@@ -10,6 +10,22 @@ export function fmtBytes(n: number | null | undefined): string {
   return (b / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+/** Formata data ISO (YYYY-MM-DD ou timestamp) como 'DD/MM/YYYY'. */
+export function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const s = String(iso);
+  // YYYY-MM-DD → DD/MM/YYYY direto (sem timezone)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return '—';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
 /** Formata ISO timestamp como 'DD/MM/YYYY HH:MM'. */
 export function fmtPostedEm(iso: string | null | undefined): string {
   if (!iso) return '—';

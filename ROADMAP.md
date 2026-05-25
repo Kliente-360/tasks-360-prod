@@ -1207,11 +1207,11 @@ Em ordem de execução sugerida (revisões primeiro pra estabilizar o que já ex
 |---|---|---|---|
 | 1 | **Revisar Dashboard** 🔍 | 1-3 dias | Polish + ajustes UX agora que está no ar há semanas. Bater olho com calma, listar issues observados em uso real, corrigir. Sem features novas. Entrega: Dashboard com qualidade de produção. |
 | 2 | **Revisar Briefing** 🔍 | 1-3 dias | Idem Dashboard — polish + UX. Entrega: Briefing com qualidade de produção. |
-| 3 | **Portal cliente v2** 🌐 | 4-6 semanas | **Big bet pré-cutover.** Portar v2 do Alpine pro Next: header narrativo, KPIs delta, sparkline 6m, lead time 90d, comentários públicos, botão "Já respondi", RLS apertada por `role='cliente'`. Detalhes de escopo em §9.2 "Portal do cliente — escopo MVP". (Subiu de §9.3.3 — decisão de fechar paridade antes do cutover.) |
+| 3 | **Revisar Portal cliente** 🔍 | 1-3 dias | Polish + UX. Port v2 do Alpine pro Next entregue em 25/05/2026 (PR de bootstrap): header verde Kliente, headline narrativa, 4 KPIs com delta, sparkline 6m, distribuição por projeto, lead time 90d, alertas amigáveis, 4 listas (aguardando/andamento/próximas/recentes), modal de task com timeline + "Já respondi" + comments públicos, simulador "view as client" pra admin/interno, RLS já aplicada via `applied/2026-05-12_rls_role_aware.sql`. Falta validar em uso real e corrigir issues. |
 
-**Total**: ~5-7 semanas de wall-clock (dominado pelo Portal). Itens 1-2 podem rodar em paralelo ao Portal por outra pessoa/sessão — são desacoplados.
+**Total**: ~3-9 dias de wall-clock (3 polish passes). Podem rodar em paralelo por sessões/pessoas diferentes — são desacoplados.
 
-**Sequência recomendada**: começar por itens 1-2 (revisões rápidas, estabilizam o que já está no ar) → item 3 (Portal, sprint dedicada).
+**Sequência sugerida**: livre — todos são revisões independentes, escolher pela ordem que faz sentido pro time validar.
 
 > **Itens menores de governance** (Calendário filtro, Bloqueado exige justificativa, Kliente 360 só admin cria) **saíram daqui** e viraram itens 3-5 de §9.3.2 — não são paridade Alpine↔Next, são features novas, e podem esperar pós-cutover + pós-DS sem prejuízo.
 

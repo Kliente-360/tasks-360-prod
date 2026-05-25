@@ -20,6 +20,10 @@
   --brand-soft:  #E6F5E6;
   --brand-tint:  #F2FAF2;
 
+  /* === PORTAL HEADER === */
+  --header-portal:      #0A3A1F;
+  --header-portal-soft: #14532D;
+
   /* === NAVY === */
   --navy:      #1f2937;
   --navy-soft: #374151;
@@ -138,6 +142,8 @@
   --brand-dark:  #00CC00;
   --brand-light: #1AD41A;
   --brand-soft:  #0B2D0B;
+  --header-portal:      #0E2E1A;
+  --header-portal-soft: #14532D;
   --brand-tint:  #0E2913;
 
   --navy:      #1f2937;
@@ -1265,4 +1271,184 @@ input[type="checkbox"] { accent-color: var(--brand); }
   .btn { min-height: 44px; }
   .btn-icon { min-height: 44px; min-width: 44px; }
   .tab { min-height: 44px; padding-top: var(--sp-3); padding-bottom: var(--sp-3); }
+}
+
+/* ============ PORTAL CLIENTE ============
+   Header verde Kliente escuro + cards/bars/alerts/KPIs específicos.
+   Portado de lib/styles.css do Alpine. Vars --header-portal* declaradas
+   em :root (light) e .dark (dark). */
+.portal-header {
+  background: var(--header-portal); color: #fff;
+  border-radius: var(--r-lg);
+  padding: var(--sp-5) var(--sp-6);
+  border: 0;
+}
+.portal-header-switch {
+  margin-top: var(--sp-3);
+}
+.portal-header-switch-sel {
+  background: rgba(255,255,255,0.10); color: rgba(255,255,255,0.85);
+  border: 1px solid rgba(255,255,255,0.20); border-radius: var(--r-sm);
+  padding: 4px 8px; padding-right: 24px;
+  font-size: 11px; font-family: var(--font-mono);
+  cursor: pointer; width: 100%;
+  appearance: none; -webkit-appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, rgba(255,255,255,0.6) 50%),
+                    linear-gradient(135deg, rgba(255,255,255,0.6) 50%, transparent 50%);
+  background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+@media (min-width: 768px) {
+  .portal-header-switch {
+    position: absolute; top: var(--sp-4); right: var(--sp-4);
+    margin-top: 0;
+  }
+  .portal-header-switch-sel { width: auto; max-width: 220px; }
+}
+.portal-header-switch-sel:hover {
+  background-color: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.35);
+}
+.portal-header-switch-sel:focus { outline: 2px solid rgba(255,255,255,0.4); outline-offset: 1px; }
+.portal-header-switch-sel option { background: var(--header-portal); color: #fff; }
+.portal-header-eyebrow {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+}
+.portal-header-name {
+  font-family: var(--font-sans); font-weight: 600;
+  font-size: 28px; line-height: 1.15; color: #fff;
+  margin-top: var(--sp-2);
+}
+.portal-header-sub {
+  font-size: 13px; color: rgba(255,255,255,0.7);
+  margin-top: var(--sp-2);
+}
+
+/* Alertas amigáveis */
+.portal-alert {
+  display: flex; align-items: flex-start; gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: var(--r-md);
+  border: 1px solid var(--line);
+  background: var(--surface-1);
+}
+.portal-alert-icon {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--bg-elev); color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700; flex-shrink: 0;
+}
+.portal-alert-title {
+  font-family: var(--font-sans); font-weight: 600;
+  font-size: 14px; color: var(--ink); line-height: 1.3;
+}
+.portal-alert-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; line-height: 1.4; }
+.portal-alert-alta {
+  background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
+  border-color: #fde68a;
+}
+.portal-alert-alta .portal-alert-icon { background: #fef3c7; color: #b45309; }
+.portal-alert-alta .portal-alert-title { color: #b45309; }
+.portal-alert-alta .portal-alert-sub { color: #92400e; }
+.portal-alert-media {
+  background: var(--surface-1);
+  border-color: color-mix(in srgb, var(--sig-amber) 30%, var(--line));
+}
+.portal-alert-media .portal-alert-icon {
+  background: color-mix(in srgb, var(--sig-amber) 15%, var(--bg));
+  color: #b45309;
+}
+.portal-alert-positivo {
+  background: color-mix(in srgb, var(--sig-green) 6%, var(--surface-1));
+  border-color: color-mix(in srgb, var(--sig-green) 35%, var(--line));
+}
+.portal-alert-positivo .portal-alert-icon {
+  background: var(--sig-green-soft); color: var(--sig-green-strong);
+}
+.portal-alert-positivo .portal-alert-title { color: var(--sig-green-strong); }
+
+/* KPI cards */
+.portal-kpi {
+  background: var(--surface-1); border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  display: flex; flex-direction: column; gap: 4px;
+  min-height: 110px;
+}
+.portal-kpi-label {
+  font-family: var(--font-mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+}
+.portal-kpi-value {
+  font-family: var(--font-sans); font-weight: 700;
+  font-size: 28px; line-height: 1.05; color: var(--ink);
+  font-feature-settings: "tnum";
+  margin-top: 2px;
+}
+.portal-kpi-delta {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--ink-soft); margin-top: auto; padding-top: 6px;
+  line-height: 1.3;
+}
+.portal-kpi-danger { border-color: color-mix(in srgb, var(--p0) 35%, var(--line)); }
+.portal-kpi-danger .portal-kpi-value { color: var(--p0); }
+@media (min-width: 768px) {
+  .portal-kpi { padding: var(--sp-5); min-height: 128px; }
+  .portal-kpi-value { font-size: 34px; }
+}
+
+/* Bar chart entregas 6 meses (sem Chart.js) */
+.portal-bars {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+  align-items: end;
+  height: 130px;
+}
+.portal-bar-col {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  height: 100%; min-width: 0;
+}
+.portal-bar-value {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--muted); font-feature-settings: "tnum";
+  height: 14px;
+}
+.portal-bar-track {
+  width: 100%; flex: 1;
+  background: var(--bg-elev);
+  border-radius: 3px 3px 0 0;
+  overflow: hidden;
+  display: flex; align-items: flex-end;
+  min-height: 4px;
+}
+.portal-bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, var(--brand) 0%, color-mix(in srgb, var(--brand) 75%, var(--navy)) 100%);
+  border-radius: 3px 3px 0 0;
+  min-height: 3px;
+  transition: height 220ms ease-out;
+}
+.portal-bar-fill-current {
+  background: linear-gradient(180deg, var(--navy) 0%, var(--brand-dark) 100%);
+}
+.portal-bar-label {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--muted); text-transform: lowercase;
+  line-height: 1.1;
+}
+
+/* Distribuição por projeto · barras horizontais */
+.portal-dist-track {
+  width: 100%; height: 6px;
+  background: var(--bg-elev);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.portal-dist-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand) 0%, var(--brand-dark) 100%);
+  border-radius: 999px;
+  transition: width 220ms ease-out;
 }
