@@ -1,0 +1,74 @@
+/**
+ * Constantes de domínio — portadas de lib/helpers.js + lib/app.js do Alpine.
+ * Mantidas como objetos `as const` pra TypeScript inferir os literal types.
+ */
+
+export const STATUS = {
+  BACKLOG: 'backlog',
+  ANDAMENTO: 'andamento',
+  BLOQUEADO: 'bloqueado',
+  CONCLUIDO: 'concluido',
+} as const;
+
+export const ROLE = {
+  ADMIN: 'admin',
+  INTERNO: 'interno',
+  CLIENTE: 'cliente',
+} as const;
+
+export const SUB_LABELS: Record<string, string> = {
+  backlog: 'Backlog',
+  priorizado: 'Priorizado',
+  em_definicao: 'Em definição',
+  escopo_definido: 'Escopo definido',
+  em_desenvolvimento: 'Em desenvolvimento',
+  em_homologacao: 'Em homologação',
+  em_revisao: 'Em revisão',
+  pronto_producao: 'Pronto p/ produção',
+  em_implantacao: 'Em implantação',
+  bloqueado: 'Bloqueado',
+  concluido: 'Concluído',
+};
+
+export const SUB_TO_MACRO: Record<string, string> = {
+  backlog: 'backlog',
+  priorizado: 'backlog',
+  em_definicao: 'backlog',
+  escopo_definido: 'backlog',
+  em_desenvolvimento: 'andamento',
+  em_homologacao: 'andamento',
+  em_revisao: 'andamento',
+  pronto_producao: 'andamento',
+  em_implantacao: 'andamento',
+  bloqueado: 'bloqueado',
+  concluido: 'concluido',
+};
+
+export const SUBS_FLAT = [
+  'backlog',
+  'priorizado',
+  'em_definicao',
+  'escopo_definido',
+  'em_desenvolvimento',
+  'em_homologacao',
+  'em_revisao',
+  'pronto_producao',
+  'em_implantacao',
+  'bloqueado',
+  'concluido',
+] as const;
+
+/** Rank das sub-etapas pra detectar tasks "incompletas" em etapa avançada. */
+export const STAGE_RANK: Record<string, number> = {
+  backlog: 0,
+  em_definicao: 1,
+  priorizado: 2,
+  escopo_definido: 3,
+  em_desenvolvimento: 4,
+  em_homologacao: 5,
+  em_revisao: 6,
+  pronto_producao: 7,
+  em_implantacao: 8,
+  bloqueado: -1,
+  concluido: -1,
+};
