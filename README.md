@@ -2,7 +2,7 @@
 
 App em **`feat/onda-0`** com paridade UX 100% vs Alpine, em preview Vercel. Subindo pra prod no Bloco 5 (cutover de domínio).
 
-App Alpine em prod até cutover: raiz do repo (`../index.html` + `../lib/`), Netlify auto-deploy de `main`.
+App Alpine legado segue em prod no Netlify a partir do repo `Kliente-360/tasks-360-mvp` até o cutover de domínio (Bloco 5).
 
 ## Stack
 
@@ -20,7 +20,6 @@ App Alpine em prod até cutover: raiz do repo (`../index.html` + `../lib/`), Net
 ## Rodar local
 
 ```bash
-cd web
 cp .env.example .env.local   # preencher as 3 chaves
 npm install
 npm run dev                  # http://localhost:3000
@@ -66,7 +65,6 @@ Em CI (GitHub Actions) e em smoke local podem ser **placeholders** (`https://pla
 │   │   │   ├── briefing/          # placeholder · parking
 │   │   │   ├── dashboard/         # placeholder · parking
 │   │   │   ├── portal/            # placeholder · parking
-│   │   │   ├── adocao/            # placeholder · parking
 │   │   │   └── layout.tsx         # Provider stack
 │   │   ├── (auth)/login/          # Magic link + 2FA
 │   │   ├── auth/callback/         # OAuth callback
@@ -136,7 +134,7 @@ Tudo dos blocos 1-4.J entregue. Status table completa em **`ONDA0.md`** (final d
 
 ## Roadmap pós-cutover
 
-Consolidado completo (Now / Next / Later / Cold) em **`../ROADMAP.md` §9.3 · Roadmap pós-Onda 0**.
+Consolidado completo (Now / Next / Later / Cold) em **`ROADMAP.md` §9.3 · Roadmap pós-Onda 0**.
 
 Highlights:
 - **Now** (~8h): cutover + realtime publication + Sentry + JWT exp 1h.

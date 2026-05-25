@@ -7,54 +7,6 @@ Para cada KPI: pergunta-resposta, cálculo, por quê importa, onde está hoje (o
 
 ---
 
-## 1. Adoção da ferramenta (uso interno)
-
-Vivem na aba **Adoption · Hero** (6 indicadores com sinal verde/amarelo/vermelho + conclusão heurística).
-
-### 1.1 DAU/WAU (Daily Active / Weekly Active)
-- **Pergunta:** "Quem entrou no mês também voltou na semana?"
-- **Cálculo:** `usuários únicos com evento últimos 7d ÷ usuários únicos últimos 30d × 100`
-- **Por quê:** mede retenção contínua. Métrica clássica SaaS — se sobe, hábito; se cai, churn interno em formação.
-- **Thresholds:** ≥70% verde · 50-69% amarelo · <50% vermelho
-- **Onde:** Adoption hero · card 1.
-
-### 1.2 Sessões/dia (densidade de uso)
-- **Pergunta:** "Com que frequência o time abre o app no dia?"
-- **Cálculo:** `total de sessões únicas (session_id) em 7d ÷ 7`
-- **Por quê:** mede densidade individual. Quem usa diário abre 5+ sessões; quem usa "pra checar quando lembra" abre <3.
-- **Thresholds:** ≥5 verde · 3-5 amarelo · <3 vermelho
-- **Onde:** Adoption hero · card 2.
-
-### 1.3 Comments públicos/sem (engajamento conversacional)
-- **Pergunta:** "O time conversa COM o cliente pelo app, ou é planilha de tracking?"
-- **Cálculo:** `# comments com visivel_cliente=true criados nos últimos 7d`
-- **Por quê:** se o time só atualiza status sem comentar publicamente, o diferencial Portal cliente está parado. Comments públicos são o lock-in real do cliente externo.
-- **Thresholds:** ≥20 verde · 10-20 amarelo · <10 vermelho
-- **Onde:** Adoption hero · card 3.
-
-### 1.4 Tasks triadas (% qualidade do cadastro)
-- **Pergunta:** "As tasks abertas têm informação suficiente pra ser priorizadas?"
-- **Cálculo:** `# tasks ativas com pri+esf+resp+prazo conforme etapa ÷ total ativas × 100` (via helper puro `needsTriage(t)`)
-- **Por quê:** mede disciplina de cadastro. Sem isso, heurísticas de capacidade são ruído.
-- **Thresholds:** ≥80% verde · 60-80% amarelo · <60% vermelho
-- **Onde:** Adoption hero · card 4. Também alimenta a aba **Triagem**.
-
-### 1.5 Retention W1 (continuidade semanal)
-- **Pergunta:** "Quem usou esta semana TAMBÉM usou semana anterior?"
-- **Cálculo:** `|ativos 0-6d ∩ ativos 7-13d| ÷ |ativos 7-13d| × 100`
-- **Por quê:** métrica SaaS canônica de hábito vs trial. Se cai abaixo de 60%, time usa "pra emergência" e não virou rotina.
-- **Thresholds:** ≥80% verde · 60-80% amarelo · <60% vermelho
-- **Onde:** Adoption hero · card 5.
-
-### 1.6 Movimentação 7d (calor do pipeline)
-- **Pergunta:** "Quantas tasks ativas tiveram update na última semana?"
-- **Cálculo:** `# tasks ativas com max(subetapaEm, statusEm) nos últimos 7d ÷ total ativas × 100`, com Δ em pontos percentuais vs semana anterior
-- **Por quê:** mede se o pipeline tá quente ou congelado. Se cai com DAU estável = friction no fluxo (gargalo, bloqueios silenciosos).
-- **Thresholds:** ≥60% verde · 40-60% amarelo · <40% vermelho
-- **Onde:** Adoption hero · card 6.
-
----
-
 ## 2. Performance / Velocity
 
 ### 2.1 Throughput (taxa de entrega)
@@ -219,8 +171,8 @@ Vivem na aba **Adoption · Hero** (6 indicadores com sinal verde/amarelo/vermelh
 - **Onde:** Proposto no Dashboard v2 · Gaps & desvios.
 
 ### 6.4 Adoção do portal pelo cliente
-- Mesmo conceito das métricas Adoption, mas medindo o **cliente externo** (eventos `cliente_portal_login`, comments do cliente, etc.).
-- **Onde:** Adoption · toggle "portal cliente".
+- Eventos do cliente externo (`cliente_portal_login`, comments do cliente, etc.).
+- **Onde:** parking — entra junto com Portal cliente (roadmap pós-cutover).
 
 ---
 
@@ -245,11 +197,10 @@ Vivem na aba **Adoption · Hero** (6 indicadores com sinal verde/amarelo/vermelh
 |---|---|
 | **Foco** | Atrasadas, Para hoje, Bloqueadas, P0/P1 ativas |
 | **Backlog/Kanban** | Aging inline em cards |
-| **Triagem** | % triadas (mesmo getter do Adoption) |
+| **Triagem** | % triadas |
 | **Dashboard (hoje)** | Em andamento h, Backlog h, Bloqueadas, Atrasadas, Throughput 7d/30d, Lead time, Cycle time |
 | **Dashboard (proposto v2)** | Throughput W1, Lead time, Cycle time, % entregue no prazo, Gaps & desvios (variância carga, breach rate, bottleneck, concentração) |
 | **Briefing** | Capacidade vs demanda, Saúde por cliente/pessoa, Tendência, Heurísticas |
-| **Adoption** | DAU/WAU, Sessões/dia, Comments públicos/sem, Tasks triadas, Retention W1, Movimentação 7d |
 | **Portal cliente** | Lead time 90d, Sparkline 6m, Aguardando você, Próximas entregas |
 
 ---
