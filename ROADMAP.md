@@ -1193,29 +1193,31 @@ Sem cache (worst case absoluto): R$ 35–50/mês. Preços de modelo podem mudar;
 
 > Estado atual: **Onda 0 + Dashboard + Briefing entregues em `feat/onda-0` (v1.02.193)**. 100% paridade UX com Alpine + PWA + CI + 44 testes. Time validando em preview antes do cutover. **Cutover (Bloco 5) parqueado — será executado manualmente quando o responsável sinalizar.**
 >
-> **Última revisão de roadmap**: 24/05/2026 — Dashboard e Briefing entregues (§9.3.2 itens 1-2 ✅), limpeza de telemetria anotada em §9.3.9.
+> **Última revisão de roadmap**: 25/05/2026 — repo `tasks-360-prod` separado · §9.3.1 expandido pra sprint final de paridade (Portal cliente sobe pra NOW) · §9.3.9 vira plano completo do Bloco 5 (cutover + observabilidade + limpeza) · §9.3.10 NEW pra aplicação do novo design system pós-cutover.
 >
 > **Como ler**: Now / Next / Later / Cold / Descontinuados. Itens em §9.3.5 foram removidos do radar — não repropor sem novo input significativo.
 
-#### 9.3.1 Now · validação em preview + destravar pós-cutover
+#### 9.3.1 Now · pré-cutover · sprint final de paridade
 
-> **Cutover (Bloco 5) parqueado.** Time validando o app Next em preview Vercel com uso real antes de fazer o cutover de domínio. Cutover será executado manualmente quando o responsável sinalizar — sem prazo definido.
+> **Estratégia**: fechar paridade total Alpine ↔ Next antes do cutover, incluindo Portal cliente. Uma vez completos os itens abaixo, o app está "basicamente migrado" e o **§9.3.9 · Bloco 5 · Cutover Vercel** vira execução administrativa (DNS + Supabase + comunicação). Tudo que vem depois do cutover (design system + evoluções) está em **§9.3.10 · design system** e **§9.3.2 · evoluções**.
 
-| Item | Esforço | Valor | Quando |
+Em ordem de execução sugerida (revisões primeiro pra estabilizar o que já existe; Portal por último porque é o maior):
+
+| # | Item | Esforço | Valor |
 |---|---|---|---|
-| **Kliente 360 · só gestão cria** ✋ | ~2-4h | Gate de criação: cliente `eh_interno` + nome ≈ "Kliente 360" exige `viewerRole='admin'` pra salvar. Esconde do dropdown pra não-admins. Gate pontual — não confundir com workspaces. | **Pré-cutover · isolado** |
-| **Bloqueado exige `bloqueadoPor` + comentário** 🚧 | ~3-4h | Ao setar `bloqueado`, valida `bloqueadoPor` obrigatório + força comentário inline (`visivel_cliente=false`). Registra evento `bloqueio_iniciado` no histórico. Elimina bloqueio órfão. | **Pré-cutover · isolado** |
-| **Calendário · filtro de Status** 📅 | ~1h | Adiciona select de Status no calendário (Abertas / Todas / Backlog / Andamento / Bloqueado / Concluído). Espelho do Backlog filter. | **Pré-cutover · isolado** |
-| **Bloco 5 · Cutover Vercel** | ~2h | Apontar domínio principal pro projeto Next. Avisar time + monitorar 24-48h. | ⏸ **Manual · aguarda sinal do responsável** |
-| **Habilitar realtime publication** (`tasks`, `clientes`, `projetos`, `pessoas`) | ~5min config | Maior ROI valor/esforço do roadmap inteiro. Resolve UX "clicar na logo pra refetch". Channel listener já montado no Next. | Pós-cutover (não habilitar antes — confunde Alpine e Next em paralelo) |
-| **Sentry + PostHog** | ~1-2h | Ouvir bugs no campo + adoption tracking em prod. | Pós-cutover |
-| **JWT exp 1h + refresh** | ~2h | Defesa em profundidade. Anon key embedded + JWT 2036 é dívida crônica. | Pós-cutover |
+| 1 | **Revisar Dashboard** 🔍 | 1-3 dias | Polish + ajustes UX agora que está no ar há semanas. Bater olho com calma, listar issues observados em uso real, corrigir. Sem features novas. Entrega: Dashboard com qualidade de produção. |
+| 2 | **Revisar Briefing** 🔍 | 1-3 dias | Idem Dashboard — polish + UX. Entrega: Briefing com qualidade de produção. |
+| 3 | **Portal cliente v2** 🌐 | 4-6 semanas | **Big bet pré-cutover.** Portar v2 do Alpine pro Next: header narrativo, KPIs delta, sparkline 6m, lead time 90d, comentários públicos, botão "Já respondi", RLS apertada por `role='cliente'`. Detalhes de escopo em §9.2 "Portal do cliente — escopo MVP". (Subiu de §9.3.3 — decisão de fechar paridade antes do cutover.) |
 
-**Dependência mantida**: realtime, Sentry e JWT só depois do cutover — enquanto Alpine atende prod, mexer no publication confunde os dois apps.
+**Total**: ~5-7 semanas de wall-clock (dominado pelo Portal). Itens 1-2 podem rodar em paralelo ao Portal por outra pessoa/sessão — são desacoplados.
+
+**Sequência recomendada**: começar por itens 1-2 (revisões rápidas, estabilizam o que já está no ar) → item 3 (Portal, sprint dedicada).
+
+> **Itens menores de governance** (Calendário filtro, Bloqueado exige justificativa, Kliente 360 só admin cria) **saíram daqui** e viraram itens 3-5 de §9.3.2 — não são paridade Alpine↔Next, são features novas, e podem esperar pós-cutover + pós-DS sem prejuízo.
 
 #### 9.3.2 Next · 1-2 meses · Onda 1 do Next · visibilidade gerencial + 1ª IA
 
-Em ordem de execução sugerida (sequência importa):
+**Pré-requisitos antes de iniciar §9.3.2**: cutover concluído (**§9.3.9**) + design system aplicado (**§9.3.10**). Sem isso, evoluções constroem em cima de UI inconsistente.
 
 Em ordem de execução sugerida (sequência importa — cada item desbloqueia o próximo):
 
@@ -1223,12 +1225,15 @@ Em ordem de execução sugerida (sequência importa — cada item desbloqueia o 
 |---|---|---|---|
 | 1 | ✅ **Dashboard** · entregue mai/2026 | — | Cockpit operacional. KPIs, heurísticas, semáforo de projetos, heatmap W0–W3, throughput 8 semanas. CSS Grid puro (sem Tremor — ver ADR §12 item 17). PR #335 + #336. |
 | 2 | ✅ **Briefing** · entregue mai/2026 | — | Relatório executivo. Clientes em atenção, heatmap portfólio, orçamento projetos, conquistas W-1, redistribuição. Aba separada, ao vivo, sem filtros. PR #335. |
-| 3 | **`ai-suggest`** (Haiku, ~R$0,015/exec) | ~1 semana | Fecha gap competitivo #1 da §14.3 do CONTEXT. Custo trivial. ⭐ |
-| 4 | **`ai-weekly-summary`** (Sonnet + cron sáb) | 4-5 dias | Combina com Briefing → aba "Insights". Sócio lê portfólio em 5min. ⭐⭐ |
-| 5 | **Push notifications + Badging API** | ~2-3 semanas | Comportamental forte. iOS 16.4+ suporta com PWA. Inclui VAPID keys + Edge Function + UI de permissão. |
-| 6 | **Escopo da task + skill da pessoa** 🎯 | ~3-5 dias | Campo `tasks.escopo` (13 valores: SF Admin · SF Clouds · IA/Conversacional) + highlight de match no dropdown de responsável. Migration + adapter + UI. Pareia com `ai-suggest`. |
-| 7 | **Triagem obrigatória pra tasks criadas por IA** 🤖 | ~3-5 dias | Flag `triada_em` + filtro "Criadas por IA" na Triagem. UI quase pronta. Combinar com lançamento de `ai-suggest`. |
-| 8 | **Briefing · dot de comentário novo** 💬 | ~2-3 dias | Dot de "novo comentário" no card do Briefing pras tasks `status=andamento` com comment após último login. `last_seen_at` por usuário (ou filtrar `notifications` unread). Combinar com lançamento do Briefing. |
+| 3 | **Calendário · filtro de Status** 📅 | ~1h | Quick win UX. Select de Status no calendário (Abertas / Todas / Backlog / Andamento / Bloqueado / Concluído). Espelho do Backlog filter. (Veio do §9.3.1 original — re-priorizado pós-DS.) |
+| 4 | **Bloqueado exige `bloqueadoPor` + comentário** 🚧 | ~3-4h | Governance. Ao setar `bloqueado`, valida `bloqueadoPor` obrigatório + força comentário inline (`visivel_cliente=false`). Registra evento `bloqueio_iniciado` no histórico. Elimina bloqueio órfão. (Veio do §9.3.1 original — re-priorizado pós-DS.) |
+| 5 | **Kliente 360 · só gestão cria** ✋ | ~2-4h | Governance. Gate de criação: cliente `eh_interno` + nome ≈ "Kliente 360" exige `viewerRole='admin'` pra salvar. Esconde do dropdown pra não-admins. Gate pontual — não confundir com workspaces. (Veio do §9.3.1 original — re-priorizado pós-DS.) |
+| 6 | **`ai-suggest`** (Haiku, ~R$0,015/exec) | ~1 semana | Fecha gap competitivo #1 da §14.3 do CONTEXT. Custo trivial. ⭐ |
+| 7 | **`ai-weekly-summary`** (Sonnet + cron sáb) | 4-5 dias | Combina com Briefing → aba "Insights". Sócio lê portfólio em 5min. ⭐⭐ |
+| 8 | **Push notifications + Badging API** | ~2-3 semanas | Comportamental forte. iOS 16.4+ suporta com PWA. Inclui VAPID keys + Edge Function + UI de permissão. |
+| 9 | **Escopo da task + skill da pessoa** 🎯 | ~3-5 dias | Campo `tasks.escopo` (13 valores: SF Admin · SF Clouds · IA/Conversacional) + highlight de match no dropdown de responsável. Migration + adapter + UI. Pareia com `ai-suggest`. |
+| 10 | **Triagem obrigatória pra tasks criadas por IA** 🤖 | ~3-5 dias | Flag `triada_em` + filtro "Criadas por IA" na Triagem. UI quase pronta. Combinar com lançamento de `ai-suggest`. |
+| 11 | **Briefing · dot de comentário novo** 💬 | ~2-3 dias | Dot de "novo comentário" no card do Briefing pras tasks `status=andamento` com comment após último login. `last_seen_at` por usuário (ou filtrar `notifications` unread). Combinar com lançamento do Briefing. |
 
 **Detalhamento de cada IA**: ver §9.2 "Onda 5+ — Diferenciação com IA" acima (frentes 1-5 com prompt strategy, custo por exec, casos de uso perfeitos).
 
@@ -1238,7 +1243,6 @@ Em ordem de prioridade (esforço × impacto):
 
 | Item | Esforço | Origem |
 |---|---|---|
-| **Portal cliente** (sai de parking) | 4-6 semanas | Big bet. Versão v2 já existe no Alpine (header narrativo, KPIs delta, sparkline 6m, lead time 90d). Portar + RLS apertada por `role='cliente'`. Detalhes do escopo MVP em §9.2 "Portal do cliente — escopo MVP" acima. |
 | **`ai-risk-scanner`** (Sonnet diário) | ~1 semana | Banner "🚨 N sinais hoje" no Dashboard. Premium-perception alta. Depende do Dashboard estar no ar. |
 | **Cronômetro start/stop por task ⏱️** | ~1 semana (UI) | Tabela `time_entries` + UI start/stop. **Habilita retro honesta + caminho pra faturamento.** Relatórios de tempo e billing são escopo adicional posterior. |
 | **Saved views / filtros nomeados** | 2-3 dias | "Minhas atrasadas", "Aguardando cliente X". Quick win UX alto impacto. |
@@ -1247,7 +1251,7 @@ Em ordem de prioridade (esforço × impacto):
 | **Captura via texto livre** (Haiku) | ~4h | "amanhã preciso revisar a apresentação do Cliente X" → Haiku estrutura. Combina com QuickCapture já portado. |
 | **Resumir thread de task** (Sonnet) | ~1 dia | Botão "TL;DR" no modal. Primeira IA low-risk/high-value. Combinar com lançamento de `ai-suggest`. |
 | **`ai-suggest-tags`** (Haiku) | 2 dias | Sugere 1-3 tags do vocabulário existente. Depende de Tags reativadas. |
-| **Auto-triage com IA** | M | Haiku + heurísticas pra classificar tasks `criado_por_ia=true`. Depende de `ai-suggest` + Triagem obrigatória (§9.3.2 item 9). |
+| **Auto-triage com IA** | M | Haiku + heurísticas pra classificar tasks `criado_por_ia=true`. Depende de `ai-suggest` + Triagem obrigatória (§9.3.2 item 10). |
 | **Aba Foco com IA leve** | M | Resumo do dia + 3 tasks priorizadas pelo modelo. |
 | **Capacidade prevista** | M | Heurística "estoura em N semanas". Requer tabela `weekly_capacity_snapshots` + job semanal. |
 | **Templates de projeto** | 3-5 dias | Quick win pra projetos recorrentes (instancia N tasks padrão). |
@@ -1281,7 +1285,7 @@ Itens avaliados em revisão de esforço × impacto e removidos do radar. Alto es
 
 | Item | Motivo |
 |---|---|
-| **WhatsApp digest** | Compliance Meta pesado (template approval, política 24h), custo fixo, volume de usuários atual não justifica. Email digest semanal (§9.3.2 item 7) cobre o caso de uso com muito menos atrito. |
+| **WhatsApp digest** | Compliance Meta pesado (template approval, política 24h), custo fixo, volume de usuários atual não justifica. Email digest semanal (§9.3.2 item 7 · `ai-weekly-summary`) cobre o caso de uso com muito menos atrito. |
 | **Slack integration** | Sem demanda real. Quando equipe crescer e surgir pedido concreto, reavaliar do zero. |
 | **iCal feed por pessoa** | Pessoas internas usam o app diretamente. Clientes externos usarão o Portal. Overlap mínimo pra esforço desproporcionado. |
 | **Triage inbox Linear-style** | Aba Triagem funcional já existe no Next. Duplicação de conceito sem ganho claro. |
@@ -1303,8 +1307,8 @@ Itens avaliados em revisão de esforço × impacto e removidos do radar. Alto es
 
 > Os 7 pedidos capturados após o fechamento da auditoria de paridade foram distribuídos nos horizontes corretos após revisão de priorização (mai/2026):
 >
-> - **#3, #4, #5** (Kliente360 gate · Bloqueado obrigatório · Calendário filtro) → **§9.3.1 Now** (pré-cutover)
-> - **#7, #2, #6** (Escopo+skill · Triagem IA obrigatória · Briefing dot) → **§9.3.2 Next** (itens 8-10)
+> - **#3, #4, #5** (Kliente360 gate · Bloqueado obrigatório · Calendário filtro) → **§9.3.2 Next** (itens 3-5 · pós-DS · governance leve)
+> - **#7, #2, #6** (Escopo+skill · Triagem IA obrigatória · Briefing dot) → **§9.3.2 Next** (itens 9-11)
 > - **#1** (Workspaces 3 pilares) → **§9.3.4 Cold storage** (aguarda spec própria + pós-cutover + observabilidade)
 >
 > Nada perdido — tudo rastreado nos horizontes acima.
@@ -1368,31 +1372,112 @@ Filtros globais ao vivo: cliente · responsável · projeto — afetam todos os 
 
 Botão "Exportar PDF" no Briefing → `window.print()` com CSS `@media print` dedicado (oculta nav, filtros, botões; ajusta cores pra escala de cinza). Sem backend. Sem cron. Sem pré-geração. Disponível quando o usuário pedir.
 
-#### 9.3.9 Limpeza pós-cutover · telemetria interna
+#### 9.3.9 Bloco 5 · Cutover Vercel · plano completo
 
-> **Pré-req**: Alpine desativado (pós-cutover confirmado). Enquanto Alpine e Next coexistem, estas tabelas e chamadas são compartilhadas — não mexer antes.
+> **Status: ⏸ parqueado.** Aguarda sinal manual do responsável quando os itens de §9.3.1 estiverem completos (paridade Alpine ↔ Next fechada, incluindo Portal cliente). Sem prazo definido. Este capítulo concentra TUDO que toca o cutover: execução, observabilidade pós, hardening, limpeza de telemetria e desligamento do Alpine.
 
-Com a aba Adoção descontinuada e PostHog assumindo a camada comportamental, toda a infraestrutura de telemetria interna do Alpine pode ser removida. O app Next nunca recebeu esses calls — a limpeza é só no lado Alpine.
+**Criticidade: ALTA.** Vira a chave de produção dos times internos + canal de cliente externo. Plano fásico com janelas de validação entre cada bloco. **Tempo ativo total: ~6-9h. Wall-clock: ~1 semana.**
 
-**Banco de dados (SQL Editor do dashboard)**:
-- `DROP TABLE usage_events CASCADE` — tabela de 90 dias, ~50k rows no pico. RLS, índices e tudo associado vai junto.
-- `DROP FUNCTION fn_usage_events_cleanup()` — função de retenção que roda via cron.
-- Remover o `cron.schedule` correspondente em **Database > Extensions > pg_cron**.
+##### Pré-requisitos antes de abrir a janela
 
-**Alpine (arquivos em `lib/`)**:
-- Deletar `lib/views/telemetria-export.js` inteiro — contém a função `track()` + `session_start` automático.
-- Deletar `lib/views/adoption.js` inteiro — único consumidor das `usage_events`.
-- Remover os ~19 calls de `this.track(...)` espalhados por:
-  - `lib/app.js` (login, portal login)
-  - `lib/views/task-modal.js` (task_view, task_create, task_edit, comment_post)
-  - `lib/views/backlog-kanban.js` (bulk_action)
-  - `lib/views/utilities.js` (tab_open, palette_open/select, onboarding_open, quick_capture)
-  - `lib/views/cadastros.js` (task/cliente/projeto arquivar)
-  - `lib/views/anexos.js` (comment_reply/edit/delete/visivel_toggle, attachment_upload/delete)
-- Remover import de `telemetria-export.js` no `index.html`.
-- Remover a aba "Adoção" do `tabsList` em `lib/app.js` (se ainda estiver lá como entrada).
+- [ ] §9.3.1 completo (paridade fechada · Portal cliente v2 no ar)
+- [ ] App Next em preview validado pelo time (>1 semana de uso real sem regressão)
+- [ ] CI verde no `main` (`lint && typecheck && test && build && test:e2e`)
+- [ ] `APP_VERSION` bumped em `src/components/app-nav.tsx`
+- [ ] Acesso ao Vercel Dashboard (Project Settings → Domains)
+- [ ] Acesso ao Supabase Dashboard (SQL Editor + Database → Extensions)
+- [ ] Acesso ao Netlify (pra reapontar Alpine pra subdomínio fallback)
+- [ ] Canal de comunicação do time aberto pra anúncio + rollback
 
-**Esforço estimado**: ~2-3h. Baixo risco — tudo é remoção, sem lógica nova. O `track()` usa fire-and-forget, então remover as chamadas não quebra nada no fluxo principal.
+##### Fase A · Cutover propriamente dito (janela única · ~1h ativo)
+
+1. **(Vercel)** Apontar domínio principal pro projeto Next deste repo. Production Branch = `main`. Root Directory = `./`.
+2. **(Netlify)** Apontar Alpine pra subdomínio fallback `alpine.<domínio>` — Alpine continua acessível pra rollback rápido.
+3. **(Supabase SQL Editor)** Habilitar realtime publication:
+   ```sql
+   alter publication supabase_realtime add table tasks, clientes, projetos, pessoas;
+   ```
+   **Só fazer agora** — antes confunde Alpine e Next escutando o mesmo channel.
+4. **(Humano)** Anunciar no canal interno: link novo + "se algo quebrar nas próximas 48h, voltar pro `alpine.<domínio>` enquanto investigo".
+
+**Gatilho de rollback** (durante Fase A ou primeiras 24h): bug crítico que afete >1 pessoa do time, ou login quebrado. Voltar DNS pro Netlify, manter Alpine como prod, abrir investigação. O `alpine.<domínio>` continua servindo como rede de segurança até a Fase D.
+
+##### Fase B · Monitoramento (24-48h wall-clock · ~0h ativo)
+
+- Acompanhar logs do Vercel (runtime errors, deploy failures)
+- Acompanhar feedback do time no canal interno
+- Sentry ainda não está plugado nesta fase — o ouvido aqui é humano + Vercel logs
+
+##### Fase C · Observabilidade + hardening (~3-4h ativo · dias depois)
+
+5. **(Sentry)** Plugar `@sentry/nextjs`. Env vars `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`. Source maps no build.
+6. **(PostHog)** Plugar SDK. `identify` por `pessoa_id` no boot do DataProvider. Captura `$pageview`, `task_create`, `comment_post`. **Substituta moderna do `usage_events`** — opt-out via cookie banner.
+7. **(Auth)** JWT exp 1h + refresh automático. Endurece anon key embedded (hoje JWT exp 2036 = dívida crônica).
+
+##### Fase D · Limpeza pós-confiança (~2-3h ativo · ~1 semana depois)
+
+**Supabase (SQL Editor + Dashboard)**:
+
+8. `drop table usage_events cascade` — leva índices + RLS + policies junto. ~50k rows no pico, **nenhuma edge function depende** (verificado em 2026-05-25 via grep em `supabase/functions/`).
+9. `drop function fn_usage_events_cleanup()`.
+10. **Database → Extensions → pg_cron**: identificar e remover o `cron.schedule` correspondente:
+    ```sql
+    select jobid, jobname from cron.job where jobname like '%usage%';
+    select cron.unschedule(<jobid>);
+    ```
+11. **Registrar migration** `supabase/migrations/applied/2026-XX-XX_drop_usage_events.sql` com as 3 ações acima, pra rastreabilidade do schema.
+12. **Auditar drift de migrations**: 16 arquivos em `supabase/migrations/` ainda não foram movidos pra `applied/` (de `2026-05-12_comment_edit.sql` até `2026-05-23_drop_legacy_comment_triggers.sql`). Confirmar no Dashboard quais já foram aplicadas e mover. Sem isso, dev novo aplica duas vezes e quebra coisa.
+
+**Netlify**:
+
+13. Quando confiança ≥ 95% (tipicamente ~2 semanas pós-cutover sem incidente): deletar o site Alpine no Netlify. Mata custo de hosting + reduz attack surface + força ninguém a confundir as duas URLs.
+
+**Repo `tasks-360-mvp` (paralelo · sem urgência)**:
+
+14. Limpar telemetria do código Alpine:
+    - Deletar `lib/views/telemetria-export.js` (função `track()` + `session_start` automático)
+    - Deletar `lib/views/adoption.js` (único consumidor de `usage_events`)
+    - Remover ~19 `this.track(...)` calls em `lib/app.js`, `task-modal.js`, `backlog-kanban.js`, `utilities.js`, `cadastros.js`, `anexos.js`
+    - Remover import de `telemetria-export.js` no `index.html`
+    - Remover aba "Adoção" do `tabsList` em `lib/app.js`
+    - `track()` é fire-and-forget — remover não quebra nada no fluxo
+    - Pode virar uma sprint inteira lá, sem bloquear nada neste repo
+
+##### Falsos positivos investigados (NÃO fazer)
+
+Itens que pareciam de cutover mas a investigação descartou (2026-05-25):
+
+- ❌ **Dropar policies `prototipo_all`** — já dropadas em `applied/2026-05-12_rls_role_aware.sql` em todas as tabelas sensíveis (`clientes`, `projetos`, `pessoas`, `tasks`, `task_comments`, `task_status_history`, `task_attachments`, `notifications`, `usage_events`).
+- ❌ **Modificar `dispatch-webhook` antes de dropar `usage_events`** — nenhuma das 8 edge functions escreve em `usage_events`.
+- ❌ **Dropar coluna `telemetria_opt_out` em `pessoas`** — não existe. O opt-out do Alpine é puramente localStorage.
+
+##### Cross-refs
+
+- §9.3.1 · pré-requisito · sprint final de paridade
+- §9.3.10 · próximo passo pós-cutover · aplicação do novo design system
+- §9.3.2 · evoluções (só depois de §9.3.10)
+- `ONDA0.md` §"Cutover (Bloco 5) — checklist" · checklist original mais conciso, mantido como histórico
+
+#### 9.3.10 Aplicar novo design system · pós-cutover · pré-evoluções
+
+> **Status: 📋 anotado · plano a detalhar.** Existe um novo design system desenhado que deve ser aplicado uniformemente ao app **depois do cutover** e **antes** das evoluções de §9.3.2. Sem isso, evoluções vão construir UI nova em cima de tokens/componentes inconsistentes — retrabalho garantido.
+
+**Pré-req**: cutover concluído (§9.3.9) — não vale aplicar DS enquanto Alpine ainda atende parte do tráfego.
+
+**Por que aqui** (e não em §9.3.2 ou §9.3.3):
+- É refactor visual amplo (tokens CSS, primitivos `.btn/.card/.inp/.chip`, possivelmente componentes), não feature
+- Toca quase todas as telas — fazer em paralelo a evoluções causa conflito de merge constante
+- Janela natural: time validando pós-cutover, sem features novas competindo por atenção
+
+**Escopo a definir quando chegar a hora**:
+- [ ] Localizar e revisar o novo DS (Figma? Spec md? Tokens prontos?)
+- [ ] Mapear delta vs `src/app/globals.css` atual (tokens, espaçamento, tipografia, cores)
+- [ ] Decidir estratégia: refactor incremental (tela por tela) vs flip de tokens + acertos
+- [ ] Estimar esforço (provavelmente M-L · semanas)
+- [ ] Avaliar se Recharts/Chart.js/SVG nativo precisa de revisão de paleta junto
+- [ ] Definir critério de "DS aplicado" (checklist por tela ou audit por componente)
+
+**Pré-req pra §9.3.2** · pré-condição obrigatória pras evoluções (item 3 em diante).
 
 ---
 

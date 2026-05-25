@@ -325,11 +325,11 @@ Captura final de status. Histórico vivo + roadmap pós-Onda 0 estão em `ROADMA
 | Item | Status | Onde retomar |
 |---|---|---|
 | Briefing · Dashboard · Portal cliente · Adoção | ⏸ Placeholders no Next | Roadmap pós-Onda 0 §9.3 do `ROADMAP.md` |
-| Realtime publication das 4 tabelas | ⏸ Channel listener pronto; aguarda cutover (não habilitar enquanto Alpine atende prod) | Pós-cutover (ver §9.3.1) |
+| Realtime publication das 4 tabelas | ⏸ Channel listener pronto; aguarda cutover (não habilitar enquanto Alpine atende prod) | Bloco 5 · Fase A (ver §9.3.9) |
 | Features de `HABILITAR_DEPOIS.md` (Tags, Tipo de trabalho, Dependências) | ❌ Ausentes no código Next | Later (item "Reativar features" de §9.3.3) |
 | Schema Drizzle `db:pull` | ⚠️ Adiado (incompat com check constraints) | Atacar quando Dashboard precisar de queries Server tipadas |
-| Sentry + PostHog | ❌ Não plugados | Now (item 3 de §9.3.1) |
-| JWT exp 1h + refresh | ❌ Default Supabase JWT 2036 | Now (item 4 de §9.3.1) |
+| Sentry + PostHog | ❌ Não plugados | Bloco 5 · Fase C (ver §9.3.9) |
+| JWT exp 1h + refresh | ❌ Default Supabase JWT 2036 | Bloco 5 · Fase C (ver §9.3.9) |
 
 ### Decisões arquiteturais que sobreviveram à execução
 
