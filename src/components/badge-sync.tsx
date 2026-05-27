@@ -14,14 +14,18 @@ export function BadgeSync() {
 
   useEffect(() => {
     if (loading) return;
-    if (!('setAppBadge' in navigator)) return;
+    if (!('setAppBadge' in navigator)) {
+      console.warn('[BadgeSync] setAppBadge não disponível neste browser/contexto');
+      return;
+    }
 
     const count = tasks.filter((t) => !t.arquivadoEm && atrasada(t)).length;
+    console.log('[BadgeSync] atrasadas:', count);
 
     if (count > 0) {
-      navigator.setAppBadge(count).catch(() => {});
+      navigator.setAppBadge(count).catch((e) => console.warn('[BadgeSync] setAppBadge erro:', e));
     } else {
-      navigator.clearAppBadge().catch(() => {});
+      navigator.clearAppBadge().catch((e) => console.warn('[BadgeSync] clearAppBadge erro:', e));
     }
   }, [tasks, loading]);
 
