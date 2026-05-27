@@ -77,16 +77,22 @@ export function CalendarioClient() {
   });
   const [selectedIso, setSelectedIso] = useState<string>('');
 
-  const [filters, setFilters] = useState<{ cliente: string; projeto: string; pessoa: string }>({
+  const [filters, setFilters] = useState<{
+    cliente: string;
+    projeto: string;
+    pessoa: string;
+    status: string;
+  }>({
     cliente: '',
     projeto: '',
     pessoa: '',
+    status: 'abertas',
   });
 
-  // g+l global → limpa filtros.
+  // g+l global → limpa filtros (status volta pro default 'abertas').
   useEffect(() => {
     const handler = () => {
-      setFilters({ cliente: '', projeto: '', pessoa: '' });
+      setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas' });
       setSelectedIso('');
     };
     window.addEventListener(CLEAR_FILTERS_EVENT, handler);
@@ -164,11 +170,23 @@ export function CalendarioClient() {
       } else if (filters.pessoa && t.pessoaId !== filters.pessoa) return false;
       return true;
     };
+    const matchStatus = (t: Task) => {
+      switch (filters.status) {
+        case 'abertas':   return t.status !== 'concluido';
+        case 'todas':     return true;
+        case 'backlog':   return t.status === 'backlog';
+        case 'andamento': return t.status === 'andamento';
+        case 'bloqueado': return t.status === 'bloqueado';
+        case 'concluido': return t.status === 'concluido';
+        default:          return true;
+      }
+    };
 
     const byPrazo: Record<string, Task[]> = {};
     for (const t of tasks) {
       if (!t.prazo) continue;
       if (t.arquivadoEm) continue;
+      if (!matchStatus(t)) continue;
       if (hasFilter && !matchFilters(t)) continue;
       (byPrazo[t.prazo] = byPrazo[t.prazo] || []).push(t);
     }
@@ -348,6 +366,19 @@ export function CalendarioClient() {
               </option>
             ))}
           </select>
+          <select
+            className={`inp ${filters.status !== 'abertas' ? 'is-active' : ''}`}
+            style={{ width: 130 }}
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+          >
+            <option value="abertas">Abertas</option>
+            <option value="todas">Todas</option>
+            <option value="backlog">Backlog</option>
+            <option value="andamento">Em andamento</option>
+            <option value="bloqueado">Bloqueado</option>
+            <option value="concluido">Concluído</option>
+          </select>
         </div>
       </div>
 
@@ -395,6 +426,18 @@ export function CalendarioClient() {
               {p.nome}
             </option>
           ))}
+        </select>
+        <select
+          className={`inp ${filters.status !== 'abertas' ? 'is-active' : ''}`}
+          value={filters.status}
+          onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+        >
+          <option value="abertas">Abertas</option>
+          <option value="todas">Todas</option>
+          <option value="backlog">Backlog</option>
+          <option value="andamento">Em andamento</option>
+          <option value="bloqueado">Bloqueado</option>
+          <option value="concluido">Concluído</option>
         </select>
       </div>
 
