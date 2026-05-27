@@ -28,6 +28,11 @@ import {
   triageFailures,
 } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS } from '@/lib/task-constants';
+import {
+  getBusinessDayCutoff,
+  useLastCommentByTask,
+  fmtLastComment,
+} from '@/lib/use-last-comment';
 import type { Task } from '@/lib/types';
 
 const STORAGE_KEY = 'kliente360-focus-pessoa';
@@ -358,6 +363,9 @@ export function FocoClient() {
             );
           })}
 
+          {/* Sem comentário hoje */}
+          <SemComentarioFoco focusPessoaId={focusPessoaId} tasks={tasks} openEdit={openEdit} />
+
           <div className="text-[10px] text-muted mt-2">
             tarefas concluídas e não atribuídas a você não aparecem. itens podem aparecer em mais de
             um grupo.
@@ -369,6 +377,109 @@ export function FocoClient() {
 }
 
 // ====================== Sub-componentes ======================
+
+// ── Sem comentário hoje ──────────────────────────────────────────────────────
+
+function SemComentarioFoco({
+  focusPessoaId,
+  tasks,
+  openEdit,
+}: {
+  focusPessoaId: string;
+  tasks: Task[];
+  openEdit: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  const cutoff = useMemo(() => getBusinessDayCutoff(), []);
+
+  // Só tasks Em andamento da pessoa — fonte pra query de comentários.
+  const andamentoIds = useMemo(
+    () =>
+      tasks
+        .filter((t) => t.pessoaId === focusPessoaId && !t.arquivadoEm && t.status === 'andamento')
+        .map((t) => t.id),
+    [tasks, focusPessoaId],
+  );
+
+  const { lastCommentMap, loading } = useLastCommentByTask(andamentoIds);
+
+  const semComentario = useMemo(() => {
+    if (!cutoff) return []; // fim de semana → seção oculta
+    return tasks
+      .filter((t) => {
+        if (t.pessoaId !== focusPessoaId) return false;
+        if (t.arquivadoEm || t.status !== 'andamento') return false;
+        const last = lastCommentMap.get(t.id);
+        return !last || last < cutoff;
+      })
+      .sort((a, b) => {
+        const la = lastCommentMap.get(a.id)?.getTime() ?? 0;
+        const lb = lastCommentMap.get(b.id)?.getTime() ?? 0;
+        return la - lb; // mais antigos primeiro
+      });
+  }, [tasks, focusPessoaId, lastCommentMap, cutoff]);
+
+  // Fim de semana ou nenhuma task andamento → não renderiza.
+  if (!cutoff || andamentoIds.length === 0) return null;
+
+  return (
+    <div>
+      <button
+        className="flex items-center justify-between w-full mb-2 px-1 text-left"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <div className="flex items-center gap-2 font-brand font-semibold text-sm">
+          <span className="text-muted text-xs font-mono">{open ? '▾' : '▸'}</span>
+          <span style={{ color: semComentario.length > 0 ? 'var(--p0)' : 'var(--muted)' }}>
+            Sem comentário hoje
+          </span>
+          {loading && (
+            <span className="text-[10px] text-muted font-mono font-normal">carregando…</span>
+          )}
+        </div>
+        <span className="text-xs text-muted">
+          {semComentario.length === 0
+            ? '✓ todas comentadas'
+            : `${semComentario.length} task${semComentario.length !== 1 ? 's' : ''}`}
+        </span>
+      </button>
+
+      {open && (
+        semComentario.length === 0 ? (
+          <div className="card text-center py-4 px-3 text-[color:var(--brand)] text-xs">
+            ✓ Todas as tasks em andamento foram comentadas no último dia útil.
+          </div>
+        ) : (
+          <div className="card divide-y divide-[var(--line)]">
+            {semComentario.map((t) => {
+              const last = lastCommentMap.get(t.id);
+              return (
+                <button
+                  key={t.id}
+                  className="w-full text-left px-3 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--brand-tint)] transition-colors"
+                  onClick={() => openEdit(t.id)}
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm text-ink truncate">{t.titulo}</div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`pri pri-${t.prioridade}`}>
+                      <span className="pri-dot" />
+                      {t.prioridade}
+                    </span>
+                    <span className="text-[10px] font-mono text-[color:var(--p0)]">
+                      {fmtLastComment(last)}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
 
 function Kpi({
   label,

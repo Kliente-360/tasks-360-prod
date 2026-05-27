@@ -13,9 +13,10 @@
  * Dados ao vivo (DataProvider in-memory).
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useData } from '@/lib/data-store';
+import { useTaskModal } from '@/components/task-modal';
 import { cn } from '@/lib/utils';
 import { atrasada, agingDays } from '@/lib/task-utils';
 import {
@@ -25,6 +26,12 @@ import {
   type ProjetoFechadoCapacidade,
   type WeekData,
 } from '@/lib/heuristics';
+import {
+  getBusinessDayCutoff,
+  useLastCommentByTask,
+  fmtLastComment,
+} from '@/lib/use-last-comment';
+import type { Task, Pessoa } from '@/lib/types';
 
 // ─────────────────────────────────────────────────────────
 //  Helpers visuais
@@ -55,6 +62,7 @@ function budgetBg(pct: number) {
 
 export function BriefingClient() {
   const { tasks, clientes, projetos, pessoas, loading, refreshing } = useData();
+  const { openEdit } = useTaskModal();
 
   const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm), [tasks]);
 
@@ -316,6 +324,9 @@ export function BriefingClient() {
         </div>
       )}
 
+      {/* ── Bloco 6 · Disciplina de comentário ── */}
+      <DisciplinaComentario tasks={tasks} pessoas={pessoas} openEdit={openEdit} />
+
       {/* ── Bloco 5 · Conquistas + sugestões ── */}
       <div className="grid md:grid-cols-2 gap-3 md:gap-4">
         {/* Conquistas W-1 */}
@@ -370,6 +381,151 @@ export function BriefingClient() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+//  Disciplina de comentário (admin)
+// ─────────────────────────────────────────────────────────
+
+/**
+ * Seção colapsável: tasks Em andamento sem comentário no último dia útil.
+ * Agrupa por pessoa, mostra só quem tem tasks pendentes.
+ * Oculta automaticamente em fim de semana (getBusinessDayCutoff → null).
+ */
+function DisciplinaComentario({
+  tasks,
+  pessoas,
+  openEdit,
+}: {
+  tasks: Task[];
+  pessoas: Pessoa[];
+  openEdit: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  const cutoff = useMemo(() => getBusinessDayCutoff(), []);
+
+  const pessoasById = useMemo(
+    () => new Map(pessoas.map((p) => [p.id, p])),
+    [pessoas],
+  );
+
+  // IDs de todas as tasks Em andamento (fonte da query de comentários)
+  const andamentoIds = useMemo(
+    () =>
+      tasks
+        .filter((t) => !t.arquivadoEm && t.status === 'andamento' && t.pessoaId)
+        .map((t) => t.id),
+    [tasks],
+  );
+
+  const { lastCommentMap, loading } = useLastCommentByTask(andamentoIds);
+
+  // Agrupa violações por pessoaId (tasks sem comentário desde o cutoff)
+  const groups = useMemo(() => {
+    if (!cutoff) return new Map<string, Task[]>();
+    const map = new Map<string, Task[]>();
+    for (const t of tasks) {
+      if (!t.pessoaId || t.arquivadoEm || t.status !== 'andamento') continue;
+      const last = lastCommentMap.get(t.id);
+      if (last && last >= cutoff) continue; // comentou hoje → ok
+      const arr = map.get(t.pessoaId) ?? [];
+      arr.push(t);
+      map.set(t.pessoaId, arr);
+    }
+    // Dentro de cada pessoa: mais antigos primeiro
+    for (const [, arr] of map) {
+      arr.sort(
+        (a, b) =>
+          (lastCommentMap.get(a.id)?.getTime() ?? 0) -
+          (lastCommentMap.get(b.id)?.getTime() ?? 0),
+      );
+    }
+    return map;
+  }, [tasks, lastCommentMap, cutoff]);
+
+  // Fim de semana ou nenhuma task andamento → não renderiza
+  if (!cutoff || andamentoIds.length === 0) return null;
+
+  const totalPessoas = groups.size;
+  const totalTasks = Array.from(groups.values()).reduce((s, arr) => s + arr.length, 0);
+
+  return (
+    <div className="bg-elev border border-line rounded-xl overflow-hidden">
+      <button
+        type="button"
+        className="w-full px-3 md:px-4 py-3 flex items-center justify-between border-b border-line"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-muted text-xs font-mono">{open ? '▾' : '▸'}</span>
+          <h2
+            className="text-sm font-semibold"
+            style={{ color: totalTasks > 0 ? 'var(--p0)' : 'var(--ink)' }}
+          >
+            Disciplina de comentário
+          </h2>
+          {loading && (
+            <span className="text-[10px] text-muted font-mono font-normal">carregando…</span>
+          )}
+        </div>
+        <span className="text-xs text-muted">
+          {totalTasks === 0
+            ? '✓ todas comentadas'
+            : `${totalPessoas} pessoa${totalPessoas !== 1 ? 's' : ''} · ${totalTasks} task${totalTasks !== 1 ? 's' : ''}`}
+        </span>
+      </button>
+
+      {open && (
+        totalTasks === 0 ? (
+          <div className="px-4 py-5 text-sm text-[var(--brand)]">
+            ✓ Todas as tasks em andamento foram comentadas no último dia útil.
+          </div>
+        ) : (
+          <div className="divide-y divide-line">
+            {Array.from(groups.entries()).map(([pessoaId, pTasks]) => {
+              const pessoa = pessoasById.get(pessoaId);
+              return (
+                <div key={pessoaId} className="px-3 md:px-4 py-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-ink uppercase tracking-wide">
+                      {pessoa?.nome ?? '—'}
+                    </span>
+                    <span className="text-[10px] text-muted">
+                      {pTasks.length} task{pTasks.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="space-y-0.5">
+                    {pTasks.map((t) => {
+                      const last = lastCommentMap.get(t.id);
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className="w-full text-left flex items-center justify-between gap-2 py-1.5 px-2 rounded hover:bg-[var(--brand-tint)] transition-colors"
+                          onClick={() => openEdit(t.id)}
+                        >
+                          <span className="text-sm text-ink truncate">{t.titulo}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`pri pri-${t.prioridade}`}>
+                              <span className="pri-dot" />
+                              {t.prioridade}
+                            </span>
+                            <span className="text-[10px] font-mono text-[var(--p0)]">
+                              {fmtLastComment(last)}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )
+      )}
     </div>
   );
 }
