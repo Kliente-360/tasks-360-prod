@@ -457,6 +457,15 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const editingRef = useRef(editing);
   editingRef.current = editing;
 
+  // Subetapa original (quando o modal abriu) — detecta transição pra bloqueado.
+  const originalSubetapa = source?.subetapa ?? '';
+  // Textarea de motivo: visível só quando a transição DE outro estado PARA bloqueado
+  // ocorre nesta sessão. Tasks já abertas como bloqueado não mostram o campo.
+  const isTransitionToBloqueado =
+    editing.subetapa === 'bloqueado' && originalSubetapa !== 'bloqueado';
+  const [bloqueioMotivo, setBloqueioMotivo] = useState('');
+  const bloqueioMotivoRef = useRef('');
+  bloqueioMotivoRef.current = bloqueioMotivo;
 
   // ===== Tabs =====
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
@@ -657,6 +666,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       if (!e.titulo.trim()) {
         return { ok: false, error: 'Dê um título à tarefa.' };
       }
+      if (e.subetapa === 'bloqueado' && !e.bloqueadoPor) {
+        return { ok: false, error: 'Informe quem está bloqueando (Nós / Cliente / Terceiro).' };
+      }
       const payload = editingToDbPayload(e);
       const nowMs = Date.now();
       const nowIso = new Date(nowMs).toISOString();
@@ -808,6 +820,45 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           }
           if (notifRows.length) {
             sb.from('notifications').insert(notifRows);
+          }
+
+          // Motivo de bloqueio: se é uma transição para 'bloqueado' nesta sessão
+          // e o usuário digitou um motivo, insere como comment interno.
+          const motivo = bloqueioMotivoRef.current.trim();
+          const wasBloqueado = prev?.subetapa === 'bloqueado';
+          if (e.subetapa === 'bloqueado' && !wasBloqueado && motivo) {
+            const commentPayload = {
+              task_id: e.id,
+              body: motivo,
+              author: currentPessoa?.nome ?? 'app',
+              author_pessoa_id: currentPessoa?.id ?? null,
+              visivel_cliente: false,
+              from_cliente: false,
+              posted_em: nowIso,
+            };
+            sb.from('task_comments')
+              .insert(commentPayload)
+              .select('id')
+              .single()
+              .then(({ data: cData }) => {
+                const localComment: Comment = {
+                  id: cData?.id ?? `tmp-motivo-${nowMs}`,
+                  parent_id: null,
+                  body: motivo,
+                  author: currentPessoa?.nome ?? 'app',
+                  author_pessoa_id: currentPessoa?.id ?? null,
+                  author_external_id: null,
+                  visivel_cliente: false,
+                  from_cliente: false,
+                  external_source: null,
+                  external_id: null,
+                  posted_em: nowIso,
+                  criado_em: nowIso,
+                  edited_em: null,
+                };
+                setComments((cur) => [...cur, localComment]);
+                setBloqueioMotivo('');
+              });
           }
         }
         return { ok: true };
@@ -1786,18 +1837,34 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   </label>
                 </div>
                 {editing.subetapa === 'bloqueado' && (
-                  <div className="sm:col-span-2">
-                    <label className="lbl">Bloqueado por</label>
-                    <select
-                      className="inp"
-                      value={editing.bloqueadoPor}
-                      onChange={(e) => set('bloqueadoPor', e.target.value)}
-                    >
-                      <option value="">— a classificar</option>
-                      <option value="cliente">Cliente</option>
-                      <option value="nos">Nós (interno)</option>
-                      <option value="terceiro">Terceiro</option>
-                    </select>
+                  <div className="sm:col-span-2 flex flex-col gap-2">
+                    <div>
+                      <label className="lbl">
+                        Bloqueado por <span className="text-danger text-xs">*</span>
+                      </label>
+                      <select
+                        className={`inp ${!editing.bloqueadoPor ? 'border-danger/50' : ''}`}
+                        value={editing.bloqueadoPor}
+                        onChange={(e) => set('bloqueadoPor', e.target.value)}
+                      >
+                        <option value="">— a classificar</option>
+                        <option value="cliente">Cliente</option>
+                        <option value="nos">Nós (interno)</option>
+                        <option value="terceiro">Terceiro</option>
+                      </select>
+                    </div>
+                    {isTransitionToBloqueado && (
+                      <div>
+                        <label className="lbl">Motivo do bloqueio</label>
+                        <textarea
+                          className="inp resize-none"
+                          rows={2}
+                          placeholder="Descreva o motivo (ficará como comentário interno)…"
+                          value={bloqueioMotivo}
+                          onChange={(e) => setBloqueioMotivo(e.target.value)}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
