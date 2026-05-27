@@ -49,16 +49,53 @@ export function escapeHtml(s: string | null | undefined): string {
 }
 
 /**
- * Renderiza body de comment plain como HTML seguro.
- * Strip de tags + escape + realça @firstname que bate com pessoa interna.
- * NÃO trata HTML rich do Salesforce — comentários SF mostram texto puro
- * (suficiente pra Onda 0).
+ * Renderiza body de comment como HTML seguro.
+ * Suporta comentários externos (Salesforce) com HTML rico:
+ *  1. Extrai links <a href> para exibir ao final (pula uma linha)
+ *  2. Converte <br>/<p> em newlines
+ *  3. Strip todas as tags restantes (mantém texto puro)
+ *  4. Realça @firstname que bate com pessoa interna
+ *
+ * Para comentários internos (plain text) os passos 1-3 são no-ops.
  */
 export function renderCommentBody(body: string, internalFirstNames: Set<string>): string {
-  const escaped = escapeHtml(body);
-  return escaped
-    .replace(/@([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9]*)/g, (m, name: string) =>
-      internalFirstNames.has(name) ? `<span class="mention">@${name}</span>` : m,
+  // 1. Extrair links antes de qualquer limpeza
+  const links: { href: string; text: string }[] = [];
+  const linkRe = /<a\s[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = linkRe.exec(body)) !== null) {
+    const href = m[1].trim();
+    const text = m[2].replace(/<[^>]+>/g, '').trim();
+    if (href && text) links.push({ href, text });
+  }
+
+  // 2. Converter <br> e <p> em newlines, depois strip todas as tags
+  const stripped = body
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<p[^>]*>/gi, '')
+    .replace(/<[^>]+>/g, '')   // strip todas as tags restantes
+    .replace(/\n{3,}/g, '\n\n') // máx 2 newlines consecutivos
+    .trim();
+
+  // 3. Escape + mentions + newlines → <br>
+  const escaped = escapeHtml(stripped);
+  let result = escaped
+    .replace(/@([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9]*)/g, (match, name: string) =>
+      internalFirstNames.has(name) ? `<span class="mention">@${name}</span>` : match,
     )
     .replace(/\n/g, '<br>');
+
+  // 4. Append links ao final, cada um em sua linha
+  if (links.length > 0) {
+    const linkHtml = links
+      .map(
+        (l) =>
+          `<a href="${escapeHtml(l.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.text)}</a>`,
+      )
+      .join('<br>');
+    result += `<br><br>${linkHtml}`;
+  }
+
+  return result;
 }
