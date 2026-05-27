@@ -13,7 +13,7 @@ import { ThemeIconButton } from '@/components/theme-toggle';
 import { ExportIconButton } from '@/components/export';
 import { NotifBell } from '@/components/notif-bell';
 
-const APP_VERSION = 'v1.02.199';
+const APP_VERSION = 'v1.02.200';
 
 /** Barra de navegação superior — espelha o header do app Alpine. */
 export function AppNav() {
@@ -68,7 +68,7 @@ export function AppNav() {
           <button
             type="button"
             onClick={openNew}
-            className="btn btn-primary btn-fixed-w text-xs"
+            className="hidden md:inline-flex btn btn-primary btn-fixed-w text-xs"
             title="Nova tarefa"
             aria-label="Nova tarefa"
           >

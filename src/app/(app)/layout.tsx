@@ -10,6 +10,7 @@ import { QuickCaptureProvider } from '@/components/quick-capture';
 import { GlobalShortcuts } from '@/components/global-shortcuts';
 import { ServiceWorkerRegister } from '@/components/sw-register';
 import { AppSplash } from '@/components/app-splash';
+import { MobileFab } from '@/components/mobile-fab';
 
 export default function AppLayout({
   children,
@@ -30,6 +31,7 @@ export default function AppLayout({
                       <AppNav />
                       <main className="max-w-[1400px] mx-auto px-4 md:px-8 py-6">{children}</main>
                     </div>
+                    <MobileFab />
                   </CommandPaletteProvider>
                 </QuickCaptureProvider>
               </TaskModalProvider>
@@ -40,3 +42,4 @@ export default function AppLayout({
     </ThemeProvider>
   );
 }
+
