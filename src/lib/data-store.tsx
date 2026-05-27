@@ -492,11 +492,39 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const viewerRole: DataState['viewerRole'] = currentPessoa ? currentPessoa.role : null;
   const isCEO = !!currentPessoa?.is_ceo;
 
+  // ===== Filtro admin-only: clientes internos (eh_interno=true) =====
+  // Não-admins não veem o cliente interno (ex: "Kliente 360") nem os
+  // projetos e tasks associados — em nenhuma lista, filtro ou dashboard.
+  // Filtra no nível do contexto: um único ponto, zero mudanças nos
+  // componentes. O banco não é alterado; é só visibilidade no front.
+  const internalClienteIds = useMemo<Set<string>>(
+    () => new Set(clientes.filter((c) => c.ehInterno).map((c) => c.id)),
+    [clientes],
+  );
+  const visibleClientes = useMemo(
+    () => (viewerRole === 'admin' ? clientes : clientes.filter((c) => !c.ehInterno)),
+    [clientes, viewerRole],
+  );
+  const visibleProjetos = useMemo(
+    () =>
+      viewerRole === 'admin'
+        ? projetos
+        : projetos.filter((p) => !internalClienteIds.has(p.clienteId ?? '')),
+    [projetos, viewerRole, internalClienteIds],
+  );
+  const visibleTasks = useMemo(
+    () =>
+      viewerRole === 'admin'
+        ? tasks
+        : tasks.filter((t) => !internalClienteIds.has(t.clienteId ?? '')),
+    [tasks, viewerRole, internalClienteIds],
+  );
+
   const value = useMemo<DataContextValue>(
     () => ({
-      tasks,
-      clientes,
-      projetos,
+      tasks: visibleTasks,
+      clientes: visibleClientes,
+      projetos: visibleProjetos,
       pessoas,
       loading,
       refreshing,
@@ -521,7 +549,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       markUserEditedTask,
     }),
     [
-      tasks, clientes, projetos, pessoas,
+      visibleTasks, visibleClientes, visibleProjetos, pessoas,
       loading, refreshing, error, realtimeStatus,
       currentPessoa, viewerRole, isCEO,
       refreshAll,
