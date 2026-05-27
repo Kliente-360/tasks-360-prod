@@ -1803,24 +1803,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               </div>
             </div>
 
-            {/* Integração */}
-            <div className="tmodal-section">
-              <div className="tmodal-section-title">Integração</div>
-              <div>
-                <label className="lbl">ID externo</label>
-                <input
-                  type="text"
-                  className="inp font-mono text-xs"
-                  value={editing.externalId}
-                  onChange={(e) => set('externalId', e.target.value)}
-                  placeholder="— sem ID externo"
-                />
-                {editing.externalSource && (
-                  <div className="text-[10px] text-muted mt-1">fonte: {editing.externalSource}</div>
-                )}
-              </div>
-            </div>
-
             {/* Privacidade — só CEO. Task privada fica visível só pra
                 pessoa atribuída (regra do banco/RLS futuro). */}
             {isCEO && (
