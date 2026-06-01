@@ -18,7 +18,7 @@ Convenções do projeto que valem pra qualquer sessão.
 
 - `APP_VERSION` segue `v1.<MINOR>.<BUILD>`. **Bumpa BUILD +1 antes de cada commit em main.**
 - BUILD é sequencial independente do número do PR no GitHub — os dois divergiram ao longo do trabalho de design e **não tentar realinhar**.
-- **Versão atual: `v1.02.161`** (pós-Onda 0 do Next, pré-cutover).
+- **Versão atual: `v1.02.214`** (pós-Onda 0 do Next, pré-cutover).
 - A versão é declarada em `src/components/app-nav.tsx` (constante `APP_VERSION`).
   - Repo legado `tasks-360-mvp` ainda mantém o Alpine em `lib/helpers.js` enquanto o cutover não acontece — durante a coexistência, bumpar BUILD lá também ao mexer no Alpine.
 - Em mudança grande de UX/dados, bumpa MINOR e zera BUILD (decisão manual). Último bump: 01→02 fechando o ciclo de design (PRs #253-#270).

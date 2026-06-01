@@ -2,7 +2,7 @@
 
 > Documento canônico do projeto. Captura todas as decisões, princípios, stack, ondas de entrega e armadilhas conhecidas. Use como referência principal quando estiver construindo o app real (pós-protótipo).
 >
-> Última atualização: maio de 2026.
+> Última atualização: junho de 2026.
 
 ---
 
@@ -353,7 +353,7 @@ Expandir conforme decisões surgirem.
 
 Painel rápido pra retomar contexto. Atualizar quando algo entrar/sair.
 
-Último update: 23/05/2026 — **v1.02.186 (Onda 0 feature-complete · cutover parqueado)**. App Alpine em prod (modo manutenção desde v1.02.050). App Next em preview Vercel via `feat/onda-0` — time validando antes do cutover. Cutover será executado manualmente quando sinalizado. Roadmap pós-Onda 0 consolidado em **§9.3**.
+Último update: 01/06/2026 — **v1.02.214 (Onda 0 feature-complete · cronômetro + timesheet + escopo + briefing dot + atrasada() fix entregues · Portal cliente pendente pré-cutover)**. App Alpine em prod (modo manutenção desde v1.02.050). App Next em preview Vercel — time validando antes do cutover. Cutover será executado manualmente quando sinalizado. Roadmap pós-Onda 0 consolidado em **§9.3**.
 
 ---
 
@@ -1191,27 +1191,23 @@ Sem cache (worst case absoluto): R$ 35–50/mês. Preços de modelo podem mudar;
 
 ### 9.3 Roadmap pós-Onda 0 · Next migration completa
 
-> Estado atual: **Onda 0 + Dashboard + Briefing entregues em `feat/onda-0` (v1.02.193)**. 100% paridade UX com Alpine + PWA + CI + 44 testes. Time validando em preview antes do cutover. **Cutover (Bloco 5) parqueado — será executado manualmente quando o responsável sinalizar.**
+> Estado atual: **v1.02.214 · Onda 0 + Dashboard + Briefing + Cronômetro/Timesheet + Escopo + Briefing dot entregues**. 100% paridade UX com Alpine + PWA + CI + 44 testes. Time validando em preview antes do cutover. **Cutover (Bloco 5) parqueado — será executado manualmente quando o responsável sinalizar.**
 >
-> **Última revisão de roadmap**: 25/05/2026 — repo `tasks-360-prod` separado · §9.3.1 expandido pra sprint final de paridade (Portal cliente sobe pra NOW) · §9.3.9 vira plano completo do Bloco 5 (cutover + observabilidade + limpeza) · §9.3.10 NEW pra aplicação do novo design system pós-cutover.
+> **Última revisão de roadmap**: 01/06/2026 — cronômetro (`time_entries` + TimerProvider + `/timesheet`) movido de Later→✅; `tasks.escopo` + skills ✅; briefing dot ✅; atrasada() fix ✅; §9.3.1 reduzido ao único item pendente (Portal cliente).
 >
 > **Como ler**: Now / Next / Later / Cold / Descontinuados. Itens em §9.3.5 foram removidos do radar — não repropor sem novo input significativo.
 
 #### 9.3.1 Now · pré-cutover · sprint final de paridade
 
-> **Estratégia**: fechar paridade total Alpine ↔ Next antes do cutover, incluindo Portal cliente. Uma vez completos os itens abaixo, o app está "basicamente migrado" e o **§9.3.9 · Bloco 5 · Cutover Vercel** vira execução administrativa (DNS + Supabase + comunicação). Tudo que vem depois do cutover (design system + evoluções) está em **§9.3.10 · design system** e **§9.3.2 · evoluções**.
-
-Em ordem de execução sugerida (revisões primeiro pra estabilizar o que já existe; Portal por último porque é o maior):
+> **Estratégia**: fechar paridade total Alpine ↔ Next antes do cutover, incluindo Portal cliente. Uma vez completo o item abaixo, o app está "basicamente migrado" e o **§9.3.9 · Bloco 5 · Cutover Vercel** vira execução administrativa (DNS + Supabase + comunicação). Tudo que vem depois do cutover (design system + evoluções) está em **§9.3.10 · design system** e **§9.3.2 · evoluções**.
 
 | # | Item | Esforço | Valor |
 |---|---|---|---|
-| 1 | **Revisar Dashboard** 🔍 | 1-3 dias | Polish + ajustes UX agora que está no ar há semanas. Bater olho com calma, listar issues observados em uso real, corrigir. Sem features novas. Entrega: Dashboard com qualidade de produção. |
-| 2 | **Revisar Briefing** 🔍 | 1-3 dias | Idem Dashboard — polish + UX. Entrega: Briefing com qualidade de produção. |
-| 3 | **Revisar Portal cliente** 🔍 | 1-3 dias | Polish + UX. Port v2 do Alpine pro Next entregue em 25/05/2026 (PR de bootstrap): header verde Kliente, headline narrativa, 4 KPIs com delta, sparkline 6m, distribuição por projeto, lead time 90d, alertas amigáveis, 4 listas (aguardando/andamento/próximas/recentes), modal de task com timeline + "Já respondi" + comments públicos, simulador "view as client" pra admin/interno, RLS já aplicada via `applied/2026-05-12_rls_role_aware.sql`. Falta validar em uso real e corrigir issues. |
+| 1 | ✅ **Revisar Dashboard** | — | Entregue — polish + ajustes UX aplicados. |
+| 2 | ✅ **Revisar Briefing** | — | Entregue — polish + UX. Inclui dot de comentário novo (✅ jun/2026). |
+| 3 | **Revisar Portal cliente** 🔍 | 1-3 dias | **Único bloqueador do cutover.** Port v2 do Alpine pro Next entregue em 25/05/2026 (PR de bootstrap): header verde Kliente, headline narrativa, 4 KPIs com delta, sparkline 6m, distribuição por projeto, lead time 90d, alertas amigáveis, 4 listas (aguardando/andamento/próximas/recentes), modal de task com timeline + "Já respondi" + comments públicos, simulador "view as client" pra admin/interno, RLS já aplicada via `applied/2026-05-12_rls_role_aware.sql`. Falta validar em uso real e corrigir issues. |
 
-**Total**: ~3-9 dias de wall-clock (3 polish passes). Podem rodar em paralelo por sessões/pessoas diferentes — são desacoplados.
-
-**Sequência sugerida**: livre — todos são revisões independentes, escolher pela ordem que faz sentido pro time validar.
+**Total restante**: ~1-3 dias (Portal cliente). Uma vez concluído, passa pra §9.3.9 (Cutover Vercel).
 
 > **Itens menores de governance** (Calendário filtro, Bloqueado exige justificativa, Kliente 360 só admin cria) **saíram daqui** e viraram itens 3-5 de §9.3.2 — não são paridade Alpine↔Next, são features novas, e podem esperar pós-cutover + pós-DS sem prejuízo.
 
@@ -1230,10 +1226,10 @@ Em ordem de execução sugerida (sequência importa — cada item desbloqueia o 
 | 5 | **Kliente 360 · só gestão cria** ✋ | ~2-4h | Governance. Gate de criação: cliente `eh_interno` + nome ≈ "Kliente 360" exige `viewerRole='admin'` pra salvar. Esconde do dropdown pra não-admins. Gate pontual — não confundir com workspaces. (Veio do §9.3.1 original — re-priorizado pós-DS.) |
 | 6 | **`ai-suggest`** (Haiku, ~R$0,015/exec) | ~1 semana | Fecha gap competitivo #1 da §14.3 do CONTEXT. Custo trivial. ⭐ |
 | 7 | **`ai-weekly-summary`** (Sonnet + cron sáb) | 4-5 dias | Combina com Briefing → aba "Insights". Sócio lê portfólio em 5min. ⭐⭐ |
-| 8 | **Push notifications + Badging API** | ~2-3 semanas | Comportamental forte. iOS 16.4+ suporta com PWA. Inclui VAPID keys + Edge Function + UI de permissão. |
-| 9 | **Escopo da task + skill da pessoa** 🎯 | ~3-5 dias | Campo `tasks.escopo` (13 valores: SF Admin · SF Clouds · IA/Conversacional) + highlight de match no dropdown de responsável. Migration + adapter + UI. Pareia com `ai-suggest`. |
+| 8 | **Push notifications + Badging API** | ~2 semanas restantes | Badging API ✅ entregue (badge no ícone home screen). Falta: VAPID keys + Edge Function `send-push` + UI de permissão + fallback gracioso iOS/Android. |
+| 9 | ✅ **Escopo da task + skill da pessoa** | — | Entregue jun/2026. `tasks.escopo text[]` (SF Admin · SF Dev · SF Clouds · IA/Conversacional · etc.) + `pessoas.skills text[]` já existia. Migration + adapter + UI no modal. |
 | 10 | **Triagem obrigatória pra tasks criadas por IA** 🤖 | ~3-5 dias | Flag `triada_em` + filtro "Criadas por IA" na Triagem. UI quase pronta. Combinar com lançamento de `ai-suggest`. |
-| 11 | **Briefing · dot de comentário novo** 💬 | ~2-3 dias | Dot de "novo comentário" no card do Briefing pras tasks `status=andamento` com comment após último login. `last_seen_at` por usuário (ou filtrar `notifications` unread). Combinar com lançamento do Briefing. |
+| 11 | ✅ **Briefing · dot de comentário novo** | — | Entregue jun/2026. Dot de "novo comentário" nos cards do Briefing para tasks em andamento com comment após último login do viewer. |
 
 **Detalhamento de cada IA**: ver §9.2 "Onda 5+ — Diferenciação com IA" acima (frentes 1-5 com prompt strategy, custo por exec, casos de uso perfeitos).
 
@@ -1244,7 +1240,7 @@ Em ordem de prioridade (esforço × impacto):
 | Item | Esforço | Origem |
 |---|---|---|
 | **`ai-risk-scanner`** (Sonnet diário) | ~1 semana | Banner "🚨 N sinais hoje" no Dashboard. Premium-perception alta. Depende do Dashboard estar no ar. |
-| **Cronômetro start/stop por task ⏱️** | ~1 semana (UI) | Tabela `time_entries` + UI start/stop. **Habilita retro honesta + caminho pra faturamento.** Relatórios de tempo e billing são escopo adicional posterior. |
+| ✅ **Cronômetro start/stop por task** | — | Entregue jun/2026. `time_entries` table + RLS + TimerProvider (boot restaura timer aberto) + TimerButton (ícone cronômetro no header desktop, start/stop com NoteModal 120 chars) + aba `/timesheet` (admin vê todos, interno vê seus). Relatórios de tempo e billing são escopo adicional posterior. |
 | **Saved views / filtros nomeados** | 2-3 dias | "Minhas atrasadas", "Aguardando cliente X". Quick win UX alto impacto. |
 | **Reativar features de `HABILITAR_DEPOIS`** | M | Tags (2-3 dias) + Tipo de trabalho (2 dias) + Dependências UI (~1 semana). Schema pronto, só UI faltando no Next. Sequência recomendada: Tags → Tipo → Dependências. |
 | **Sticky thead da tabela Backlog** | 2-3 dias | Parqueado no Alpine por CSS sticky problemático. Agora no Next: DOM determinístico. Quick win UX. |
@@ -1321,7 +1317,7 @@ Itens avaliados em revisão de esforço × impacto e removidos do radar. Alto es
 | **Visibilidade gerencial** (Dashboard + Briefing) | ✅ Entregue mai/2026 · PRs #335-#336 | — |
 | **Diferenciação por IA** | ❌ Zero features de IA em prod | Next · `ai-suggest` item 3 ⭐ |
 | **Multi-tenancy real** (Portal cliente) | ⏸ RLS desenhada · UI ausente no Next | Later · 4-6 semanas |
-| **Time tracking** | ❌ `tempoRealHoras` manual · sem cronômetro | Later · cronômetro item 3 (~1 sem UI) |
+| **Time tracking** | ✅ `time_entries` + cronômetro start/stop + aba Timesheet entregues (jun/2026) | — |
 
 #### 9.3.8 Dashboard + Briefing · Especificação de design · mai/2026
 
