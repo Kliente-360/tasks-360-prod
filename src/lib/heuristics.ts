@@ -552,6 +552,8 @@ export interface VelocidadeMetrics {
   throughputW2: number;
   /** Avg days criadoEm → concluído, last 30d. null se sem dados. */
   leadTimeDias: number | null;
+  /** Avg days andamento→concluído (proxy: subetapaEm→statusEm), last 30d. null se sem dados. */
+  cycleDias: number | null;
   /** % tasks com prazo concluídas no prazo, last 30d. null se nenhuma com prazo. */
   pctNoPrazo: number | null;
   /** Denominador do pctNoPrazo (tasks com prazo concluídas em 30d). */
@@ -594,6 +596,19 @@ export function computeVelocidade(tasks: Task[]): VelocidadeMetrics {
         ) / 10
       : null;
 
+  // Cycle time proxy: subetapaEm marks last subetapa transition (e.g. entered active work).
+  // Valid when subetapaEm sits between criadoEm and statusEm.
+  const withCycle = concluded30d.filter(
+    (t) => t.subetapaEm > 0 && t.subetapaEm > t.criadoEm && t.subetapaEm < t.statusEm,
+  );
+  const cycleDias =
+    withCycle.length > 0
+      ? Math.round(
+          (10 * withCycle.reduce((s, t) => s + (t.statusEm - t.subetapaEm) / 86400000, 0)) /
+            withCycle.length,
+        ) / 10
+      : null;
+
   const comPrazo = concluded30d.filter((t) => t.prazo);
   const emPrazo = comPrazo.filter((t) => {
     const prazoMs = new Date(t.prazo).getTime() + 86400000;
@@ -606,6 +621,7 @@ export function computeVelocidade(tasks: Task[]): VelocidadeMetrics {
     throughputW1,
     throughputW2,
     leadTimeDias,
+    cycleDias,
     pctNoPrazo,
     pctNoPrazoBases: comPrazo.length,
     pctNoPrazoOk: emPrazo.length,
