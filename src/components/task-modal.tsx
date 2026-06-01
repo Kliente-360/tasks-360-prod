@@ -151,6 +151,7 @@ function blankEditing(): Task {
     criadoEm: 0,
     statusEm: 0,
     subetapaEm: 0,
+    andamentoEm: 0,
     ordem: null,
     tags: [],
     checklist: [],
@@ -196,7 +197,7 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
 }
 
 const TASK_LIGHT_COLS =
-  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,privada';
+  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,privada';
 
 // ============================================================
 // Mention picker hook — espelho de anexos.js:341 (onMentionInput)
@@ -680,8 +681,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         const prev = tasksById.get(e.id) ?? null;
         const subChanged = !!prev && prev.subetapa !== e.subetapa;
         const statusChanged = !!prev && prev.status !== (SUB_TO_MACRO[e.subetapa] || 'backlog');
+        const enteringAndamento = statusChanged && (SUB_TO_MACRO[e.subetapa] || 'backlog') === 'andamento';
         if (subChanged) payload.subetapa_em = nowIso;
         if (statusChanged) payload.status_em = nowIso;
+        if (enteringAndamento) payload.andamento_em = nowIso;
 
         // Optimistic local — TODOS os campos que o payload toca precisam
         // estar aqui, senão o store fica defasado (chip não aparece, sort
@@ -710,6 +713,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             privada: e.privada,
             statusEm: statusChanged ? nowMs : prev.statusEm,
             subetapaEm: subChanged ? nowMs : prev.subetapaEm,
+            andamentoEm: enteringAndamento ? nowMs : prev.andamentoEm,
           });
         }
 

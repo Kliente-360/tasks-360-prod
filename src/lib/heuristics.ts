@@ -552,7 +552,7 @@ export interface VelocidadeMetrics {
   throughputW2: number;
   /** Avg days criadoEm → concluído, last 30d. null se sem dados. */
   leadTimeDias: number | null;
-  /** Avg days andamento→concluído (proxy: subetapaEm→statusEm), last 30d. null se sem dados. */
+  /** Avg days andamento→concluído (andamentoEm→statusEm), last 30d. null se sem dados. */
   cycleDias: number | null;
   /** % tasks com prazo concluídas no prazo, last 30d. null se nenhuma com prazo. */
   pctNoPrazo: number | null;
@@ -596,15 +596,12 @@ export function computeVelocidade(tasks: Task[]): VelocidadeMetrics {
         ) / 10
       : null;
 
-  // Cycle time proxy: subetapaEm marks last subetapa transition (e.g. entered active work).
-  // Valid when subetapaEm sits between criadoEm and statusEm.
-  const withCycle = concluded30d.filter(
-    (t) => t.subetapaEm > 0 && t.subetapaEm > t.criadoEm && t.subetapaEm < t.statusEm,
-  );
+  // Cycle time: uses andamentoEm (set when task enters andamento, not overwritten on conclude).
+  const withCycle = concluded30d.filter((t) => t.andamentoEm > 0 && t.andamentoEm < t.statusEm);
   const cycleDias =
     withCycle.length > 0
       ? Math.round(
-          (10 * withCycle.reduce((s, t) => s + (t.statusEm - t.subetapaEm) / 86400000, 0)) /
+          (10 * withCycle.reduce((s, t) => s + (t.statusEm - t.andamentoEm) / 86400000, 0)) /
             withCycle.length,
         ) / 10
       : null;
