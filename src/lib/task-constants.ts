@@ -72,3 +72,22 @@ export const STAGE_RANK: Record<string, number> = {
   bloqueado: -1,
   concluido: -1,
 };
+
+// ─── Skills / Escopo ─────────────────────────────────────────────────────────
+
+export const SKILL_GROUPS = [
+  {
+    group: 'Salesforce',
+    values: ['Admin', 'Flow', 'Apex', 'LWC', 'Integração', 'Arquitetura', 'Consultoria'],
+  },
+  {
+    group: 'Clouds',
+    values: ['Sales Cloud', 'Service Cloud', 'Marketing Cloud'],
+  },
+  {
+    group: 'Digital / IA',
+    values: ['WhatsApp', 'Bot', 'Agentforce'],
+  },
+] as const;
+
+export const ALL_SKILLS = SKILL_GROUPS.flatMap((g) => g.values) as string[];

@@ -43,7 +43,7 @@ import { useToastSafe } from '@/components/toast';
 import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
 import { fmtDate, fmtDateShort, lblStatus } from '@/lib/task-utils';
-import { SUB_TO_MACRO } from '@/lib/task-constants';
+import { SUB_TO_MACRO, SKILL_GROUPS, ALL_SKILLS } from '@/lib/task-constants';
 import type { ChecklistItem, Task } from '@/lib/types';
 
 // ============================================================
@@ -153,7 +153,7 @@ function blankEditing(): Task {
     tags: [],
     checklist: [],
     reopenCount: 0,
-    tipoTrabalho: '',
+    escopo: [],
     tempoRealHoras: null,
     externalSource: '',
     externalId: '',
@@ -183,7 +183,7 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
     visivel_cliente: e.visivelCliente !== false,
     tags: e.tags ?? [],
     checklist: e.checklist ?? [],
-    tipo_trabalho: e.tipoTrabalho || null,
+    escopo: e.escopo ?? [],
     tempo_real_horas: e.tempoRealHoras == null || (e.tempoRealHoras as unknown as string) === '' ? null : Number(e.tempoRealHoras),
     external_id: e.externalId || null,
     privada: e.privada === true,
@@ -194,7 +194,7 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
 }
 
 const TASK_LIGHT_COLS =
-  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,ordem,tags,checklist,reopen_count,tipo_trabalho,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,privada';
+  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,privada';
 
 // ============================================================
 // Mention picker hook — espelho de anexos.js:341 (onMentionInput)
@@ -700,7 +700,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             visivelCliente: e.visivelCliente,
             tags: [...e.tags],
             checklist: e.checklist.map((c) => ({ ...c })),
-            tipoTrabalho: e.tipoTrabalho,
+            escopo: [...(e.escopo ?? [])],
             tempoRealHoras: (e.tempoRealHoras as unknown as string) === '' ? null : e.tempoRealHoras,
             externalId: e.externalId,
             externalSource: e.externalSource || (e.externalId ? 'salesforce' : ''),
@@ -734,7 +734,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             { jsKey: 'complexidade', field: 'complexidade', fmt: (v) => (v as string) || null },
             { jsKey: 'pessoaId', field: 'pessoa', fmt: (v) => (v as string) || null },
             { jsKey: 'subetapa', field: 'subetapa', fmt: (v) => (v as string) || null },
-            { jsKey: 'tipoTrabalho', field: 'tipo_trabalho', fmt: (v) => (v as string) || null },
+            { jsKey: 'escopo', field: 'escopo', fmt: (v) => (v as string[])?.join(', ') || null },
             { jsKey: 'tempoRealHoras', field: 'tempo_real_horas', fmt: (v) => (v == null ? null : String(v)) },
             { jsKey: 'bloqueadoPor', field: 'bloqueado_por', fmt: (v) => (v as string) || null },
           ];
@@ -1676,11 +1676,32 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     onChange={(e) => set('pessoaId', e.target.value)}
                   >
                     <option value="">—</option>
-                    {pessoasNaoCliente.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.nome}
-                      </option>
-                    ))}
+                    {(() => {
+                      const escopo = editing.escopo ?? [];
+                      const match = escopo.length > 0
+                        ? pessoasNaoCliente.filter((p) => (p.skills ?? []).some((s) => escopo.includes(s)))
+                        : [];
+                      const rest = pessoasNaoCliente.filter((p) => !match.includes(p));
+                      if (match.length === 0) {
+                        return rest.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>);
+                      }
+                      return (
+                        <>
+                          <optgroup label="✓ Skills compatíveis">
+                            {match.map((p) => (
+                              <option key={p.id} value={p.id}>{p.nome}</option>
+                            ))}
+                          </optgroup>
+                          {rest.length > 0 && (
+                            <optgroup label="Outros">
+                              {rest.map((p) => (
+                                <option key={p.id} value={p.id}>{p.nome}</option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </>
+                      );
+                    })()}
                   </select>
                 </div>
                 <div>
@@ -1867,6 +1888,40 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Escopo / Skills */}
+            <div className="tmodal-section">
+              <div className="tmodal-section-title">Escopo</div>
+              <div className="flex flex-col gap-2">
+                {SKILL_GROUPS.map((g) => (
+                  <div key={g.group}>
+                    <div className="text-[10px] uppercase tracking-wide text-muted mb-1">{g.group}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {g.values.map((skill) => {
+                        const active = (editing.escopo ?? []).includes(skill);
+                        return (
+                          <button
+                            key={skill}
+                            type="button"
+                            onClick={() => {
+                              const cur = editing.escopo ?? [];
+                              set('escopo', active ? cur.filter((s) => s !== skill) : [...cur, skill]);
+                            }}
+                            className={`text-xs px-2 py-1 rounded border transition-colors ${
+                              active
+                                ? 'bg-[var(--brand)] border-[var(--brand)] text-white font-medium'
+                                : 'bg-[var(--surface-3)] border-[var(--line)] text-muted hover:border-[var(--brand)] hover:text-[var(--brand)]'
+                            }`}
+                          >
+                            {skill}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -2558,7 +2613,7 @@ function labelField(f: string): string {
         complexidade: 'complexidade',
         pessoa: 'responsável',
         subetapa: 'etapa',
-        tipo_trabalho: 'tipo de trabalho',
+        escopo: 'escopo',
         tempo_real_horas: 'tempo real',
         bloqueado_por: 'bloqueado por',
       } as Record<string, string>

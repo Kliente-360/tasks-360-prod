@@ -42,7 +42,7 @@ export interface Task {
   tags: string[];
   checklist: ChecklistItem[];
   reopenCount: number;
-  tipoTrabalho: string;
+  escopo: string[];
   tempoRealHoras: number | null;
   externalSource: string;
   externalId: string;

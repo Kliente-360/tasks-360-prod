@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { savePessoa, type PessoaPayload } from './actions';
 import type { ClienteOption } from './projeto-modal';
 import { useData } from '@/lib/data-store';
+import { SKILL_GROUPS } from '@/lib/task-constants';
 
 export type PessoaInitial = {
   id: string;
@@ -31,10 +32,6 @@ const BLANK: PessoaInitial = {
   senioridade: '',
 };
 
-function normalizeTag(s: string): string {
-  return String(s || '').trim().toLowerCase().replace(/\s+/g, '-').slice(0, 24);
-}
-
 function PessoaModal({
   initial,
   clientes,
@@ -54,7 +51,6 @@ function PessoaModal({
     initial.capacidadeHorasSemana == null ? '40' : String(initial.capacidadeHorasSemana),
   );
   const [skills, setSkills] = useState<string[]>(initial.skills);
-  const [skillsInput, setSkillsInput] = useState('');
   const [senioridade, setSenioridade] = useState(initial.senioridade ?? '');
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -72,22 +68,9 @@ function PessoaModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const addSkill = useCallback(() => {
-    const s = normalizeTag(skillsInput);
-    if (!s) {
-      setSkillsInput('');
-      return;
-    }
-    if (!skills.includes(s)) setSkills([...skills, s]);
-    setSkillsInput('');
-  }, [skillsInput, skills]);
-
   const submit = useCallback(() => {
     setErr(null);
-    // Se ficou texto no input sem confirmar, normaliza e inclui.
     const finalSkills = [...skills];
-    const pending = normalizeTag(skillsInput);
-    if (pending && !finalSkills.includes(pending)) finalSkills.push(pending);
 
     const payload: PessoaPayload = {
       id: initial.id || null,
@@ -120,7 +103,6 @@ function PessoaModal({
     clienteSecundarioId,
     capacidade,
     skills,
-    skillsInput,
     senioridade,
     onClose,
     upsertPessoa,
@@ -268,46 +250,34 @@ function PessoaModal({
 
               <div>
                 <label className="lbl">Skills</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    className="inp flex-1"
-                    value={skillsInput}
-                    onChange={(e) => setSkillsInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addSkill();
-                      }
-                    }}
-                    placeholder="ex: backend, sql, design…"
-                  />
-                  <button
-                    type="button"
-                    className="btn text-sm"
-                    onClick={addSkill}
-                    disabled={!skillsInput.trim()}
-                  >
-                    adicionar
-                  </button>
+                <div className="flex flex-col gap-2 mt-1">
+                  {SKILL_GROUPS.map((g) => (
+                    <div key={g.group}>
+                      <div className="text-[10px] uppercase tracking-wide text-muted mb-1">{g.group}</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {g.values.map((skill) => {
+                          const active = skills.includes(skill);
+                          return (
+                            <button
+                              key={skill}
+                              type="button"
+                              onClick={() =>
+                                setSkills(active ? skills.filter((s) => s !== skill) : [...skills, skill])
+                              }
+                              className={`text-xs px-2 py-1 rounded border transition-colors ${
+                                active
+                                  ? 'bg-[var(--brand)] border-[var(--brand)] text-white font-medium'
+                                  : 'bg-[var(--surface-3)] border-[var(--line)] text-muted hover:border-[var(--brand)] hover:text-[var(--brand)]'
+                              }`}
+                            >
+                              {skill}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                {skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {skills.map((s) => (
-                      <span key={s} className="tag-chip">
-                        {s}
-                        <button
-                          type="button"
-                          className="ml-1 text-muted hover:text-danger"
-                          onClick={() => setSkills(skills.filter((x) => x !== s))}
-                          title="Remover"
-                        >
-                          ✕
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             </>
           )}

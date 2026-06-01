@@ -45,7 +45,7 @@ export function taskFromDb(r: Row): Task {
       done: c.done === true,
     })),
     reopenCount: num(r.reopen_count),
-    tipoTrabalho: str(r.tipo_trabalho),
+    escopo: arr<string>(r.escopo),
     tempoRealHoras: numNull(r.tempo_real_horas),
     externalSource: str(r.external_source),
     externalId: str(r.external_id),
@@ -102,4 +102,4 @@ export function pessoaFromDb(r: Row): Pessoa {
 
 /** Colunas leves carregadas no boot. `descricao` é lazy (modal puxa). */
 export const TASK_LIGHT_COLS =
-  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,ordem,tags,checklist,reopen_count,tipo_trabalho,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,privada,webhook_sync_status,webhook_sync_error';
+  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,privada,webhook_sync_status,webhook_sync_error';
