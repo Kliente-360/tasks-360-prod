@@ -474,6 +474,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const [modalTab, setModalTab] = useState<'detalhes' | 'conversa' | 'anexos' | 'historico' | 'tempo'>(
     isMobile ? 'detalhes' : 'conversa',
   );
+  const [tempoCount, setTempoCount] = useState<number | null>(null);
   const [checklistOpen, setChecklistOpen] = useState<boolean>(
     (source?.checklist?.length ?? 0) > 0,
   );
@@ -1624,7 +1625,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   Histórico <span className="count">{history.length}</span>
                 </>
               )}
-              {tab === 'tempo' && 'Tempo'}
+              {tab === 'tempo' && (
+                <>Tempo {tempoCount !== null && <span className="count">{tempoCount}</span>}</>
+              )}
             </div>
           ))}
         </div>
@@ -1978,7 +1981,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   className={`tmodal-tab ${modalTab === 'tempo' ? 'active' : ''}`}
                   onClick={() => setModalTab('tempo')}
                 >
-                  Tempo
+                  Tempo {tempoCount !== null && <span className="count">{tempoCount}</span>}
                 </div>
               )}
             </div>
@@ -2189,7 +2192,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             )}
             {/* TEMPO */}
             {modalTab === 'tempo' && editing.id && (
-              <TimesheetTab taskId={editing.id} />
+              <TimesheetTab taskId={editing.id} onLoaded={setTempoCount} />
             )}
           </div>
         </div>
@@ -2252,7 +2255,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
 // Sub-componentes
 // ============================================================
 
-function TimesheetTab({ taskId }: { taskId: string }) {
+function TimesheetTab({ taskId, onLoaded }: { taskId: string; onLoaded?: (n: number) => void }) {
   const { currentPessoa, viewerRole } = useData();
   const { activeEntry } = useTimer();
   const [entries, setEntries] = useState<TimeEntry[]>([]);
@@ -2266,12 +2269,15 @@ function TimesheetTab({ taskId }: { taskId: string }) {
       .eq('task_id', taskId)
       .order('started_at', { ascending: false })
       .then(({ data }) => {
-        setEntries((data ?? []).map(timeEntryFromDb));
+        const mapped = (data ?? []).map(timeEntryFromDb);
+        setEntries(mapped);
         setLoadingTime(false);
+        onLoaded?.(mapped.length);
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
 
-  // Refresh if the active timer for this task was just stopped
+  // Refresh when active timer stops
   useEffect(() => {
     if (!activeEntry) {
       const supabase = createClient();
@@ -2281,7 +2287,11 @@ function TimesheetTab({ taskId }: { taskId: string }) {
         .eq('task_id', taskId)
         .order('started_at', { ascending: false })
         .then(({ data }) => {
-          if (data) setEntries(data.map(timeEntryFromDb));
+          if (data) {
+            const mapped = data.map(timeEntryFromDb);
+            setEntries(mapped);
+            onLoaded?.(mapped.length);
+          }
         });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2330,28 +2340,30 @@ function TimesheetTab({ taskId }: { taskId: string }) {
         const durMs = e.endedAt ? e.endedAt - e.startedAt : Date.now() - e.startedAt;
         const isRunning = !e.endedAt;
         return (
-          <div
-            key={e.id}
-            className="flex items-center gap-2 text-xs py-2 border-b border-line last:border-0"
-          >
-            <span className="text-muted font-mono shrink-0 w-10">{fmtDay(e.startedAt)}</span>
-            <span className="text-muted font-mono shrink-0">
-              {fmtTime(e.startedAt)} – {e.endedAt ? fmtTime(e.endedAt) : (
-                <span className="text-[color:var(--brand)]">em andamento</span>
+          <div key={e.id} className="py-2 border-b border-line last:border-0">
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-muted font-mono shrink-0 w-10">{fmtDay(e.startedAt)}</span>
+              <span className="text-muted font-mono shrink-0">
+                {fmtTime(e.startedAt)} – {e.endedAt ? fmtTime(e.endedAt) : (
+                  <span className="text-[color:var(--brand)]">em andamento</span>
+                )}
+              </span>
+              <span className={`font-mono font-medium ml-auto shrink-0 ${isRunning ? 'text-[color:var(--brand)]' : 'text-ink'}`}>
+                {fmtDuration(durMs)}
+              </span>
+              {canDelete(e) && !isRunning && (
+                <button
+                  type="button"
+                  className="text-muted hover:text-danger ml-1 shrink-0"
+                  onClick={() => deleteEntry(e.id)}
+                  title="Excluir registro"
+                >
+                  ×
+                </button>
               )}
-            </span>
-            <span className={`font-mono font-medium ml-auto shrink-0 ${isRunning ? 'text-[color:var(--brand)]' : 'text-ink'}`}>
-              {fmtDuration(durMs)}
-            </span>
-            {canDelete(e) && !isRunning && (
-              <button
-                type="button"
-                className="text-muted hover:text-danger ml-1 shrink-0"
-                onClick={() => deleteEntry(e.id)}
-                title="Excluir registro"
-              >
-                ×
-              </button>
+            </div>
+            {e.note && (
+              <p className="text-xs text-muted italic mt-0.5 pl-[3.5rem] truncate">{e.note}</p>
             )}
           </div>
         );

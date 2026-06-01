@@ -14,7 +14,7 @@ import { ExportIconButton } from '@/components/export';
 import { NotifBell } from '@/components/notif-bell';
 import { TimerButton } from '@/components/timer-button';
 
-const APP_VERSION = 'v1.02.213';
+const APP_VERSION = 'v1.02.214';
 
 /** Barra de navegação superior — espelha o header do app Alpine. */
 export function AppNav() {
@@ -54,20 +54,18 @@ export function AppNav() {
           </div>
         </button>
 
-        {/* Right actions — "+ task" também no mobile (igual Alpine) +
-            ProfileMenu (avatar). Notificações e tema entram no header
-            ao lado do "+ task" nos blocos 4.D / 4.E. */}
-        {/* Ordem espelha o Alpine:
-            DESKTOP: Export · Help · Tema · | · + task · Notif · Avatar
-            MOBILE : + task · Notif · Avatar (ícones extras vivem no
-                     profile menu mobile). */}
+        {/* Right actions
+            DESKTOP: Cronômetro · | · Export · Help · Tema · | · + task · Notif · Avatar
+            MOBILE : Export · Help · Tema · Notif · Avatar (cronômetro oculto) */}
         <div className="flex items-center gap-1 shrink-0">
+          {/* Cronômetro — desktop only, posição mais à esquerda */}
+          <div className="hidden md:flex items-center">
+            <TimerButton />
+            <div className="w-px h-6 bg-line mx-2" />
+          </div>
           <ExportIconButton />
           <HelpIconButton />
           <ThemeIconButton />
-          <div className="hidden md:block">
-            <TimerButton />
-          </div>
           <div className="w-px h-6 bg-line mx-1 md:mx-2 hidden md:block" />
           <div className="hidden md:block">
             <button

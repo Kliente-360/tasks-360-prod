@@ -171,13 +171,16 @@ export default function TimesheetPage() {
                       {task ? (
                         <button
                           type="button"
-                          className="text-left hover:text-brand hover:underline truncate max-w-full"
+                          className="text-left hover:text-brand hover:underline truncate max-w-full block"
                           onClick={() => openEdit(e.taskId)}
                         >
                           {task.titulo}
                         </button>
                       ) : (
                         <span className="text-muted">{e.taskId.slice(0, 8)}…</span>
+                      )}
+                      {e.note && (
+                        <span className="text-xs text-muted italic block truncate max-w-[180px]">{e.note}</span>
                       )}
                     </td>
                     {isAdmin && !onlyMine && (

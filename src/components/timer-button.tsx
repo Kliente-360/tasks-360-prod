@@ -5,6 +5,67 @@ import { useTimer, fmtElapsed } from '@/lib/use-timer';
 import { useData, useClientesById } from '@/lib/data-store';
 import { cn } from '@/lib/utils';
 
+const MAX_NOTE = 120;
+
+function NoteModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: (note: string) => void;
+  onCancel: () => void;
+}) {
+  const [note, setNote] = useState('');
+  const areaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    areaRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center modal-bg px-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div className="card w-full max-w-sm p-5" role="dialog" aria-label="Parar cronômetro">
+        <h3 className="font-brand font-semibold mb-1">Parar cronômetro</h3>
+        <p className="text-xs text-muted mb-3">
+          Adicione uma nota ao registro — opcional, máx. {MAX_NOTE} caracteres.
+        </p>
+        <textarea
+          ref={areaRef}
+          className="inp w-full resize-none text-sm"
+          style={{ height: '88px' }}
+          placeholder="O que foi feito?"
+          maxLength={MAX_NOTE}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+        <div
+          className={`text-right text-xs mt-1 mb-4 tabular-nums ${
+            note.length >= MAX_NOTE ? 'text-[color:var(--danger)]' : 'text-muted'
+          }`}
+        >
+          {note.length}/{MAX_NOTE} caracteres
+        </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" className="btn text-xs" onClick={() => onConfirm('')}>
+            salvar sem nota
+          </button>
+          <button type="button" className="btn btn-primary text-xs" onClick={() => onConfirm(note)}>
+            salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TaskPickerModal({
   onSelect,
   onClose,
@@ -22,9 +83,7 @@ function TaskPickerModal({
   }, []);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
@@ -34,7 +93,6 @@ function TaskPickerModal({
     return tasks
       .filter((t) => !t.arquivadoEm && t.status === 'andamento')
       .sort((a, b) => {
-        // My tasks first
         const aMine = a.pessoaId === myId ? 0 : 1;
         const bMine = b.pessoaId === myId ? 0 : 1;
         return aMine - bMine || a.titulo.localeCompare(b.titulo);
@@ -69,7 +127,7 @@ function TaskPickerModal({
           onChange={(e) => setQ(e.target.value)}
         />
         {candidates.length === 0 ? (
-          <p className="text-sm text-muted text-center py-4">Nenhuma tarefa em andamento atribuída a você.</p>
+          <p className="text-sm text-muted text-center py-4">Nenhuma tarefa em andamento encontrada.</p>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted text-center py-4">Nenhum resultado.</p>
         ) : (
@@ -97,6 +155,7 @@ export function TimerButton() {
   const { activeEntry, elapsed, starting, stopping, startTimer, stopTimer } = useTimer();
   const { tasks } = useData();
   const [picking, setPicking] = useState(false);
+  const [showNote, setShowNote] = useState(false);
 
   const activeTask = activeEntry ? tasks.find((t) => t.id === activeEntry.taskId) : null;
 
@@ -105,22 +164,32 @@ export function TimerButton() {
     await startTimer(taskId);
   }
 
+  async function handleNoteConfirm(note: string) {
+    setShowNote(false);
+    await stopTimer(note || undefined);
+  }
+
   if (activeEntry) {
     return (
-      <button
-        type="button"
-        onClick={stopTimer}
-        disabled={stopping}
-        title={activeTask ? `Parar: ${activeTask.titulo}` : 'Parar cronômetro'}
-        className={cn(
-          'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono font-medium transition-colors',
-          'text-[color:var(--brand)] hover:bg-[var(--brand-tint)] border border-[var(--brand)] border-opacity-40',
-          stopping && 'opacity-50',
+      <>
+        <button
+          type="button"
+          onClick={() => setShowNote(true)}
+          disabled={stopping}
+          title={activeTask ? `Parar: ${activeTask.titulo}` : 'Parar cronômetro'}
+          className={cn(
+            'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono font-medium transition-colors',
+            'text-[color:var(--brand)] hover:bg-[var(--brand-tint)] border border-[color:var(--brand)] border-opacity-40',
+            stopping && 'opacity-50',
+          )}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse shrink-0" />
+          {stopping ? '…' : fmtElapsed(elapsed)}
+        </button>
+        {showNote && (
+          <NoteModal onConfirm={handleNoteConfirm} onCancel={() => setShowNote(false)} />
         )}
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse shrink-0" />
-        {stopping ? '…' : fmtElapsed(elapsed)}
-      </button>
+      </>
     );
   }
 
@@ -134,17 +203,24 @@ export function TimerButton() {
         className="icon-btn text-muted hover:text-ink"
         aria-label="Iniciar cronômetro"
       >
-        {/* Clock/play icon */}
+        {/* Stopwatch icon */}
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="10" cy="10" r="8" />
-          <polyline points="10,5 10,10 13,12" />
+          {/* Crown bar */}
+          <line x1="7.5" y1="5" x2="12.5" y2="5" />
+          {/* Left button stem */}
+          <line x1="7.5" y1="5" x2="7.5" y2="3.5" />
+          {/* Right button stem (start trigger) */}
+          <line x1="12.5" y1="5" x2="12.5" y2="3.5" />
+          {/* Stem connecting crown to body */}
+          <line x1="10" y1="5" x2="10" y2="6.5" />
+          {/* Main dial */}
+          <circle cx="10" cy="13" r="6" />
+          {/* Hand pointing up */}
+          <line x1="10" y1="13" x2="10" y2="9.5" />
         </svg>
       </button>
       {picking && (
-        <TaskPickerModal
-          onSelect={handleSelect}
-          onClose={() => setPicking(false)}
-        />
+        <TaskPickerModal onSelect={handleSelect} onClose={() => setPicking(false)} />
       )}
     </>
   );

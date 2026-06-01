@@ -12,7 +12,7 @@ interface TimerState {
   starting: boolean;
   stopping: boolean;
   startTimer: (taskId: string) => Promise<void>;
-  stopTimer: () => Promise<void>;
+  stopTimer: (note?: string) => Promise<void>;
 }
 
 const TimerContext = createContext<TimerState | null>(null);
@@ -83,14 +83,16 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentPessoa?.id, activeEntry, starting]);
 
-  const stopTimer = useCallback(async () => {
+  const stopTimer = useCallback(async (note?: string) => {
     if (!activeEntry || stopping) return;
     setStopping(true);
     try {
       const supabase = createClient();
+      const update: Record<string, unknown> = { ended_at: new Date().toISOString() };
+      if (note) update.note = note;
       await supabase
         .from('time_entries')
-        .update({ ended_at: new Date().toISOString() })
+        .update(update)
         .eq('id', activeEntry.id);
       setActiveEntry(null);
     } finally {
