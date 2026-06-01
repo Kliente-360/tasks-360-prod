@@ -1552,7 +1552,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             </span>
           )}
           <div className="tmodal-head-right">
-            {editing.id && editing.externalSource === 'salesforce' && editing.webhookSyncStatus === 'error' && (
+            {editing.id && clienteWebhookEnabled && editing.webhookSyncStatus === 'error' && (
               <span
                 className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
                 style={{ background: 'var(--p0-soft)', color: 'var(--p0)' }}
@@ -1561,7 +1561,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 sync · erro
               </span>
             )}
-            {editing.id && editing.externalSource === 'salesforce' && editing.webhookSyncStatus === 'synced' && (
+            {editing.id && clienteWebhookEnabled && editing.webhookSyncStatus === 'synced' && (
               <span
                 className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
                 style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}
