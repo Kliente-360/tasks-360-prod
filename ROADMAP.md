@@ -1199,15 +1199,15 @@ Sem cache (worst case absoluto): R$ 35–50/mês. Preços de modelo podem mudar;
 
 #### 9.3.1 Now · pré-cutover · sprint final de paridade
 
-> **Estratégia**: fechar paridade total Alpine ↔ Next antes do cutover, incluindo Portal cliente. Uma vez completo o item abaixo, o app está "basicamente migrado" e o **§9.3.9 · Bloco 5 · Cutover Vercel** vira execução administrativa (DNS + Supabase + comunicação). Tudo que vem depois do cutover (design system + evoluções) está em **§9.3.10 · design system** e **§9.3.2 · evoluções**.
+> **Estratégia**: fechar paridade total Alpine ↔ Next antes do cutover, incluindo Portal cliente. Uma vez completos os itens abaixo, o app está "basicamente migrado" e o **§9.3.9 · Bloco 5 · Cutover Vercel** vira execução administrativa (DNS + Supabase + comunicação). Tudo que vem depois do cutover (design system + evoluções) está em **§9.3.10 · design system** e **§9.3.2 · evoluções**.
 
 | # | Item | Esforço | Valor |
 |---|---|---|---|
-| 1 | ✅ **Revisar Dashboard** | — | Entregue — polish + ajustes UX aplicados. |
-| 2 | ✅ **Revisar Briefing** | — | Entregue — polish + UX. Inclui dot de comentário novo (✅ jun/2026). |
-| 3 | **Revisar Portal cliente** 🔍 | 1-3 dias | **Único bloqueador do cutover.** Port v2 do Alpine pro Next entregue em 25/05/2026 (PR de bootstrap): header verde Kliente, headline narrativa, 4 KPIs com delta, sparkline 6m, distribuição por projeto, lead time 90d, alertas amigáveis, 4 listas (aguardando/andamento/próximas/recentes), modal de task com timeline + "Já respondi" + comments públicos, simulador "view as client" pra admin/interno, RLS já aplicada via `applied/2026-05-12_rls_role_aware.sql`. Falta validar em uso real e corrigir issues. |
+| 1 | **Revisar Dashboard** 🔍 | 1-3 dias | Polish + ajustes UX agora que está no ar há semanas. Bater olho com calma, listar issues observados em uso real, corrigir. Sem features novas. Entrega: Dashboard com qualidade de produção. |
+| 2 | **Revisar Briefing** 🔍 | 1-3 dias | Idem Dashboard — polish + UX. Entrega: Briefing com qualidade de produção. |
+| 3 | **Revisar Portal cliente** 🔍 | 1-3 dias | Polish + UX. Port v2 do Alpine pro Next entregue em 25/05/2026 (PR de bootstrap): header verde Kliente, headline narrativa, 4 KPIs com delta, sparkline 6m, distribuição por projeto, lead time 90d, alertas amigáveis, 4 listas (aguardando/andamento/próximas/recentes), modal de task com timeline + "Já respondi" + comments públicos, simulador "view as client" pra admin/interno, RLS já aplicada via `applied/2026-05-12_rls_role_aware.sql`. Falta validar em uso real e corrigir issues. |
 
-**Total restante**: ~1-3 dias (Portal cliente). Uma vez concluído, passa pra §9.3.9 (Cutover Vercel).
+**Total restante**: ~3-9 dias (3 polish passes). Podem rodar em paralelo — são desacoplados.
 
 > **Itens menores de governance** (Calendário filtro, Bloqueado exige justificativa, Kliente 360 só admin cria) **saíram daqui** e viraram itens 3-5 de §9.3.2 — não são paridade Alpine↔Next, são features novas, e podem esperar pós-cutover + pós-DS sem prejuízo.
 
