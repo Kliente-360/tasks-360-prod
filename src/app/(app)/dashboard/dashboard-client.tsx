@@ -1,39 +1,23 @@
 'use client';
 
-/**
- * Dashboard · cockpit operacional — Onda 1
- * Mobile-first: título oculto (tab bar já indica contexto),
- * filtros colapsáveis, heatmap compacto, throughput sem labels mobile.
- */
-
 import { useMemo, useState } from 'react';
-import { useData } from '@/lib/data-store';
+import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
+import { useTaskModal } from '@/components/task-modal';
 import { cn } from '@/lib/utils';
-import { atrasada } from '@/lib/task-utils';
+import { atrasada, agingDays, effEsforco } from '@/lib/task-utils';
 import {
-  computeHeuristicAlerts,
-  computeWeeklyCapacityAnalysis,
+  computeThroughput12w,
+  computeEntregasSemanas,
+  computeCalendario,
+  computeVolumeByCliente,
+  computeCargaByPessoa,
   computeProjetosSaude,
-  computeThroughput,
-  type HeuristicAlert,
+  computeSaudePorPessoa,
 } from '@/lib/heuristics';
 
 // ─────────────────────────────────────────────────────────
-//  Helpers visuais
+//  Helpers
 // ─────────────────────────────────────────────────────────
-
-function severityColor(s: string) {
-  if (s === 'alta') return 'text-[var(--danger)] bg-[var(--p0-soft)] border-[var(--p0)]';
-  if (s === 'media') return 'text-[var(--warn)] bg-[var(--p1-soft)] border-[var(--p1)]';
-  return 'text-[var(--muted)] bg-[var(--surface-3)] border-[var(--line)]';
-}
-
-function heatmapColor(nivel: string) {
-  if (nivel === 'sobrecarga') return 'bg-[var(--p0-soft)] text-[var(--p0)] font-semibold';
-  if (nivel === 'pressao') return 'bg-[var(--p1-soft)] text-[var(--warn)] font-semibold';
-  if (nivel === 'ok') return 'bg-[var(--brand-tint)] text-[var(--brand-dark)]';
-  return 'bg-[var(--surface-3)] text-[var(--muted)]';
-}
 
 function sinalDot(sinal: string) {
   if (sinal === 'vermelho') return 'bg-[var(--danger)]';
@@ -41,173 +25,207 @@ function sinalDot(sinal: string) {
   return 'bg-[var(--brand)]';
 }
 
+function linearRegression(values: number[]): number[] {
+  const n = values.length;
+  if (n < 2) return values.slice();
+  const xMean = (n - 1) / 2;
+  const yMean = values.reduce((s, v) => s + v, 0) / n;
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (i - xMean) * (values[i] - yMean);
+    den += (i - xMean) ** 2;
+  }
+  const slope = den !== 0 ? num / den : 0;
+  const intercept = yMean - slope * xMean;
+  return values.map((_, i) => slope * i + intercept);
+}
+
+function calDayBg(dia: { count: number; isPast: boolean }) {
+  if (dia.count === 0) return '';
+  if (dia.isPast || dia.count >= 5) return 'bg-red-100';
+  if (dia.count >= 3) return 'bg-orange-100';
+  return 'bg-yellow-50';
+}
+
+function calBadgeBg(dia: { count: number; isPast: boolean }) {
+  if (dia.isPast || dia.count >= 5) return 'bg-red-500';
+  if (dia.count >= 3) return 'bg-orange-400';
+  return 'bg-amber-400';
+}
+
 // ─────────────────────────────────────────────────────────
-//  Componentes auxiliares
+//  Sub-componentes
 // ─────────────────────────────────────────────────────────
 
-function KpiCard({
-  label,
-  value,
-  delta,
-  deltaSign,
-  sub,
-  danger,
-}: {
-  label: string;
-  value: number | string;
-  delta?: string;
-  deltaSign?: 'up' | 'down' | 'neutral';
-  sub?: string;
-  danger?: boolean;
+function KpiCard({ label, value, sub, danger }: {
+  label: string; value: number | string; sub?: string; danger?: boolean;
 }) {
   return (
     <div className="bg-elev border border-line rounded-xl p-3 md:p-4 flex flex-col gap-1 min-w-0">
       <div className="text-[10px] md:text-[11px] font-medium uppercase tracking-[0.12em] text-muted leading-none">
         {label}
       </div>
-      <div
-        className={cn(
-          'text-2xl md:text-3xl font-semibold tabular-nums leading-none mt-1',
-          danger && Number(value) > 0 ? 'text-[var(--danger)]' : 'text-[var(--ink)]',
-        )}
-      >
+      <div className={cn(
+        'text-2xl md:text-3xl font-semibold tabular-nums leading-none mt-1',
+        danger && Number(value) > 0 ? 'text-[var(--danger)]' : 'text-[var(--ink)]',
+      )}>
         {value}
       </div>
-      {delta && (
-        <div
-          className={cn(
-            'text-[11px] mt-0.5',
-            deltaSign === 'up'
-              ? 'text-[var(--brand)]'
-              : deltaSign === 'down'
-              ? 'text-[var(--danger)]'
-              : 'text-muted',
-          )}
-        >
-          {deltaSign === 'up' ? '▲' : deltaSign === 'down' ? '▼' : '●'} {delta}
-        </div>
-      )}
-      {sub && <div className="text-[10px] text-muted hidden md:block mt-0.5">{sub}</div>}
+      {sub && <div className="text-[10px] text-muted mt-0.5">{sub}</div>}
     </div>
   );
 }
 
-function HeuristicRow({ alert, expanded }: { alert: HeuristicAlert; expanded: boolean }) {
+function SectionHeader({ title, sub }: { title: string; sub?: string }) {
   return (
-    <div className={cn('border rounded-lg px-3 py-2.5 text-sm', severityColor(alert.severity))}>
-      <div className="flex items-start gap-2">
-        <span className="shrink-0 text-xs font-bold mt-0.5 opacity-60">
-          {alert.severity === 'alta' ? '●' : '○'}
-        </span>
-        <div className="min-w-0">
-          <div className="font-medium leading-snug text-[13px]">{alert.titulo}</div>
-          {expanded && alert.detalhe && (
-            <div className="text-xs opacity-75 mt-1">{alert.detalhe}</div>
-          )}
-        </div>
-      </div>
+    <div className="px-3 md:px-4 py-3 border-b border-line">
+      <h2 className="text-sm font-semibold text-ink">{title}</h2>
+      {sub && <p className="text-[10px] text-muted mt-0.5">{sub}</p>}
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────
-//  Dashboard principal
+//  Dashboard
 // ─────────────────────────────────────────────────────────
 
 export function DashboardClient() {
   const { tasks, clientes, projetos, pessoas, loading, refreshing } = useData();
+  const clientesById = useClientesById();
+  const projetosById = useProjetosById();
+  const pessoasById = usePessoasById();
+  const { openEdit } = useTaskModal();
 
   const [filterCliente, setFilterCliente] = useState('');
   const [filterPessoa, setFilterPessoa] = useState('');
   const [filterProjeto, setFilterProjeto] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [heurExpanded, setHeurExpanded] = useState(false);
-  const [heurFilter, setHeurFilter] = useState<'' | 'alta' | 'media'>('');
 
   const hasFilter = !!(filterCliente || filterPessoa || filterProjeto);
 
   const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm), [tasks]);
 
   const filteredTasks = useMemo(
-    () =>
-      baseTasks.filter((t) => {
-        if (filterCliente && t.clienteId !== filterCliente) return false;
-        if (filterPessoa && t.pessoaId !== filterPessoa) return false;
-        if (filterProjeto && t.projetoId !== filterProjeto) return false;
-        return true;
-      }),
+    () => baseTasks.filter((t) => {
+      if (filterCliente && t.clienteId !== filterCliente) return false;
+      if (filterPessoa && t.pessoaId !== filterPessoa) return false;
+      if (filterProjeto && t.projetoId !== filterProjeto) return false;
+      return true;
+    }),
     [baseTasks, filterCliente, filterPessoa, filterProjeto],
   );
 
-  const throughput = useMemo(() => computeThroughput(baseTasks), [baseTasks]);
-  const throughputW1 = throughput[throughput.length - 2]?.count ?? 0;
-  const throughputW2 = throughput[throughput.length - 3]?.count ?? 0;
-  const throughputDelta = throughputW1 - throughputW2;
+  // ── KPIs
+  const kpiAndamento = useMemo(() => filteredTasks.filter((t) => t.status === 'andamento'), [filteredTasks]);
+  const kpiBacklog = useMemo(() => filteredTasks.filter((t) => t.status === 'backlog'), [filteredTasks]);
+  const kpiBloqueadas = useMemo(() => filteredTasks.filter((t) => t.status === 'bloqueado'), [filteredTasks]);
+  const kpiAtrasadas = useMemo(() => filteredTasks.filter((t) => atrasada(t) && t.status !== 'concluido'), [filteredTasks]);
 
-  const abertas = useMemo(() => filteredTasks.filter((t) => t.status !== 'concluido'), [filteredTasks]);
-  const atrasadas = useMemo(() => abertas.filter((t) => atrasada(t)), [abertas]);
+  const kpiAndamentoHoras = useMemo(
+    () => Math.round(kpiAndamento.reduce((s, t) => s + effEsforco(t), 0) * 10) / 10,
+    [kpiAndamento],
+  );
+  const kpiBacklogHoras = useMemo(
+    () => Math.round(kpiBacklog.reduce((s, t) => s + effEsforco(t), 0) * 10) / 10,
+    [kpiBacklog],
+  );
 
-  const projetosSaude = useMemo(
+  // ── Throughput 12w (sem filtro — histórico)
+  const throughput12 = useMemo(() => computeThroughput12w(baseTasks), [baseTasks]);
+  const maxTotal = Math.max(...throughput12.map((w) => w.total), 1);
+  const trendLine = useMemo(() => linearRegression(throughput12.map((w) => w.total)), [throughput12]);
+
+  // SVG chart constants
+  const SVG_W = 600;
+  const SVG_H = 90;
+  const PAD_T = 12;
+  const BAR_AREA = SVG_W / 12;
+  const BAR_W = BAR_AREA - 4;
+  const BAR_GAP = 2;
+
+  // ── Entregas + calendário
+  const entregasSemanas = useMemo(() => computeEntregasSemanas(filteredTasks), [filteredTasks]);
+  const maxEntregasH = Math.max(...entregasSemanas.map((s) => s.hours), 1);
+  const calendario = useMemo(() => computeCalendario(filteredTasks), [filteredTasks]);
+  const calWeeks: typeof calendario[] = [];
+  for (let i = 0; i < calendario.length; i += 7) calWeeks.push(calendario.slice(i, i + 7));
+
+  // ── Volume + Carga
+  const volumeCliente = useMemo(() => computeVolumeByCliente(filteredTasks, clientes), [filteredTasks, clientes]);
+  const maxVolume = Math.max(...volumeCliente.map((v) => v.count), 1);
+  const cargaPessoa = useMemo(() => computeCargaByPessoa(filteredTasks, pessoas), [filteredTasks, pessoas]);
+  const maxCarga = Math.max(...cargaPessoa.map((p) => p.total), 1);
+
+  // ── Saúde
+  const saudeProjeto = useMemo(
     () => computeProjetosSaude(filteredTasks, projetos, clientes),
     [filteredTasks, projetos, clientes],
   );
-  const projsEmRisco = projetosSaude.filter((p) => p.sinal !== 'verde').length;
-
-  const heuristicAlerts = useMemo(
-    () => computeHeuristicAlerts(baseTasks, clientes, projetos, pessoas),
-    [baseTasks, clientes, projetos, pessoas],
-  );
-  const alertsToShow = heurFilter
-    ? heuristicAlerts.filter((a) => a.severity === heurFilter)
-    : heuristicAlerts;
-  const countAlta = heuristicAlerts.filter((a) => a.severity === 'alta').length;
-  const countMedia = heuristicAlerts.filter((a) => a.severity === 'media').length;
-
-  const wca = useMemo(
-    () => computeWeeklyCapacityAnalysis(baseTasks, clientes, projetos, pessoas),
-    [baseTasks, clientes, projetos, pessoas],
+  const saudePessoa = useMemo(
+    () => computeSaudePorPessoa(filteredTasks, pessoas),
+    [filteredTasks, pessoas],
   );
 
+  // ── Bottom cards
+  const today = new Date().toISOString().slice(0, 10);
+  const offsetSeg = (new Date().getDay() + 6) % 7;
+  const mondayDate = useMemo(() => {
+    const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - offsetSeg); return d;
+  }, [offsetSeg]);
+  const mondayStr = mondayDate.toISOString().slice(0, 10);
+  const sundayDate = new Date(mondayDate); sundayDate.setDate(mondayDate.getDate() + 7);
+  const sundayStr = sundayDate.toISOString().slice(0, 10);
+
+  const p0p1Atrasadas = useMemo(() =>
+    filteredTasks
+      .filter((t) => (t.prioridade === 'P0' || t.prioridade === 'P1') && atrasada(t) && t.status !== 'concluido')
+      .map((t) => ({ ...t, diasAtraso: Math.floor((Date.now() - new Date(t.prazo).getTime()) / 86400000) }))
+      .sort((a, b) => b.diasAtraso - a.diasAtraso),
+    [filteredTasks],
+  );
+
+  const semanaAtualTasks = useMemo(() =>
+    filteredTasks
+      .filter((t) => t.prazo >= mondayStr && t.prazo < sundayStr && t.status !== 'concluido')
+      .sort((a, b) => a.prazo.localeCompare(b.prazo) || a.prioridade.localeCompare(b.prioridade)),
+    [filteredTasks, mondayStr, sundayStr],
+  );
+
+  const bloqueadasList = useMemo(() => {
+    const bpOrder: Record<string, number> = { cliente: 0, nos: 1, terceiro: 2, '': 3 };
+    return filteredTasks
+      .filter((t) => t.subetapa === 'bloqueado' && t.status !== 'concluido')
+      .sort((a, b) => {
+        const d = (bpOrder[a.bloqueadoPor] ?? 3) - (bpOrder[b.bloqueadoPor] ?? 3);
+        return d !== 0 ? d : agingDays(b) - agingDays(a);
+      });
+  }, [filteredTasks]);
+
+  // ── Filter options
   const clientesAtivos = useMemo(
-    () =>
-      clientes
-        .filter((c) => !c.arquivadoEm && !c.ehInterno)
-        .sort((a, b) => a.nome.localeCompare(b.nome)),
+    () => clientes.filter((c) => !c.arquivadoEm && !c.ehInterno).sort((a, b) => a.nome.localeCompare(b.nome)),
     [clientes],
   );
   const pessoasAtivas = useMemo(
-    () =>
-      pessoas.filter((p) => p.role !== 'cliente').sort((a, b) => a.nome.localeCompare(b.nome)),
+    () => pessoas.filter((p) => p.role !== 'cliente').sort((a, b) => a.nome.localeCompare(b.nome)),
     [pessoas],
   );
   const projetosAtivos = useMemo(
-    () =>
-      projetos
-        .filter((p) => !p.arquivadoEm && (!filterCliente || p.clienteId === filterCliente))
-        .sort((a, b) => a.nome.localeCompare(b.nome)),
+    () => projetos.filter((p) => !p.arquivadoEm && (!filterCliente || p.clienteId === filterCliente))
+      .sort((a, b) => a.nome.localeCompare(b.nome)),
     [projetos, filterCliente],
   );
 
-  // Labels compactos no heatmap: mobile usa W0/W1/W2/W3, desktop usa por extenso
-  const weekLabelsMobile = ['Agora', '+1s', '+2s', '+3s'];
-  const weekLabelsDesktop = ['Esta sem.', 'Próx. sem.', 'Em 2 sem.', 'Em 3 sem.'];
+  function clearFilters() { setFilterCliente(''); setFilterPessoa(''); setFilterProjeto(''); }
 
-  const maxThroughput = Math.max(...throughput.map((w) => w.count), 1);
+  if (loading) return <div className="text-muted text-sm py-8">Carregando…</div>;
 
-  function clearFilters() {
-    setFilterCliente('');
-    setFilterPessoa('');
-    setFilterProjeto('');
-  }
-
-  if (loading) {
-    return <div className="text-muted text-sm py-8">Carregando…</div>;
-  }
+  const selCls = 'text-sm border border-line rounded-lg px-3 py-1.5 bg-elev text-ink focus:outline-none focus:border-[var(--cyan)] min-w-[140px]';
 
   return (
     <div className="flex flex-col gap-4 md:gap-6">
 
-      {/* ── Page bar · desktop only (mobile: tab bar já diz "Dashboard") ── */}
+      {/* ── Page bar ── */}
       <div className="page-bar hidden md:flex">
         <div className="page-bar-info">
           <span className="page-bar-narrative">
@@ -221,7 +239,6 @@ export function DashboardClient() {
       </div>
 
       {/* ── Filtros ── */}
-      {/* Mobile: botão colapsável compacto */}
       <div>
         <div className="flex items-center gap-2 md:hidden">
           <button
@@ -241,321 +258,424 @@ export function DashboardClient() {
             )}
             <span style={{ fontSize: 9, opacity: 0.6 }}>{filtersOpen ? '▴' : '▾'}</span>
           </button>
-          {hasFilter && (
-            <button onClick={clearFilters} className="text-xs text-muted underline">
-              Limpar
-            </button>
-          )}
-          {refreshing && (
-            <span className="text-xs text-muted ml-auto">atualizando…</span>
-          )}
+          {hasFilter && <button onClick={clearFilters} className="text-xs text-muted underline">Limpar</button>}
+          {refreshing && <span className="text-xs text-muted ml-auto">atualizando…</span>}
         </div>
-
-        {/* Mobile: painel expansível */}
         {filtersOpen && (
           <div className="mt-2 p-3 bg-elev border border-line rounded-xl flex flex-col gap-2 md:hidden">
-            <select
-              value={filterCliente}
-              onChange={(e) => { setFilterCliente(e.target.value); setFilterProjeto(''); }}
-              className="text-sm border border-line rounded-lg px-3 py-2.5 bg-[var(--surface-3)] text-ink w-full"
-            >
+            <select value={filterCliente} onChange={(e) => { setFilterCliente(e.target.value); setFilterProjeto(''); }} className="text-sm border border-line rounded-lg px-3 py-2.5 bg-[var(--surface-3)] text-ink w-full">
               <option value="">Todos clientes</option>
               {clientesAtivos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
-            <select
-              value={filterPessoa}
-              onChange={(e) => setFilterPessoa(e.target.value)}
-              className="text-sm border border-line rounded-lg px-3 py-2.5 bg-[var(--surface-3)] text-ink w-full"
-            >
+            <select value={filterPessoa} onChange={(e) => setFilterPessoa(e.target.value)} className="text-sm border border-line rounded-lg px-3 py-2.5 bg-[var(--surface-3)] text-ink w-full">
               <option value="">Todas pessoas</option>
               {pessoasAtivas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
-            <select
-              value={filterProjeto}
-              onChange={(e) => setFilterProjeto(e.target.value)}
-              className="text-sm border border-line rounded-lg px-3 py-2.5 bg-[var(--surface-3)] text-ink w-full"
-            >
+            <select value={filterProjeto} onChange={(e) => setFilterProjeto(e.target.value)} className="text-sm border border-line rounded-lg px-3 py-2.5 bg-[var(--surface-3)] text-ink w-full">
               <option value="">Todos projetos</option>
               {projetosAtivos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           </div>
         )}
-
-        {/* Desktop: inline como antes */}
         <div className="hidden md:flex flex-wrap gap-2">
-          <select
-            value={filterCliente}
-            onChange={(e) => { setFilterCliente(e.target.value); setFilterProjeto(''); }}
-            className="text-sm border border-line rounded-lg px-3 py-1.5 bg-elev text-ink focus:outline-none focus:border-[var(--cyan)] min-w-[140px]"
-          >
+          <select value={filterCliente} onChange={(e) => { setFilterCliente(e.target.value); setFilterProjeto(''); }} className={selCls}>
             <option value="">Todos clientes</option>
             {clientesAtivos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
-          <select
-            value={filterPessoa}
-            onChange={(e) => setFilterPessoa(e.target.value)}
-            className="text-sm border border-line rounded-lg px-3 py-1.5 bg-elev text-ink focus:outline-none focus:border-[var(--cyan)] min-w-[140px]"
-          >
+          <select value={filterPessoa} onChange={(e) => setFilterPessoa(e.target.value)} className={selCls}>
             <option value="">Todas pessoas</option>
             {pessoasAtivas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
           </select>
-          <select
-            value={filterProjeto}
-            onChange={(e) => setFilterProjeto(e.target.value)}
-            className="text-sm border border-line rounded-lg px-3 py-1.5 bg-elev text-ink focus:outline-none focus:border-[var(--cyan)] min-w-[140px]"
-          >
+          <select value={filterProjeto} onChange={(e) => setFilterProjeto(e.target.value)} className={selCls}>
             <option value="">Todos projetos</option>
             {projetosAtivos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
           </select>
-          {hasFilter && (
-            <button onClick={clearFilters} className="text-xs text-muted hover:text-ink underline px-1">
-              Limpar filtros
-            </button>
-          )}
+          {hasFilter && <button onClick={clearFilters} className="text-xs text-muted hover:text-ink underline px-1">Limpar filtros</button>}
         </div>
       </div>
 
-      {/* ── Bloco 1 · KPIs ── */}
+      {/* ── 1. KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-        <KpiCard
-          label="Throughput W-1"
-          value={throughputW1}
-          delta={throughputDelta !== 0 ? `${Math.abs(throughputDelta)} vs W-2` : 'igual a W-2'}
-          deltaSign={throughputDelta > 0 ? 'up' : throughputDelta < 0 ? 'down' : 'neutral'}
-          sub="tasks concluídas"
-        />
-        <KpiCard
-          label="Tasks abertas"
-          value={abertas.length}
-          sub={hasFilter ? 'no filtro' : 'total ativas'}
-        />
-        <KpiCard
-          label="Atrasadas"
-          value={atrasadas.length}
-          sub="com prazo vencido"
-          danger
-        />
-        <KpiCard
-          label="Em atenção"
-          value={projsEmRisco}
-          sub="projetos âmbar/vermelho"
-          danger={projsEmRisco > 0}
-        />
+        <KpiCard label="Em andamento" value={kpiAndamento.length} sub={`${kpiAndamentoHoras}h alocadas`} />
+        <KpiCard label="Backlog" value={kpiBacklog.length} sub={`${kpiBacklogHoras}h previstas`} />
+        <KpiCard label="Bloqueadas" value={kpiBloqueadas.length} sub="aguardando ação" danger={kpiBloqueadas.length > 0} />
+        <KpiCard label="Atrasadas" value={kpiAtrasadas.length} sub="prazo vencido" danger />
       </div>
 
-      {/* ── Bloco 2 · Heurísticas ── */}
+      {/* ── 2. Throughput 12 semanas ── */}
       <div className="bg-elev border border-line rounded-xl p-3 md:p-4">
-        {/* Header — duas linhas no mobile, uma linha no desktop */}
-        <div className="flex flex-col gap-2 mb-3">
-          {/* Linha 1: título + badges */}
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-ink">Alertas</h2>
-            {countAlta > 0 && (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[var(--p0-soft)] text-[var(--danger)]">
-                {countAlta} crítico{countAlta > 1 ? 's' : ''}
-              </span>
-            )}
-            {countMedia > 0 && (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[var(--p1-soft)] text-[var(--warn)]">
-                {countMedia} atenção
-              </span>
-            )}
-            {heuristicAlerts.length === 0 && (
-              <span className="text-[11px] text-[var(--brand)]">✓ tudo certo</span>
-            )}
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">Throughput · 12 semanas</h2>
+            <p className="text-[10px] text-muted">tasks concluídas por semana</p>
           </div>
-          {/* Linha 2: controles — filtros de severidade apenas desktop */}
-          <div className="flex items-center gap-2">
-            <div className="hidden md:flex gap-1">
-              {(['', 'alta', 'media'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setHeurFilter(f)}
-                  className={cn(
-                    'text-xs px-2 py-1 rounded border transition-colors',
-                    heurFilter === f
-                      ? 'bg-[var(--brand-soft)] border-[var(--brand)] text-[var(--brand-dark)] font-medium'
-                      : 'border-line text-muted',
-                  )}
-                >
-                  {f === '' ? 'Todos' : f === 'alta' ? 'Críticos' : 'Atenção'}
-                </button>
+          <div className="hidden md:flex items-center gap-3 text-[10px] text-muted">
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#86efac' }} />
+              no prazo
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#fca5a5' }} />
+              com atraso
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-5 border-t-2 border-dashed inline-block" style={{ borderColor: '#8b5cf6' }} />
+              tendência
+            </span>
+          </div>
+        </div>
+        <svg
+          viewBox={`0 0 ${SVG_W} ${SVG_H + PAD_T}`}
+          className="w-full"
+          style={{ height: 120 }}
+          aria-hidden="true"
+        >
+          {throughput12.map((week, i) => {
+            const x = i * BAR_AREA + BAR_GAP;
+            const atH = (week.atrasada / maxTotal) * SVG_H;
+            const npH = (week.noPrazo / maxTotal) * SVG_H;
+            const totalH = atH + npH;
+            const baseY = PAD_T + SVG_H;
+            return (
+              <g key={i}>
+                {atH > 0 && (
+                  <rect x={x} y={baseY - atH} width={BAR_W} height={atH}
+                    fill={week.isCurrent ? '#dc2626' : '#fca5a5'} rx="1" />
+                )}
+                {npH > 0 && (
+                  <rect x={x} y={baseY - atH - npH} width={BAR_W} height={npH}
+                    fill={week.isCurrent ? '#16a34a' : '#86efac'} rx="1" />
+                )}
+                {week.total > 0 && (
+                  <text x={x + BAR_W / 2} y={PAD_T + SVG_H - totalH - 3}
+                    textAnchor="middle" fontSize="8" fill="var(--muted)">
+                    {week.total}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+          {/* Trend line */}
+          <polyline
+            points={trendLine.map((v, i) => {
+              const cx = i * BAR_AREA + BAR_GAP + BAR_W / 2;
+              const cy = PAD_T + SVG_H - (Math.max(0, v) / maxTotal) * SVG_H;
+              return `${cx},${cy}`;
+            }).join(' ')}
+            fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeDasharray="4 2" opacity="0.8"
+          />
+        </svg>
+        {/* Labels */}
+        <div className="hidden md:flex mt-0.5">
+          {throughput12.map((week, i) => (
+            <div key={i} className="flex-1 text-center text-[9px] text-muted truncate">{week.label}</div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 3. Entregas + Calendário ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+
+        {/* Entregas semana atual + 4 */}
+        <div className="bg-elev border border-line rounded-xl">
+          <SectionHeader title="Entregas — semana atual + 4" sub="horas de tarefas abertas por semana do prazo (atrasadas em vermelho)" />
+          <div className="p-3 md:p-4">
+            <div className="flex items-end gap-1.5 h-36">
+              {entregasSemanas.map((sem, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                  <div className="text-[9px] text-muted tabular-nums">
+                    {sem.hours > 0 ? `${Math.round(sem.hours)}h` : ''}
+                  </div>
+                  <div
+                    className="w-full rounded-t-sm min-h-[3px]"
+                    style={{
+                      height: `${Math.max(3, (sem.hours / maxEntregasH) * 110)}px`,
+                      background: sem.isAtrasada
+                        ? (sem.hours > 0 ? '#ef4444' : '#fecaca')
+                        : sem.isCurrent
+                          ? 'var(--brand)'
+                          : 'var(--brand-soft)',
+                    }}
+                  />
+                </div>
               ))}
             </div>
-            <div className="flex-1 md:hidden" />
-            <button
-              onClick={() => setHeurExpanded((v) => !v)}
-              className="text-xs text-muted hover:text-ink shrink-0"
-            >
-              {heurExpanded ? 'Menos ▴' : 'Detalhe ▾'}
-            </button>
+            <div className="flex gap-1.5 mt-1.5">
+              {entregasSemanas.map((sem, i) => (
+                <div key={i} className="flex-1 text-center text-[9px] truncate"
+                  style={{ color: sem.isAtrasada ? 'var(--danger)' : 'var(--muted)' }}>
+                  {sem.label}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {alertsToShow.length === 0 ? (
-          <div className="text-sm text-muted py-1">
-            {heuristicAlerts.length === 0 ? '✓ Nenhum alerta no momento' : 'Nenhum alerta nesta categoria'}
+        {/* Calendário de entregas */}
+        <div className="bg-elev border border-line rounded-xl">
+          <div className="px-3 md:px-4 py-3 border-b border-line flex items-start justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold text-ink">Calendário de entregas</h2>
+              <p className="text-[10px] text-muted mt-0.5">tarefas por dia · semana passada + atual + 4</p>
+            </div>
+            <div className="hidden md:flex items-center gap-2 text-[9px] text-muted shrink-0">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-100 border border-yellow-200 inline-block" />1–2</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-orange-100 border border-orange-200 inline-block" />3–4</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-100 border border-red-200 inline-block" />5+&nbsp;/&nbsp;ATRASADA</span>
+            </div>
           </div>
-        ) : (
-          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-            {alertsToShow.map((a, i) => (
-              <HeuristicRow key={i} alert={a} expanded={heurExpanded} />
+          <div className="p-2 md:p-3">
+            {/* Day headers */}
+            <div className="grid grid-cols-7 gap-1 mb-1">
+              {['SEG','TER','QUA','QUI','SEX','SÁB','DOM'].map((d) => (
+                <div key={d} className="text-center text-[9px] font-medium uppercase tracking-wide text-muted">{d}</div>
+              ))}
+            </div>
+            {/* Weeks */}
+            {calWeeks.map((week, wi) => (
+              <div key={wi} className="grid grid-cols-7 gap-1 mb-1">
+                {week.map((dia) => (
+                  <div
+                    key={dia.date}
+                    className={cn(
+                      'rounded-md p-1 min-h-[36px] relative text-[10px] leading-none',
+                      calDayBg(dia),
+                      dia.isWeekend && dia.count === 0 ? 'opacity-40' : '',
+                      dia.isToday ? 'ring-1 ring-[var(--brand)]' : '',
+                    )}
+                  >
+                    <span className={cn('font-medium', dia.isPast && dia.count > 0 ? 'text-red-600' : 'text-[var(--ink)]')}>
+                      {new Date(dia.date + 'T12:00:00').getDate()}
+                    </span>
+                    {dia.count > 0 && (
+                      <span className={cn(
+                        'absolute bottom-1 right-1 text-white rounded-full flex items-center justify-center font-bold',
+                        calBadgeBg(dia),
+                      )} style={{ fontSize: 9, minWidth: 16, height: 16, padding: '0 3px' }}>
+                        {dia.count}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* ── Bloco 3 · Semáforo de projetos ── */}
-      <div className="bg-elev border border-line rounded-xl overflow-hidden">
-        <div className="px-3 md:px-4 py-3 border-b border-line">
-          <h2 className="text-sm font-semibold text-ink">Saúde por projeto</h2>
-        </div>
-        {projetosSaude.length === 0 ? (
-          <div className="px-4 py-5 text-sm text-muted">Nenhum projeto ativo no filtro</div>
-        ) : (
-          <div className="divide-y divide-line">
-            {projetosSaude.map((ps) => (
-              <div
-                key={ps.projetoId}
-                className="flex items-center gap-3 px-3 md:px-4 py-3"
-              >
-                <span
-                  className={cn('shrink-0 w-2.5 h-2.5 rounded-full', sinalDot(ps.sinal))}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium text-ink truncate">{ps.nome}</div>
-                  {/* Mobile: motivo na segunda linha; Desktop: inline */}
-                  <div className="text-xs text-muted truncate">
-                    <span>{ps.nomeCliente}</span>
-                    <span className="md:hidden">
-                      {ps.motivo !== 'Saudável' && ` · ${ps.motivo}`}
-                    </span>
-                  </div>
+      {/* ── 4. Volume + Carga ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+
+        {/* Volume por cliente */}
+        <div className="bg-elev border border-line rounded-xl">
+          <SectionHeader title="Volume por cliente" sub="tasks abertas por cliente" />
+          <div className="p-3 md:p-4 flex flex-col gap-1.5">
+            {volumeCliente.length === 0 && <p className="text-xs text-muted">Sem dados</p>}
+            {volumeCliente.map((v) => (
+              <div key={v.clienteId} className="flex items-center gap-2">
+                <div className="w-24 text-xs text-right text-muted truncate shrink-0">{v.nome}</div>
+                <div className="flex-1 relative h-5 bg-[var(--surface-3)] rounded-sm overflow-hidden">
+                  <div
+                    className="h-full rounded-sm transition-all"
+                    style={{ width: `${(v.count / maxVolume) * 100}%`, background: 'var(--brand)' }}
+                  />
                 </div>
-                <div className="text-xs text-muted shrink-0 hidden md:block">{ps.motivo}</div>
-                <div className="text-xs tabular-nums shrink-0 text-right">
-                  <span className="text-muted">{ps.nAbertas}</span>
-                  {ps.nAtrasadas > 0 && (
-                    <span className="text-[var(--danger)] ml-1 font-medium">
-                      · {ps.nAtrasadas}↑
-                    </span>
+                <span className="text-[10px] font-mono text-muted w-6 text-right shrink-0">{v.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Carga por pessoa */}
+        <div className="bg-elev border border-line rounded-xl">
+          <SectionHeader title="Carga por pessoa" sub="tasks abertas · vermelho = tasks atrasadas" />
+          <div className="p-3 md:p-4 flex flex-col gap-1.5">
+            {cargaPessoa.length === 0 && <p className="text-xs text-muted">Sem dados</p>}
+            {cargaPessoa.map((p) => (
+              <div key={p.pessoaId} className="flex items-center gap-2">
+                <div className="w-16 text-xs text-right text-muted truncate shrink-0">{p.nome.split(' ')[0]}</div>
+                <div className="flex-1 relative h-5 bg-[var(--surface-3)] rounded-sm overflow-hidden">
+                  <div
+                    className="h-full rounded-sm"
+                    style={{ width: `${(p.total / maxCarga) * 100}%`, background: 'var(--brand)' }}
+                  />
+                  {p.nAtrasadas > 0 && (
+                    <div
+                      className="absolute top-0 right-0 h-full"
+                      style={{
+                        width: `${(p.nAtrasadas / maxCarga) * 100}%`,
+                        background: 'var(--danger)',
+                        opacity: 0.75,
+                      }}
+                    />
                   )}
                 </div>
+                <span className="text-[10px] font-mono text-muted w-6 text-right shrink-0">{p.total}</span>
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* ── Bloco 4 · Heatmap capacidade ── */}
-      <div className="bg-elev border border-line rounded-xl overflow-hidden">
-        <div className="px-3 md:px-4 py-3 border-b border-line flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-ink">Capacidade · 4 semanas</h2>
-          <div className="flex items-center gap-2 md:gap-3 text-[10px] text-muted shrink-0">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-sm bg-[var(--p0-soft)] inline-block border border-[var(--p0)] border-opacity-30" />
-              <span className="hidden sm:inline">Sobrecarga</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-sm bg-[var(--p1-soft)] inline-block border border-[var(--p1)] border-opacity-30" />
-              <span className="hidden sm:inline">Pressão</span>
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-sm bg-[var(--brand-tint)] inline-block" />
-              <span className="hidden sm:inline">OK</span>
-            </span>
-          </div>
-        </div>
-        {wca.pessoas.length === 0 ? (
-          <div className="px-4 py-5 text-sm text-muted">Nenhum dado de capacidade</div>
-        ) : (
-          <div className="overflow-x-auto">
-            {/* Mobile: col nome 72px; Desktop: 120px */}
-            <div className="px-3 md:px-4 py-3" style={{ minWidth: 300 }}>
-              {/* Header */}
-              <div
-                className="grid gap-1 mb-1.5"
-                style={{ gridTemplateColumns: 'var(--name-col, 72px) repeat(4, 1fr)' }}
-              >
-                <div />
-                {weekLabelsMobile.map((l, i) => (
-                  <div key={l} className="text-center text-[10px] text-muted font-medium uppercase tracking-wide">
-                    <span className="md:hidden">{weekLabelsMobile[i]}</span>
-                    <span className="hidden md:inline">{weekLabelsDesktop[i]}</span>
-                  </div>
-                ))}
-              </div>
-              {/* Rows */}
-              <div className="space-y-1">
-                {wca.pessoas.map((p) => (
-                  <div
-                    key={p.pessoaId}
-                    className="grid gap-1 items-center"
-                    style={{ gridTemplateColumns: 'var(--name-col, 72px) repeat(4, 1fr)' }}
-                  >
-                    <div
-                      className="text-xs text-ink truncate pr-1"
-                      title={p.nome}
-                    >
-                      {p.nome.split(' ')[0]}
+      {/* ── 5. Saúde por projeto + por pessoa ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+
+        {/* Saúde por projeto */}
+        <div className="bg-elev border border-line rounded-xl overflow-hidden">
+          <SectionHeader title="Saúde por projeto" sub="semáforo: vermelho = atrasadas / SLA / bloqueio >5d · âmbar = bloqueio interno" />
+          {saudeProjeto.length === 0
+            ? <div className="px-4 py-5 text-sm text-muted">Nenhum projeto ativo</div>
+            : (
+              <div className="divide-y divide-line">
+                {saudeProjeto.map((ps) => (
+                  <div key={ps.projetoId} className="flex items-start gap-3 px-3 md:px-4 py-2.5">
+                    <span className={cn('shrink-0 w-2.5 h-2.5 rounded-full mt-1', sinalDot(ps.sinal))} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-ink truncate">{ps.nome}</div>
+                      <div className="text-xs text-muted">{ps.nomeCliente}</div>
                     </div>
-                    {p.weeks.map((wk, i) => (
-                      <div
-                        key={i}
-                        className={cn(
-                          'text-center text-[11px] py-1.5 rounded font-mono',
-                          heatmapColor(wk.nivel),
-                        )}
-                        title={`${wk.hours}h`}
-                      >
-                        {wk.pctCap != null ? `${wk.pctCap}%` : '—'}
-                      </div>
-                    ))}
+                    <div className="text-right shrink-0">
+                      <div className="text-xs text-muted">{ps.nAbertas} aberta(s)</div>
+                      {ps.motivo !== 'Saudável' && (
+                        <div className="text-[10px] text-[var(--danger)]">{ps.motivo}</div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
-              {wca.pessoas.some((p) => p.capacidade === 0) && (
-                <p className="text-[10px] text-muted mt-2">* Sem capacidade → % não calculado</p>
-              )}
-            </div>
-          </div>
-        )}
+            )}
+        </div>
+
+        {/* Saúde por pessoa */}
+        <div className="bg-elev border border-line rounded-xl overflow-hidden">
+          <SectionHeader title="Saúde por pessoa" sub="semáforo: vermelho = atrasadas ou paradas ≥3 · âmbar = aguard. cliente / bloqueio / parada" />
+          {saudePessoa.length === 0
+            ? <div className="px-4 py-5 text-sm text-muted">Sem dados</div>
+            : (
+              <div className="divide-y divide-line">
+                {saudePessoa.map((ps) => (
+                  <div key={ps.pessoaId} className="flex items-start gap-3 px-3 md:px-4 py-2.5">
+                    <span className={cn('shrink-0 w-2.5 h-2.5 rounded-full mt-1', sinalDot(ps.sinal))} />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-ink">{ps.nome}</div>
+                      <div className="text-[10px] text-muted">{ps.nTasks} tarefa(s) · {ps.totalHoras}h</div>
+                    </div>
+                    <div className="text-right shrink-0 text-[10px] space-y-0.5">
+                      {ps.nAtrasadas > 0 && <div className="text-[var(--danger)]">{ps.nAtrasadas} atras.</div>}
+                      {ps.nAguardCliente > 0 && <div className="text-[var(--warn)]">{ps.nAguardCliente} aguard.</div>}
+                      {ps.nBloqueadas > 0 && <div className="text-[var(--warn)]">{ps.nBloqueadas} bloq.</div>}
+                      {ps.nParadas > 0 && <div className="text-muted">{ps.nParadas} parada(s)</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+        </div>
       </div>
 
-      {/* ── Bloco 5 · Throughput ── */}
-      <div className="bg-elev border border-line rounded-xl p-3 md:p-4">
-        <h2 className="text-sm font-semibold text-ink mb-3">
-          Throughput · 8 semanas
-        </h2>
-        <div className="flex items-end gap-1 h-24 md:h-28">
-          {throughput.map((week, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-              <div className="text-[10px] text-muted tabular-nums">{week.count || ''}</div>
-              <div
-                className={cn(
-                  'w-full rounded-t-sm',
-                  week.isCurrent ? 'bg-[var(--brand)]' : 'bg-[var(--brand-soft)]',
-                )}
-                style={{ height: `${Math.max(3, (week.count / maxThroughput) * 70)}px` }}
-              />
-            </div>
-          ))}
+      {/* ── 6. Bottom cards: P0/P1 atrasadas · semana atual · bloqueadas ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+
+        {/* P0/P1 atrasadas */}
+        <div className="bg-elev border border-line rounded-xl overflow-hidden flex flex-col">
+          <SectionHeader title="P0 e P1 atrasadas" sub="prazo vencido e ainda abertas" />
+          <div className="flex-1 overflow-y-auto divide-y divide-line" style={{ maxHeight: 320 }}>
+            {p0p1Atrasadas.length === 0 && (
+              <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Nenhuma P0/P1 atrasada</div>
+            )}
+            {p0p1Atrasadas.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => openEdit(t.id)}
+                className="w-full text-left flex items-start gap-2 px-3 py-2.5 hover:bg-[var(--surface-3)] transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-ink truncate">{t.titulo}</div>
+                  <div className="text-[10px] text-muted truncate">
+                    {clientesById.get(t.clienteId)?.nome ?? '—'}
+                    {t.projetoId && ` · ${projetosById.get(t.projetoId)?.nome ?? ''}`}
+                    {t.pessoaId && ` · ${pessoasById.get(t.pessoaId)?.nome?.split(' ')[0] ?? ''}`}
+                  </div>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  <span className="text-[10px] font-semibold text-[var(--danger)] tabular-nums">{t.diasAtraso}d</span>
+                  <span className={cn('text-[9px] px-1 py-0.5 rounded font-mono', t.prioridade === 'P0' ? 'bg-[var(--p0-soft)] text-[var(--danger)]' : 'bg-[var(--p1-soft)] text-[var(--warn)]')}>
+                    {t.prioridade}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
-        {/* Labels de data: hidden no mobile (barras falam por si), visíveis no desktop */}
-        <div className="hidden md:flex gap-1.5 mt-1.5">
-          {throughput.map((week, i) => (
-            <div key={i} className="flex-1 text-center text-[9px] text-muted truncate">
-              {week.label}
-            </div>
-          ))}
+
+        {/* Semana atual */}
+        <div className="bg-elev border border-line rounded-xl overflow-hidden flex flex-col">
+          <SectionHeader title="Semana atual" sub={`prazo ${mondayStr} – ${sundayStr.slice(5).replace('-', '/')}`} />
+          <div className="flex-1 overflow-y-auto divide-y divide-line" style={{ maxHeight: 320 }}>
+            {semanaAtualTasks.length === 0 && (
+              <div className="px-4 py-5 text-sm text-muted italic">Nenhuma tarefa com prazo nesta semana</div>
+            )}
+            {semanaAtualTasks.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => openEdit(t.id)}
+                className="w-full text-left flex items-start gap-2 px-3 py-2.5 hover:bg-[var(--surface-3)] transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-ink truncate">{t.titulo}</div>
+                  <div className="text-[10px] text-muted truncate">
+                    {clientesById.get(t.clienteId)?.nome ?? '—'}
+                    {t.pessoaId && ` · ${pessoasById.get(t.pessoaId)?.nome?.split(' ')[0] ?? ''}`}
+                  </div>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  <span className="text-[10px] text-muted tabular-nums">{t.prazo.slice(5).replace('-', '/')}</span>
+                  <span className={cn('text-[9px] px-1 py-0.5 rounded font-mono',
+                    t.prioridade === 'P0' ? 'bg-[var(--p0-soft)] text-[var(--danger)]' :
+                    t.prioridade === 'P1' ? 'bg-[var(--p1-soft)] text-[var(--warn)]' :
+                    'bg-[var(--surface-3)] text-muted')}>
+                    {t.prioridade}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
-        {/* Mobile: só semana atual */}
-        <div className="flex justify-end mt-1 md:hidden">
-          <span className="text-[10px] text-muted">
-            ← semanas anteriores · semana atual{' '}
-            <span className="inline-block w-2 h-2 rounded-sm bg-[var(--brand)] align-middle" />
-          </span>
+
+        {/* Bloqueadas */}
+        <div className="bg-elev border border-line rounded-xl overflow-hidden flex flex-col">
+          <SectionHeader title="Bloqueadas" sub="aguardando alguma ação externa" />
+          <div className="flex-1 overflow-y-auto divide-y divide-line" style={{ maxHeight: 320 }}>
+            {bloqueadasList.length === 0 && (
+              <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Nenhuma task bloqueada</div>
+            )}
+            {bloqueadasList.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => openEdit(t.id)}
+                className="w-full text-left flex items-start gap-2 px-3 py-2.5 hover:bg-[var(--surface-3)] transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-ink truncate">{t.titulo}</div>
+                  <div className="text-[10px] text-muted truncate">
+                    {clientesById.get(t.clienteId)?.nome ?? '—'}
+                    {t.projetoId && ` · ${projetosById.get(t.projetoId)?.nome ?? ''}`}
+                  </div>
+                </div>
+                <div className="shrink-0 flex flex-col items-end gap-1">
+                  <span className="text-[10px] text-muted tabular-nums">{effEsforco(t)}h</span>
+                  <span className={cn('text-[9px] px-1 py-0.5 rounded font-mono',
+                    t.prioridade === 'P0' ? 'bg-[var(--p0-soft)] text-[var(--danger)]' :
+                    t.prioridade === 'P1' ? 'bg-[var(--p1-soft)] text-[var(--warn)]' :
+                    'bg-[var(--surface-3)] text-muted')}>
+                    {t.prioridade}
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
+
       </div>
     </div>
   );

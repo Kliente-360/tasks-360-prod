@@ -709,3 +709,260 @@ export function computeProjetosSaude(
 
 // Re-exporta needsTriage para conveniência dos componentes
 export { needsTriage };
+
+// ─────────────────────────────────────────────────────────
+//  Throughput 12 semanas · split no-prazo / atrasada
+// ─────────────────────────────────────────────────────────
+
+export interface ThroughputWeek12 {
+  label: string;
+  noPrazo: number;
+  atrasada: number;
+  total: number;
+  isCurrent: boolean;
+}
+
+export function computeThroughput12w(tasks: Task[]): ThroughputWeek12[] {
+  const completed = tasks.filter((t) => t.status === STATUS.CONCLUIDO && t.statusEm);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const offsetSeg = (now.getDay() + 6) % 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - offsetSeg);
+
+  const result: ThroughputWeek12[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const start = new Date(monday);
+    start.setDate(monday.getDate() - i * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 7);
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+
+    let noPrazo = 0;
+    let lat = 0;
+    for (const t of completed) {
+      if (t.statusEm < startMs || t.statusEm >= endMs) continue;
+      if (!t.prazo) {
+        noPrazo++;
+      } else if (t.statusEm <= new Date(t.prazo).getTime() + 86400000) {
+        noPrazo++;
+      } else {
+        lat++;
+      }
+    }
+    const label = start.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    result.push({ label, noPrazo, atrasada: lat, total: noPrazo + lat, isCurrent: i === 0 });
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────
+//  Entregas semana atual + 4 (horas abertas por prazo)
+// ─────────────────────────────────────────────────────────
+
+export interface EntregaSemana {
+  label: string;
+  hours: number;
+  isAtrasada: boolean;
+  isCurrent: boolean;
+}
+
+export function computeEntregasSemanas(tasks: Task[], today?: string): EntregaSemana[] {
+  const todayStr = today ?? new Date().toISOString().slice(0, 10);
+  const todayDate = new Date(todayStr + 'T00:00:00');
+  const offsetSeg = (todayDate.getDay() + 6) % 7;
+  const monday = new Date(todayDate);
+  monday.setDate(todayDate.getDate() - offsetSeg);
+
+  const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
+
+  const result: EntregaSemana[] = [];
+  const horasAtras = abertas
+    .filter((t) => t.prazo && t.prazo < todayStr)
+    .reduce((s, t) => s + effEsforco(t), 0);
+  result.push({ label: 'Atrasadas', hours: horasAtras, isAtrasada: true, isCurrent: false });
+
+  for (let i = 0; i <= 4; i++) {
+    const wStart = new Date(monday);
+    wStart.setDate(monday.getDate() + i * 7);
+    const wEnd = new Date(wStart);
+    wEnd.setDate(wStart.getDate() + 7);
+    const wStartStr = wStart.toISOString().slice(0, 10);
+    const wEndStr = wEnd.toISOString().slice(0, 10);
+    const hours = abertas
+      .filter((t) => t.prazo && t.prazo >= wStartStr && t.prazo < wEndStr)
+      .reduce((s, t) => s + effEsforco(t), 0);
+    const label = wStart.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    result.push({ label, hours, isAtrasada: false, isCurrent: i === 0 });
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────
+//  Calendário de entregas (semana passada + atual + 4)
+// ─────────────────────────────────────────────────────────
+
+export interface CalDia {
+  date: string;
+  count: number;
+  isToday: boolean;
+  isPast: boolean;
+  isWeekend: boolean;
+}
+
+export function computeCalendario(tasks: Task[], today?: string): CalDia[] {
+  const todayStr = today ?? new Date().toISOString().slice(0, 10);
+  const todayDate = new Date(todayStr + 'T00:00:00');
+  const offsetSeg = (todayDate.getDay() + 6) % 7;
+  const currentMonday = new Date(todayDate);
+  currentMonday.setDate(todayDate.getDate() - offsetSeg);
+
+  const startDate = new Date(currentMonday);
+  startDate.setDate(currentMonday.getDate() - 7); // semana passada
+
+  const endDate = new Date(currentMonday);
+  endDate.setDate(currentMonday.getDate() + 5 * 7); // +4 semanas (6 semanas total)
+
+  const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
+  const countByDay = new Map<string, number>();
+  for (const t of abertas) {
+    if (!t.prazo) continue;
+    countByDay.set(t.prazo, (countByDay.get(t.prazo) ?? 0) + 1);
+  }
+
+  const result: CalDia[] = [];
+  const cur = new Date(startDate);
+  while (cur < endDate) {
+    const dateStr = cur.toISOString().slice(0, 10);
+    const dow = cur.getDay();
+    result.push({
+      date: dateStr,
+      count: countByDay.get(dateStr) ?? 0,
+      isToday: dateStr === todayStr,
+      isPast: dateStr < todayStr,
+      isWeekend: dow === 0 || dow === 6,
+    });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────
+//  Volume por cliente (contagem de tasks abertas)
+// ─────────────────────────────────────────────────────────
+
+export interface VolumeCliente {
+  clienteId: string;
+  nome: string;
+  count: number;
+}
+
+export function computeVolumeByCliente(tasks: Task[], clientes: Cliente[]): VolumeCliente[] {
+  const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
+  const countMap = new Map<string, number>();
+  for (const t of abertas) {
+    if (!t.clienteId) continue;
+    countMap.set(t.clienteId, (countMap.get(t.clienteId) ?? 0) + 1);
+  }
+  const clientesById = new Map(clientes.map((c) => [c.id, c]));
+  const result: VolumeCliente[] = [];
+  for (const [clienteId, count] of countMap) {
+    const c = clientesById.get(clienteId);
+    if (!c || c.arquivadoEm) continue;
+    result.push({ clienteId, nome: c.nome, count });
+  }
+  result.sort((a, b) => b.count - a.count);
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────
+//  Carga por pessoa (contagem, split tasks atrasadas)
+// ─────────────────────────────────────────────────────────
+
+export interface CargaPessoa {
+  pessoaId: string;
+  nome: string;
+  total: number;
+  nAtrasadas: number;
+}
+
+export function computeCargaByPessoa(tasks: Task[], pessoas: Pessoa[]): CargaPessoa[] {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
+  const totalMap = new Map<string, number>();
+  const atrasMap = new Map<string, number>();
+  for (const t of abertas) {
+    if (!t.pessoaId) continue;
+    totalMap.set(t.pessoaId, (totalMap.get(t.pessoaId) ?? 0) + 1);
+    if (t.prazo && t.prazo < todayStr) {
+      atrasMap.set(t.pessoaId, (atrasMap.get(t.pessoaId) ?? 0) + 1);
+    }
+  }
+  const pessoasById = new Map(pessoas.map((p) => [p.id, p]));
+  const result: CargaPessoa[] = [];
+  for (const [pessoaId, total] of totalMap) {
+    const p = pessoasById.get(pessoaId);
+    if (!p || p.role === 'cliente') continue;
+    result.push({ pessoaId, nome: p.nome, total, nAtrasadas: atrasMap.get(pessoaId) ?? 0 });
+  }
+  result.sort((a, b) => b.total - a.total);
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────
+//  Saúde por pessoa
+// ─────────────────────────────────────────────────────────
+
+export interface PessoaSaude {
+  pessoaId: string;
+  nome: string;
+  sinal: 'verde' | 'amarelo' | 'vermelho';
+  nTasks: number;
+  nAtrasadas: number;
+  nBloqueadas: number;
+  nAguardCliente: number;
+  nParadas: number;
+  totalHoras: number;
+}
+
+export function computeSaudePorPessoa(tasks: Task[], pessoas: Pessoa[], today?: string): PessoaSaude[] {
+  const todayStr = today ?? new Date().toISOString().slice(0, 10);
+  const h24ago = Date.now() - 24 * 3600 * 1000;
+  const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
+
+  const byPessoa = new Map<string, Task[]>();
+  for (const t of abertas) {
+    if (!t.pessoaId) continue;
+    const arr = byPessoa.get(t.pessoaId) ?? [];
+    arr.push(t);
+    byPessoa.set(t.pessoaId, arr);
+  }
+
+  const pessoasById = new Map(pessoas.map((p) => [p.id, p]));
+  const result: PessoaSaude[] = [];
+
+  for (const [pessoaId, ptasks] of byPessoa) {
+    const p = pessoasById.get(pessoaId);
+    if (!p || p.role === 'cliente') continue;
+    const nAtrasadas = ptasks.filter((t) => t.prazo && t.prazo < todayStr).length;
+    const nAguardCliente = ptasks.filter((t) => t.subetapa === 'bloqueado' && t.bloqueadoPor === 'cliente').length;
+    const nBloqueadas = ptasks.filter((t) => t.subetapa === 'bloqueado' && t.bloqueadoPor !== 'cliente').length;
+    const nParadas = ptasks.filter((t) => t.status === 'andamento' && t.subetapaEm > 0 && t.subetapaEm < h24ago).length;
+    const totalHoras = ptasks.reduce((s, t) => s + effEsforco(t), 0);
+
+    let sinal: 'verde' | 'amarelo' | 'vermelho' = 'verde';
+    if (nAtrasadas > 0 || nParadas >= 3) sinal = 'vermelho';
+    else if (nAguardCliente > 0 || nBloqueadas > 0 || nParadas > 0) sinal = 'amarelo';
+
+    result.push({
+      pessoaId, nome: p.nome, sinal,
+      nTasks: ptasks.length, nAtrasadas, nBloqueadas, nAguardCliente, nParadas, totalHoras,
+    });
+  }
+
+  const order: Record<string, number> = { vermelho: 0, amarelo: 1, verde: 2 };
+  result.sort((a, b) => order[a.sinal] - order[b.sinal]);
+  return result;
+}
+
