@@ -29,9 +29,12 @@ export function effTamanho(t: Pick<Task, 'esforco'>): string {
 }
 
 /** Task atrasada: tem prazo, não concluída, prazo < hoje. */
-export function atrasada(t: Pick<Task, 'prazo' | 'status'>, today?: string): boolean {
+export function atrasada(t: Pick<Task, 'prazo' | 'status'> & { subetapa?: string }, today?: string): boolean {
   if (!t.prazo) return false;
   if (t.status === STATUS.CONCLUIDO) return false;
+  // Bloqueado e em homologação não contam como atrasadas — o time não tem ação direta.
+  if (t.status === STATUS.BLOQUEADO) return false;
+  if (t.subetapa === 'em_homologacao') return false;
   const ref = today ?? new Date().toISOString().slice(0, 10);
   return t.prazo < ref;
 }
@@ -179,7 +182,7 @@ function monthRangeIso(iso: string): [string, string] {
 
 /** Testa se a task se encaixa na janela de prazo escolhida. */
 export function matchesPrazoFilter(
-  t: Pick<Task, 'prazo' | 'status'>,
+  t: Pick<Task, 'prazo' | 'status'> & { subetapa?: string },
   mode: PrazoFilter,
 ): boolean {
   if (!mode) return true;

@@ -13,7 +13,7 @@ import { ThemeIconButton } from '@/components/theme-toggle';
 import { ExportIconButton } from '@/components/export';
 import { NotifBell } from '@/components/notif-bell';
 
-const APP_VERSION = 'v1.02.210';
+const APP_VERSION = 'v1.02.211';
 
 /** Barra de navegação superior — espelha o header do app Alpine. */
 export function AppNav() {
