@@ -457,12 +457,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const editingRef = useRef(editing);
   editingRef.current = editing;
 
-  // Subetapa original (quando o modal abriu) — detecta transição pra bloqueado.
-  const originalSubetapa = source?.subetapa ?? '';
-  // Textarea de motivo: visível só quando a transição DE outro estado PARA bloqueado
-  // ocorre nesta sessão. Tasks já abertas como bloqueado não mostram o campo.
+  // Subetapa original capturada UMA VEZ quando o modal abre.
+  // Não pode ser derivada de `source` porque o autosave atualiza source
+  // após 800ms, fazendo isTransitionToBloqueado virar false e o textarea sumir.
+  const originalSubetapaRef = useRef(source?.subetapa ?? '');
   const isTransitionToBloqueado =
-    editing.subetapa === 'bloqueado' && originalSubetapa !== 'bloqueado';
+    editing.subetapa === 'bloqueado' && originalSubetapaRef.current !== 'bloqueado';
   const [bloqueioMotivo, setBloqueioMotivo] = useState('');
   const bloqueioMotivoRef = useRef('');
   bloqueioMotivoRef.current = bloqueioMotivo;
