@@ -1221,11 +1221,11 @@ Em ordem de execução sugerida (sequência importa — cada item desbloqueia o 
 |---|---|---|---|
 | 1 | ✅ **Dashboard** · entregue mai/2026 | — | Cockpit operacional. KPIs, heurísticas, semáforo de projetos, heatmap W0–W3, throughput 8 semanas. CSS Grid puro (sem Tremor — ver ADR §12 item 17). PR #335 + #336. |
 | 2 | ✅ **Briefing** · entregue mai/2026 | — | Relatório executivo. Clientes em atenção, heatmap portfólio, orçamento projetos, conquistas W-1, redistribuição. Aba separada, ao vivo, sem filtros. PR #335. |
-| 3 | **Calendário · filtro de Status** 📅 | ~1h | Quick win UX. Select de Status no calendário (Abertas / Todas / Backlog / Andamento / Bloqueado / Concluído). Espelho do Backlog filter. (Veio do §9.3.1 original — re-priorizado pós-DS.) |
-| 4 | **Bloqueado exige `bloqueadoPor` + comentário** 🚧 | ~3-4h | Governance. Ao setar `bloqueado`, valida `bloqueadoPor` obrigatório + força comentário inline (`visivel_cliente=false`). Registra evento `bloqueio_iniciado` no histórico. Elimina bloqueio órfão. (Veio do §9.3.1 original — re-priorizado pós-DS.) |
-| 5 | **Kliente 360 · só gestão cria** ✋ | ~2-4h | Governance. Gate de criação: cliente `eh_interno` + nome ≈ "Kliente 360" exige `viewerRole='admin'` pra salvar. Esconde do dropdown pra não-admins. Gate pontual — não confundir com workspaces. (Veio do §9.3.1 original — re-priorizado pós-DS.) |
-| 6 | **`ai-suggest`** (Haiku, ~R$0,015/exec) | ~1 semana | Fecha gap competitivo #1 da §14.3 do CONTEXT. Custo trivial. ⭐ |
-| 7 | **`ai-weekly-summary`** (Sonnet + cron sáb) | 4-5 dias | Combina com Briefing → aba "Insights". Sócio lê portfólio em 5min. ⭐⭐ |
+| 3 | ✅ **Calendário · filtro de Status** | — | Entregue. |
+| 4 | ✅ **Bloqueado exige `bloqueadoPor` + comentário** | — | Entregue. |
+| 5 | ✅ **Kliente 360 · só gestão cria** | — | Entregue. |
+| 6 | ✅ **`ai-suggest`** → movido pra §9.3.3 (LATER · só IA) | — | — |
+| 7 | ✅ **`ai-weekly-summary`** → movido pra §9.3.3 (LATER · só IA) | — | — |
 | 8 | **Push notifications + Badging API** | ~2 semanas restantes | Badging API ✅ entregue (badge no ícone home screen). Falta: VAPID keys + Edge Function `send-push` + UI de permissão + fallback gracioso iOS/Android. |
 | 9 | ✅ **Escopo da task + skill da pessoa** | — | Entregue jun/2026. `tasks.escopo text[]` (SF Admin · SF Dev · SF Clouds · IA/Conversacional · etc.) + `pessoas.skills text[]` já existia. Migration + adapter + UI no modal. |
 | 10 | **Triagem obrigatória pra tasks criadas por IA** 🤖 | ~3-5 dias | Flag `triada_em` + filtro "Criadas por IA" na Triagem. UI quase pronta. Combinar com lançamento de `ai-suggest`. |

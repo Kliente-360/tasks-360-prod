@@ -4,6 +4,8 @@ Convenções do projeto que valem pra qualquer sessão.
 
 > **Sobre este repo**: `tasks-360-prod` é o repo produtivo do app Next (sprint final). Foi separado de `Kliente-360/tasks-360-mvp` (que ainda hospeda o Alpine em prod no Netlify até o cutover). Trabalho diário acontece aqui.
 
+> **Roadmap vivo**: ler **`STATUS.md`** no início de toda sessão relevante — é a fonte de verdade do estado atual (NOW/NEXT/LATER/done). `ROADMAP.md` é arquivo histórico imutável; não editar para refletir estado corrente.
+
 ## Supabase
 
 - **Nunca instruir Supabase CLI.** O usuário não usa CLI — tudo é feito pelo Dashboard (SQL Editor, Edge Functions UI, Database > Extensions, Database > Cron).
