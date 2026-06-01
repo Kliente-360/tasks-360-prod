@@ -137,11 +137,13 @@ export function DashboardClient() {
 
   // SVG chart constants
   const SVG_W = 600;
-  const SVG_H = 90;
-  const PAD_T = 12;
+  const SVG_H = 130;   // área de barras
+  const PAD_T = 14;    // espaço topo p/ labels de valor
+  const LABEL_H = 16;  // altura da faixa de labels de semana (dentro do SVG)
   const BAR_AREA = SVG_W / 12;
   const BAR_W = BAR_AREA - 4;
   const BAR_GAP = 2;
+  const SVG_TOTAL_H = PAD_T + SVG_H + LABEL_H;
 
   // ── Entregas + calendário
   const entregasSemanas = useMemo(() => computeEntregasSemanas(filteredTasks), [filteredTasks]);
@@ -184,9 +186,11 @@ export function DashboardClient() {
     [filteredTasks],
   );
 
+  const isP0P1 = (t: { prioridade: string }) => t.prioridade === 'P0' || t.prioridade === 'P1';
+
   const semanaAtualTasks = useMemo(() =>
     filteredTasks
-      .filter((t) => t.prazo >= mondayStr && t.prazo < sundayStr && t.status !== 'concluido')
+      .filter((t) => isP0P1(t) && t.prazo >= mondayStr && t.prazo < sundayStr && t.status !== 'concluido')
       .sort((a, b) => a.prazo.localeCompare(b.prazo) || a.prioridade.localeCompare(b.prioridade)),
     [filteredTasks, mondayStr, sundayStr],
   );
@@ -194,7 +198,7 @@ export function DashboardClient() {
   const bloqueadasList = useMemo(() => {
     const bpOrder: Record<string, number> = { cliente: 0, nos: 1, terceiro: 2, '': 3 };
     return filteredTasks
-      .filter((t) => t.subetapa === 'bloqueado' && t.status !== 'concluido')
+      .filter((t) => isP0P1(t) && t.subetapa === 'bloqueado' && t.status !== 'concluido')
       .sort((a, b) => {
         const d = (bpOrder[a.bloqueadoPor] ?? 3) - (bpOrder[b.bloqueadoPor] ?? 3);
         return d !== 0 ? d : agingDays(b) - agingDays(a);
@@ -325,33 +329,43 @@ export function DashboardClient() {
           </div>
         </div>
         <svg
-          viewBox={`0 0 ${SVG_W} ${SVG_H + PAD_T}`}
-          className="w-full"
-          style={{ height: 120 }}
+          viewBox={`0 0 ${SVG_W} ${SVG_TOTAL_H}`}
+          preserveAspectRatio="none"
+          className="w-full hidden md:block"
+          style={{ height: 180 }}
           aria-hidden="true"
         >
           {throughput12.map((week, i) => {
             const x = i * BAR_AREA + BAR_GAP;
-            const atH = (week.atrasada / maxTotal) * SVG_H;
+            const cx = x + BAR_W / 2;
             const npH = (week.noPrazo / maxTotal) * SVG_H;
-            const totalH = atH + npH;
+            const atH = (week.atrasada / maxTotal) * SVG_H;
+            const totalH = npH + atH;
             const baseY = PAD_T + SVG_H;
+            // verde embaixo, vermelho em cima
+            const npY = baseY - npH;
+            const atY = npY - atH;
             return (
               <g key={i}>
-                {atH > 0 && (
-                  <rect x={x} y={baseY - atH} width={BAR_W} height={atH}
-                    fill={week.isCurrent ? '#dc2626' : '#fca5a5'} rx="1" />
-                )}
                 {npH > 0 && (
-                  <rect x={x} y={baseY - atH - npH} width={BAR_W} height={npH}
-                    fill={week.isCurrent ? '#16a34a' : '#86efac'} rx="1" />
+                  <rect x={x} y={npY} width={BAR_W} height={npH}
+                    fill={week.isCurrent ? '#22c55e' : '#86efac'} rx="1" />
+                )}
+                {atH > 0 && (
+                  <rect x={x} y={atY} width={BAR_W} height={atH}
+                    fill={week.isCurrent ? '#ef4444' : '#fca5a5'} rx="1" />
                 )}
                 {week.total > 0 && (
-                  <text x={x + BAR_W / 2} y={PAD_T + SVG_H - totalH - 3}
-                    textAnchor="middle" fontSize="8" fill="var(--muted)">
+                  <text x={cx} y={baseY - totalH - 3}
+                    textAnchor="middle" fontSize="9" fill="#6b7280">
                     {week.total}
                   </text>
                 )}
+                {/* Label de semana alinhada à barra */}
+                <text x={cx} y={SVG_TOTAL_H - 3}
+                  textAnchor="middle" fontSize="9" fill="#9ca3af">
+                  {week.label}
+                </text>
               </g>
             );
           })}
@@ -362,13 +376,16 @@ export function DashboardClient() {
               const cy = PAD_T + SVG_H - (Math.max(0, v) / maxTotal) * SVG_H;
               return `${cx},${cy}`;
             }).join(' ')}
-            fill="none" stroke="#8b5cf6" strokeWidth="1.5" strokeDasharray="4 2" opacity="0.8"
+            fill="none" stroke="#8b5cf6" strokeWidth="2" strokeDasharray="5 3" opacity="0.75"
           />
         </svg>
-        {/* Labels */}
-        <div className="hidden md:flex mt-0.5">
+        {/* Mobile: barras simples sem SVG */}
+        <div className="flex items-end gap-1 h-24 md:hidden">
           {throughput12.map((week, i) => (
-            <div key={i} className="flex-1 text-center text-[9px] text-muted truncate">{week.label}</div>
+            <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+              <div className="text-[8px] text-muted tabular-nums">{week.total || ''}</div>
+              <div className="w-full rounded-t-sm" style={{ height: `${Math.max(2, (week.total / maxTotal) * 70)}px`, background: week.isCurrent ? '#22c55e' : '#86efac' }} />
+            </div>
           ))}
         </div>
       </div>
@@ -494,20 +511,10 @@ export function DashboardClient() {
             {cargaPessoa.map((p) => (
               <div key={p.pessoaId} className="flex items-center gap-2">
                 <div className="w-16 text-xs text-right text-muted truncate shrink-0">{p.nome.split(' ')[0]}</div>
-                <div className="flex-1 relative h-5 bg-[var(--surface-3)] rounded-sm overflow-hidden">
-                  <div
-                    className="h-full rounded-sm"
-                    style={{ width: `${(p.total / maxCarga) * 100}%`, background: 'var(--brand)' }}
-                  />
+                <div className="flex-1 h-5 bg-[var(--surface-3)] rounded-sm overflow-hidden flex">
+                  <div style={{ width: `${((p.total - p.nAtrasadas) / maxCarga) * 100}%`, background: 'var(--brand)', flexShrink: 0 }} />
                   {p.nAtrasadas > 0 && (
-                    <div
-                      className="absolute top-0 right-0 h-full"
-                      style={{
-                        width: `${(p.nAtrasadas / maxCarga) * 100}%`,
-                        background: 'var(--danger)',
-                        opacity: 0.75,
-                      }}
-                    />
+                    <div style={{ width: `${(p.nAtrasadas / maxCarga) * 100}%`, background: '#ef4444', flexShrink: 0 }} />
                   )}
                 </div>
                 <span className="text-[10px] font-mono text-muted w-6 text-right shrink-0">{p.total}</span>
@@ -610,7 +617,7 @@ export function DashboardClient() {
 
         {/* Semana atual */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden flex flex-col">
-          <SectionHeader title="Semana atual" sub={`prazo ${mondayStr} – ${sundayStr.slice(5).replace('-', '/')}`} />
+          <SectionHeader title="Semana atual · P0/P1" sub={`prazo ${mondayStr} – ${sundayStr.slice(5).replace('-', '/')}`} />
           <div className="flex-1 overflow-y-auto divide-y divide-line" style={{ maxHeight: 320 }}>
             {semanaAtualTasks.length === 0 && (
               <div className="px-4 py-5 text-sm text-muted italic">Nenhuma tarefa com prazo nesta semana</div>
@@ -644,7 +651,7 @@ export function DashboardClient() {
 
         {/* Bloqueadas */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden flex flex-col">
-          <SectionHeader title="Bloqueadas" sub="aguardando alguma ação externa" />
+          <SectionHeader title="Bloqueadas · P0/P1" sub="aguardando alguma ação externa" />
           <div className="flex-1 overflow-y-auto divide-y divide-line" style={{ maxHeight: 320 }}>
             {bloqueadasList.length === 0 && (
               <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Nenhuma task bloqueada</div>
