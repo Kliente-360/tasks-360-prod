@@ -29,6 +29,7 @@ export const NAV: ReadonlyArray<NavItem> = [
   { href: '/portal',     label: 'Portal cliente', roles: ['admin', 'interno', 'cliente'], onda: 2 },
   // Cadastros sai da tab bar (espelha inProfileMenu do Alpine) — vive no
   // dropdown do avatar pra liberar espaço horizontal nas abas principais.
+  { href: '/timesheet',  label: 'Timesheet',     roles: ['admin', 'interno'],          onda: 1, inProfileMenu: true },
   { href: '/cadastros',  label: 'Cadastros',     roles: ['admin'],                     onda: 1, inProfileMenu: true },
   // Adoção removida: PostHog cobre a camada comportamental (mai/2026).
 ] as const;

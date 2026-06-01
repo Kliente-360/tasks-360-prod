@@ -1,5 +1,6 @@
 import { AppNav } from '@/components/app-nav';
 import { DataProvider } from '@/lib/data-store';
+import { TimerProvider } from '@/lib/use-timer';
 import { TaskModalProvider } from '@/components/task-modal';
 import { ToastProvider } from '@/components/toast';
 import { HelpProvider } from '@/components/help-modal';
@@ -20,6 +21,7 @@ export default function AppLayout({
     <ThemeProvider>
       <ToastProvider>
         <DataProvider>
+          <TimerProvider>
           <HelpProvider>
             <OnboardingProvider>
               <TaskModalProvider>
@@ -39,6 +41,7 @@ export default function AppLayout({
               </TaskModalProvider>
             </OnboardingProvider>
           </HelpProvider>
+          </TimerProvider>
         </DataProvider>
       </ToastProvider>
     </ThemeProvider>

@@ -94,3 +94,13 @@ export interface Pessoa {
   senioridade: string | null;
   is_ceo?: boolean;
 }
+
+export interface TimeEntry {
+  id: string;
+  taskId: string;
+  pessoaId: string;
+  startedAt: number;
+  endedAt: number | null;
+  note: string | null;
+  criadoEm: number;
+}

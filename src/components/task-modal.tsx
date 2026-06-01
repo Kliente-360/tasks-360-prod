@@ -44,7 +44,9 @@ import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
 import { fmtDate, fmtDateShort, lblStatus } from '@/lib/task-utils';
 import { SUB_TO_MACRO, SKILL_GROUPS, ALL_SKILLS } from '@/lib/task-constants';
-import type { ChecklistItem, Task } from '@/lib/types';
+import { timeEntryFromDb } from '@/lib/adapters';
+import { fmtDuration, useTimer } from '@/lib/use-timer';
+import type { ChecklistItem, Task, TimeEntry } from '@/lib/types';
 
 // ============================================================
 // Tipos das tabelas auxiliares (snake_case, vêm direto do banco)
@@ -469,7 +471,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
 
   // ===== Tabs =====
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
-  const [modalTab, setModalTab] = useState<'detalhes' | 'conversa' | 'anexos' | 'historico'>(
+  const [modalTab, setModalTab] = useState<'detalhes' | 'conversa' | 'anexos' | 'historico' | 'tempo'>(
     isMobile ? 'detalhes' : 'conversa',
   );
   const [checklistOpen, setChecklistOpen] = useState<boolean>(
@@ -1600,7 +1602,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
 
         {/* Tabs mobile */}
         <div className="tmodal-mobile-tabs">
-          {(['detalhes', 'conversa', 'anexos', 'historico'] as const).map((tab) => (
+          {(['detalhes', 'conversa', 'anexos', 'historico', 'tempo'] as const).map((tab) => (
             <div
               key={tab}
               className={`tmtab ${modalTab === tab ? 'active' : ''}`}
@@ -1622,6 +1624,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   Histórico <span className="count">{history.length}</span>
                 </>
               )}
+              {tab === 'tempo' && 'Tempo'}
             </div>
           ))}
         </div>
@@ -1970,6 +1973,14 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               >
                 Histórico <span className="count">{history.length}</span>
               </div>
+              {editing.id && (
+                <div
+                  className={`tmodal-tab ${modalTab === 'tempo' ? 'active' : ''}`}
+                  onClick={() => setModalTab('tempo')}
+                >
+                  Tempo
+                </div>
+              )}
             </div>
 
             {/* HISTÓRICO */}
@@ -2176,6 +2187,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 )}
               </>
             )}
+            {/* TEMPO */}
+            {modalTab === 'tempo' && editing.id && (
+              <TimesheetTab taskId={editing.id} />
+            )}
           </div>
         </div>
 
@@ -2236,6 +2251,115 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
 // ============================================================
 // Sub-componentes
 // ============================================================
+
+function TimesheetTab({ taskId }: { taskId: string }) {
+  const { currentPessoa, viewerRole } = useData();
+  const { activeEntry } = useTimer();
+  const [entries, setEntries] = useState<TimeEntry[]>([]);
+  const [loadingTime, setLoadingTime] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('time_entries')
+      .select('*')
+      .eq('task_id', taskId)
+      .order('started_at', { ascending: false })
+      .then(({ data }) => {
+        setEntries((data ?? []).map(timeEntryFromDb));
+        setLoadingTime(false);
+      });
+  }, [taskId]);
+
+  // Refresh if the active timer for this task was just stopped
+  useEffect(() => {
+    if (!activeEntry) {
+      const supabase = createClient();
+      supabase
+        .from('time_entries')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('started_at', { ascending: false })
+        .then(({ data }) => {
+          if (data) setEntries(data.map(timeEntryFromDb));
+        });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeEntry]);
+
+  async function deleteEntry(id: string) {
+    const supabase = createClient();
+    await supabase.from('time_entries').delete().eq('id', id);
+    setEntries((prev) => prev.filter((e) => e.id !== id));
+  }
+
+  const totalMs = entries.reduce((acc, e) => {
+    if (!e.endedAt) return acc + (Date.now() - e.startedAt);
+    return acc + (e.endedAt - e.startedAt);
+  }, 0);
+
+  const canDelete = (e: TimeEntry) =>
+    viewerRole === 'admin' || e.pessoaId === currentPessoa?.id;
+
+  function fmtTime(ms: number) {
+    const d = new Date(ms);
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtDay(ms: number) {
+    const d = new Date(ms);
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  }
+
+  if (loadingTime) {
+    return <div className="tmodal-thread"><p className="text-xs text-muted text-center py-6">carregando…</p></div>;
+  }
+
+  return (
+    <div className="tmodal-thread">
+      {/* Total */}
+      <div className="flex items-center justify-between px-1 py-2 border-b border-line mb-1">
+        <span className="text-xs font-medium text-ink">Total registrado</span>
+        <span className="text-sm font-mono font-semibold text-brand">{fmtDuration(totalMs)}</span>
+      </div>
+
+      {entries.length === 0 && (
+        <p className="text-xs text-muted text-center py-6">Nenhum registro de tempo ainda.</p>
+      )}
+
+      {entries.map((e) => {
+        const durMs = e.endedAt ? e.endedAt - e.startedAt : Date.now() - e.startedAt;
+        const isRunning = !e.endedAt;
+        return (
+          <div
+            key={e.id}
+            className="flex items-center gap-2 text-xs py-2 border-b border-line last:border-0"
+          >
+            <span className="text-muted font-mono shrink-0 w-10">{fmtDay(e.startedAt)}</span>
+            <span className="text-muted font-mono shrink-0">
+              {fmtTime(e.startedAt)} – {e.endedAt ? fmtTime(e.endedAt) : (
+                <span className="text-[color:var(--brand)]">em andamento</span>
+              )}
+            </span>
+            <span className={`font-mono font-medium ml-auto shrink-0 ${isRunning ? 'text-[color:var(--brand)]' : 'text-ink'}`}>
+              {fmtDuration(durMs)}
+            </span>
+            {canDelete(e) && !isRunning && (
+              <button
+                type="button"
+                className="text-muted hover:text-danger ml-1 shrink-0"
+                onClick={() => deleteEntry(e.id)}
+                title="Excluir registro"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function ChecklistEditor({
   items,
   onChange,

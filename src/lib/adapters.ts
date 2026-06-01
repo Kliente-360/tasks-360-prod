@@ -4,7 +4,7 @@
  * runtime pra reuso de helpers (task-utils) e lógica idêntica de UI.
  */
 
-import type { Cliente, Projeto, Pessoa, Task, Complexidade, Prioridade, TaskStatus } from './types';
+import type { Cliente, Projeto, Pessoa, Task, TimeEntry, Complexidade, Prioridade, TaskStatus } from './types';
 
 type Row = Record<string, unknown>;
 
@@ -97,6 +97,18 @@ export function pessoaFromDb(r: Row): Pessoa {
     skills: (r.skills as string[]) ?? null,
     senioridade: (r.senioridade as string) ?? null,
     is_ceo: r.is_ceo === true,
+  };
+}
+
+export function timeEntryFromDb(r: Row): TimeEntry {
+  return {
+    id: str(r.id),
+    taskId: str(r.task_id),
+    pessoaId: str(r.pessoa_id),
+    startedAt: dateMs(r.started_at),
+    endedAt: r.ended_at ? new Date(r.ended_at as string).getTime() : null,
+    note: r.note ? String(r.note) : null,
+    criadoEm: dateMs(r.criado_em),
   };
 }
 
