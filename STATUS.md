@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.02.215 · **Atualizado**: 01/06/2026
+> **Versão**: v1.02.216 · **Atualizado**: 01/06/2026
 
 ---
 
@@ -12,7 +12,7 @@
 Todos os 3 concluídos → libera **§9.3.9 Cutover Vercel** (§9.3.9 do ROADMAP.md tem o plano completo).
 
 - [ ] Revisar Dashboard
-- [ ] Revisar Briefing
+- ✅ Revisar Briefing (jun/2026)
 - [ ] Revisar Portal cliente
 
 ---
@@ -81,5 +81,5 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## Próximo passo imediato
 
-→ Revisar **Dashboard / Briefing / Portal cliente** (NOW — qualquer ordem, são desacoplados).
-→ Quando os 3 done: executar **Cutover Vercel** (~1h ativo · plano em §9.3.9 do ROADMAP.md).
+→ Revisar **Dashboard** e **Portal cliente** (NOW — 2 pendentes, desacoplados).
+→ Quando os 2 done: executar **Cutover Vercel** (~1h ativo · plano em §9.3.9 do ROADMAP.md).
