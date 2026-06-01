@@ -752,7 +752,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               field: 'status',
               from_value: prev.status,
               to_value: SUB_TO_MACRO[e.subetapa] || 'backlog',
-              actor_pessoa_id: null,
+              actor_pessoa_id: currentPessoa?.id ?? null,
               actor_source: 'app',
               occurred_at: nowIso,
             });
@@ -766,7 +766,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 field,
                 from_value: a,
                 to_value: b,
-                actor_pessoa_id: null,
+                actor_pessoa_id: currentPessoa?.id ?? null,
                 actor_source: 'app',
                 occurred_at: nowIso,
               });
@@ -895,7 +895,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             field: 'status',
             from_value: null,
             to_value: data.status,
-            actor_pessoa_id: null,
+            actor_pessoa_id: currentPessoa?.id ?? null,
             actor_source: 'app',
             occurred_at: nowIso,
           });
@@ -929,6 +929,11 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       console.warn('[autosave]', res.error);
     }
   }, [persist, markUserEditedTask]);
+  // Ref sempre atualizado — evita incluir autosaveNow nas deps do effect
+  // de dirty/debounce e previne o loop (patchTask → tasksById → persist
+  // → autosaveNow ref muda → effect re-dispara → loop).
+  const autosaveNowRef = useRef(autosaveNow);
+  autosaveNowRef.current = autosaveNow;
 
   // Autosave OFF quando o cliente tem webhook_enabled=true (VB, CTF…).
   // Pra esses, o save dispara um webhook Salesforce — não pode rodar a
@@ -959,12 +964,16 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     setSaveState('dirty');
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     autosaveTimer.current = setTimeout(() => {
-      autosaveNow();
+      autosaveNowRef.current();
     }, 800);
     return () => {
       if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
     };
-  }, [editing, autosaveNow, clienteWebhookEnabled]);
+    // autosaveNow intencionalmente fora das deps — usamos o ref pra sempre
+    // chamar a versão mais recente sem re-disparar o effect quando persist
+    // muda de referência após patchTask (evita loop dirty→save→dirty).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, clienteWebhookEnabled]);
 
   // Quando muda cliente (Sem→Com webhook ou vice-versa) sem que o user
   // tenha tocado em outro campo, o useEffect acima já trata. Mas o
@@ -1543,7 +1552,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             </span>
           )}
           <div className="tmodal-head-right">
-            {editing.id && editing.webhookSyncStatus === 'error' && (
+            {editing.id && editing.externalSource === 'salesforce' && editing.webhookSyncStatus === 'error' && (
               <span
                 className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
                 style={{ background: 'var(--p0-soft)', color: 'var(--p0)' }}
@@ -1552,7 +1561,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 sync · erro
               </span>
             )}
-            {editing.id && editing.webhookSyncStatus === 'synced' && (
+            {editing.id && editing.externalSource === 'salesforce' && editing.webhookSyncStatus === 'synced' && (
               <span
                 className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
                 style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}
