@@ -14,7 +14,7 @@ import { ExportIconButton } from '@/components/export';
 import { NotifBell } from '@/components/notif-bell';
 import { TimerButton } from '@/components/timer-button';
 
-const APP_VERSION = 'v1.02.212';
+const APP_VERSION = 'v1.02.213';
 
 /** Barra de navegação superior — espelha o header do app Alpine. */
 export function AppNav() {
@@ -65,8 +65,10 @@ export function AppNav() {
           <ExportIconButton />
           <HelpIconButton />
           <ThemeIconButton />
+          <div className="hidden md:block">
+            <TimerButton />
+          </div>
           <div className="w-px h-6 bg-line mx-1 md:mx-2 hidden md:block" />
-          <TimerButton />
           <div className="hidden md:block">
             <button
               type="button"

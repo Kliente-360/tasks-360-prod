@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTimer, fmtElapsed } from '@/lib/use-timer';
 import { useData, useClientesById } from '@/lib/data-store';
 import { cn } from '@/lib/utils';
@@ -29,12 +29,17 @@ function TaskPickerModal({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  const candidates = tasks.filter(
-    (t) =>
-      !t.arquivadoEm &&
-      t.status === 'andamento' &&
-      t.pessoaId === currentPessoa?.id,
-  );
+  const candidates = useMemo(() => {
+    const myId = currentPessoa?.id;
+    return tasks
+      .filter((t) => !t.arquivadoEm && t.status === 'andamento')
+      .sort((a, b) => {
+        // My tasks first
+        const aMine = a.pessoaId === myId ? 0 : 1;
+        const bMine = b.pessoaId === myId ? 0 : 1;
+        return aMine - bMine || a.titulo.localeCompare(b.titulo);
+      });
+  }, [tasks, currentPessoa?.id]);
 
   const filtered = q.trim()
     ? candidates.filter(
