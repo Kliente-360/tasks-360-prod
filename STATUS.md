@@ -11,9 +11,9 @@
 
 Todos os 3 concluídos → libera **§9.3.9 Cutover Vercel** (§9.3.9 do ROADMAP.md tem o plano completo).
 
-- [ ] Revisar Dashboard
+- ✅ Revisar Dashboard (jun/2026)
 - ✅ Revisar Briefing (jun/2026)
-- [ ] Revisar Portal cliente
+- ✅ Revisar Portal cliente (jun/2026)
 
 ---
 
@@ -81,5 +81,4 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## Próximo passo imediato
 
-→ Revisar **Dashboard** e **Portal cliente** (NOW — 2 pendentes, desacoplados).
-→ Quando os 2 done: executar **Cutover Vercel** (~1h ativo · plano em §9.3.9 do ROADMAP.md).
+→ **NOW completo.** Próximo passo: executar **Cutover Vercel** (~1h ativo · plano em §9.3.9 do ROADMAP.md).
