@@ -544,6 +544,75 @@ export function computeThroughput(tasks: Task[]): ThroughputWeek[] {
 }
 
 // ─────────────────────────────────────────────────────────
+//  Velocidade da operação (30d)
+// ─────────────────────────────────────────────────────────
+
+export interface VelocidadeMetrics {
+  throughputW1: number;
+  throughputW2: number;
+  /** Avg days criadoEm → concluído, last 30d. null se sem dados. */
+  leadTimeDias: number | null;
+  /** % tasks com prazo concluídas no prazo, last 30d. null se nenhuma com prazo. */
+  pctNoPrazo: number | null;
+  /** Denominador do pctNoPrazo (tasks com prazo concluídas em 30d). */
+  pctNoPrazoBases: number;
+  /** Numerador (entregues no prazo). */
+  pctNoPrazoOk: number;
+}
+
+export function computeVelocidade(tasks: Task[]): VelocidadeMetrics {
+  const now = Date.now();
+  const d30ago = now - 30 * 24 * 3600 * 1000;
+
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const offsetSeg = (todayDate.getDay() + 6) % 7;
+  const thisMonday = new Date(todayDate);
+  thisMonday.setDate(todayDate.getDate() - offsetSeg);
+  const lastMonday = new Date(thisMonday);
+  lastMonday.setDate(thisMonday.getDate() - 7);
+  const prevMonday = new Date(lastMonday);
+  prevMonday.setDate(lastMonday.getDate() - 7);
+
+  const concluded = tasks.filter((t) => t.status === STATUS.CONCLUIDO && t.statusEm);
+
+  const throughputW1 = concluded.filter(
+    (t) => t.statusEm >= lastMonday.getTime() && t.statusEm < thisMonday.getTime(),
+  ).length;
+  const throughputW2 = concluded.filter(
+    (t) => t.statusEm >= prevMonday.getTime() && t.statusEm < lastMonday.getTime(),
+  ).length;
+
+  const concluded30d = concluded.filter((t) => t.statusEm >= d30ago);
+
+  const withDates = concluded30d.filter((t) => t.criadoEm);
+  const leadTimeDias =
+    withDates.length > 0
+      ? Math.round(
+          (10 * withDates.reduce((s, t) => s + (t.statusEm - t.criadoEm) / 86400000, 0)) /
+            withDates.length,
+        ) / 10
+      : null;
+
+  const comPrazo = concluded30d.filter((t) => t.prazo);
+  const emPrazo = comPrazo.filter((t) => {
+    const prazoMs = new Date(t.prazo).getTime() + 86400000;
+    return t.statusEm <= prazoMs;
+  });
+  const pctNoPrazo =
+    comPrazo.length > 0 ? Math.round((emPrazo.length / comPrazo.length) * 100) : null;
+
+  return {
+    throughputW1,
+    throughputW2,
+    leadTimeDias,
+    pctNoPrazo,
+    pctNoPrazoBases: comPrazo.length,
+    pctNoPrazoOk: emPrazo.length,
+  };
+}
+
+// ─────────────────────────────────────────────────────────
 //  Semáforo de projetos (saúde operacional)
 // ─────────────────────────────────────────────────────────
 

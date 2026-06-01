@@ -4,6 +4,8 @@ Convenções do projeto que valem pra qualquer sessão.
 
 > **Sobre este repo**: `tasks-360-prod` é o repo produtivo do app Next (sprint final). Foi separado de `Kliente-360/tasks-360-mvp` (que ainda hospeda o Alpine em prod no Netlify até o cutover). Trabalho diário acontece aqui.
 
+> **Roadmap vivo**: ler **`STATUS.md`** no início de toda sessão relevante — é a fonte de verdade do estado atual (NOW/NEXT/LATER/done). `ROADMAP.md` é arquivo histórico imutável; não editar para refletir estado corrente.
+
 ## Supabase
 
 - **Nunca instruir Supabase CLI.** O usuário não usa CLI — tudo é feito pelo Dashboard (SQL Editor, Edge Functions UI, Database > Extensions, Database > Cron).
@@ -18,7 +20,7 @@ Convenções do projeto que valem pra qualquer sessão.
 
 - `APP_VERSION` segue `v1.<MINOR>.<BUILD>`. **Bumpa BUILD +1 antes de cada commit em main.**
 - BUILD é sequencial independente do número do PR no GitHub — os dois divergiram ao longo do trabalho de design e **não tentar realinhar**.
-- **Versão atual: `v1.02.161`** (pós-Onda 0 do Next, pré-cutover).
+- **Versão atual: `v1.02.214`** (pós-Onda 0 do Next, pré-cutover).
 - A versão é declarada em `src/components/app-nav.tsx` (constante `APP_VERSION`).
   - Repo legado `tasks-360-mvp` ainda mantém o Alpine em `lib/helpers.js` enquanto o cutover não acontece — durante a coexistência, bumpar BUILD lá também ao mexer no Alpine.
 - Em mudança grande de UX/dados, bumpa MINOR e zera BUILD (decisão manual). Último bump: 01→02 fechando o ciclo de design (PRs #253-#270).
