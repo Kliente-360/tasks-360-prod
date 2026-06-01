@@ -217,11 +217,7 @@ export function DashboardClient() {
             </span>
           </span>
         </div>
-        <div className="page-bar-controls">
-          <a href="/briefing" className="btn btn-ghost text-xs">
-            Briefing →
-          </a>
-        </div>
+        <div className="page-bar-controls" />
       </div>
 
       {/* ── Filtros ── */}
