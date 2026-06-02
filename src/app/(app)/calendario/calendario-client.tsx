@@ -22,6 +22,7 @@ import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
+import { PriChip, TaskAvatar, PrazoLabel, TagIA } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
 import type { Filters as StdFilters } from '@/lib/filters';
 import {
@@ -596,11 +597,11 @@ export function CalendarioClient() {
                 return (
                   <div key={t.id} className="kcard" onClick={() => openEdit(t.id)}>
                     <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="font-medium text-sm leading-snug">{t.titulo}</div>
-                      <span className={`pri pri-${t.prioridade}`}>
-                        <span className="pri-dot" />
-                        {t.prioridade}
-                      </span>
+                      <div className="font-medium text-sm leading-snug flex items-center gap-1.5">
+                        {t.criadoPorIa && <TagIA />}
+                        <span>{t.titulo}</span>
+                      </div>
+                      <PriChip prio={t.prioridade} />
                     </div>
                     <div className="text-xs text-muted mb-2">
                       {(clientesById.get(t.clienteId)?.nome ?? '—') +
@@ -616,11 +617,14 @@ export function CalendarioClient() {
                         ))}
                       </div>
                     )}
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-ink-soft">{pessoasById.get(t.pessoaId)?.nome ?? '—'}</span>
-                      <span className={`font-mono ${atrasada(t) ? 'late' : ''}`}>
-                        {t.prazo ? fmtDateShort(t.prazo) : '—'}
+                    <div className="flex items-center justify-between text-xs gap-2">
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <TaskAvatar name={pessoasById.get(t.pessoaId)?.nome ?? ''} />
+                        <span className="text-ink-soft truncate">
+                          {(pessoasById.get(t.pessoaId)?.nome ?? '—').split(/\s+/)[0]}
+                        </span>
                       </span>
+                      <PrazoLabel task={t} />
                     </div>
                     <div className="flex items-center gap-1.5 mt-2">
                       <div className="text-[10px] text-muted font-mono">

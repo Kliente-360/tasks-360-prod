@@ -21,6 +21,7 @@ import { useToast } from '@/components/toast';
 import { BulkBar, BulkBarClearButton, BulkBarSep } from '@/components/bulk-bar';
 import { PageHeader } from '@/components/page-header';
 import { PillsFilter } from '@/components/pills-filter';
+import { PriChip, PrazoLabel, TagIA } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
 import { agingDays, atrasada, fmtDateShort, triageFailures } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS } from '@/lib/task-constants';
@@ -315,22 +316,13 @@ export function TriagemClient() {
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2 flex-wrap mb-1">
-                    {t.prioridade && (
-                      <span className={`pri pri-${t.prioridade}`}>
-                        <span className="pri-dot" />
-                        {t.prioridade}
-                      </span>
-                    )}
+                    {t.prioridade && <PriChip prio={t.prioridade} />}
                     {t.privada && (
                       <span className="ia-chip ia-chip-mini" title="Task privada">
                         🔒
                       </span>
                     )}
-                    {t.criadoPorIa && (
-                      <span className="ia-chip ia-chip-mini" title="Criada por automação IA">
-                        🤖 IA
-                      </span>
-                    )}
+                    {t.criadoPorIa && <TagIA />}
                     <span className="font-medium text-ink break-words">{t.titulo}</span>
                   </div>
                   {/* Linha 2 (subetapa · criada há Xd) — fonte mono pra dar
@@ -360,9 +352,7 @@ export function TriagemClient() {
                       {t.pessoaId ? pessoasById.get(t.pessoaId)?.nome ?? '—' : 'sem responsável'}
                     </span>
                     <span className="text-muted">·</span>
-                    <span className={`font-mono ${atrasada(t) ? 'late' : t.prazo ? '' : 'italic text-muted'}`}>
-                      {t.prazo ? fmtDateShort(t.prazo) : 'sem prazo'}
-                    </span>
+                    {t.prazo ? <PrazoLabel task={t} /> : <span className="italic text-muted font-mono">sem prazo</span>}
                   </div>
                   <div className="md:hidden flex items-center gap-1.5 text-xs text-ink-soft mt-1 flex-wrap">
                     <span className={t.clienteId ? 'truncate' : 'italic text-muted'}>
