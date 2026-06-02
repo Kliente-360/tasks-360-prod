@@ -251,9 +251,8 @@ export function DashboardClient() {
   const selCls = 'text-sm border border-line rounded-lg px-3 py-1.5 bg-elev text-ink focus:outline-none focus:border-[var(--cyan)] min-w-[140px]';
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
-
-      {/* ── PageHeader + FilterBar (desktop) ── */}
+    <div>
+      {/* ── PageHeader + FilterBar (desktop) — bare div: pageheader.mb:24 controla o Y do primeiro elemento ── */}
       <div className="hidden md:block">
         <PageHeader
           title="Dashboard"
@@ -333,6 +332,7 @@ export function DashboardClient() {
         {/* Desktop filtros agora vivem dentro do FilterBar no PageHeader acima */}
       </div>
 
+      <div className="space-y-4 md:space-y-6">
       {/* ── 1. KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
         <KpiCard label="Em andamento" value={kpiAndamento.length} sub={`${kpiAndamentoHoras}h alocadas`} />
@@ -738,6 +738,7 @@ export function DashboardClient() {
           </div>
         </div>
 
+      </div>
       </div>
     </div>
   );

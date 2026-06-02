@@ -777,6 +777,8 @@ input[type="checkbox"] { accent-color: var(--brand); }
 .view-toggle button { padding: 0 12px; font-size: 12.5px; font-weight: 500; color: var(--fg-muted); border: none; background: transparent; cursor: pointer; transition: all 0.15s; height: 100%; display: inline-flex; align-items: center; }
 .view-toggle button:hover { color: var(--fg); }
 .view-toggle button.active { background: var(--green-tint); color: var(--green); font-weight: 600; }
+/* Variante ícone-only — botões quadrados 34x34, sem padding lateral grande */
+.view-toggle.view-toggle-icons button { padding: 0; width: 34px; justify-content: center; }
 .kcol-readonly { opacity: 0.95; }
 .kcol-readonly .kcard { cursor: pointer; }
 
