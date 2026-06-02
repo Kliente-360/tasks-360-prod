@@ -3,13 +3,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
-import { MobileTaskCard, MobileAvatar } from '@/components/mobile-task-card';
-import { Icon } from '@/components/icons';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { cn } from '@/lib/utils';
 import { atrasada, agingDays, effEsforco } from '@/lib/task-utils';
-import type { Task } from '@/lib/types';
 import type { Filters as StdFilters } from '@/lib/filters';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import {
@@ -255,25 +252,6 @@ export function DashboardClient() {
 
   return (
     <div>
-      {/* ============ MOBILE · espelha mobile.jsx MDashboard ============ */}
-      <div className="md:hidden">
-        <DashboardMobile
-          baseTasks={baseTasks}
-          kpiAndamento={kpiAndamento.length}
-          kpiBacklog={kpiBacklog.length}
-          kpiBloqueadas={kpiBloqueadas.length}
-          kpiAtrasadas={kpiAtrasadas.length}
-          throughput12={throughput12.map((w) => w.total)}
-          cargaPessoa={cargaPessoa}
-          openEdit={openEdit}
-          clientesById={clientesById}
-          projetosById={projetosById}
-          pessoasById={pessoasById}
-        />
-      </div>
-
-      {/* ============ DESKTOP · conteúdo original ============ */}
-      <div className="hidden md:block">
       {/* ── PageHeader + FilterBar (desktop) — bare div: pageheader.mb:24 controla o Y do primeiro elemento ── */}
       <div className="hidden md:block">
         <PageHeader
@@ -762,165 +740,6 @@ export function DashboardClient() {
 
       </div>
       </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// MOBILE · espelha mobile.jsx MDashboard
-// ============================================================
-type DashboardMobileProps = {
-  baseTasks: Task[];
-  kpiAndamento: number;
-  kpiBacklog: number;
-  kpiBloqueadas: number;
-  kpiAtrasadas: number;
-  throughput12: number[];
-  cargaPessoa: { pessoaId: string; nome: string; total: number }[];
-  openEdit: (id: string) => void;
-  clientesById: Map<string, { nome: string }>;
-  projetosById: Map<string, { nome: string }>;
-  pessoasById: Map<string, { nome: string }>;
-};
-
-function DashboardMobile({
-  baseTasks,
-  kpiAndamento,
-  kpiBacklog,
-  kpiBloqueadas,
-  kpiAtrasadas,
-  throughput12,
-  cargaPessoa,
-  openEdit,
-  clientesById,
-  projetosById,
-  pessoasById,
-}: DashboardMobileProps) {
-  const abertas = baseTasks.filter((t) => t.status !== 'concluido');
-  const maxT = Math.max(...throughput12, 1);
-  const last = throughput12.length - 1;
-  const maxCarga = Math.max(...cargaPessoa.map((p) => p.total), 1);
-
-  // "Precisa de atenção": atrasadas ou P0, primeiras 3
-  const atencao = abertas
-    .filter((t) => atrasada(t) || t.prioridade === 'P0')
-    .slice(0, 3);
-
-  // throughput estimado: média / sem, 1 casa
-  const tpAvg = throughput12.length
-    ? (throughput12.reduce((a, b) => a + b, 0) / throughput12.length).toFixed(1).replace('.', ',')
-    : '0,0';
-
-  return (
-    <div className="m-scroll">
-      <div className="m-pagetitle">
-        <h1>Visão geral</h1>
-        <div className="narr">
-          <b>{abertas.length}</b> ativas <span className="sep">·</span> throughput <b>{tpAvg}</b>/sem
-        </div>
-      </div>
-      <div className="m-kpis">
-        <MKpi label="Em andamento" value={kpiAndamento} sub="ativas" />
-        <MKpi label="Backlog" value={kpiBacklog} sub="previstas" />
-        <MKpi label="Bloqueadas" value={kpiBloqueadas} sub="aguardam ação" danger={kpiBloqueadas > 0} />
-        <MKpi label="Atrasadas" value={kpiAtrasadas} sub="ação" danger />
-      </div>
-
-      <div className="m-sec mt14">
-        <div className="h">
-          <div>
-            <h3>Throughput</h3>
-            <div className="sub">concluídas / semana · 12 sem</div>
-          </div>
-          <Icon name="sort" className="muted" size={16} />
-        </div>
-        <div className="body">
-          <div className="bars">
-            {throughput12.map((v, i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                <div
-                  className={'bar' + (i === last ? ' now' : '')}
-                  style={{ height: (v / maxT) * 100 + '%' }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="m-sec mt14">
-        <div className="h">
-          <h3>Carga por pessoa</h3>
-        </div>
-        <div className="body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {cargaPessoa.slice(0, 8).map((c) => {
-            const pct = Math.round((c.total / maxCarga) * 100);
-            const over = pct > 85;
-            return (
-              <div key={c.pessoaId} className="loadrow">
-                <MobileAvatar nome={c.nome} sm />
-                <div className="track">
-                  <div className={'fill' + (over ? ' over' : '')} style={{ width: pct + '%' }} />
-                </div>
-                <span className="pct">{pct}%</span>
-              </div>
-            );
-          })}
-          {cargaPessoa.length === 0 && (
-            <div className="text-muted text-xs italic">Sem dados.</div>
-          )}
-        </div>
-      </div>
-
-      <div className="m-sec mt14">
-        <div className="h">
-          <div>
-            <h3>Precisa de atenção</h3>
-            <div className="sub">priorize hoje</div>
-          </div>
-        </div>
-        <div className="m-list" style={{ padding: 12, gap: 9 }}>
-          {atencao.map((t) => (
-            <MobileTaskCard
-              key={t.id}
-              task={t}
-              clienteNome={clientesById.get(t.clienteId)?.nome ?? '—'}
-              projetoNome={projetosById.get(t.projetoId)?.nome ?? ''}
-              pessoaNome={pessoasById.get(t.pessoaId)?.nome ?? '—'}
-              onOpen={openEdit}
-            />
-          ))}
-          {atencao.length === 0 && (
-            <div className="text-muted text-xs italic px-1 py-2">Nada urgente. ✓</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MKpi({
-  label,
-  value,
-  sub,
-  danger,
-}: {
-  label: string;
-  value: number | string;
-  sub?: string;
-  danger?: boolean;
-}) {
-  return (
-    <div className="kpi card" style={{ padding: '13px 14px' }}>
-      <div className="text-[10px] uppercase tracking-wider text-muted font-mono">{label}</div>
-      <div
-        className="val font-brand font-semibold"
-        style={{ fontSize: 26, marginTop: 2, color: danger ? 'var(--danger)' : undefined }}
-      >
-        {value}
-      </div>
-      {sub && <div className="text-[11px] text-muted mt-1">{sub}</div>}
     </div>
   );
 }

@@ -209,21 +209,8 @@ export function FocoClient() {
 
   return (
     <div>
-      {/* ============ MOBILE · espelha mobile.jsx MFoco ============ */}
-      <div className="md:hidden">
-        <FocoMobile
-          tasks={tasks}
-          focusPessoaId={focusPessoaId}
-          openEdit={openEdit}
-          clientesById={clientesById}
-          projetosById={projetosById}
-          pessoasById={pessoasById}
-        />
-      </div>
-
-      {/* ============ DESKTOP · conteúdo original ============ */}
+      {/* Desktop · PageHeader + selector "atuando como" pra admin (pills Minhas/Atrasadas/Hoje removidos — redundantes com as seções abaixo) */}
       <div className="hidden md:block">
-
         <PageHeader
           title={
             hasFocus
@@ -248,6 +235,25 @@ export function FocoClient() {
             ) : undefined
           }
         />
+      </div>
+
+      {/* Mobile selector — só admin */}
+      {isAdmin && (
+        <div className="md:hidden mb-4">
+          <select
+            className={`inp w-full ${focusPessoaId ? 'is-active' : ''}`}
+            value={focusPessoaId}
+            onChange={(e) => setFocus(e.target.value)}
+          >
+            <option value="">— atuando como —</option>
+            {pessoasNaoCliente.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Setup banner sem pessoa */}
       {!hasFocus && (
@@ -342,7 +348,6 @@ export function FocoClient() {
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }
@@ -543,153 +548,6 @@ function FocoCard({
           <span className="triage-badge" title={triageFailures(t).join(' · ')}>
             triar
           </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// MOBILE · espelha mobile.jsx MFoco
-// ============================================================
-type FocoMobileProps = {
-  tasks: Task[];
-  focusPessoaId: string;
-  openEdit: (id: string) => void;
-  clientesById: Map<string, { nome: string }>;
-  projetosById: Map<string, { nome: string }>;
-  pessoasById: Map<string, { nome: string }>;
-};
-
-function FocoMobile({
-  tasks,
-  focusPessoaId,
-  openEdit,
-  clientesById,
-  projetosById,
-  pessoasById,
-}: FocoMobileProps) {
-  const [seg, setSeg] = useState<'minhas' | 'atrasadas' | 'hoje'>('minhas');
-  const [done, setDone] = useState<Set<string>>(() => new Set());
-
-  const mine = useMemo(
-    () =>
-      tasks.filter(
-        (t) => t.pessoaId === focusPessoaId && !t.arquivadoEm && t.status !== STATUS.CONCLUIDO,
-      ),
-    [tasks, focusPessoaId],
-  );
-  const today = new Date().toISOString().slice(0, 10);
-  const minhas = mine;
-  const atrasadasL = mine.filter((t) => atrasada(t));
-  const hojeL = mine.filter((t) => t.prazo === today || atrasada(t));
-  const list = seg === 'atrasadas' ? atrasadasL : seg === 'hoje' ? hojeL : minhas;
-  const totalH = list.reduce((a, t) => a + (Number(t.esforco) || 0), 0);
-
-  const segs = [
-    { v: 'minhas' as const, label: 'Minhas', ct: minhas.length },
-    { v: 'atrasadas' as const, label: 'Atrasadas', ct: atrasadasL.length },
-    { v: 'hoje' as const, label: 'Hoje', ct: hojeL.length },
-  ];
-
-  const toggleDone = (id: string) =>
-    setDone((d) => {
-      const next = new Set(d);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
-  if (!focusPessoaId) {
-    return (
-      <div className="m-scroll">
-        <div className="m-pagetitle">
-          <h1>Foco</h1>
-          <div className="narr">sem pessoa vinculada</div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="m-scroll">
-      <div className="m-pagetitle">
-        <h1>
-          Foco de <em>hoje</em>
-        </h1>
-        <div className="narr">
-          <b>{list.length}</b> tarefas <span className="sep">·</span> <b>{totalH}h</b> previstas
-        </div>
-      </div>
-      <div className="m-pills">
-        {segs.map((s) => (
-          <button
-            key={s.v}
-            type="button"
-            className={'m-pill' + (seg === s.v ? ' on' : '')}
-            onClick={() => setSeg(s.v)}
-          >
-            {s.label}
-            <span className="ct">{s.ct}</span>
-          </button>
-        ))}
-      </div>
-      <div className="m-list">
-        {list.map((t) => {
-          const isDone = done.has(t.id);
-          return (
-            <div key={t.id} className={'tcard check' + (isDone ? ' done' : '')}>
-              <label
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 22,
-                  height: 22,
-                  flex: 'none',
-                  cursor: 'pointer',
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <input
-                  type="checkbox"
-                  checked={isDone}
-                  onChange={() => toggleDone(t.id)}
-                  aria-label="Marcar como feito"
-                />
-              </label>
-              <div
-                className="body"
-                onClick={() => openEdit(t.id)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div className="ttl">{t.titulo}</div>
-                <div className="sub">
-                  {clientesById.get(t.clienteId)?.nome ?? '—'}
-                  {t.projetoId ? ' · ' + (projetosById.get(t.projetoId)?.nome ?? '—') : ''}
-                </div>
-              </div>
-              <div
-                className="col"
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 7 }}
-              >
-                {t.prioridade && (
-                  <span className={`pri pri-${t.prioridade}`}>
-                    <span className="pri-dot" />
-                    {t.prioridade}
-                  </span>
-                )}
-                <span className="chip mono" style={{ padding: '1px 7px' }}>
-                  {t.esforco || '?'}h
-                </span>
-              </div>
-            </div>
-          );
-        })}
-        {list.length === 0 && (
-          <div className="card text-center py-4 px-3 text-muted text-xs italic">
-            Nada por aqui.
-          </div>
         )}
       </div>
     </div>

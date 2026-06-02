@@ -25,8 +25,6 @@ import { fmtDate } from '@/lib/format';
 import type { Task } from '@/lib/types';
 import { usePortalData, type PortalCards } from './use-portal-data';
 import { PortalTaskModal } from './portal-task-modal';
-import { MobileTaskCard } from '@/components/mobile-task-card';
-import { Icon } from '@/components/icons';
 
 const LS_KEY = 'kliente360-portal-cliente';
 
@@ -146,23 +144,7 @@ export function PortalClient() {
 
   // ---- Conteúdo do portal ----
   return (
-    <div className="fade-up">
-      {/* ============ MOBILE · espelha mobile.jsx MPortal ============ */}
-      <div className="md:hidden">
-        <PortalMobile
-          clienteNome={portalCliente?.nome ?? ''}
-          corPortal={portalCliente?.corPortal ?? null}
-          corPortalTexto={portalCliente?.corPortalTexto ?? null}
-          cards={cards}
-          metrics={metrics}
-          openTask={openPortalTask}
-          projetosById={projetosById}
-          pessoasById={pessoasById}
-        />
-      </div>
-
-      {/* ============ DESKTOP · conteúdo original ============ */}
-      <div className="hidden md:block space-y-5 md:space-y-6">
+    <div className="fade-up space-y-5 md:space-y-6">
       {/* 1. HEADER · cor + texto customizáveis por cliente (cadastro do cliente) */}
       <div
         className={`portal-header relative${
@@ -442,140 +424,11 @@ export function PortalClient() {
         );
       })}
 
-      </div>
-
       <PortalTaskModal
         task={openTask}
         clienteNome={portalCliente?.nome ?? 'cliente'}
         onClose={closeModal}
       />
-    </div>
-  );
-}
-
-// ============================================================
-// MOBILE · espelha mobile.jsx MPortal
-// ============================================================
-type PortalMobileProps = {
-  clienteNome: string;
-  corPortal: string | null;
-  corPortalTexto: 'light' | 'dark' | null;
-  cards: PortalCards;
-  metrics: ReturnType<typeof usePortalData>['metrics'];
-  openTask: (t: Task) => void;
-  projetosById: Map<string, { nome: string }>;
-  pessoasById: Map<string, { nome: string }>;
-};
-
-function PortalMobile({
-  clienteNome,
-  corPortal,
-  corPortalTexto,
-  cards,
-  metrics,
-  openTask,
-  projetosById,
-  pessoasById,
-}: PortalMobileProps) {
-  const ativas = cards.emAndamento.concat(cards.aguardando, cards.proximas);
-  const aguardando = cards.aguardando.length;
-  const entregues = metrics.mesAtual;
-  const horasMes = Math.round(
-    (cards.emAndamento.concat(cards.aguardando, cards.proximas).reduce((a, t) => a + (Number(t.esforco) || 0), 0)) * 10,
-  ) / 10;
-
-  return (
-    <div className="m-scroll" style={{ padding: 0 }}>
-      <div
-        className={'portal-header relative' + (corPortalTexto === 'dark' ? ' theme-dark-text' : '')}
-        style={{
-          padding: '18px 18px',
-          background: corPortal || undefined,
-        }}
-      >
-        <div className="m-eyebrow" style={{ color: 'rgba(255,255,255,.55)' }}>
-          Portal do cliente
-        </div>
-        <h1 style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}>{clienteNome}</h1>
-        <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.72)', marginTop: 4 }}>
-          {ativas.length} ativas · {aguardando} aguardando você
-        </div>
-      </div>
-
-      <div style={{ padding: '14px 16px 28px' }}>
-        <div className="m-kpis">
-          <MPortalKpi label="Ativas" value={ativas.length} sub="em execução" />
-          <MPortalKpi label="Entregues" value={entregues} sub="este mês" />
-          <MPortalKpi
-            label="Aguardando você"
-            value={aguardando}
-            sub={aguardando > 0 ? 'responda' : 'tudo certo'}
-            danger={aguardando > 0}
-          />
-          <MPortalKpi label="Horas no mês" value={`${horasMes}h`} sub="alocadas" />
-        </div>
-
-        {aguardando > 0 && (
-          <div className="alert warn mt14">
-            <span className="ai">
-              <Icon name="alert" size={18} />
-            </span>
-            <div>
-              <div className="at">
-                {aguardando} {aguardando === 1 ? 'tarefa aguardando' : 'tarefas aguardando'} aprovação
-              </div>
-              <div className="as">Descontos e follow-up precisam do seu OK.</div>
-            </div>
-          </div>
-        )}
-
-        <div className="m-sec mt14">
-          <div className="h">
-            <h3>Tarefas do projeto</h3>
-            <span className="chip mono">{ativas.length} ativas</span>
-          </div>
-          <div className="m-list" style={{ padding: 12, gap: 9 }}>
-            {ativas.map((t) => (
-              <MobileTaskCard
-                key={t.id}
-                task={t}
-                clienteNome={clienteNome}
-                projetoNome={projetosById.get(t.projetoId)?.nome ?? ''}
-                pessoaNome={pessoasById.get(t.pessoaId)?.nome ?? '—'}
-                onOpen={() => openTask(t)}
-              />
-            ))}
-            {ativas.length === 0 && (
-              <div className="text-muted text-xs italic px-1 py-3">Nenhuma tarefa ativa.</div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MPortalKpi({
-  label,
-  value,
-  sub,
-  danger,
-}: {
-  label: string;
-  value: number | string;
-  sub?: string;
-  danger?: boolean;
-}) {
-  return (
-    <div className="kpi card" style={{ padding: '13px 14px' }}>
-      <div className="text-[10px] uppercase tracking-wider text-muted font-mono">{label}</div>
-      <div
-        className="val font-brand font-semibold"
-        style={{ fontSize: 26, marginTop: 2, color: danger ? 'var(--danger)' : undefined }}
-      >
-        {value}
-      </div>
-      {sub && <div className="text-[11px] text-muted mt-1">{sub}</div>}
     </div>
   );
 }
