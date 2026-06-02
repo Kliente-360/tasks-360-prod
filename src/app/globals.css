@@ -1686,6 +1686,18 @@ body {
 }
 .fselect.clear:hover { border-color: var(--danger); background: var(--danger-soft); }
 .fselect.clear .ic { color: var(--danger); }
+/* Estado vazio (sem filtros aplicados): cinza desabilitado, ocupa o
+   mesmo espaço pra não deslocar a bar quando filtros entram/saem. */
+.fselect.clear.is-empty,
+.fselect.clear:disabled {
+  color: var(--fg-muted);
+  cursor: default;
+  opacity: 0.45;
+}
+.fselect.clear.is-empty:hover,
+.fselect.clear:disabled:hover { border-color: transparent; background: transparent; }
+.fselect.clear.is-empty .ic,
+.fselect.clear:disabled .ic { color: var(--fg-muted); }
 
 .fmenu {
   position: absolute;
