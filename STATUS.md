@@ -3,17 +3,17 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.02.221 · **Atualizado**: 01/06/2026
+> **Versão**: v1.02.225 · **Atualizado**: 02/06/2026
 
 ---
 
-## NOW · pré-cutover (§9.3.1)
+## ✅ Cutover concluído (§9.3.9 · jun/2026)
 
-Todos os 3 concluídos → libera **§9.3.9 Cutover Vercel** (§9.3.9 do ROADMAP.md tem o plano completo).
-
-- ✅ Revisar Dashboard (jun/2026)
-- ✅ Revisar Briefing (jun/2026)
-- ✅ Revisar Portal cliente (jun/2026)
+- ✅ Fase A · Vercel + Netlify fallback + Realtime publication ativada
+- ✅ Fase B · Monitoramento (Vercel logs · sem incidente)
+- ✅ Fase C · JWT 1h (já estava configurado) · Realtime token refresh fix · Sentry/PostHog descartados
+- ✅ Fase D · `usage_events` + `task_dependencies` dropadas · 18 migrations movidas pra `applied/`
+- ⏳ Fase D · Alpine no Netlify ativo como fallback — deletar após ~2 semanas sem incidente
 
 ---
 
@@ -56,7 +56,7 @@ Pré-req: ter chave Anthropic em env do Supabase. Sequência recomendada:
 ## COLD · parqueado conscientemente (§9.3.4)
 
 - `ai-chat` com tool use — adiar até `ai-suggest` + `ai-risk-scanner` validados em prod
-- Workspaces 3 pilares (Salesforce · Dados · IA) — precisa spec própria + pós-cutover
+- Workspaces 3 pilares (Salesforce · Dados · IA) — precisa spec própria
 - Heurísticas: Skill mismatch · Senioridade malalocada · Churn risk · Cliente em fricção
 
 ---
@@ -72,13 +72,14 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 | Promessa | Status |
 |---|---|
 | Visibilidade gerencial (Dashboard + Briefing) | ✅ Entregue mai/2026 |
-| Colaboração viva (realtime) | ⏸ Canal pronto · publication dorme até Cutover Fase A |
+| Colaboração viva (realtime) | ✅ Ativo desde cutover jun/2026 |
 | Diferenciação por IA | ❌ Zero em prod — 1ª prioridade pós-cutover |
-| Portal cliente | ⏸ Portado, validando |
+| Portal cliente | ✅ Entregue jun/2026 |
 | Time tracking (cronômetro) | ✅ Entregue jun/2026 |
 
 ---
 
 ## Próximo passo imediato
 
-→ **NOW completo.** Próximo passo: executar **Cutover Vercel** (~1h ativo · plano em §9.3.9 do ROADMAP.md).
+→ Deletar Alpine no Netlify após ~2 semanas sem incidente (meados jun/2026).
+→ Em paralelo: iniciar NEXT — sugestão: **Push notifications** ou **`ai-suggest`** (LATER).
