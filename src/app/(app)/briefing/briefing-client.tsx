@@ -11,7 +11,6 @@ import {
   computeWeeklyCapacityAnalysis,
   computeProjetosSaude,
   computeHeuristicAlerts,
-  computeVelocidade,
   type HeuristicAlert,
   type ProjetoSaude,
 } from '@/lib/heuristics';
@@ -83,47 +82,6 @@ function SectionHeader({
 }
 
 // ─────────────────────────────────────────────────────────
-//  KPI card (velocidade)
-// ─────────────────────────────────────────────────────────
-
-function VelCard({
-  label, value, sub, meta, status, delta, deltaSign,
-}: {
-  label: string; value: string; sub: string; meta: string;
-  status: 'ok' | 'warn' | 'danger' | 'muted';
-  delta?: string; deltaSign?: 'up' | 'down' | 'neutral';
-}) {
-  const valueColor =
-    status === 'ok' ? 'text-[var(--brand-dark)]' :
-    status === 'warn' ? 'text-[var(--warn)]' :
-    status === 'danger' ? 'text-[var(--danger)]' :
-    'text-[var(--ink)]';
-  const dotColor =
-    status === 'ok' ? 'bg-[var(--brand)]' :
-    status === 'warn' ? 'bg-[var(--warn)]' :
-    status === 'danger' ? 'bg-[var(--danger)]' :
-    'bg-[var(--line-strong)]';
-  return (
-    <div className="bg-elev border border-line rounded-xl p-3 md:p-4 flex flex-col gap-1 min-w-0">
-      <div className="flex items-center justify-between">
-        <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted leading-none">{label}</div>
-        <span className={cn('w-2 h-2 rounded-full shrink-0', dotColor)} />
-      </div>
-      <div className={cn('text-2xl md:text-3xl font-semibold tabular-nums leading-none mt-1', valueColor)}>{value}</div>
-      {delta && (
-        <div className={cn('text-[11px] mt-0.5',
-          deltaSign === 'up' ? 'text-[var(--brand)]' :
-          deltaSign === 'down' ? 'text-[var(--danger)]' : 'text-muted')}>
-          {deltaSign === 'up' ? '▲' : deltaSign === 'down' ? '▼' : '●'} {delta}
-        </div>
-      )}
-      <div className="text-[10px] text-muted mt-0.5">{meta}</div>
-      <div className="text-[10px] text-muted hidden md:block">{sub}</div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
 //  Alerta row — sempre exibe detalhe
 // ─────────────────────────────────────────────────────────
 
@@ -165,8 +123,6 @@ export function BriefingClient() {
     setCollapsed((s) => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
   const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm), [tasks]);
-
-  const vel = useMemo(() => computeVelocidade(baseTasks), [baseTasks]);
 
   const heuristicAlerts = useMemo(
     () => computeHeuristicAlerts(baseTasks, clientes, projetos, pessoas),
@@ -337,51 +293,9 @@ export function BriefingClient() {
       />
 
       <div className="hidden md:block space-y-4 md:space-y-6">
-      {/* ── Bloco 1 · Velocidade da operação (não colapsável) ── */}
-      <div className="bg-elev border border-line rounded-xl overflow-hidden">
-        <div className="px-3 md:px-4 py-3 border-b border-line flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-ink">Velocidade da operação</h2>
-          <span className="text-[10px] text-muted">throughput · lead · ciclo · previsibilidade · 30d</span>
-        </div>
-        <div className="p-3 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-          <VelCard
-            label="Throughput W-1" value={String(vel.throughputW1)} meta="meta ≥ 8/sem"
-            sub="tasks concluídas na semana anterior"
-            status={vel.throughputW1 >= 8 ? 'ok' : vel.throughputW1 >= 4 ? 'warn' : 'danger'}
-            delta={vel.throughputW1 !== vel.throughputW2
-              ? `${vel.throughputW1 > vel.throughputW2 ? '+' : ''}${vel.throughputW1 - vel.throughputW2} vs sem ant`
-              : 'igual à sem ant'}
-            deltaSign={vel.throughputW1 > vel.throughputW2 ? 'up' : vel.throughputW1 < vel.throughputW2 ? 'down' : 'neutral'}
-          />
-          <VelCard
-            label="Lead time" value={vel.leadTimeDias != null ? `${vel.leadTimeDias}d` : '—'}
-            meta="meta ≤ 7d" sub="criação → concluído · 30d"
-            status={vel.leadTimeDias == null ? 'muted' : vel.leadTimeDias <= 7 ? 'ok' : vel.leadTimeDias <= 14 ? 'warn' : 'danger'}
-          />
-          <VelCard
-            label="Ciclo" value={vel.cycleDias != null ? `${vel.cycleDias}d` : '—'}
-            meta="meta ≤ 5d" sub="andamento → concluído · 30d"
-            status={vel.cycleDias == null ? 'muted' : vel.cycleDias <= 5 ? 'ok' : vel.cycleDias <= 10 ? 'warn' : 'danger'}
-          />
-          <VelCard
-            label="% no prazo" value={vel.pctNoPrazo != null ? `${vel.pctNoPrazo}%` : '—'}
-            meta="meta ≥ 80%"
-            sub={vel.pctNoPrazoBases > 0
-              ? `${vel.pctNoPrazoOk}/${vel.pctNoPrazoBases} entregas com prazo · 30d`
-              : 'sem entregas com prazo em 30d'}
-            status={vel.pctNoPrazo == null ? 'muted' : vel.pctNoPrazo >= 80 ? 'ok' : vel.pctNoPrazo >= 50 ? 'warn' : 'danger'}
-          />
-        </div>
-        {vel.pctNoPrazo != null && vel.pctNoPrazo < 80 && (
-          <div className="px-3 md:px-4 pb-3 text-xs text-[var(--danger)]">
-            {vel.pctNoPrazo < 50
-              ? `${vel.pctNoPrazo}% de entregas no prazo — abaixo do crítico (meta ≥ 80%). Investigar gargalo.`
-              : `${vel.pctNoPrazo}% de entregas no prazo — abaixo da meta. Revisar prazos ou capacidade.`}
-          </div>
-        )}
-      </div>
-
-      {/* ── Bloco 2 · Alertas (não colapsável, mas ver todos expansível) ── */}
+      {/* ── Bloco 1 · Alertas (Velocidade da operação foi movida pro
+            Dashboard em jun/2026 — Briefing fica focado em leitura
+            editorial: alertas + clientes em atenção + comentários) ── */}
       <div className="bg-elev border border-line rounded-xl p-3 md:p-4">
         <div className="flex items-center gap-2 mb-3">
           <h2 className="text-sm font-semibold text-ink">Alertas</h2>

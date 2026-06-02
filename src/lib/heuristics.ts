@@ -514,6 +514,15 @@ export function computeHeuristicAlerts(
 // ─────────────────────────────────────────────────────────
 
 export interface VelocidadeMetrics {
+  /** Tasks concluídas NESTA semana (segunda passada → próxima segunda) */
+  throughputW0: number;
+  /** Projeção de W-0: throughputW0 + (tasks abertas com prazo nesta sem × pctNoPrazo).
+   *  null se pctNoPrazo for null (sem histórico pra taxa). */
+  throughputW0Projected: number | null;
+  /** Tendência da projeção vs W-1: 'up' se proj >= W1, 'down' se menor, 'neutral' se =. null se projeção null */
+  throughputW0Trend: 'up' | 'down' | 'neutral' | null;
+  /** Tasks ainda abertas com prazo nesta semana (usado pra UI explicar a projeção) */
+  abertasComPrazoNaSemana: number;
   throughputW1: number;
   throughputW2: number;
   /** Avg days criadoEm → concluído, last 30d. null se sem dados. */
@@ -541,9 +550,14 @@ export function computeVelocidade(tasks: Task[]): VelocidadeMetrics {
   lastMonday.setDate(thisMonday.getDate() - 7);
   const prevMonday = new Date(lastMonday);
   prevMonday.setDate(lastMonday.getDate() - 7);
+  const nextMonday = new Date(thisMonday);
+  nextMonday.setDate(thisMonday.getDate() + 7);
 
   const concluded = tasks.filter((t) => t.status === STATUS.CONCLUIDO && t.statusEm);
 
+  const throughputW0 = concluded.filter(
+    (t) => t.statusEm >= thisMonday.getTime() && t.statusEm < nextMonday.getTime(),
+  ).length;
   const throughputW1 = concluded.filter(
     (t) => t.statusEm >= lastMonday.getTime() && t.statusEm < thisMonday.getTime(),
   ).length;
@@ -580,7 +594,34 @@ export function computeVelocidade(tasks: Task[]): VelocidadeMetrics {
   const pctNoPrazo =
     comPrazo.length > 0 ? Math.round((emPrazo.length / comPrazo.length) * 100) : null;
 
+  // ===== Projeção W-0 =====
+  // Tasks ainda ABERTAS com prazo nesta semana — vão competir pra conclusão
+  // até sexta. Aplicamos a taxa histórica de % no prazo pra estimar quantas
+  // realmente serão concluídas. Soma com o throughput já realizado da
+  // semana pra projeção total.
+  const abertasComPrazoNaSemana = tasks.filter((t) => {
+    if (t.arquivadoEm) return false;
+    if (t.status === STATUS.CONCLUIDO) return false;
+    if (!t.prazo) return false;
+    const prazoMs = new Date(t.prazo).getTime();
+    return prazoMs >= thisMonday.getTime() && prazoMs < nextMonday.getTime();
+  }).length;
+
+  const throughputW0Projected: number | null = pctNoPrazo != null
+    ? throughputW0 + Math.round(abertasComPrazoNaSemana * (pctNoPrazo / 100))
+    : null;
+
+  const throughputW0Trend: 'up' | 'down' | 'neutral' | null =
+    throughputW0Projected == null ? null
+    : throughputW0Projected > throughputW1 ? 'up'
+    : throughputW0Projected < throughputW1 ? 'down'
+    : 'neutral';
+
   return {
+    throughputW0,
+    throughputW0Projected,
+    throughputW0Trend,
+    abertasComPrazoNaSemana,
     throughputW1,
     throughputW2,
     leadTimeDias,

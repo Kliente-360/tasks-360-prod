@@ -95,7 +95,7 @@ export function CalendarioClient() {
       cliente: s.cliente,
       projeto: s.projeto,
       pessoa: s.pessoa,
-      status: 'abertas',
+      status: 'todas',
       prazo: s.prazo,
     };
   });
@@ -115,7 +115,7 @@ export function CalendarioClient() {
   // g+l global → limpa filtros (status volta pro default 'abertas').
   useEffect(() => {
     const handler = () => {
-      setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas', prazo: '' });
+      setFilters({ cliente: '', projeto: '', pessoa: '', status: 'todas', prazo: '' });
       setSelectedIso('');
       setQDraft('');
       setOnlyIA(false);
@@ -381,7 +381,7 @@ export function CalendarioClient() {
               }}
               onClear={() => {
                 setQDraft('');
-                setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas', prazo: '' });
+                setFilters({ cliente: '', projeto: '', pessoa: '', status: 'todas', prazo: '' });
                 setShowArchived(false);
                 setOnlyIA(false);
                 setOnlyHumano(false);
@@ -450,7 +450,7 @@ export function CalendarioClient() {
           ))}
         </select>
         <select
-          className={`inp ${filters.status !== 'abertas' ? 'is-active' : ''}`}
+          className={`inp ${filters.status !== 'todas' ? 'is-active' : ''}`}
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
         >

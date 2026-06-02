@@ -1928,12 +1928,20 @@ body {
 .cal-task.status-active   { background: var(--green-soft); color: var(--green); border-color: var(--green); }
 .cal-task.status-blocked  { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
 .cal-task.status-late     { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
-.cal-task.status-done     { background: var(--bg-alt); color: var(--fg-muted); border-color: var(--line); text-decoration: line-through; }
+/* Done · verde clarinho desbotado + line-through. Distintivo do backlog
+   (cinza neutro) e do andamento (verde cheio). */
+.cal-task.status-done     {
+  background: var(--green-soft);
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 30%, transparent);
+  text-decoration: line-through;
+  opacity: 0.55;
+}
 .cal-task.status-backlog  { background: var(--bg-alt); color: var(--fg-soft); border-color: var(--line); }
 .cal-dot.status-active    { background: var(--green); }
 .cal-dot.status-blocked   { background: var(--warn); }
 .cal-dot.status-late      { background: var(--danger); }
-.cal-dot.status-done      { background: var(--p3); }
+.cal-dot.status-done      { background: var(--green); opacity: 0.5; }
 .cal-dot.status-backlog   { background: var(--fg-muted); }
 
 /* ============ F8 · Harmonização visual das toolbars do PageHeader ============
