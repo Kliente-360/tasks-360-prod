@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
+import { PriChip, TaskAvatar, PrazoLabel, TagIA } from '@/components/task-card/primitives';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'next/navigation';
 import { useData, useClientesById, useProjetosById, usePessoasById, useProjetosByCliente } from '@/lib/data-store';
@@ -1473,8 +1474,6 @@ function MobileTaskCard({
   respNome: string;
   onClick: () => void;
 }) {
-  const isLate = atrasada(t);
-  const ini = respNome.split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
   const firstName = respNome.split(/\s+/)[0] ?? respNome;
   return (
     <div className="tcard" onClick={onClick}>
@@ -1483,27 +1482,14 @@ function MobileTaskCard({
           <div className="ttl">{t.titulo}</div>
           <div className="sub">{cliente}{projeto ? ' · ' + projeto : ''}</div>
         </div>
-        <span className={cn('pri', `pri-${t.prioridade}`)}>
-          <span className="pri-dot" />
-          {t.prioridade}
-        </span>
+        <PriChip prio={t.prioridade} />
       </div>
       <div className="meta">
-        <span
-          className="inline-flex items-center justify-center shrink-0 rounded-full font-mono font-semibold"
-          style={{
-            width: 22, height: 22, fontSize: 9,
-            background: 'var(--green-soft)', color: 'var(--green)',
-          }}
-        >
-          {ini || '?'}
-        </span>
+        <TaskAvatar name={respNome} />
         <span className="text-xs text-muted">{firstName}</span>
         <span className="sp" />
-        {t.criadoPorIa && <span className="tag-ai"><Icon name="refresh" size={9} />IA</span>}
-        {isLate
-          ? <span className="late text-xs">{t.prazo ? fmtDateShort(t.prazo) : '—'}</span>
-          : <span className="font-mono text-xs text-muted">{t.prazo ? fmtDateShort(t.prazo) : '—'}</span>}
+        {t.criadoPorIa && <TagIA />}
+        <PrazoLabel task={t} />
       </div>
     </div>
   );

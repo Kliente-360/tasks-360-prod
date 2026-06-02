@@ -18,6 +18,7 @@ import { useData, usePessoasById, useClientesById, useProjetosById } from '@/lib
 import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
 import { Icon } from '@/components/icons';
+import { PriChip } from '@/components/task-card/primitives';
 import { cn } from '@/lib/utils';
 import {
   agingDays,
@@ -418,7 +419,7 @@ function FocoMobilePanel({
                   <div className="sub">{cli}{proj ? ' · ' + proj : ''}</div>
                 </div>
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <MobilePri p={t.prioridade} />
+                  <PriChip prio={t.prioridade} />
                   {t.esforco > 0 && (
                     <span className="chip font-mono" style={{ padding: '1px 7px', fontSize: 10 }}>
                       {t.esforco}h
@@ -431,16 +432,6 @@ function FocoMobilePanel({
         )}
       </div>
     </div>
-  );
-}
-
-/** Chip de prioridade mobile (P0/P1/P2/P3) — reusa .pri-P* do DS. */
-function MobilePri({ p }: { p: string }) {
-  return (
-    <span className={cn('pri', `pri-${p}`)}>
-      <span className="pri-dot" />
-      {p}
-    </span>
   );
 }
 
