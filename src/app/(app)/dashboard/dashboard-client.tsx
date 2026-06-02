@@ -20,29 +20,16 @@ import {
   computeCargaByPessoa,
   computeProjetosSaude,
   computeSaudePorPessoa,
+  computeVelocidade,
   type ThroughputWeek12,
   type CargaPessoa,
 } from '@/lib/heuristics';
+import { VelocidadeOperacao } from '@/components/velocidade-operacao';
 import type { Task } from '@/lib/types';
 
 // ─────────────────────────────────────────────────────────
 //  Helpers
 // ─────────────────────────────────────────────────────────
-
-function linearRegression(values: number[]): number[] {
-  const n = values.length;
-  if (n < 2) return values.slice();
-  const xMean = (n - 1) / 2;
-  const yMean = values.reduce((s, v) => s + v, 0) / n;
-  let num = 0, den = 0;
-  for (let i = 0; i < n; i++) {
-    num += (i - xMean) * (values[i] - yMean);
-    den += (i - xMean) ** 2;
-  }
-  const slope = den !== 0 ? num / den : 0;
-  const intercept = yMean - slope * xMean;
-  return values.map((_, i) => slope * i + intercept);
-}
 
 function sinalDot(sinal: string) {
   if (sinal === 'vermelho') return 'bg-[var(--danger)]';
@@ -66,25 +53,6 @@ function calBadgeBg(dia: { count: number; isPast: boolean }) {
 // ─────────────────────────────────────────────────────────
 //  Sub-componentes
 // ─────────────────────────────────────────────────────────
-
-function KpiCard({ label, value, sub, danger }: {
-  label: string; value: number | string; sub?: string; danger?: boolean;
-}) {
-  return (
-    <div className="bg-elev border border-line rounded-xl p-3 md:p-4 flex flex-col justify-center gap-1 min-w-0">
-      <div className="text-[10px] md:text-[11px] font-medium uppercase tracking-[0.12em] text-muted leading-none">
-        {label}
-      </div>
-      <div className={cn(
-        'text-2xl md:text-3xl font-semibold tabular-nums leading-none mt-1',
-        danger && Number(value) > 0 ? 'text-[var(--danger)]' : 'text-[var(--ink)]',
-      )}>
-        {value}
-      </div>
-      {sub && <div className="text-[10px] text-muted mt-0.5">{sub}</div>}
-    </div>
-  );
-}
 
 function SectionHeader({ title, sub }: { title: string; sub?: string }) {
   return (
@@ -153,19 +121,12 @@ export function DashboardClient() {
   const kpiBloqueadas = useMemo(() => filteredTasks.filter((t) => t.status === 'bloqueado'), [filteredTasks]);
   const kpiAtrasadas = useMemo(() => filteredTasks.filter((t) => atrasada(t) && t.status !== 'concluido'), [filteredTasks]);
 
-  const kpiAndamentoHoras = useMemo(
-    () => Math.round(kpiAndamento.reduce((s, t) => s + effEsforco(t), 0) * 10) / 10,
-    [kpiAndamento],
-  );
-  const kpiBacklogHoras = useMemo(
-    () => Math.round(kpiBacklog.reduce((s, t) => s + effEsforco(t), 0) * 10) / 10,
-    [kpiBacklog],
-  );
+  // ── Velocidade da operação (movida pro Dashboard em jun/2026)
+  const vel = useMemo(() => computeVelocidade(baseTasks), [baseTasks]);
 
-  // ── Throughput 12w (sem filtro — histórico)
+  // ── Throughput 12w (consumido pelo DashboardMobilePanel — mobile mantém
+  //    a chart de bars; desktop usa Velocidade da operação)
   const throughput12 = useMemo(() => computeThroughput12w(baseTasks), [baseTasks]);
-  const maxTotal = Math.max(...throughput12.map((w) => w.total), 1);
-  const trendLine = useMemo(() => linearRegression(throughput12.map((w) => w.total)), [throughput12]);
 
   // ── Entregas + calendário
   const entregasSemanas = useMemo(() => computeEntregasSemanas(filteredTasks), [filteredTasks]);
@@ -355,95 +316,14 @@ export function DashboardClient() {
       </div>
 
       <div className="hidden md:block space-y-4 md:space-y-6">
-      {/* ── 1. KPIs · min-h padroniza Y da 2ª linha entre tabs ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 min-h-[116px]">
-        <KpiCard label="Em andamento" value={kpiAndamento.length} sub={`${kpiAndamentoHoras}h alocadas`} />
-        <KpiCard label="Backlog" value={kpiBacklog.length} sub={`${kpiBacklogHoras}h previstas`} />
-        <KpiCard label="Bloqueadas" value={kpiBloqueadas.length} sub="aguardando ação" danger={kpiBloqueadas.length > 0} />
-        <KpiCard label="Atrasadas" value={kpiAtrasadas.length} sub="prazo vencido" danger />
-      </div>
+      {/* ── 1. Velocidade da operação · movida do Briefing (jun/2026) ──
+           4 cards (W-0 com projeção, W-1, Ciclo, % no prazo).
+           Substituiu o grid de 4 KPIs (Em andamento/Backlog/Bloqueadas/Atrasadas)
+           + a chart Throughput 12 semanas — densidade equivalente, mais
+           acionável (foca em ritmo + previsibilidade vs estado bruto). */}
+      <VelocidadeOperacao vel={vel} />
 
-      {/* ── 2. Throughput 12 semanas ── */}
-      <div className="bg-elev border border-line rounded-xl p-3 md:p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-sm font-semibold text-ink">Throughput · 12 semanas</h2>
-            <p className="text-[10px] text-muted">tasks concluídas por semana</p>
-          </div>
-          <div className="flex items-center gap-3 text-[10px] text-muted">
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: 'var(--brand-soft)' }} />
-              no prazo
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#fca5a5' }} />
-              com atraso
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-5 border-t border-dashed inline-block" style={{ borderColor: 'rgba(148,163,184,0.6)' }} />
-              tendência
-            </span>
-          </div>
-        </div>
-        <div className="relative">
-          <div className="flex items-end gap-1 h-36">
-            {throughput12.map((week, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                <div className="text-[8px] text-muted tabular-nums">{week.total || ''}</div>
-                <div
-                  className="w-full overflow-hidden"
-                  style={{
-                    height: `${Math.max(3, (week.total / maxTotal) * 110)}px`,
-                    borderRadius: '3px 3px 0 0',
-                    background: week.total === 0 ? 'var(--surface-3)' : undefined,
-                  }}
-                >
-                  {week.atrasada > 0 && (
-                    <div style={{
-                      height: `${(week.atrasada / week.total) * 100}%`,
-                      background: week.isCurrent ? '#ef4444' : '#fca5a5',
-                    }} />
-                  )}
-                  {week.noPrazo > 0 && (
-                    <div style={{
-                      height: `${(week.noPrazo / week.total) * 100}%`,
-                      background: week.isCurrent ? 'var(--brand)' : 'var(--brand-soft)',
-                    }} />
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* Trend line overlay — viewBox 0 0 12 144 maps to bar area (h-36 = 144px) */}
-          <svg
-            viewBox="0 0 12 144"
-            preserveAspectRatio="none"
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            aria-hidden="true"
-          >
-            <polyline
-              vectorEffect="non-scaling-stroke"
-              points={trendLine.map((v, i) => {
-                const y = 144 - Math.max(3, (Math.max(0, v) / maxTotal) * 110);
-                return `${i + 0.5},${y}`;
-              }).join(' ')}
-              fill="none"
-              stroke="rgba(148,163,184,0.6)"
-              strokeWidth="1.5"
-              strokeDasharray="4 3"
-            />
-          </svg>
-        </div>
-        <div className="flex gap-1 mt-1.5">
-          {throughput12.map((week, i) => (
-            <div key={i} className="flex-1 text-center text-[8px] truncate text-muted">
-              {week.label}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── 3. Entregas + Calendário ── */}
+      {/* ── 2. Entregas + Calendário ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 
         {/* Entregas semana atual + 4 */}
