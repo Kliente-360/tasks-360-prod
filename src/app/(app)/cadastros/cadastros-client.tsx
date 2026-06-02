@@ -1,28 +1,22 @@
 'use client';
 
 /**
- * Cadastros — Onda 0 · Bloco 3 + delete · v1.02.121
+ * Cadastros — Client Component consumindo useData().
  *
- * Client Component consumindo useData() — listas vêm da store em memória,
- * iguais a Backlog/Kanban/etc. Server actions só fazem write e retornam
- * o registro; os mutators do data-store refletem in-memory pra UX
- * instantânea (sem revalidatePath round-trip).
+ * Pós-refactor v1.02.226: writes via Supabase JS direto do client (sem
+ * Server Actions + Drizzle), mesmo padrão de Backlog/Kanban/Modal.
+ * Latência cai de ~300-600ms pra ~50-150ms.
+ *
+ * Listas vêm da store em memória (igual antes). Mutators do data-store
+ * refletem in-memory pra UX instantânea.
  */
 
 import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import { useData } from '@/lib/data-store';
 import { useToast } from '@/components/toast';
 import { createClient } from '@/lib/supabase/client';
+import { clienteFromDb, projetoFromDb } from '@/lib/adapters';
 import { cn } from '@/lib/utils';
-import {
-  arquivarCliente,
-  arquivarProjeto,
-  deleteCliente,
-  deletePessoa,
-  deleteProjeto,
-  desarquivarCliente,
-  desarquivarProjeto,
-} from './actions';
 import { NewClienteButton, EditClienteButton } from './cliente-modal';
 import { NewProjetoButton, EditProjetoButton } from './projeto-modal';
 import { NewPessoaButton, EditPessoaButton } from './pessoa-modal';
@@ -112,18 +106,24 @@ export function CadastrosClient() {
   // ===== Action helpers (com transition pra feedback) =====
   const [, startTransition] = useTransition();
 
-  const runArquivarCliente = (id: string) =>
+  // Arquivar/desarquivar: update simples. arquivado_em = now / null.
+  const setClienteArquivado = (id: string, arquivado: boolean) =>
     startTransition(async () => {
-      const res = await arquivarCliente(id);
-      if (res.ok) upsertCliente(res.data);
-      else toast.error(res.error);
+      const arquivado_em = arquivado ? new Date().toISOString() : null;
+      const { data, error } = await sb
+        .from('clientes')
+        .update({ arquivado_em })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error || !data) {
+        toast.error(error?.message || 'Cliente não encontrado.');
+        return;
+      }
+      upsertCliente(clienteFromDb(data as Record<string, unknown>));
     });
-  const runDesarquivarCliente = (id: string) =>
-    startTransition(async () => {
-      const res = await desarquivarCliente(id);
-      if (res.ok) upsertCliente(res.data);
-      else toast.error(res.error);
-    });
+  const runArquivarCliente = (id: string) => setClienteArquivado(id, true);
+  const runDesarquivarCliente = (id: string) => setClienteArquivado(id, false);
   const runDeleteCliente = (id: string, nome: string) => {
     const tcount = tasksByCliente.get(id) ?? 0;
     const pcount = projetosByCliente.get(id) ?? 0;
@@ -133,24 +133,32 @@ export function CadastrosClient() {
     }
     if (!confirm(`Excluir cliente "${nome}"?`)) return;
     startTransition(async () => {
-      const res = await deleteCliente(id);
-      if (res.ok) removeCliente(id);
-      else toast.error(res.error);
+      const { error } = await sb.from('clientes').delete().eq('id', id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      removeCliente(id);
     });
   };
 
-  const runArquivarProjeto = (id: string) =>
+  const setProjetoArquivado = (id: string, arquivado: boolean) =>
     startTransition(async () => {
-      const res = await arquivarProjeto(id);
-      if (res.ok) upsertProjeto(res.data);
-      else toast.error(res.error);
+      const arquivado_em = arquivado ? new Date().toISOString() : null;
+      const { data, error } = await sb
+        .from('projetos')
+        .update({ arquivado_em })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error || !data) {
+        toast.error(error?.message || 'Projeto não encontrado.');
+        return;
+      }
+      upsertProjeto(projetoFromDb(data as Record<string, unknown>));
     });
-  const runDesarquivarProjeto = (id: string) =>
-    startTransition(async () => {
-      const res = await desarquivarProjeto(id);
-      if (res.ok) upsertProjeto(res.data);
-      else toast.error(res.error);
-    });
+  const runArquivarProjeto = (id: string) => setProjetoArquivado(id, true);
+  const runDesarquivarProjeto = (id: string) => setProjetoArquivado(id, false);
   const runDeleteProjeto = (id: string, nome: string) => {
     const tcount = tasksByProjeto.get(id) ?? 0;
     if (tcount) {
@@ -159,9 +167,12 @@ export function CadastrosClient() {
     }
     if (!confirm(`Excluir projeto "${nome}"?`)) return;
     startTransition(async () => {
-      const res = await deleteProjeto(id);
-      if (res.ok) removeProjeto(id);
-      else toast.error(res.error);
+      const { error } = await sb.from('projetos').delete().eq('id', id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      removeProjeto(id);
     });
   };
 
@@ -245,9 +256,12 @@ export function CadastrosClient() {
     }
     if (!confirm(`Excluir "${nome}"?`)) return;
     startTransition(async () => {
-      const res = await deletePessoa(id);
-      if (res.ok) removePessoa(id);
-      else toast.error(res.error);
+      const { error } = await sb.from('pessoas').delete().eq('id', id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      removePessoa(id);
     });
   };
 

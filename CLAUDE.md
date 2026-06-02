@@ -20,7 +20,7 @@ Convenções do projeto que valem pra qualquer sessão.
 
 - `APP_VERSION` segue `v1.<MINOR>.<BUILD>`. **Bumpa BUILD +1 antes de cada commit em main.**
 - BUILD é sequencial independente do número do PR no GitHub — os dois divergiram ao longo do trabalho de design e **não tentar realinhar**.
-- **Versão atual: `v1.02.225`** (pós-cutover · em produção).
+- **Versão atual: `v1.02.226`** (pós-cutover · em produção).
 - A versão é declarada em `src/components/app-nav.tsx` (constante `APP_VERSION`).
 - Em mudança grande de UX/dados, bumpa MINOR e zera BUILD (decisão manual). Último bump: 01→02 fechando o ciclo de design (PRs #253-#270).
 - Após commit em main, arquivos de migration vão pra `supabase/migrations/applied/` (mover manualmente — não tem automação).
@@ -44,11 +44,11 @@ Arquitetura (na prática, virou **quase 100% Client Components**):
 - **Não usar Server Actions** em telas com >1 interação/segundo — latência inaceitável.
 - Helpers portados pra `src/lib/task-utils.ts` com cobertura de testes (44 unit · 3 e2e).
 
-### Drizzle ORM — dormente
+### Sem ORM
 
-Instalado mas **não usado em runtime**. Schema draft em `src/lib/db/schema.ts` documenta o shape do DB; `db:pull` continua quebrado por incompat com check constraints. Pode vir a ser útil para agregações server-side pesadas ou Kysely como alternativa. Até lá, peso morto trivial.
+Stack 100% **Next + Supabase JS, sem ORM**. Drizzle foi removido em v1.02.226 — única tela que usava (Cadastros) foi migrada pra Supabase JS direto pelo mesmo motivo das outras (latência inaceitável via Server Action + Edge runtime, ~300-600ms vs ~50-150ms direto).
 
-**Stack efetiva em runtime: Next + Supabase JS, sem ORM.**
+Se voltar a fazer sentido (ex: agregações pesadas server-side no Dashboard), avaliar Kysely ou voltar Drizzle — mas só com dor concreta justificando, não preventivamente.
 
 ## CI · GitHub Actions
 

@@ -1,8 +1,17 @@
 'use client';
 
+/**
+ * Modal de criar/editar Projeto.
+ *
+ * Pós-refactor v1.02.226: Supabase JS direto do client (sem Server Action
+ * + Drizzle).
+ */
+
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
-import { saveProjeto, type ProjetoPayload } from './actions';
 import { useData } from '@/lib/data-store';
+import { createClient } from '@/lib/supabase/client';
+import { projetoFromDb } from '@/lib/adapters';
+import { numOrNull } from '@/lib/utils';
 
 export type ProjetoInitial = {
   id: string;
@@ -65,22 +74,36 @@ function ProjetoModal({
 
   const submit = useCallback(() => {
     setErr(null);
-    const payload: ProjetoPayload = {
-      id: initial.id || null,
-      nome,
-      clienteId,
-      tipo,
-      slaRespostaHoras: slaR,
-      slaEntregaDias: slaE,
-      orcamentoHoras: orc,
+    const nomeTrim = nome.trim();
+    if (!nomeTrim) {
+      setErr('Nome obrigatório.');
+      return;
+    }
+    if (!clienteId) {
+      setErr('Cliente obrigatório.');
+      return;
+    }
+    // orcamento_horas é numeric no Postgres — Supabase JS aceita number direto,
+    // mas pra manter consistência com o tipo Postgres usamos number explícito.
+    const orcVal = numOrNull(orc);
+    const row = {
+      nome: nomeTrim,
+      cliente_id: clienteId,
+      tipo: tipo || null,
+      sla_resposta_horas: numOrNull(slaR),
+      sla_entrega_dias: numOrNull(slaE),
+      orcamento_horas: orcVal,
     };
     startTransition(async () => {
-      const res = await saveProjeto(payload);
-      if (!res.ok) {
-        setErr(res.error);
+      const sb = createClient();
+      const { data, error } = initial.id
+        ? await sb.from('projetos').update(row).eq('id', initial.id).select().single()
+        : await sb.from('projetos').insert(row).select().single();
+      if (error || !data) {
+        setErr(error?.message || 'Falha ao salvar.');
         return;
       }
-      upsertProjeto(res.data);
+      upsertProjeto(projetoFromDb(data as Record<string, unknown>));
       onClose();
     });
   }, [initial.id, nome, clienteId, tipo, slaR, slaE, orc, onClose, upsertProjeto]);

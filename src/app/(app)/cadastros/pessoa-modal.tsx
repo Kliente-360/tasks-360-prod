@@ -1,9 +1,17 @@
 'use client';
 
+/**
+ * Modal de criar/editar Pessoa.
+ *
+ * Pós-refactor v1.02.226: Supabase JS direto do client (sem Server Action
+ * + Drizzle).
+ */
+
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
-import { savePessoa, type PessoaPayload } from './actions';
 import type { ClienteOption } from './projeto-modal';
 import { useData } from '@/lib/data-store';
+import { createClient } from '@/lib/supabase/client';
+import { pessoaFromDb } from '@/lib/adapters';
 import { SKILL_GROUPS } from '@/lib/task-constants';
 
 export type PessoaInitial = {
@@ -70,27 +78,39 @@ function PessoaModal({
 
   const submit = useCallback(() => {
     setErr(null);
-    const finalSkills = [...skills];
-
-    const payload: PessoaPayload = {
-      id: initial.id || null,
-      nome,
-      email,
-      role,
-      clienteId,
-      clientePrincipalId,
-      clienteSecundarioId,
-      capacidadeHorasSemana: capacidade,
-      skills: finalSkills,
-      senioridade,
+    const nomeTrim = nome.trim();
+    const emailTrim = (email || '').trim().toLowerCase();
+    if (!nomeTrim) {
+      setErr('Dê um nome à pessoa.');
+      return;
+    }
+    if (role === 'cliente' && !clienteId) {
+      setErr('Cliente externo precisa de um cliente vinculado.');
+      return;
+    }
+    const capNum =
+      capacidade === '' || capacidade == null ? 40 : Number(capacidade) || 40;
+    const row = {
+      nome: nomeTrim,
+      email: emailTrim || null,
+      role: role || 'interno',
+      cliente_id: role === 'cliente' ? clienteId || null : null,
+      cliente_principal_id: role !== 'cliente' ? clientePrincipalId || null : null,
+      cliente_secundario_id: role !== 'cliente' ? clienteSecundarioId || null : null,
+      capacidade_horas_semana: role !== 'cliente' ? capNum : 40,
+      skills: role !== 'cliente' ? skills : [],
+      senioridade: role !== 'cliente' ? senioridade || null : null,
     };
     startTransition(async () => {
-      const res = await savePessoa(payload);
-      if (!res.ok) {
-        setErr(res.error);
+      const sb = createClient();
+      const { data, error } = initial.id
+        ? await sb.from('pessoas').update(row).eq('id', initial.id).select().single()
+        : await sb.from('pessoas').insert(row).select().single();
+      if (error || !data) {
+        setErr(error?.message || 'Falha ao salvar.');
         return;
       }
-      upsertPessoa(res.data);
+      upsertPessoa(pessoaFromDb(data as Record<string, unknown>));
       onClose();
     });
   }, [
