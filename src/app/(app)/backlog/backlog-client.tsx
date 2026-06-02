@@ -23,6 +23,7 @@ import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { atrasada, agingDays, agingLevel, fmtDate, fmtDateShort, fmtTempoEtapa, lblComplex, lblStatus } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS, SUBS_FLAT, SUBS_FLAT_ORDER } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
+import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import type { Filters as StdFilters } from '@/lib/filters';
 import type { Task } from '@/lib/types';
 
@@ -117,7 +118,24 @@ export function BacklogClient() {
   const sb = sbRef.current;
 
   // ============ State local ============
-  const [f, setF] = useState<Filters>(DEFAULT_FILTERS);
+  const [f, setF] = useState<Filters>(() => {
+    const s = getSharedFilters();
+    return {
+      ...DEFAULT_FILTERS,
+      cliente: s.cliente,
+      projeto: s.projeto,
+      pessoa: s.pessoa,
+      tag: s.tag,
+    };
+  });
+  useEffect(() => {
+    patchSharedFilters({
+      cliente: f.cliente,
+      projeto: f.projeto,
+      pessoa: f.pessoa,
+      tag: f.tag,
+    });
+  }, [f.cliente, f.projeto, f.pessoa, f.tag]);
   const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
   const [groupBy, setGroupBy] = useState<string>('');
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
@@ -373,6 +391,7 @@ export function BacklogClient() {
     setShowArchived(false);
     setGroupBy('');
     setCollapsedGroups([]);
+    clearSharedFilters();
   }, []);
 
   // g+l global → limpa filtros desta tela.

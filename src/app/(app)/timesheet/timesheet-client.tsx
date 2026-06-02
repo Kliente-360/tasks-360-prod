@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useData, useTasksById, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { atrasada } from '@/lib/task-utils';
 import type { Filters as StdFilters } from '@/lib/filters';
+import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 
 function fmtTime(ms: number) {
   return new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -29,10 +30,18 @@ export function TimesheetClient() {
 
   const isAdmin = viewerRole === 'admin';
   const [qDraft, setQDraft] = useState('');
-  const [filterCliente, setFilterCliente] = useState('');
-  const [filterProjeto, setFilterProjeto] = useState('');
-  const [filterPessoaId, setFilterPessoaId] = useState('');
-  const [filterPrazo, setFilterPrazo] = useState<'' | 'atrasadas' | 'hoje' | 'semana' | 'sem'>('');
+  const [filterCliente, setFilterCliente] = useState(() => getSharedFilters().cliente);
+  const [filterProjeto, setFilterProjeto] = useState(() => getSharedFilters().projeto);
+  const [filterPessoaId, setFilterPessoaId] = useState(() => getSharedFilters().pessoa);
+  const [filterPrazo, setFilterPrazo] = useState<'' | 'atrasadas' | 'hoje' | 'semana' | 'sem'>(() => getSharedFilters().prazo);
+  useEffect(() => {
+    patchSharedFilters({
+      cliente: filterCliente,
+      projeto: filterProjeto,
+      pessoa: filterPessoaId,
+      prazo: filterPrazo,
+    });
+  }, [filterCliente, filterProjeto, filterPessoaId, filterPrazo]);
   const [groupBy, setGroupBy] = useState<'' | 'resp' | 'cli' | 'task'>('');
 
   const clientesAtivos = useMemo(() => clientes.filter((c) => !c.arquivadoEm), [clientes]);
@@ -159,6 +168,7 @@ export function TimesheetClient() {
               setFilterProjeto('');
               setFilterPessoaId('');
               setFilterPrazo('');
+              clearSharedFilters();
             }}
             clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
             projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}

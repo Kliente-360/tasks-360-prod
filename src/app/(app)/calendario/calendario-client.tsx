@@ -35,6 +35,7 @@ import {
 } from '@/lib/task-utils';
 import { SUB_TO_MACRO } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
+import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import type { Task } from '@/lib/types';
 
 const EMPTY = '__empty__';
@@ -87,13 +88,24 @@ export function CalendarioClient() {
     pessoa: string;
     status: string;
     prazo: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
-  }>({
-    cliente: '',
-    projeto: '',
-    pessoa: '',
-    status: 'abertas',
-    prazo: '',
+  }>(() => {
+    const s = getSharedFilters();
+    return {
+      cliente: s.cliente,
+      projeto: s.projeto,
+      pessoa: s.pessoa,
+      status: 'abertas',
+      prazo: s.prazo,
+    };
   });
+  useEffect(() => {
+    patchSharedFilters({
+      cliente: filters.cliente,
+      projeto: filters.projeto,
+      pessoa: filters.pessoa,
+      prazo: filters.prazo,
+    });
+  }, [filters.cliente, filters.projeto, filters.pessoa, filters.prazo]);
   const [qDraft, setQDraft] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [onlyIA, setOnlyIA] = useState(false);
@@ -107,6 +119,7 @@ export function CalendarioClient() {
       setQDraft('');
       setOnlyIA(false);
       setOnlyHumano(false);
+      clearSharedFilters();
     };
     window.addEventListener(CLEAR_FILTERS_EVENT, handler);
     return () => window.removeEventListener(CLEAR_FILTERS_EVENT, handler);
@@ -379,6 +392,7 @@ export function CalendarioClient() {
                 setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas', prazo: '' });
                 setOnlyIA(false);
                 setOnlyHumano(false);
+                clearSharedFilters();
               }}
               clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
               projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
