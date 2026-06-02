@@ -188,22 +188,24 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 ## 🎯 NEXT · ordem definida (jun/2026)
 
 Bloco de trabalho consolidado pelos próximos 8-14 semanas. 8 items
-priorizados pelo Felipe, ordenados em 3 ondas considerando dependências
-e perfil de risco.
+priorizados pelo Felipe, ordenados em 3 ondas (ordem reordenada
+jun/2026: design primeiro, closing loops segundo, quick wins por
+último — coloca o trabalho pesado na frente enquanto contexto está
+fresco).
 
-**Onda 1 · Quick wins** (~10 dias · isolados, baixo risco)
-1. **A.9** Timesheet · entrada manual + permissões
-2. **A.16** Revisar bulk actions (BulkBar)
-3. **C.3** Skill mismatch (heurística pura)
+**Onda 1 · Design coeso** (~15-25 dias · A.17 base pra A.13 + A.18)
+1. **A.17** Card de task · VISUAL (replan + execução)
+2. **A.13** Triagem · redesign UX-first (consome A.17 · TaskAlertRow)
+3. **A.18** Meu foco · redesign UX-first (consome A.17 · TaskCard md checkable + persistência local por dia)
 
-**Onda 2 · Design coeso** (~15-25 dias · A.17 base pra A.13 + A.18)
-4. **A.17** Card de task · VISUAL (replan + execução)
-5. **A.13** Triagem · redesign UX-first (consome A.17 · TaskAlertRow)
-6. **A.18** Meu foco · redesign UX-first (consome A.17 · TaskCard md checkable + persistência local por dia)
+**Onda 2 · Closing loops** (~10-20 dias)
+4. **A.15** Mobile fechamento (Step 4 task modal + validação real)
+5. **A.12** Dashboard × Portal · padrão técnico convergente
 
-**Onda 3 · Closing loops** (~10-20 dias)
-7. **A.15** Mobile fechamento (Step 4 task modal + validação real)
-8. **A.12** Dashboard × Portal · padrão técnico convergente
+**Onda 3 · Quick wins** (~10 dias · isolados, baixo risco — funcionam como warm-down)
+6. **A.9** Timesheet · entrada manual + permissões
+7. **A.16** Revisar bulk actions (BulkBar)
+8. **C.3** Skill mismatch (heurística pura)
 
 Items NÃO no NEXT (revisitar depois): A.3 Push · A.4 Triagem IA mandatory · A.5 Saved views · A.6 Sticky thead · A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.1-C.2/C.4-C.9.
 
@@ -211,5 +213,7 @@ Items NÃO no NEXT (revisitar depois): A.3 Push · A.4 Triagem IA mandatory · A
 
 ## Próximo passo imediato
 
-Começar **Onda 1 · A.9** (Timesheet · entrada manual + permissões). Item bem
-definido, sem dependências, ~3-5 dias. Após A.9, A.16 e C.3 fechando a Onda 1.
+Começar **Onda 1 · A.17** (Card de task VISUAL). É o item que destrava
+A.13 e A.18, e fecha o débito do A.14 parcial. Precisa REPLAN antes
+de código — começar com auditoria visual real (prints lado-a-lado de
+cada tela) e definição clara da variante única por contexto.
