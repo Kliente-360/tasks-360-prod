@@ -306,6 +306,18 @@ export function BriefingClient() {
 
   return (
     <div>
+      {/* ============ MOBILE · espelha mobile.jsx MBriefing ============ */}
+      <div className="md:hidden">
+        <BriefingMobile
+          alerts={heuristicAlerts}
+          countAlta={countAlta}
+          countMedia={countMedia}
+          todayLabel={todayLabel}
+        />
+      </div>
+
+      {/* ============ DESKTOP · conteúdo original ============ */}
+      <div className="hidden md:block">
       {/* ── PageHeader (DS) — bare div: pageheader.margin-bottom: 24px controla o Y do primeiro elemento abaixo ── */}
       <div className="hidden md:block">
         <PageHeader
@@ -736,6 +748,119 @@ export function BriefingClient() {
       </div>
 
       </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MOBILE · espelha mobile.jsx MBriefing
+// ============================================================
+function BriefingMobile({
+  alerts,
+  countAlta,
+  countMedia,
+  todayLabel,
+}: {
+  alerts: HeuristicAlert[];
+  countAlta: number;
+  countMedia: number;
+  todayLabel: string;
+}) {
+  const criticos = alerts.filter((a) => a.severity === 'alta').slice(0, 6);
+  const atencao = alerts.filter((a) => a.severity === 'media').slice(0, 6);
+
+  // Clientes em atenção: derivar de alerts associados a um clienteId (heurística)
+  const clientesAtencao = useMemo(() => {
+    const seen = new Map<string, { nm: string; sinal: string; lt: string; act: string; tag: string }>();
+    for (const a of alerts) {
+      const cid = (a as { clienteId?: string }).clienteId;
+      const cnome = (a as { clienteNome?: string }).clienteNome;
+      if (!cid || !cnome) continue;
+      if (seen.has(cid)) continue;
+      seen.set(cid, {
+        nm: cnome,
+        sinal: a.severity === 'alta' ? 'var(--danger)' : 'var(--warn)',
+        lt: a.titulo,
+        act: (a as { acao?: string }).acao || 'Revisar plano',
+        tag: (a as { tag?: string }).tag || (a.severity === 'alta' ? 'crítico' : 'atenção'),
+      });
+      if (seen.size >= 4) break;
+    }
+    return Array.from(seen.values());
+  }, [alerts]);
+
+  return (
+    <div className="m-scroll">
+      <div className="m-pagetitle">
+        <h1>Briefing</h1>
+        <div className="narr">
+          resumo operacional <span className="sep">·</span> <b>{todayLabel}</b>
+        </div>
+      </div>
+
+      <div className="m-sec">
+        <div className="b-seehead">
+          <div className="t">
+            <h3>Alertas</h3>
+            <span className="b-counts">
+              <span className="b-count crit">{countAlta} críticos</span>
+              <span className="b-count att">{countMedia} atenção</span>
+            </span>
+          </div>
+          <span className="b-link">ver todos ({alerts.length})</span>
+        </div>
+        <div className="b-alerts">
+          {criticos.map((a, i) => (
+            <div key={'c' + i} className="b-alert crit">
+              <span className="dot" />
+              <div>
+                <div className="at">{a.titulo}</div>
+                {a.detalhe && <div className="ad">{a.detalhe}</div>}
+              </div>
+            </div>
+          ))}
+          {atencao.map((a, i) => (
+            <div key={'a' + i} className="b-alert att">
+              <span className="dot" />
+              <div>
+                <div className="at">{a.titulo}</div>
+                {a.detalhe && <div className="ad">{a.detalhe}</div>}
+              </div>
+            </div>
+          ))}
+          {criticos.length + atencao.length === 0 && (
+            <div className="text-muted text-xs italic px-2 py-3">Nenhum alerta no momento.</div>
+          )}
+        </div>
+      </div>
+
+      {clientesAtencao.length > 0 && (
+        <div className="m-sec mt14">
+          <div className="b-seehead">
+            <div className="t">
+              <h3>Clientes em atenção</h3>
+            </div>
+            <span className="muted fs12 mono">{clientesAtencao.length} clientes</span>
+          </div>
+          <div>
+            {clientesAtencao.map((c) => (
+              <div key={c.nm} className="b-cli">
+                <div className="top">
+                  <span className="sd" style={{ background: c.sinal }} />
+                  <span className="nm">{c.nm}</span>
+                  <span className="chip" style={{ padding: '2px 8px' }}>{c.tag}</span>
+                </div>
+                <div className="lt">{c.lt}</div>
+                <span className="act">
+                  <span style={{ fontSize: 14 }}>→</span>
+                  {c.act}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
