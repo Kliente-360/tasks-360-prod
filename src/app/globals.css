@@ -247,6 +247,36 @@
   --btn-primary-fg:       #FFFFFF;
 
   --ring-focus: 0 0 0 2px var(--surface-2), 0 0 0 4px var(--cyan);
+
+  /* ====== DS jun/2026 · tokens NOVOS aliasados pro dark mode ======
+     Ciclo redesign DS introduziu --green*/--fg* sem dark overrides.
+     Sem isso, `--green` ficava #007A3D (verde editorial light) sobre
+     bg escuro → contraste péssimo, e `--fg` ficava #0E1116 (texto
+     escuro) invisível na superfície escura.
+     Solução: alias pros equivalentes brand/ink que já estão definidos
+     acima — mantém a paleta dark anterior (que era boa) só estendendo
+     pros nomes novos. */
+  --green:       var(--brand);          /* #00B300 — neon green visível */
+  --green-hover: var(--brand-light);    /* #1AD41A */
+  --green-soft:  var(--brand-soft);     /* #0B2D0B — fundo verde escuro */
+  --green-tint:  var(--brand-tint);     /* #0E2913 — fundo verde ainda mais escuro */
+
+  --fg:       var(--ink);                /* #F0F0EE — texto principal */
+  --fg-soft:  var(--ink-soft);           /* #BFC0BE — texto secundário */
+  --fg-muted: var(--muted);              /* #7D8185 — texto/icons muted */
+
+  /* --logo-green (verde brilhante do aperture) mantém valor light (#009900)
+     porque é cor de marca fixa, não muda com tema. */
+
+  /* Surfaces auxiliares · alias pros surface-N escuros */
+  --bg-app:    var(--surface-2);     /* #0A0C12 — fundo do app */
+  --bg-alt:    var(--surface-3);     /* #161922 — fundo "alt" pra alternar */
+  --line-soft: rgba(255,255,255,0.06); /* line mais leve em dark */
+
+  /* Soft backgrounds semânticos — versões dark dos tons amber/red usados
+     em alerts, b-alert.crit/.att, fselect.clear:hover, cal-task.status-* */
+  --danger-soft: rgba(229,91,77,0.16);    /* ~#3a1813 em alpha */
+  --warn-soft:   rgba(226,154,63,0.14);   /* ~#3a2a13 em alpha */
 }
 
 /* ============ BASE ============ */
