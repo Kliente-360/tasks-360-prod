@@ -101,9 +101,13 @@ export function TimesheetClient() {
             show={isAdmin ? ['resp'] : []}
             pessoaOptions={staffPessoas.map((p) => ({ v: p.id, label: p.nome }))}
             moreItems={[
-              { key: 'group', label: 'Agrupar', enabled: false, kind: 'action', icon: 'list-filter' },
+              { key: 'group-resp', label: 'Agrupar: Responsável', enabled: false, kind: 'action', icon: 'users' },
+              { key: 'group-cli', label: 'Agrupar: Cliente', enabled: false, kind: 'action', icon: 'building' },
+              { key: 'group-status', label: 'Agrupar: Status', enabled: false, kind: 'action', icon: 'list-filter' },
+              { key: 'div1', label: '---' },
               { key: 'arquivadas', label: 'Mostrar arquivadas', enabled: false, kind: 'toggle' },
               { key: 'ia', label: 'Somente criadas por IA', enabled: false, kind: 'toggle' },
+              { key: 'humano', label: 'Somente criadas por humanos', enabled: false, kind: 'toggle' },
             ] satisfies MoreMenuItem[]}
           />
         }

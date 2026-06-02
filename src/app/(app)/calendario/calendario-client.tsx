@@ -86,22 +86,27 @@ export function CalendarioClient() {
     projeto: string;
     pessoa: string;
     status: string;
+    prazo: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
   }>({
     cliente: '',
     projeto: '',
     pessoa: '',
     status: 'abertas',
+    prazo: '',
   });
   const [qDraft, setQDraft] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [onlyIA, setOnlyIA] = useState(false);
+  const [onlyHumano, setOnlyHumano] = useState(false);
 
   // g+l global → limpa filtros (status volta pro default 'abertas').
   useEffect(() => {
     const handler = () => {
-      setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas' });
+      setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas', prazo: '' });
       setSelectedIso('');
       setQDraft('');
+      setOnlyIA(false);
+      setOnlyHumano(false);
     };
     window.addEventListener(CLEAR_FILTERS_EVENT, handler);
     return () => window.removeEventListener(CLEAR_FILTERS_EVENT, handler);
@@ -165,8 +170,11 @@ export function CalendarioClient() {
     const start = new Date(y, m, 1 - offset);
     const today = isoLocal(new Date());
 
-    const hasFilter = !!(filters.cliente || filters.projeto || filters.pessoa || qDraft || onlyIA);
+    const hasFilter = !!(filters.cliente || filters.projeto || filters.pessoa || filters.prazo || qDraft || onlyIA || onlyHumano);
     const q = qDraft.trim().toLowerCase();
+    const todayIso = today;
+    const in7d = new Date(); in7d.setDate(in7d.getDate() + 7);
+    const in7dIso = in7d.toISOString().slice(0, 10);
     const matchFilters = (t: Task) => {
       if (!showArchived && t.arquivadoEm) return false;
       if (filters.cliente === EMPTY) {
@@ -179,6 +187,14 @@ export function CalendarioClient() {
         if (t.pessoaId) return false;
       } else if (filters.pessoa && t.pessoaId !== filters.pessoa) return false;
       if (onlyIA && !t.criadoPorIa) return false;
+      if (onlyHumano && t.criadoPorIa) return false;
+      if (filters.prazo === 'atrasadas' && !atrasada(t)) return false;
+      if (filters.prazo === 'hoje' && t.prazo !== todayIso) return false;
+      if (filters.prazo === 'sem' && t.prazo) return false;
+      if (filters.prazo === 'semana') {
+        if (!t.prazo) return false;
+        if (t.prazo < todayIso || t.prazo > in7dIso) return false;
+      }
       if (q) {
         const cli = clientesById.get(t.clienteId)?.nome ?? '';
         const proj = projetosById.get(t.projetoId)?.nome ?? '';
@@ -227,7 +243,7 @@ export function CalendarioClient() {
       });
     }
     return out;
-  }, [cursor, tasks, filters, qDraft, showArchived, onlyIA, clientesById, projetosById, pessoasById]);
+  }, [cursor, tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, clientesById, projetosById, pessoasById]);
 
   // Versão mobile: tira fim de semana pra caber 5 colunas no viewport
   // estreito; matem a ordem segunda → sexta.
@@ -345,40 +361,32 @@ export function CalendarioClient() {
                 cliente: filters.cliente,
                 projeto: filters.projeto,
                 resp: filters.pessoa,
-                prazo: '',
+                prazo: filters.prazo,
               } satisfies StdFilters}
               set={(key, value) => {
                 if (key === 'q') setQDraft(value);
                 else if (key === 'cliente') setFilters({ ...filters, cliente: value, projeto: value ? filters.projeto : '' });
                 else if (key === 'projeto') setFilters({ ...filters, projeto: value });
                 else if (key === 'resp') setFilters({ ...filters, pessoa: value });
+                else if (key === 'prazo') setFilters({ ...filters, prazo: value as typeof filters.prazo });
               }}
               onClear={() => {
                 setQDraft('');
-                setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas' });
+                setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas', prazo: '' });
+                setOnlyIA(false);
+                setOnlyHumano(false);
               }}
               clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
               projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
               pessoaOptions={pessoasNaoCliente.map((p) => ({ v: p.id, label: p.nome }))}
-              // Calendário não filtra por prazo (todo dia tem que aparecer); status vira cor no bloquinho.
-              show={['cliente', 'projeto', 'resp']}
               moreItems={[
-                { key: 'group', label: 'Agrupar', enabled: false, kind: 'action', icon: 'list-filter' },
+                { key: 'group-resp', label: 'Agrupar: Responsável', enabled: false, kind: 'action', icon: 'users' },
+                { key: 'group-cli', label: 'Agrupar: Cliente', enabled: false, kind: 'action', icon: 'building' },
+                { key: 'group-status', label: 'Agrupar: Status', enabled: false, kind: 'action', icon: 'list-filter' },
                 { key: 'div1', label: '---' },
-                {
-                  key: 'arquivadas',
-                  label: 'Mostrar arquivadas',
-                  kind: 'toggle',
-                  active: showArchived,
-                  onClick: () => setShowArchived((v) => !v),
-                },
-                {
-                  key: 'ia',
-                  label: 'Somente criadas por IA',
-                  kind: 'toggle',
-                  active: onlyIA,
-                  onClick: () => setOnlyIA((v) => !v),
-                },
+                { key: 'arquivadas', label: 'Mostrar arquivadas', kind: 'toggle', active: showArchived, onClick: () => setShowArchived((v) => !v) },
+                { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
+                { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
               ] satisfies MoreMenuItem[]}
             />
           }

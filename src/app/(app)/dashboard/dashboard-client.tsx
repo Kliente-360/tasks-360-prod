@@ -102,21 +102,35 @@ export function DashboardClient() {
   const [filterCliente, setFilterCliente] = useState('');
   const [filterPessoa, setFilterPessoa] = useState('');
   const [filterProjeto, setFilterProjeto] = useState('');
+  const [filterPrazo, setFilterPrazo] = useState<'' | 'atrasadas' | 'hoje' | 'semana' | 'sem'>('');
+  const [onlyIA, setOnlyIA] = useState(false);
+  const [onlyHumano, setOnlyHumano] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const hasFilter = !!(filterCliente || filterPessoa || filterProjeto);
+  const hasFilter = !!(filterCliente || filterPessoa || filterProjeto || filterPrazo || onlyIA || onlyHumano);
 
   const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm), [tasks]);
 
-  const filteredTasks = useMemo(
-    () => baseTasks.filter((t) => {
+  const filteredTasks = useMemo(() => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const in7 = new Date(); in7.setDate(in7.getDate() + 7);
+    const in7Iso = in7.toISOString().slice(0, 10);
+    return baseTasks.filter((t) => {
       if (filterCliente && t.clienteId !== filterCliente) return false;
       if (filterPessoa && t.pessoaId !== filterPessoa) return false;
       if (filterProjeto && t.projetoId !== filterProjeto) return false;
+      if (onlyIA && !t.criadoPorIa) return false;
+      if (onlyHumano && t.criadoPorIa) return false;
+      if (filterPrazo === 'atrasadas' && !atrasada(t)) return false;
+      if (filterPrazo === 'hoje' && t.prazo !== todayIso) return false;
+      if (filterPrazo === 'sem' && t.prazo) return false;
+      if (filterPrazo === 'semana') {
+        if (!t.prazo) return false;
+        if (t.prazo < todayIso || t.prazo > in7Iso) return false;
+      }
       return true;
-    }),
-    [baseTasks, filterCliente, filterPessoa, filterProjeto],
-  );
+    });
+  }, [baseTasks, filterCliente, filterPessoa, filterProjeto, filterPrazo, onlyIA, onlyHumano]);
 
   // ── KPIs
   const kpiAndamento = useMemo(() => filteredTasks.filter((t) => t.status === 'andamento'), [filteredTasks]);
@@ -213,7 +227,14 @@ export function DashboardClient() {
     [projetos, filterCliente],
   );
 
-  function clearFilters() { setFilterCliente(''); setFilterPessoa(''); setFilterProjeto(''); }
+  function clearFilters() {
+    setFilterCliente('');
+    setFilterPessoa('');
+    setFilterProjeto('');
+    setFilterPrazo('');
+    setOnlyIA(false);
+    setOnlyHumano(false);
+  }
 
   if (loading) return <div className="text-muted text-sm py-8">Carregando…</div>;
 
@@ -241,31 +262,27 @@ export function DashboardClient() {
                 cliente: filterCliente,
                 projeto: filterProjeto,
                 resp: filterPessoa,
-                prazo: '',
+                prazo: filterPrazo,
               } satisfies StdFilters}
               set={(key, value) => {
                 if (key === 'cliente') { setFilterCliente(value); setFilterProjeto(''); }
                 else if (key === 'projeto') setFilterProjeto(value);
                 else if (key === 'resp') setFilterPessoa(value);
-                // Dashboard não tem busca/prazo no FilterBar (dados são agregados; busca não faz sentido aqui)
+                else if (key === 'prazo') setFilterPrazo(value as typeof filterPrazo);
+                // 'q' não tem efeito (Dashboard agrega dados — busca textual não faz sentido)
               }}
               onClear={clearFilters}
               clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
               projetoOptions={projetosAtivos.map((p) => ({ v: p.id, label: p.nome }))}
               pessoaOptions={pessoasAtivas.map((p) => ({ v: p.id, label: p.nome }))}
-              show={['cliente', 'projeto', 'resp']}
               moreItems={[
-                { key: 'group', label: 'Agrupar', enabled: false, kind: 'action', icon: 'list-filter' },
+                { key: 'group-resp', label: 'Agrupar: Responsável', enabled: false, kind: 'action', icon: 'users' },
+                { key: 'group-cli', label: 'Agrupar: Cliente', enabled: false, kind: 'action', icon: 'building' },
+                { key: 'group-status', label: 'Agrupar: Status', enabled: false, kind: 'action', icon: 'list-filter' },
+                { key: 'div1', label: '---' },
                 { key: 'arquivadas', label: 'Mostrar arquivadas', enabled: false, kind: 'toggle', hint: 'Dashboard ignora' },
-                { key: 'div', label: '---' },
-                {
-                  key: 'export',
-                  label: 'Exportar CSV',
-                  kind: 'action',
-                  icon: 'download',
-                  enabled: false,
-                  hint: 'use ↓ no header',
-                },
+                { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
+                { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
               ] satisfies MoreMenuItem[]}
             />
           }

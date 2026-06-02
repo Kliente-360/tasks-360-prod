@@ -71,6 +71,7 @@ export function KanbanClient() {
   const [qDraft, setQDraft] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [onlyIA, setOnlyIA] = useState(false);
+  const [onlyHumano, setOnlyHumano] = useState(false);
   const [kanbanView, setKanbanView] = useState<'op' | 'exec'>('op');
 
   // g+l global → limpa filtros.
@@ -128,6 +129,7 @@ export function KanbanClient() {
       } else if (filters.pessoa && t.pessoaId !== filters.pessoa) return false;
       if (filters.prazo && !matchesPrazoFilter(t, filters.prazo)) return false;
       if (onlyIA && !t.criadoPorIa) return false;
+      if (onlyHumano && t.criadoPorIa) return false;
       if (q) {
         const cli = clientesById.get(t.clienteId)?.nome ?? '';
         const proj = projetosById.get(t.projetoId)?.nome ?? '';
@@ -137,7 +139,7 @@ export function KanbanClient() {
       }
       return true;
     });
-  }, [tasks, filters, qDraft, showArchived, onlyIA, clientesById, projetosById, pessoasById]);
+  }, [tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, clientesById, projetosById, pessoasById]);
 
   // ===== Buckets por coluna =====
   const tasksBySub = useMemo(() => {
@@ -297,22 +299,13 @@ export function KanbanClient() {
               projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
               pessoaOptions={pessoasNaoCliente.map((p) => ({ v: p.id, label: p.nome }))}
               moreItems={[
-                { key: 'group', label: 'Agrupar', enabled: false, kind: 'action', icon: 'list-filter', hint: 'já agrupa por etapa' },
+                { key: 'group-resp', label: 'Agrupar: Responsável', enabled: false, kind: 'action', icon: 'users', hint: 'kanban agrupa por etapa' },
+                { key: 'group-cli', label: 'Agrupar: Cliente', enabled: false, kind: 'action', icon: 'building' },
+                { key: 'group-status', label: 'Agrupar: Status', enabled: false, kind: 'action', icon: 'list-filter' },
                 { key: 'div1', label: '---' },
-                {
-                  key: 'arquivadas',
-                  label: 'Mostrar arquivadas',
-                  kind: 'toggle',
-                  active: showArchived,
-                  onClick: () => setShowArchived((v) => !v),
-                },
-                {
-                  key: 'ia',
-                  label: 'Somente criadas por IA',
-                  kind: 'toggle',
-                  active: onlyIA,
-                  onClick: () => setOnlyIA((v) => !v),
-                },
+                { key: 'arquivadas', label: 'Mostrar arquivadas', kind: 'toggle', active: showArchived, onClick: () => setShowArchived((v) => !v) },
+                { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
+                { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
               ] satisfies MoreMenuItem[]}
             />
           }
