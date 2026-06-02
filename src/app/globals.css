@@ -904,11 +904,14 @@ input[type="checkbox"] { accent-color: var(--brand); }
   width: 22px; height: 22px; border-radius: 6px;
   font-size: 11px; font-weight: 700; font-family: var(--font-mono); line-height: 1;
 }
-.notif-kind-mention            { background: var(--brand-soft);   color: var(--brand-dark); }
-.notif-kind-assigned           { background: var(--p2-soft);      color: var(--p2); }
-.notif-kind-comment_on_my_task { background: var(--surface-3);    color: var(--ink-soft); }
-.notif-kind-cliente_respondeu  { background: var(--triage-soft);  color: var(--triage); }
-.notif-kind-status_change      { background: var(--p1-soft);      color: var(--p1); }
+/* Cores semânticas por tipo — todas via tokens DS atuais.
+   mention=verde editorial · assigned=info azul (p2 mantido por enquanto) ·
+   comment=neutro · cliente_respondeu=âmbar · status_change=âmbar legacy. */
+.notif-kind-mention            { background: var(--green-soft);     color: var(--green); }
+.notif-kind-assigned           { background: var(--p2-soft);        color: var(--p2); }
+.notif-kind-comment_on_my_task { background: var(--surface-3);      color: var(--ink-soft); }
+.notif-kind-cliente_respondeu  { background: var(--sig-amber-bg);   color: var(--sig-amber-fg); }
+.notif-kind-status_change      { background: var(--p1-soft);        color: var(--p1); }
 
 /* ============ MODAL TASK ============ */
 .tmodal {

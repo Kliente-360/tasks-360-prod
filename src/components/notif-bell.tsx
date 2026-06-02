@@ -23,6 +23,7 @@ import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
 import { createClient } from '@/lib/supabase/client';
 import { fmtPostedEm } from '@/lib/format';
+import { Icon, type IconName } from '@/components/icons';
 
 type NotifKind = 'mention' | 'assigned' | 'comment_on_my_task' | 'cliente_respondeu' | 'status_change';
 type Notif = {
@@ -70,66 +71,19 @@ function notifSummary(n: Notif): string {
   }
 }
 
+/** Mapa kind → ícone Lucide. Centraliza o vocabulário visual de notificação. */
+const KIND_ICON: Record<string, IconName> = {
+  mention: 'mention',
+  assigned: 'users',
+  comment_on_my_task: 'comment',
+  cliente_respondeu: 'building',
+  status_change: 'refresh',
+};
+
 function NotifKindIcon({ kind }: { kind: Notif['kind'] }) {
-  const common = {
-    width: 14,
-    height: 14,
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 2,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    'aria-hidden': true,
-  };
-  if (kind === 'mention') {
-    return (
-      <svg {...common}>
-        <circle cx="12" cy="12" r="4" />
-        <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94" />
-      </svg>
-    );
-  }
-  if (kind === 'assigned') {
-    return (
-      <svg {...common}>
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-    );
-  }
-  if (kind === 'comment_on_my_task') {
-    // message-circle (lucide)
-    return (
-      <svg {...common}>
-        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-      </svg>
-    );
-  }
-  if (kind === 'cliente_respondeu') {
-    // building-2 (lucide) — torre com janelas
-    return (
-      <svg {...common}>
-        <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
-        <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
-        <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
-        <path d="M10 6h4" />
-        <path d="M10 10h4" />
-        <path d="M10 14h4" />
-        <path d="M10 18h4" />
-      </svg>
-    );
-  }
-  if (kind === 'status_change') {
-    return (
-      <svg {...common}>
-        <polyline points="23 4 23 10 17 10" />
-        <polyline points="1 20 1 14 7 14" />
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-      </svg>
-    );
-  }
-  return null;
+  const name = KIND_ICON[kind];
+  if (!name) return null;
+  return <Icon name={name} size={14} />;
 }
 
 export function NotifBell() {
@@ -287,14 +241,11 @@ export function NotifBell() {
         title="Notificações"
         aria-expanded={open}
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-        </svg>
+        <Icon name="bell" size={16} />
         {unreadCount > 0 && (
           <span
             className="absolute -top-1 -right-1 min-w-[16px] h-4 rounded-full text-[9px] font-bold text-white px-1 flex items-center justify-center"
-            style={{ background: 'var(--p0)' }}
+            style={{ background: 'var(--danger)' }}
           >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
@@ -360,7 +311,7 @@ export function NotifBell() {
                     <span>
                       Lidas <span className="opacity-60">· {readList.length}</span>
                     </span>
-                    <span className="font-mono">{readOpen ? '▾' : '▸'}</span>
+                    <Icon name={readOpen ? 'chevron-down' : 'chevron-right'} size={12} />
                   </button>
                   {readOpen &&
                     readList.map((n) => (
@@ -383,59 +334,17 @@ export function NotifBell() {
   );
 }
 
-/** Ícones SVG pros chips de filtro — mesmo style do sino (lucide-like:
- *  stroke 2, 14×14, currentColor). Sem emoji pra manter consistência. */
+/** Mapa filtro de chips → ícone Lucide. Lista pra "tudo", @ pra menções,
+ *  pessoa pra atribuições, refresh pra mudanças de status. */
+const CHIP_ICON: Record<KindFilter, IconName> = {
+  all: 'list',
+  mention: 'mention',
+  assignment: 'users',
+  status: 'refresh',
+};
+
 function FilterChipIcon({ kind }: { kind: KindFilter }) {
-  const common = {
-    width: 14,
-    height: 14,
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 2,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    'aria-hidden': true,
-  };
-  if (kind === 'all') {
-    // lista (3 linhas com bullets) — representa "tudo"
-    return (
-      <svg {...common}>
-        <line x1="8" y1="6" x2="21" y2="6" />
-        <line x1="8" y1="12" x2="21" y2="12" />
-        <line x1="8" y1="18" x2="21" y2="18" />
-        <line x1="3" y1="6" x2="3.01" y2="6" />
-        <line x1="3" y1="12" x2="3.01" y2="12" />
-        <line x1="3" y1="18" x2="3.01" y2="18" />
-      </svg>
-    );
-  }
-  if (kind === 'mention') {
-    // @ — círculo com curva interna (lucide at-sign)
-    return (
-      <svg {...common}>
-        <circle cx="12" cy="12" r="4" />
-        <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94" />
-      </svg>
-    );
-  }
-  if (kind === 'assignment') {
-    // user (lucide) — cabeça + ombros
-    return (
-      <svg {...common}>
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-        <circle cx="12" cy="7" r="4" />
-      </svg>
-    );
-  }
-  // status: refresh-cw (lucide) — ciclo
-  return (
-    <svg {...common}>
-      <polyline points="23 4 23 10 17 10" />
-      <polyline points="1 20 1 14 7 14" />
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-    </svg>
-  );
+  return <Icon name={CHIP_ICON[kind]} size={14} />;
 }
 
 function NotifRow({ n, onClick }: { n: Notif; onClick: () => void }) {
