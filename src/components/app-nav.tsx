@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { useData } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
 import { ProfileMenu } from '@/components/profile-menu';
-import { ProfileSheet } from '@/components/profile-sheet';
 import { HelpIconButton } from '@/components/help-modal';
 import { ThemeIconButton } from '@/components/theme-toggle';
 import { ExportIconButton } from '@/components/export';
@@ -16,7 +15,7 @@ import { NotifBell } from '@/components/notif-bell';
 import { TimerButton } from '@/components/timer-button';
 import { Icon, type IconName } from '@/components/icons';
 
-export const APP_VERSION = 'v1.03.010';
+export const APP_VERSION = 'v1.03.011';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -32,151 +31,151 @@ const TAB_ICON: Record<string, IconName> = {
   '/cadastros': 'sliders',
 };
 
-/** Ordem fixa da tab bar mobile (handoff §2.2): Briefing · Foco · Backlog · Dashboard · Portal */
-const MOBILE_TABS = ['/briefing', '/foco', '/backlog', '/dashboard', '/portal'] as const;
-
 /**
- * AppNav · header do app pós design system (F2 + v1.03 mobile shell).
+ * AppNav · header do app pós design system (F2).
+ * Anatomia (handoff §4):
+ *   [ aperture · tasks 360 ] ... [ Cronômetro | Export · Help · Tema | + Tarefa · Sino · Avatar ]
+ *   [ tab tab tab ... ]
  *
- * Desktop (>860px): header completo + tabs horizontais (mesma anatomia do v1.02).
- * Mobile (≤860px): header reduzido [aperture + tasks 360 ... sino · avatar] +
- *   tab bar inferior fixa com 5 itens (Briefing · Foco · Backlog · Dashboard · Portal).
- *   Avatar abre ProfileSheet (bottom sheet) em vez do dropdown desktop.
+ * - Frosted glass (rgba bg + backdrop-filter blur)
+ * - Mark aperture com opacidade gradiente (4 círculos: .45/.65/.85/1.0)
+ * - Clusters de ação separados por `.hdr-sep`
+ * - Tabs com ícone Lucide + cor verde editorial quando ativa
+ * - Versão saiu do header (vive no menu do perfil; constante exportada
+ *   pra outros consumidores ainda referenciam)
  */
 export function AppNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { refreshAll, refreshing, currentPessoa, viewerRole } = useData();
+  const { refreshAll, refreshing } = useData();
   const { openNew } = useTaskModal();
-  const [profileSheetOpen, setProfileSheetOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  const initial = (currentPessoa?.nome ?? '?').charAt(0).toUpperCase();
-
-  // Filtra tabs mobile pelo role do viewer (briefing é admin-only etc.)
-  const role = viewerRole ?? 'interno';
-  const visibleMobileTabs = MOBILE_TABS.filter((href) => {
-    const item = NAV.find((n) => n.href === href);
-    return item && item.roles.includes(role);
-  });
+  const currentTab = NAV.find((n) => pathname.startsWith(n.href));
 
   return (
-    <>
-      {/* ===== Header MOBILE (≤860px) — só logo + bell + avatar ===== */}
-      <header className="m-header">
+    <header className="hdr-v2">
+      {/* Top row: brand + actions */}
+      <div className="hdr-v2-top">
+        {/* Brand · click no logo dispara refetch (mesmo gesto do Alpine) */}
         <button
           type="button"
           onClick={() => refreshAll()}
-          className="brand bg-transparent border-0 cursor-pointer p-0"
+          className="hdr-brand min-w-0 text-left bg-transparent border-0 cursor-pointer"
+          title="Recarregar dados"
           aria-label="Recarregar dados"
         >
           <span className={cn('mark sz-24', refreshing && 'loading-pulse')}>
             <span /><span /><span /><span />
           </span>
-          <b>tasks 360</b>
+          <b className="leading-none truncate">tasks 360</b>
         </button>
-        <span className="sp" />
-        <NotifBell />
-        <button
-          type="button"
-          className="m-prof"
-          onClick={() => setProfileSheetOpen(true)}
-          aria-label="Perfil"
-          title={currentPessoa?.nome ?? 'Conta'}
-        >
-          {initial}
-        </button>
-      </header>
 
-      {/* ===== Header DESKTOP — mesma anatomia v1.02 ===== */}
-      <header className="hdr-v2">
-        <div className="hdr-v2-top">
+        <span className="hdr-spacer" />
+
+        {/* Actions · 3 clusters separados por hdr-sep */}
+        <div className="hdr-actions">
+          {/* Cluster 1: Cronômetro · desktop only */}
+          <div className="hidden md:flex items-center gap-1">
+            <TimerButton />
+          </div>
+          <span className="hdr-sep hidden md:block" />
+
+          {/* Cluster 2: utilitários globais */}
+          <ExportIconButton />
+          <HelpIconButton />
+          <ThemeIconButton />
+
+          <span className="hdr-sep hidden md:block" />
+
+          {/* Cluster 3: criar + notif + avatar */}
           <button
             type="button"
-            onClick={() => refreshAll()}
-            className="hdr-brand min-w-0 text-left bg-transparent border-0 cursor-pointer"
-            title="Recarregar dados"
-            aria-label="Recarregar dados"
+            onClick={openNew}
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[color:var(--green)] text-white text-xs font-medium hover:bg-[color:var(--green-hover)] transition-colors"
+            title="Nova tarefa"
+            aria-label="Nova tarefa"
           >
-            <span className={cn('mark sz-24', refreshing && 'loading-pulse')}>
-              <span /><span /><span /><span />
-            </span>
-            <b className="leading-none truncate">tasks 360</b>
+            <Icon name="plus" size={14} />
+            Tarefa
           </button>
-
-          <span className="hdr-spacer" />
-
-          <div className="hdr-actions">
-            <div className="hidden md:flex items-center gap-1">
-              <TimerButton />
-            </div>
-            <span className="hdr-sep hidden md:block" />
-
-            <ExportIconButton />
-            <HelpIconButton />
-            <ThemeIconButton />
-
-            <span className="hdr-sep hidden md:block" />
-
-            <button
-              type="button"
-              onClick={openNew}
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[color:var(--green)] text-white text-xs font-medium hover:bg-[color:var(--green-hover)] transition-colors"
-              title="Nova tarefa"
-              aria-label="Nova tarefa"
-            >
-              <Icon name="plus" size={14} />
-              Tarefa
-            </button>
-            <NotifBell />
-            <ProfileMenu />
-          </div>
+          <NotifBell />
+          <ProfileMenu />
         </div>
+      </div>
 
-        {/* Desktop tabs (escondido em ≤860px pelo CSS .m-tabbar e .hdr-v2-tabs) */}
-        <nav className="hidden md:flex hdr-v2-tabs">
-          {NAV.filter((item) => !item.inProfileMenu).map((item) => {
-            const active = pathname.startsWith(item.href);
-            const ic = TAB_ICON[item.href] ?? 'list';
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn('tab-v2', active && 'active')}
-              >
-                <Icon name={ic} size={15} />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </header>
+      {/* Mobile: dropdown com tab atual + lista pra trocar */}
+      <div className="md:hidden border-t border-line relative">
+        <button
+          type="button"
+          className="w-full flex items-center justify-between px-4 py-3"
+          onClick={() => setMobileNavOpen((v) => !v)}
+          aria-label="Menu de navegação"
+        >
+          <span className="flex items-center gap-2 font-medium text-sm">
+            {currentTab && (
+              <Icon
+                name={TAB_ICON[currentTab.href] ?? 'list'}
+                size={15}
+                className="text-[color:var(--green)]"
+              />
+            )}
+            {currentTab?.label ?? 'tasks 360'}
+          </span>
+          <Icon name={mobileNavOpen ? 'chevron-down' : 'chevron-down'} size={14} className="text-muted" />
+        </button>
+        {mobileNavOpen && (
+          <>
+            <div className="fixed inset-0 z-20" onClick={() => setMobileNavOpen(false)} />
+            <div className="absolute left-0 right-0 top-full bg-bg-elev border-b border-line shadow-lg z-30">
+              {NAV.filter((item) => !item.hideMobile && !item.inProfileMenu).map((item) => {
+                const active = pathname.startsWith(item.href);
+                const ic = TAB_ICON[item.href] ?? 'list';
+                return (
+                  <button
+                    key={item.href}
+                    type="button"
+                    className={cn(
+                      'w-full flex items-center justify-between px-4 py-3 border-b border-line last:border-0 transition-colors',
+                      active ? 'bg-[color:var(--green-soft)] text-[color:var(--green)] font-medium' : 'hover:bg-bg-elev',
+                    )}
+                    onClick={() => {
+                      setMobileNavOpen(false);
+                      router.push(item.href);
+                    }}
+                  >
+                    <span className="flex items-center gap-2.5 text-sm">
+                      <Icon name={ic} size={15} />
+                      {item.label}
+                    </span>
+                    {active && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[color:var(--green)]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
 
-      {/* ===== Tab bar MOBILE inferior fixa ===== */}
-      <nav className="m-tabbar" aria-label="Navegação mobile">
-        {visibleMobileTabs.map((href) => {
-          const item = NAV.find((n) => n.href === href);
-          if (!item) return null;
-          const active = pathname.startsWith(href);
-          const ic = TAB_ICON[href] ?? 'list';
+      {/* Desktop tabs — uma linha com ícone + label, ativa em verde */}
+      <nav className="hidden md:flex hdr-v2-tabs">
+        {NAV.filter((item) => !item.inProfileMenu).map((item) => {
+          const active = pathname.startsWith(item.href);
+          const ic = TAB_ICON[item.href] ?? 'list';
           return (
-            <button
-              key={href}
-              type="button"
-              className={cn('m-tab', active && 'on')}
-              onClick={() => router.push(href)}
-              aria-label={item.label}
-              aria-current={active ? 'page' : undefined}
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn('tab-v2', active && 'active')}
             >
-              <Icon name={ic} size={22} className="ic" />
-              <span>{item.label}</span>
-            </button>
+              <Icon name={ic} size={15} />
+              {item.label}
+            </Link>
           );
         })}
       </nav>
-
-      {profileSheetOpen && (
-        <ProfileSheet onClose={() => setProfileSheetOpen(false)} />
-      )}
-    </>
+    </header>
   );
 }

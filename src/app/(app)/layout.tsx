@@ -30,14 +30,12 @@ export default function AppLayout({
                     <GlobalShortcuts />
                     <ServiceWorkerRegister />
                     <AppSplash />
-                    <div className="min-h-screen app-shell-root">
+                    <div className="min-h-screen">
                       <AppNav />
                       {/* Main alinha EXATAMENTE com .hdr-v2-top: max-width 1320px
                           (var(--container)) + padding 16px. Conteúdo começa no mesmo X
-                          do logo aperture e termina no mesmo X do avatar/perfil.
-                          Em mobile (≤860px) o CSS zera padding/max-width pra que
-                          cada .m-scroll controle seu próprio padding (18px 16px 28px). */}
-                      <main className="app-main-wrap max-w-[1320px] mx-auto px-4 py-6">{children}</main>
+                          do logo aperture e termina no mesmo X do avatar/perfil. */}
+                      <main className="max-w-[1320px] mx-auto px-4 py-6">{children}</main>
                     </div>
                     <MobileFab />
                     <BadgeSync />
