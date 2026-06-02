@@ -257,8 +257,8 @@ export function PortalClient() {
         </div>
       </div>
 
-      {/* 4. STORYTELLING */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-12 md:gap-4">
+      {/* 4. STORYTELLING (desktop only — mobile foca em header + KPIs + alerts + lista) */}
+      <div className="hidden md:grid grid-cols-1 gap-3 md:grid-cols-12 md:gap-4">
         {/* Sparkline 6 meses */}
         <div className="card p-4 md:col-span-5 md:p-5">
           <div className="mb-1 flex items-baseline justify-between">
