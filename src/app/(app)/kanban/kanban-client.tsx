@@ -30,6 +30,7 @@ import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
+import { PriChip, TaskAvatar, PrazoLabel, TagIA } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
 import { agingDays, agingLevel, atrasada, fmtDateShort, fmtTempoEtapa, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
@@ -479,25 +480,16 @@ function KCard({
       onDragEnd={onDragEnd}
       onClick={onClick}
     >
-      <div className="font-medium text-sm leading-snug mb-2">
+      <div className="font-medium text-sm leading-snug mb-2 flex items-start gap-1.5">
         {t.privada && (
-          <span className="ia-chip ia-chip-mini mr-1" title="Task privada">
-            🔒
-          </span>
+          <span className="ia-chip ia-chip-mini" title="Task privada">🔒</span>
         )}
-        {t.criadoPorIa && (
-          <span className="ia-chip ia-chip-mini mr-1" title="Criada por automação IA">
-            🤖 IA
-          </span>
-        )}
-        {t.titulo}
+        {t.criadoPorIa && <TagIA />}
+        <span>{t.titulo}</span>
       </div>
       <div className="flex items-center justify-between gap-2 mb-1">
         <div className="text-xs text-muted truncate">{clienteName + ' · ' + projetoName}</div>
-        <span className={`pri shrink-0 pri-${t.prioridade}`}>
-          <span className="pri-dot" />
-          {t.prioridade}
-        </span>
+        <PriChip prio={t.prioridade} />
       </div>
       {showSubetapa && (
         <div className="text-[11px] text-ink-soft font-mono mb-2">{SUB_LABELS[t.subetapa] ?? t.subetapa}</div>
@@ -511,11 +503,12 @@ function KCard({
           ))}
         </div>
       )}
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-ink-soft">{pessoaName}</span>
-        <span className={`font-mono ${atrasada(t) ? 'late' : ''}`}>
-          {t.prazo ? fmtDateShort(t.prazo) : '—'}
+      <div className="flex items-center justify-between text-xs gap-2">
+        <span className="flex items-center gap-1.5 min-w-0">
+          <TaskAvatar name={pessoaName} title={pessoaName} />
+          <span className="text-ink-soft truncate">{pessoaName.split(/\s+/)[0] ?? pessoaName}</span>
         </span>
+        <PrazoLabel task={t} />
       </div>
       <div className="flex items-center gap-1.5 mt-2">
         {extraFooter}
