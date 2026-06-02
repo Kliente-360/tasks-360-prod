@@ -762,10 +762,10 @@ input[type="checkbox"] { accent-color: var(--brand); }
   display: flex; align-items: center; gap: var(--sp-1);
 }
 .kcol-op-name { font-family: var(--sans); font-size: var(--fs-sm); font-weight: 600; line-height: 1.2; color: var(--ink); margin-top: 3px; }
-.view-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-elev); }
-.view-toggle button { padding: 6px 12px; font-size: 12px; font-weight: 500; color: var(--muted); border: none; background: transparent; cursor: pointer; transition: all 0.15s; }
-.view-toggle button:hover { color: var(--ink); }
-.view-toggle button.active { background: var(--brand); color: #fff; }
+.view-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; background: var(--bg); height: 34px; box-sizing: border-box; }
+.view-toggle button { padding: 0 12px; font-size: 12.5px; font-weight: 500; color: var(--fg-muted); border: none; background: transparent; cursor: pointer; transition: all 0.15s; height: 100%; display: inline-flex; align-items: center; }
+.view-toggle button:hover { color: var(--fg); }
+.view-toggle button.active { background: var(--green-tint); color: var(--green); font-weight: 600; }
 .kcol-readonly { opacity: 0.95; }
 .kcol-readonly .kcard { cursor: pointer; }
 
@@ -1402,14 +1402,28 @@ body {
 }
 @keyframes timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
 
-/* ============ PAGE HEADER (interno de cada tela) ============ */
+/* ============ PAGE HEADER (interno de cada tela) ============
+   PADRONIZAÇÃO Y/X entre telas (Dashboard/Backlog/Kanban/Calendário/...):
+   - min-height fixo → mesma altura mesmo com/sem context+titleAside
+   - ph-titles min-width fixo → aside começa no mesmo X em todas as telas
+     (toggle Kanban alinha com setas Calendário e selector Foco)
+   - margin-bottom fixo → primeiro elemento abaixo (KPIs, tabela, etc)
+     começa no mesmo Y em qualquer tela
+   - narr min-height fixo → mesma altura com ou sem texto de contexto */
 .pageheader {
   display: flex; align-items: center; justify-content: space-between;
   gap: 18px; flex-wrap: wrap;
-  margin-bottom: 20px;
+  min-height: 64px;
+  margin-bottom: 24px;
 }
-.ph-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
-.ph-titles { min-width: 0; }
+.ph-left {
+  display: flex; align-items: center; gap: 12px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+.ph-titles {
+  min-width: 200px;
+}
 .ph-titles h1 {
   font-family: var(--sans);
   font-size: clamp(21px, 2.4vw, 26px);
@@ -1422,11 +1436,15 @@ body {
 .ph-titles .narr {
   font-size: 12.5px;
   color: var(--fg-muted);
-  margin-top: 2px;
+  margin-top: 4px;
   line-height: 1.4;
+  min-height: 18px;
 }
 .ph-titles .narr b { color: var(--fg); font-weight: 600; }
-.ph-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.ph-right {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
 
 /* Em mobile: PageHeader empilha; controles full-width */
 @media (max-width: 860px) {
@@ -1448,8 +1466,10 @@ body {
   border-radius: var(--r-sm);
   background: var(--bg);
   min-width: 0;
-  width: 208px;
+  width: 240px;
+  height: 34px;
   transition: all var(--dur) var(--ease);
+  box-sizing: border-box;
 }
 .search .ic { color: var(--fg-muted); flex: none; }
 .search input {
@@ -1478,6 +1498,16 @@ body {
   color: var(--fg-soft);
   cursor: pointer;
   transition: all var(--dur) var(--ease);
+  height: 34px;
+  min-width: 124px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+.fselect > span:not(.ic):first-of-type {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .fselect:hover { border-color: var(--fg); color: var(--fg); }
 .fselect .ic { color: var(--fg-muted); }
@@ -1613,3 +1643,33 @@ body {
 .cal-dot.status-late      { background: var(--danger); }
 .cal-dot.status-done      { background: var(--p3); }
 .cal-dot.status-backlog   { background: var(--fg-muted); }
+
+/* ============ F8 · Harmonização visual das toolbars do PageHeader ============
+   Todos os elementos dentro de .ph-right alinham por altura (34px) e box. */
+.ph-right .btn,
+.ph-right .iconbtn,
+.ph-right .view-toggle,
+.ph-right .search,
+.ph-right .fselect,
+.ph-right .inp,
+.ph-right select.inp {
+  height: 34px;
+  box-sizing: border-box;
+}
+.ph-right .btn { padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; }
+.ph-right select.inp { padding-top: 0; padding-bottom: 0; }
+
+/* Mesma altura no titleAside (setas Calendário, toggle Kanban) */
+.ph-left .iconbtn,
+.ph-left .btn,
+.ph-left .view-toggle {
+  height: 34px;
+  box-sizing: border-box;
+}
+.ph-left .btn { padding: 0 12px; display: inline-flex; align-items: center; }
+
+/* No mobile, deixa o conteúdo voltar a fluir */
+@media (max-width: 860px) {
+  .ph-right .search { width: 100%; }
+  .ph-right .fselect { min-width: 0; }
+}
