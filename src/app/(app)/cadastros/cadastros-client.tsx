@@ -14,6 +14,8 @@
 import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import { useData } from '@/lib/data-store';
 import { useToast } from '@/components/toast';
+import { PageHeader } from '@/components/page-header';
+import { Icon } from '@/components/icons';
 import { createClient } from '@/lib/supabase/client';
 import { clienteFromDb, projetoFromDb } from '@/lib/adapters';
 import { cn } from '@/lib/utils';
@@ -273,60 +275,47 @@ export function CadastrosClient() {
 
   return (
     <div className="space-y-5">
-      {/* Page bar */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <p className="text-sm text-muted">
-          <strong className="text-ink">{clientesAtivos.length}</strong> clientes ·{' '}
-          <strong className="text-ink">{projetosAtivos.length}</strong> projetos ·{' '}
-          <strong className="text-ink">{pessoas.length}</strong> pessoas
-          {tab === 'clientes' && clientesSemDominio.length > 0 && (
-            <span className="ml-2 font-mono text-[11px] text-amber-700">
-              · <strong>{clientesSemDominio.length}</strong> sem domínio
-            </span>
-          )}
-        </p>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex rounded-md border border-line overflow-hidden text-sm">
+      {/* PageHeader · padrão DS · toggle das 3 abas no titleAside · ações no right */}
+      <PageHeader
+        title="Cadastros"
+        titleAside={
+          <div className="view-toggle ml-2" role="tablist" aria-label="Tipo de cadastro">
             {(['clientes', 'projetos', 'pessoas'] as Tab[]).map((t) => (
               <button
                 key={t}
                 type="button"
+                className={tab === t ? 'active' : ''}
                 onClick={() => setTab(t)}
-                className={cn(
-                  'px-3 py-1.5 capitalize transition-colors',
-                  tab === t
-                    ? 'bg-brand-tint font-semibold text-brand-dark'
-                    : 'text-ink-soft hover:bg-brand-tint',
-                )}
               >
-                {t}
+                {t.charAt(0).toUpperCase() + t.slice(1)}
               </button>
             ))}
           </div>
+        }
+        right={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowArquivados((v) => !v)}
+              disabled={tab === 'pessoas'}
+              title={tab === 'pessoas' ? 'Pessoas não têm flag de arquivado.' : undefined}
+              className={cn(
+                'iconbtn bordered text-xs',
+                tab === 'pessoas' && 'opacity-40 cursor-not-allowed',
+                showArquivados && tab !== 'pessoas' && 'bg-[color:var(--green-tint)] border-[color:var(--green)] text-[color:var(--green)]',
+              )}
+              style={{ width: 'auto', padding: '0 12px', gap: 6 }}
+            >
+              <Icon name={showArquivados ? 'eye' : 'eye-off'} size={14} />
+              Arquivados
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setShowArquivados((v) => !v)}
-            disabled={tab === 'pessoas'}
-            title={tab === 'pessoas' ? 'Pessoas não têm flag de arquivado.' : undefined}
-            className={cn(
-              'text-xs px-2 py-1.5 rounded border transition-colors',
-              tab === 'pessoas'
-                ? 'border-line text-muted opacity-40 cursor-not-allowed'
-                : showArquivados
-                  ? 'border-brand text-brand-dark bg-brand-tint'
-                  : 'border-line text-muted hover:border-line-strong',
-            )}
-          >
-            arquivados
-          </button>
-
-          {tab === 'clientes' && <NewClienteButton />}
-          {tab === 'projetos' && <NewProjetoButton clientes={clienteOptions} />}
-          {tab === 'pessoas' && <NewPessoaButton clientes={clienteOptions} />}
-        </div>
-      </div>
+            {tab === 'clientes' && <NewClienteButton />}
+            {tab === 'projetos' && <NewProjetoButton clientes={clienteOptions} />}
+            {tab === 'pessoas' && <NewPessoaButton clientes={clienteOptions} />}
+          </div>
+        }
+      />
 
       {/* Clientes */}
       {tab === 'clientes' && (

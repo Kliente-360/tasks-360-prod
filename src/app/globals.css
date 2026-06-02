@@ -253,8 +253,13 @@
 html {
   /* Reserva espaço fixo pra scrollbar — sem isso, telas curtas (Timesheet,
      Foco sem pessoa, Portal sem cliente) ficam sem scrollbar e empurram
-     todo o layout 15px pra direita quando comparado a telas longas. */
+     todo o layout 15px pra direita quando comparado a telas longas.
+
+     `scrollbar-gutter: stable` cobre Chrome/Firefox/Edge modernos.
+     `overflow-y: scroll` é fallback que força scrollbar sempre presente
+     em Safari + browsers antigos. Combinados eliminam o jump. */
   scrollbar-gutter: stable;
+  overflow-y: scroll;
 }
 html, body {
   background: var(--bg);
@@ -1382,31 +1387,35 @@ body {
 
 /* ============ TIMER BUTTON (cronômetro no header) ============ */
 .timer-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 7px 12px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  height: 28px;             /* compacto · não estoura altura do cluster do header */
+  box-sizing: border-box;
   border: 1px solid var(--line);
   border-radius: var(--r-pill);
   background: var(--bg);
   color: var(--fg-soft);
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 12px;
   font-feature-settings: "tnum";
   cursor: pointer;
   transition: all var(--dur) var(--ease);
 }
 .timer-btn:hover { border-color: var(--fg-muted); color: var(--fg); }
+/* Rodando = REC vermelho (analogia de gravação) — convenção universal */
 .timer-btn.running {
-  background: var(--green-soft);
-  border-color: var(--green);
-  color: var(--green);
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
 }
 .timer-btn.running::before {
   content: '';
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: var(--green);
+  background: var(--danger);
   animation: timer-pulse 1.4s ease-in-out infinite;
-  margin-right: -2px;
+  margin-right: -1px;
 }
 @keyframes timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
 

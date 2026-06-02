@@ -10,11 +10,11 @@ import { cn } from '@/lib/utils';
 const MAX_NOTE = 120;
 
 /**
- * Modal pra registrar nota ao parar o cronômetro. Posicionado no topo
- * (items-start pt-[15vh]) — mesma âncora visual do popover de seleção
- * de task. Padrão único pra ambos os fluxos.
+ * Popover pra registrar nota ao parar o cronômetro. Ancorado no
+ * próprio TimerButton (dropdown), mesmo padrão do TaskPickerPopover —
+ * sem overlay fullscreen que cobre o header. Click-fora cancela.
  */
-function NoteModal({
+function NotePopover({
   onConfirm,
   onCancel,
 }: {
@@ -23,6 +23,7 @@ function NoteModal({
 }) {
   const [note, setNote] = useState('');
   const areaRef = useRef<HTMLTextAreaElement>(null);
+  const ref = useClickAway<HTMLDivElement>(onCancel);
 
   useEffect(() => {
     areaRef.current?.focus();
@@ -36,33 +37,38 @@ function NoteModal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-start justify-center modal-bg pt-[15vh] px-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+      ref={ref}
+      className="absolute top-full right-0 mt-2 z-50 w-[360px] max-w-[calc(100vw-24px)] bg-bg-elev border border-line rounded-lg shadow-xl overflow-hidden"
+      role="dialog"
+      aria-label="Parar cronômetro"
     >
-      <div className="card w-full max-w-sm p-5" role="dialog" aria-label="Parar cronômetro">
-        <h3 className="font-brand font-semibold mb-1">Parar cronômetro</h3>
-        <p className="text-xs text-muted mb-3">
-          Adicione uma nota ao registro — opcional, máx. {MAX_NOTE} caracteres.
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-line">
+        <div className="w-2 h-2 rounded-full bg-[color:var(--danger)] shrink-0" />
+        <span className="text-sm font-medium">Parar cronômetro</span>
+      </div>
+      <div className="p-3">
+        <p className="text-xs text-muted mb-2">
+          Adicione uma nota — opcional, máx. {MAX_NOTE} caracteres.
         </p>
         <textarea
           ref={areaRef}
           className="inp w-full resize-none text-sm"
-          style={{ height: '88px' }}
+          style={{ height: '80px' }}
           placeholder="O que foi feito?"
           maxLength={MAX_NOTE}
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
         <div
-          className={`text-right text-xs mt-1 mb-4 tabular-nums ${
+          className={`text-right text-xs mt-1 mb-3 tabular-nums ${
             note.length >= MAX_NOTE ? 'text-[color:var(--danger)]' : 'text-muted'
           }`}
         >
-          {note.length}/{MAX_NOTE} caracteres
+          {note.length}/{MAX_NOTE}
         </div>
         <div className="flex justify-end gap-2">
           <button type="button" className="btn text-xs" onClick={() => onConfirm('')}>
-            salvar sem nota
+            sem nota
           </button>
           <button type="button" className="btn btn-primary text-xs" onClick={() => onConfirm(note)}>
             salvar
@@ -183,10 +189,11 @@ export function TimerButton() {
     await stopTimer(note || undefined);
   }
 
-  // Rodando: pill verde com tempo HH:MM:SS + dot pulsando + ícone square (stop)
+  // Rodando: pill vermelha (REC) com tempo HH:MM:SS + dot pulsando + ícone
+  // square (stop). Wrapper `relative inline-flex` ancora o NotePopover.
   if (activeEntry) {
     return (
-      <>
+      <div className="relative inline-flex">
         <button
           type="button"
           onClick={() => setShowNote(true)}
@@ -198,9 +205,9 @@ export function TimerButton() {
           <span className="tabular-nums">{stopping ? '…' : fmtElapsed(elapsed)}</span>
         </button>
         {showNote && (
-          <NoteModal onConfirm={handleNoteConfirm} onCancel={() => setShowNote(false)} />
+          <NotePopover onConfirm={handleNoteConfirm} onCancel={() => setShowNote(false)} />
         )}
-      </>
+      </div>
     );
   }
 
