@@ -20,6 +20,9 @@ import { useToast } from '@/components/toast';
 import { BulkBar, BulkBarClearButton, BulkBarSep } from '@/components/bulk-bar';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
+import { FilterSheet, type MobileFilters } from '@/components/filter-sheet';
+import { MobileTaskCard } from '@/components/mobile-task-card';
+import { Icon } from '@/components/icons';
 import { atrasada, agingDays, agingLevel, fmtDate, fmtDateShort, fmtTempoEtapa, lblComplex, lblStatus } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS, SUBS_FLAT, SUBS_FLAT_ORDER } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
@@ -565,6 +568,38 @@ export function BacklogClient() {
     // filho visível do mobile. Com flex+gap, elementos display:none
     // são totalmente ignorados.
     <div>
+      {/* ============ MOBILE · espelha mobile.jsx MBacklog ============ */}
+      <div className="md:hidden">
+        <BacklogMobile
+          tasks={filtered}
+          openEdit={openEditModal}
+          filters={{
+            cliente: f.cliente,
+            resp: f.pessoa,
+            pri: f.pri,
+            prazo: f.prazo,
+          }}
+          setMobileFilters={(mf) =>
+            setF({
+              ...f,
+              cliente: mf.cliente,
+              pessoa: mf.resp,
+              pri: mf.pri,
+              prazo: (mf.prazo as Filters['prazo']) || '',
+            })
+          }
+          qDraft={qDraft}
+          setQDraft={setQDraft}
+          clientesById={clientesById}
+          projetosById={projetosById}
+          pessoasById={pessoasById}
+          clientesAtivos={clientesAtivos}
+          pessoasNaoCliente={pessoasNaoCliente}
+        />
+      </div>
+
+      {/* ============ DESKTOP · conteúdo original ============ */}
+      <div className="hidden md:block">
       {/* ============ Desktop · PageHeader + FilterBar (DS) — bare div: pageheader.mb:24 controla Y do primeiro elemento ============ */}
       <div className="hidden md:block">
         <PageHeader
@@ -1237,6 +1272,174 @@ export function BacklogClient() {
           <BulkBarClearButton onClick={clearSelection} />
         </div>
       </BulkBar>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MOBILE · espelha mobile.jsx MBacklog
+// ============================================================
+type BacklogMobileProps = {
+  tasks: Task[];
+  openEdit: (id: string) => void;
+  filters: MobileFilters;
+  setMobileFilters: (f: MobileFilters) => void;
+  qDraft: string;
+  setQDraft: (v: string) => void;
+  clientesById: Map<string, { nome: string }>;
+  projetosById: Map<string, { nome: string }>;
+  pessoasById: Map<string, { nome: string }>;
+  clientesAtivos: { id: string; nome: string }[];
+  pessoasNaoCliente: { id: string; nome: string }[];
+};
+
+function BacklogMobile({
+  tasks,
+  openEdit,
+  filters,
+  setMobileFilters,
+  qDraft,
+  setQDraft,
+  clientesById,
+  projetosById,
+  pessoasById,
+  clientesAtivos,
+  pessoasNaoCliente,
+}: BacklogMobileProps) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const nActive = ['cliente', 'resp', 'pri', 'prazo'].filter(
+    (k) => filters[k as keyof MobileFilters],
+  ).length;
+  const totalH = tasks.reduce((a, t) => a + (Number(t.esforco) || 0), 0);
+  const atrasCount = tasks.filter((t) => atrasada(t)).length;
+
+  const clienteIdByNome = useMemo(() => {
+    const m = new Map<string, string>();
+    clientesAtivos.forEach((c) => m.set(c.nome, c.id));
+    return m;
+  }, [clientesAtivos]);
+  const pessoaIdByNome = useMemo(() => {
+    const m = new Map<string, string>();
+    pessoasNaoCliente.forEach((p) => m.set(p.nome, p.id));
+    return m;
+  }, [pessoasNaoCliente]);
+
+  // sheet ↔ ID-based filters bridge: sheet usa nomes, store usa IDs.
+  const sheetFilters: MobileFilters = {
+    cliente: filters.cliente ? clientesAtivos.find((c) => c.id === filters.cliente)?.nome ?? '' : '',
+    resp: filters.resp ? pessoasNaoCliente.find((p) => p.id === filters.resp)?.nome ?? '' : '',
+    pri: filters.pri,
+    prazo: filters.prazo,
+  };
+
+  const applyFromSheet = (mf: MobileFilters) => {
+    setMobileFilters({
+      cliente: mf.cliente ? clienteIdByNome.get(mf.cliente) ?? '' : '',
+      resp: mf.resp ? pessoaIdByNome.get(mf.resp) ?? '' : '',
+      pri: mf.pri,
+      prazo: mf.prazo,
+    });
+  };
+
+  return (
+    <div className="m-scroll">
+      <div className="m-pagetitle">
+        <h1>Backlog</h1>
+        <div className="narr">
+          <b>{tasks.length}</b> abertas <span className="sep">·</span> <b>{atrasCount}</b> atrasadas{' '}
+          <span className="sep">·</span> <b>{totalH}h</b>
+        </div>
+      </div>
+      <div className="m-filterbar">
+        <label className="m-search">
+          <Icon name="search" size={16} />
+          <input
+            value={qDraft}
+            onChange={(e) => setQDraft(e.target.value)}
+            placeholder="Buscar tudo…"
+          />
+        </label>
+        <button
+          type="button"
+          className={'m-fbtn' + (nActive ? ' on' : '')}
+          onClick={() => setSheetOpen(true)}
+          aria-label="Abrir filtros"
+        >
+          <Icon name="filter" size={16} />
+          {nActive > 0 && <span className="badge">{nActive}</span>}
+        </button>
+      </div>
+      {nActive > 0 && (
+        <div className="m-pills" style={{ marginBottom: 12 }}>
+          {sheetFilters.cliente && (
+            <button
+              type="button"
+              className="m-pill on"
+              onClick={() => setMobileFilters({ ...filters, cliente: '' })}
+            >
+              {sheetFilters.cliente}
+              <Icon name="x" size={12} />
+            </button>
+          )}
+          {sheetFilters.resp && (
+            <button
+              type="button"
+              className="m-pill on"
+              onClick={() => setMobileFilters({ ...filters, resp: '' })}
+            >
+              {sheetFilters.resp.split(/\s+/)[0]}
+              <Icon name="x" size={12} />
+            </button>
+          )}
+          {filters.pri && (
+            <button
+              type="button"
+              className="m-pill on"
+              onClick={() => setMobileFilters({ ...filters, pri: '' })}
+            >
+              {filters.pri}
+              <Icon name="x" size={12} />
+            </button>
+          )}
+          {filters.prazo && (
+            <button
+              type="button"
+              className="m-pill on"
+              onClick={() => setMobileFilters({ ...filters, prazo: '' })}
+            >
+              Atrasadas
+              <Icon name="x" size={12} />
+            </button>
+          )}
+        </div>
+      )}
+      <div className="m-list">
+        {tasks.map((t) => (
+          <MobileTaskCard
+            key={t.id}
+            task={t}
+            clienteNome={clientesById.get(t.clienteId)?.nome ?? '—'}
+            projetoNome={projetosById.get(t.projetoId)?.nome ?? ''}
+            pessoaNome={pessoasById.get(t.pessoaId)?.nome ?? '—'}
+            onOpen={openEdit}
+          />
+        ))}
+        {tasks.length === 0 && (
+          <div className="card text-center py-4 px-3 text-muted text-xs italic">
+            Nenhuma tarefa encontrada.
+          </div>
+        )}
+      </div>
+      {sheetOpen && (
+        <FilterSheet
+          filters={sheetFilters}
+          setFilters={applyFromSheet}
+          onClose={() => setSheetOpen(false)}
+          clientes={clientesAtivos.map((c) => c.nome)}
+          pessoas={pessoasNaoCliente.map((p) => p.nome)}
+        />
+      )}
     </div>
   );
 }
