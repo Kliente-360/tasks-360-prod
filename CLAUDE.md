@@ -35,11 +35,13 @@ Convenções do projeto que valem pra qualquer sessão.
 
 ## Git workflow
 
-- Branch temporária `feat/*`/`fix/*`/`refactor/*`/`chore/*` → push → PR via `mcp__github__create_pull_request` → squash-merge via `mcp__github__merge_pull_request`. GitHub deleta a head branch automaticamente ("Automatically delete head branches" ativo). Resultado: 1 commit em `main`, zero branches sobreviventes.
-- Nada de manter branches paralelas. Cada PR é uma sessão de trabalho fechada.
-- Branches `claude/*` criadas pelo harness são ignoradas — não usar, não deletar.
-- Antes de commitar: bumpar `APP_VERSION` (ver §Versionamento).
-- **Sempre `git pull origin main` antes de criar branch nova**, pra evitar divergência local.
+**Trabalho direto em `main`** (decisão jun/2026). Sem PRs intermediários.
+
+- Fluxo padrão: `git pull origin main` → editar → `git add` → bumpar `APP_VERSION` → `git commit` → `git push origin main`. Vercel pega de main e deploya.
+- **Não criar branches temporárias** — vai direto pra main. Hoje só Felipe + Claude editam, conflict é improvável, e o overhead de PR-merge não compensa.
+- Single exceção: se rolar trabalho experimental que pode quebrar prod (ex: refactor grande, mudança de schema), criar branch local, validar, depois mergear via `git merge --ff-only` em main e push. Sem PR.
+- Antes de qualquer commit: bumpar `APP_VERSION` (ver §Versionamento) e rodar `npm run typecheck` + `npm run lint` (build full opcional, só se mudou CSS).
+- Branches `claude/*` criadas por harness anterior podem ser deletadas se aparecerem.
 
 ## Onda 0 · migração Alpine → Next (✅ concluída · em produção jun/2026)
 

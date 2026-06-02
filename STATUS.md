@@ -111,6 +111,28 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 
 **Pré-req**: idealmente sai junto com A.1 (Design System) — barra de filtros é componente visível em 4 telas, vale aplicar tokens novos de uma vez só pra evitar reapplicar depois.
 
+### Bucket V · Visão cliente (pre-launch hardening)
+
+**Objetivo macro:** abrir o produto pro **primeiro cliente em definitivo** com identidade, segurança e UX dignas. Hoje o Portal cliente existe e funciona pra clientes externos da Kliente 360, mas várias áreas precisam de polish/auditoria antes de soltar pra cliente "real" (não-interno).
+
+Diferente dos buckets A/B/C que são features incrementais, V é **um lote coeso** — escopo é "tudo que um cliente novo encosta". Vale executar como um sprint focado de 1-2 semanas com Felipe validando cada item.
+
+| # | Item | Esforço | Impacto |
+|---|---|---|---|
+| V.1 | **Portal cliente · revisão completa de UX** · auditar storytelling (header verde + KPIs + ritmo de entregas + distribuição + lead time + lista), decidir o que fica/sai pra cliente externo (vs admin trocando contexto). Hoje storytelling some no mobile — avaliar se fica mesmo ou se vale port fiel. Revisar copy ("Portal · Kliente 360", "Entregues este mês", etc) pra ficar acolhedora ao cliente externo. | 3-5 dias | Alto — é a vitrine do produto pro cliente |
+| V.2 | **Indicadores e gráficos do Portal · revisão analítica** · KPIs atuais (Entregues mês · Em execução · Aguardando você · Próxima entrega) e gráficos (Ritmo 6 meses · Distribuição por projeto · Lead time + total concluídas) — auditar se métricas batem com o que o cliente quer ver, se valores casam com a realidade, se faltam ângulos (ex: NPS interno do cliente · histórico de comments · SLA cumprido). Definir versão "1.0 cliente real". | 3-5 dias | Alto — informação útil é o que ancora valor percebido |
+| V.3 | **RLS audit · segurança end-to-end** · revisar todas as policies `pessoas`, `tasks`, `task_comments`, `clientes`, `projetos` pra garantir que cliente externo NUNCA vê dado fora do escopo dele. Casos a cobrir: cliente vê tasks de outro cliente · cliente vê comments internos (visivel_cliente=false) · cliente vê pessoas internas · cliente vê custos/horas internas. Documentar matriz role × tabela × CRUD. | 3-5 dias | Crítico — vazamento de dado entre clientes é gameover |
+| V.4 | **Modal de task · review pra cliente externo** · cliente externo vê o mesmo modal do time interno hoje? Auditar campos visíveis: prazo/responsável/status/tags/checklist/tempo/anexos/histórico. Decidir o que esconder (custo/esforço/comments internos/historico de mudança de subetapa interna). Versão "modo cliente" do modal. | 3-5 dias | Alto — modal é onde cliente passa tempo |
+| V.5 | **Forma de login · revisão UX** · hoje magic-link OTP por email + check em `pessoas.invited_at`. Avaliar: experiência do cliente recebendo o email · se o domínio do email vai pra spam · se a copy é clara · se tem fallback (botão "reenviar") · se a tela "verifica teu email ✉" tem CTA suficiente (ex: link mailto + suporte). Polir. Considerar adicionar "Lembrar de mim" / sessão mais longa pra cliente externo (hoje JWT 1h). | 2-3 dias | Médio-alto — primeira impressão técnica |
+| V.6 | **Identidade visual no Portal** · cada cliente já tem `corPortal` + `corPortalTexto` configuráveis (admin define em Cadastros). Auditar: como fica o portal com cor escura vs clara · se a logomarca/Mark aperture aparece bem nas duas variantes · se há contraste suficiente em alerts/KPIs em ambos os temas. Considerar permitir logo do cliente (upload) no header do portal. | 2-3 dias | Médio — branding aumenta sensação de "feito pra mim" |
+| V.7 | **Docs · Help + Onboarding pro cliente externo** · tour inicial específico pra cliente (não admin), com 3-4 telas: "este é seu portal · veja suas tasks · responda comentários · acompanhe entregas". Help modal com FAQ ("como reportar problema? quem é meu contato? como exportar?"). Hoje o onboarding existe mas é interno. | 2-3 dias | Médio — reduz suporte recorrente |
+| V.8 | **Notificações pro cliente externo** · cliente recebe notif quando: comment do time é marcado visivel_cliente=true, status muda pra "aguardando cliente", task é concluída. Hoje o sino do header funciona mas só pra usuários internos via realtime. Habilitar pro role=cliente (RLS já cobre? validar). Considerar email digest semanal opcional. | 3-5 dias | Médio-alto — fecha o loop de comunicação |
+| V.9 | **Auditoria de "modo cliente" end-to-end** · após V.1-V.8, fazer um walkthrough completo logado como `role=cliente`: navegar todas as telas acessíveis, tentar acessar URLs proibidas, validar permissões, validar copy, validar links quebrados, validar dark mode. Checklist final pré-launch. | 1-2 dias | Crítico — gate final |
+
+**Pré-req:** mobile fechamento (A.15) ajuda mas não bloqueia — cliente externo provavelmente abre no desktop primeiro. Se mobile estiver decente, V atende.
+
+**Quando atacar:** depois que tiver pelo menos UM cliente externo real definido (sabemos quem? qual cor? quais tasks?). Sem cliente concreto, V vira teoria.
+
 ### Bucket B · Features com IA
 
 Tarefas que invocam LLM (Claude Haiku/Sonnet) pra produzir saída útil ao usuário. **Pré-req comum**: chave Anthropic em env do Supabase + Edge Function pattern + observabilidade de custo/uso.
