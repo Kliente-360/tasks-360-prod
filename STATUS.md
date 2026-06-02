@@ -13,7 +13,7 @@
 - ✅ Fase B · Monitoramento (Vercel logs · sem incidente)
 - ✅ Fase C · JWT 1h (já estava configurado) · Realtime token refresh fix · Sentry/PostHog descartados
 - ✅ Fase D · `usage_events` + `task_dependencies` dropadas · 18 migrations movidas pra `applied/`
-- ⏳ Fase D · Alpine no Netlify ativo como fallback — deletar após ~2 semanas sem incidente
+- ✅ Fase D · Alpine no Netlify desativado (jun/2026)
 
 ---
 
@@ -81,5 +81,4 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## Próximo passo imediato
 
-→ Deletar Alpine no Netlify após ~2 semanas sem incidente (meados jun/2026).
-→ Em paralelo: iniciar NEXT — sugestão: **Push notifications** ou **`ai-suggest`** (LATER).
+→ **100% Vercel.** Próximo: atacar NEXT — sugestão: **Push notifications** ou **`ai-suggest`** (LATER).
