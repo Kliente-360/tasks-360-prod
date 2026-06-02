@@ -18,7 +18,7 @@ import { useData, usePessoasById, useClientesById, useProjetosById } from '@/lib
 import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
 import { Icon } from '@/components/icons';
-import { PriChip } from '@/components/task-card/primitives';
+import { TaskCard } from '@/components/task-card/task-card';
 import { cn } from '@/lib/utils';
 import {
   agingDays,
@@ -221,6 +221,7 @@ export function FocoClient() {
           openEdit={openEdit}
           clientesById={clientesById}
           projetosById={projetosById}
+          pessoasById={pessoasById}
         />
       )}
 
@@ -326,12 +327,14 @@ function FocoMobilePanel({
   openEdit,
   clientesById,
   projetosById,
+  pessoasById,
 }: {
   focusPessoaId: string;
   tasks: Task[];
   openEdit: (id: string) => void;
   clientesById: ReturnType<typeof useClientesById>;
   projetosById: ReturnType<typeof useProjetosById>;
+  pessoasById: ReturnType<typeof usePessoasById>;
 }) {
   const [seg, setSeg] = useState<'minhas' | 'atrasadas' | 'hoje'>('minhas');
   const [done, setDone] = useState<Set<string>>(() => new Set());
@@ -400,33 +403,23 @@ function FocoMobilePanel({
           </div>
         ) : (
           list.map((t) => {
-            const isDone = done.has(t.id);
             const cli = clientesById.get(t.clienteId)?.nome ?? '—';
             const proj = projetosById.get(t.projetoId)?.nome;
+            const respNome = pessoasById.get(t.pessoaId)?.nome ?? '';
             return (
-              <div key={t.id} className={cn('tcard check', isDone && 'done')}>
-                <button
-                  type="button"
-                  className="iconbtn"
-                  onClick={() => toggle(t.id)}
-                  aria-label={isDone ? 'Desmarcar' : 'Marcar como feito'}
-                  style={{ width: 28, height: 28, border: '1.5px solid var(--line-strong)', borderRadius: 6 }}
-                >
-                  {isDone && <Icon name="check" size={14} className="text-[color:var(--green)]" />}
-                </button>
-                <div className="body" onClick={() => openEdit(t.id)}>
-                  <div className="ttl">{t.titulo}</div>
-                  <div className="sub">{cli}{proj ? ' · ' + proj : ''}</div>
-                </div>
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  <PriChip prio={t.prioridade} />
-                  {t.esforco > 0 && (
-                    <span className="chip font-mono" style={{ padding: '1px 7px', fontSize: 10 }}>
-                      {t.esforco}h
-                    </span>
-                  )}
-                </div>
-              </div>
+              <TaskCard
+                key={t.id}
+                task={t}
+                cliente={cli}
+                projeto={proj}
+                respNome={respNome}
+                size="md"
+                checkable
+                checked={done.has(t.id)}
+                onToggleCheck={() => toggle(t.id)}
+                onClick={() => openEdit(t.id)}
+                showEsforco
+              />
             );
           })
         )}
