@@ -249,10 +249,11 @@
   --ring-focus: 0 0 0 2px var(--surface-2), 0 0 0 4px var(--cyan);
 
   /* ====== DS jun/2026 · tokens NOVOS aliasados pro dark mode ======
-     Ciclo redesign DS introduziu --green*/--fg* sem dark overrides.
-     Sem isso, `--green` ficava #007A3D (verde editorial light) sobre
-     bg escuro → contraste péssimo, e `--fg` ficava #0E1116 (texto
-     escuro) invisível na superfície escura.
+     Ciclo redesign DS introduziu os tokens --green (e variantes) e
+     --fg (e variantes) sem dark overrides. Sem isso, --green ficava
+     #007A3D (verde editorial light) sobre bg escuro -> contraste
+     péssimo, e --fg ficava #0E1116 (texto escuro) invisível na
+     superfície escura.
      Solução: alias pros equivalentes brand/ink que já estão definidos
      acima — mantém a paleta dark anterior (que era boa) só estendendo
      pros nomes novos. */
