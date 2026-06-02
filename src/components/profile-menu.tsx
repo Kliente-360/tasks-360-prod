@@ -79,9 +79,8 @@ export function ProfileMenu() {
           <div
             className="fixed md:absolute top-14 md:top-full right-3 md:right-0 mt-0 md:mt-1 bg-[color:var(--bg-elev)] border border-line rounded-lg shadow-xl py-2 w-[260px] max-w-[calc(100vw-24px)] md:w-[260px] z-40"
           >
-            {/* 1. Identidade */}
-            <div className="px-3 py-1 text-xs text-muted">logado como</div>
-            <div className="px-3 pb-1 text-sm font-medium text-ink truncate">
+            {/* 1. Identidade — apenas nome + email, sem "logado como" */}
+            <div className="px-3 pt-2 pb-0.5 text-sm font-medium text-ink truncate">
               {currentPessoa?.nome ?? '—'}
             </div>
             <div className="px-3 pb-2 text-[11px] text-muted font-mono truncate">
@@ -150,7 +149,7 @@ export function ProfileMenu() {
               onClick={signOut}
             >
               <Icon name="logout" size={14} />
-              <span>sair</span>
+              <span>Sair</span>
             </button>
 
             {/* 7. Versão */}

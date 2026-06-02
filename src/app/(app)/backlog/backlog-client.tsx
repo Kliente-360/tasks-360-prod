@@ -46,6 +46,7 @@ type Filters = {
   status: string;
   tag: string;
   origem: '' | 'ia' | 'humano';
+  prazo: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
 };
 
 type BulkPending = {
@@ -71,6 +72,7 @@ const DEFAULT_FILTERS: Filters = {
   status: 'abertas',
   tag: '',
   origem: '',
+  prazo: '',
 };
 
 const DEFAULT_BULK: BulkPending = {
@@ -126,6 +128,7 @@ export function BacklogClient() {
       projeto: s.projeto,
       pessoa: s.pessoa,
       tag: s.tag,
+      prazo: s.prazo,
     };
   });
   useEffect(() => {
@@ -134,8 +137,9 @@ export function BacklogClient() {
       projeto: f.projeto,
       pessoa: f.pessoa,
       tag: f.tag,
+      prazo: f.prazo,
     });
-  }, [f.cliente, f.projeto, f.pessoa, f.tag]);
+  }, [f.cliente, f.projeto, f.pessoa, f.tag, f.prazo]);
   const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
   const [groupBy, setGroupBy] = useState<string>('');
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
@@ -229,6 +233,19 @@ export function BacklogClient() {
       } else if (f.tag && !t.tags.includes(f.tag)) return false;
       if (f.origem === 'ia' && !t.criadoPorIa) return false;
       if (f.origem === 'humano' && t.criadoPorIa) return false;
+      if (f.prazo) {
+        const todayIso = new Date().toISOString().slice(0, 10);
+        if (f.prazo === 'atrasadas' && !atrasada(t)) return false;
+        if (f.prazo === 'hoje' && t.prazo !== todayIso) return false;
+        if (f.prazo === 'sem' && t.prazo) return false;
+        if (f.prazo === 'semana') {
+          if (!t.prazo) return false;
+          const in7 = new Date();
+          in7.setDate(in7.getDate() + 7);
+          const in7Iso = in7.toISOString().slice(0, 10);
+          if (t.prazo < todayIso || t.prazo > in7Iso) return false;
+        }
+      }
       return true;
     });
 
@@ -380,6 +397,7 @@ export function BacklogClient() {
     if (f.complexidade) n++;
     if (f.status && f.status !== 'abertas') n++;
     if (f.origem) n++;
+    if (f.prazo) n++;
     if (showArchived) n++;
     if (groupBy) n++;
     return n;
@@ -558,14 +576,14 @@ export function BacklogClient() {
                 cliente: f.cliente,
                 projeto: f.projeto,
                 resp: f.pessoa,
-                prazo: '',
+                prazo: f.prazo,
               } satisfies StdFilters}
               set={(key, value) => {
                 if (key === 'q') setQDraft(value);
                 else if (key === 'cliente') setF({ ...f, cliente: value, projeto: value ? f.projeto : '' });
                 else if (key === 'projeto') setF({ ...f, projeto: value });
                 else if (key === 'resp') setF({ ...f, pessoa: value });
-                // 'prazo' não tem mapping atual no Filters local; ignora silenciosamente
+                else if (key === 'prazo') setF({ ...f, prazo: value as Filters['prazo'] });
               }}
               onClear={() => {
                 setQDraft('');

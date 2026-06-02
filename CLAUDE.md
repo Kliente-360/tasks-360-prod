@@ -20,9 +20,12 @@ Convenções do projeto que valem pra qualquer sessão.
 
 - `APP_VERSION` segue `v1.<MINOR>.<BUILD>`. **Bumpa BUILD +1 antes de cada commit em main.**
 - BUILD é sequencial independente do número do PR no GitHub — os dois divergiram ao longo do trabalho de design e **não tentar realinhar**.
-- **Versão atual: `v1.02.232`** (pós-cutover · em produção).
+- **Versão atual: `v1.03.001`** (pós-redesign DS · em produção).
 - A versão é declarada em `src/components/app-nav.tsx` (constante `APP_VERSION`).
-- Em mudança grande de UX/dados, bumpa MINOR e zera BUILD (decisão manual). Último bump: 01→02 fechando o ciclo de design (PRs #253-#270).
+- Em mudança grande de UX/dados, bumpa MINOR e zera BUILD (decisão manual). Últimos bumps:
+  - 01→02 fechando o ciclo de design (PRs #253-#270 do repo legado).
+  - **02→03** com o redesign DS completo aplicado em todas as telas (PRs #1-#7 no repo prod, jun/2026).
+- A `APP_VERSION` é exibida no rodapé do menu do perfil — mantenha visível.
 - Após commit em main, arquivos de migration vão pra `supabase/migrations/applied/` (mover manualmente — não tem automação).
 
 ## Git workflow

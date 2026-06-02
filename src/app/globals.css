@@ -1480,16 +1480,19 @@ body {
 
 .search {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 7px 11px;
+  padding: 7px 10px;
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   background: var(--bg);
   min-width: 0;
-  width: 240px;
+  /* Padronizado pra mesma largura dos fselect (124px) — uniformidade visual */
+  width: 124px;
   height: 34px;
   transition: all var(--dur) var(--ease);
   box-sizing: border-box;
 }
+/* Quando focado, expande pra dar espaço de digitar sem perder o alinhamento
+   da grid colapsada — UX boa pra busca, padrão coletivo permanece. */
 .search .ic { color: var(--fg-muted); flex: none; }
 .search input {
   border: 0; outline: 0;
@@ -1500,6 +1503,7 @@ body {
 }
 .search input::placeholder { color: var(--fg-muted); }
 .search:focus-within {
+  width: 240px;
   border-color: var(--green);
   box-shadow: 0 0 0 3px var(--green-soft);
 }
