@@ -273,25 +273,21 @@ export function CadastrosClient() {
 
   const clientesVisiveis = showArquivados ? clientes : clientesAtivos;
   const projetosVisiveis = showArquivados ? projetos : projetosAtivos;
+  const clientesById = new Map(clientes.map((c) => [c.id, c] as const));
 
   return (
-    <div className="space-y-5">
-      {/* PageHeader · padrão DS · toggle das 3 abas no titleAside · ações no right */}
+    <div>
+      {/* PageHeader · contexto = stats agregadas · right = arquivados + botão criar contextual */}
       <PageHeader
         title="Cadastros"
-        titleAside={
-          <div className="view-toggle ml-2" role="tablist" aria-label="Tipo de cadastro">
-            {(['clientes', 'projetos', 'pessoas'] as Tab[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                className={tab === t ? 'active' : ''}
-                onClick={() => setTab(t)}
-              >
-                {t.charAt(0).toUpperCase() + t.slice(1)}
-              </button>
-            ))}
-          </div>
+        context={
+          <>
+            <b>{clientesAtivos.length}</b> clientes
+            <span className="mx-1.5">·</span>
+            <b>{projetosAtivos.length}</b> projetos
+            <span className="mx-1.5">·</span>
+            <b>{pessoas.length}</b> pessoas
+          </>
         }
         right={
           <div className="flex items-center gap-2">
@@ -299,18 +295,18 @@ export function CadastrosClient() {
               type="button"
               onClick={() => setShowArquivados((v) => !v)}
               disabled={tab === 'pessoas'}
-              title={tab === 'pessoas' ? 'Pessoas não têm flag de arquivado.' : undefined}
+              title={tab === 'pessoas' ? 'Pessoas não têm flag de arquivado.' : 'Mostrar arquivados'}
               className={cn(
                 'iconbtn bordered text-xs',
                 tab === 'pessoas' && 'opacity-40 cursor-not-allowed',
                 showArquivados && tab !== 'pessoas' && 'bg-[color:var(--green-tint)] border-[color:var(--green)] text-[color:var(--green)]',
               )}
               style={{ width: 'auto', padding: '0 12px', gap: 6 }}
+              aria-label="Mostrar arquivados"
             >
               <Icon name={showArquivados ? 'eye' : 'eye-off'} size={14} />
               Arquivados
             </button>
-
             {tab === 'clientes' && <NewClienteButton />}
             {tab === 'projetos' && <NewProjetoButton clientes={clienteOptions} />}
             {tab === 'pessoas' && <NewPessoaButton clientes={clienteOptions} />}
@@ -318,290 +314,393 @@ export function CadastrosClient() {
         }
       />
 
-      {/* Clientes */}
-      {tab === 'clientes' && (
-        <div className="card divide-y divide-[color:var(--line)] overflow-hidden">
-          {clientesVisiveis.map((c) => (
-            <div
-              key={c.id}
-              className={cn(
-                'flex items-center justify-between gap-3 flex-wrap px-3 md:px-4 py-3 md:py-4 transition-colors hover:bg-[color:var(--surface-3)]',
-                c.arquivadoEm && 'opacity-60',
+      {/* Subabas · padrão DS com count badge */}
+      <div className="subtabs" role="tablist" aria-label="Tipo de cadastro">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'clientes'}
+          className={cn('subtab', tab === 'clientes' && 'active')}
+          onClick={() => setTab('clientes')}
+        >
+          <Icon name="building" size={14} />
+          Clientes
+          <span className="badge">{clientesAtivos.length}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'projetos'}
+          className={cn('subtab', tab === 'projetos' && 'active')}
+          onClick={() => setTab('projetos')}
+        >
+          <Icon name="folder" size={14} />
+          Projetos
+          <span className="badge">{projetosAtivos.length}</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'pessoas'}
+          className={cn('subtab', tab === 'pessoas' && 'active')}
+          onClick={() => setTab('pessoas')}
+        >
+          <Icon name="users" size={14} />
+          Pessoas
+          <span className="badge">{pessoas.length}</span>
+        </button>
+      </div>
+
+      {/* Aviso opcional: clientes sem domínio (preserva o sinal que estava antes) */}
+      {tab === 'clientes' && clientesSemDominio.length > 0 && (
+        <p className="mt-3 text-xs text-[color:var(--sig-amber-fg)]">
+          <strong>{clientesSemDominio.length}</strong> cliente(s) sem domínio cadastrado — edite pra ativar matching automático de email.
+        </p>
+      )}
+
+      <div className="mt-4 card overflow-hidden">
+        {/* ===== Clientes ===== */}
+        {tab === 'clientes' && (
+          <table className="ds-table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th style={{ width: 100, textAlign: 'right' }}>Projetos</th>
+                <th style={{ width: 100, textAlign: 'right' }}>Tarefas</th>
+                <th style={{ width: 160 }} className="actions">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clientesVisiveis.map((c) => {
+                const isInterno = c.ehInterno;
+                return (
+                  <tr key={c.id} className={cn(c.arquivadoEm && 'opacity-60')}>
+                    <td>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar label={c.nome} shape="square" />
+                        <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium text-[color:var(--ink)]">{c.nome}</span>
+                          <Chip show={c.tier === 'estrategico'} label="estratégico" variant="green" />
+                          <Chip show={c.tier === 'potencial'} label="potencial" variant="warning" />
+                          <Chip show={c.tier === 'descoberta'} label="descoberta" variant="muted" />
+                          <Chip show={!!c.arquivadoEm} label="arquivado" variant="muted" />
+                          <Chip show={isInterno} label="interno" variant="muted" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="num" style={{ textAlign: 'right' }}>{projetosByCliente.get(c.id) ?? 0}</td>
+                    <td className="num" style={{ textAlign: 'right' }}>{tasksByCliente.get(c.id) ?? 0}</td>
+                    <td className="actions">
+                      {/* Arquivar/Desarquivar · interno mostra mas desabilita */}
+                      {!c.arquivadoEm ? (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          onClick={() => !isInterno && runArquivarCliente(c.id)}
+                          disabled={isInterno}
+                          title={isInterno ? 'Kliente 360 (interno) não pode ser arquivado' : 'Arquivar cliente'}
+                          aria-label="Arquivar cliente"
+                        >
+                          <Icon name="archive" size={14} />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          onClick={() => runDesarquivarCliente(c.id)}
+                          title="Desarquivar cliente"
+                          aria-label="Desarquivar cliente"
+                        >
+                          <Icon name="refresh" size={14} />
+                        </button>
+                      )}
+                      <EditClienteButton
+                        cliente={{
+                          id: c.id,
+                          nome: c.nome,
+                          tier: c.tier,
+                          ehInterno: c.ehInterno,
+                          dominios: c.dominios,
+                          corPortal: c.corPortal,
+                          corPortalTexto: c.corPortalTexto,
+                        }}
+                      />
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          style={{ color: isInterno ? 'var(--muted)' : 'var(--danger)' }}
+                          onClick={() => !isInterno && runDeleteCliente(c.id, c.nome)}
+                          disabled={isInterno}
+                          title={isInterno ? 'Kliente 360 (interno) não pode ser excluído' : 'Excluir cliente'}
+                          aria-label="Excluir cliente"
+                        >
+                          <Icon name="trash" size={14} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {clientesVisiveis.length === 0 && (
+                <tr>
+                  <td colSpan={4}>
+                    <EmptyState label="Nenhum cliente cadastrado." icon="building" />
+                  </td>
+                </tr>
               )}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className="w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold shrink-0"
-                  style={{ background: 'var(--green-soft)', color: 'var(--green)' }}
-                >
-                  {c.nome.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap text-sm font-medium text-[color:var(--ink)]">
-                    <span>{c.nome}</span>
-                    <Chip show={c.tier === 'estrategico'} label="estratégico" variant="green" />
-                    <Chip show={c.tier === 'potencial'} label="potencial" variant="warning" />
-                    <Chip show={c.tier === 'descoberta'} label="descoberta" variant="muted" />
-                    <Chip show={!!c.arquivadoEm} label="arquivado" variant="muted" />
-                    <Chip show={c.ehInterno} label="interno" variant="muted" />
-                    <Chip
-                      show={!c.ehInterno && !c.arquivadoEm && (!c.dominios || c.dominios.length === 0)}
-                      label="sem domínio"
-                      variant="warning"
-                    />
-                  </div>
-                  <p className="text-xs text-muted mt-0.5">
-                    {tasksByCliente.get(c.id) ?? 0} tarefas · {projetosByCliente.get(c.id) ?? 0} projetos
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-1 items-center">
-                {!c.arquivadoEm && !c.ehInterno && (
-                  <button
-                    type="button"
-                    className="iconbtn"
-                    onClick={() => runArquivarCliente(c.id)}
-                    title="Arquivar cliente"
-                    aria-label="Arquivar cliente"
-                  >
-                    <Icon name="archive" size={14} />
-                  </button>
-                )}
-                {c.arquivadoEm && (
-                  <button
-                    type="button"
-                    className="iconbtn"
-                    onClick={() => runDesarquivarCliente(c.id)}
-                    title="Desarquivar cliente"
-                    aria-label="Desarquivar cliente"
-                  >
-                    <Icon name="refresh" size={14} />
-                  </button>
-                )}
-                <EditClienteButton
-                  cliente={{
-                    id: c.id,
-                    nome: c.nome,
-                    tier: c.tier,
-                    ehInterno: c.ehInterno,
-                    dominios: c.dominios,
-                    corPortal: c.corPortal,
-                    corPortalTexto: c.corPortalTexto,
-                  }}
-                />
-                {!c.ehInterno && isAdmin && (
-                  <button
-                    type="button"
-                    className="iconbtn"
-                    style={{ color: 'var(--danger)' }}
-                    onClick={() => runDeleteCliente(c.id, c.nome)}
-                    title="Excluir cliente"
-                    aria-label="Excluir cliente"
-                  >
-                    <Icon name="trash" size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-          {clientesVisiveis.length === 0 && <EmptyState label="Nenhum cliente cadastrado." icon="building" />}
-        </div>
-      )}
+            </tbody>
+          </table>
+        )}
 
-      {/* Projetos */}
-      {tab === 'projetos' && (
-        <div className="card divide-y divide-[color:var(--line)] overflow-hidden">
-          {projetosVisiveis.map((p) => {
-            const clienteNome = clientes.find((c) => c.id === p.clienteId)?.nome ?? '—';
-            return (
-              <div
-                key={p.id}
-                className={cn(
-                  'flex items-center justify-between gap-3 flex-wrap px-3 md:px-4 py-3 md:py-4 transition-colors hover:bg-[color:var(--surface-3)]',
-                  p.arquivadoEm && 'opacity-60',
-                )}
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap text-sm font-medium text-[color:var(--ink)]">
-                    <span>{p.nome}</span>
-                    <Chip show={!!p.tipo} label={p.tipo || ''} variant="muted" />
-                    {p.slaEntregaDias != null && (
-                      <Chip show label={`SLA ${p.slaEntregaDias}d`} variant="muted" />
-                    )}
-                    {p.orcamentoHoras != null && (
-                      <Chip show label={`${p.orcamentoHoras}h`} variant="muted" />
-                    )}
-                    <Chip show={!!p.arquivadoEm} label="arquivado" variant="muted" />
-                  </div>
-                  <p className="text-xs text-muted mt-0.5">
-                    {clienteNome} · {tasksByProjeto.get(p.id) ?? 0} tarefas
-                  </p>
-                </div>
-                <div className="flex gap-1 items-center">
-                  {!p.arquivadoEm && (
-                    <button
-                      type="button"
-                      className="iconbtn"
-                      onClick={() => runArquivarProjeto(p.id)}
-                      title="Arquivar projeto"
-                      aria-label="Arquivar projeto"
-                    >
-                      <Icon name="archive" size={14} />
-                    </button>
-                  )}
-                  {p.arquivadoEm && (
-                    <button
-                      type="button"
-                      className="iconbtn"
-                      onClick={() => runDesarquivarProjeto(p.id)}
-                      title="Desarquivar projeto"
-                      aria-label="Desarquivar projeto"
-                    >
-                      <Icon name="refresh" size={14} />
-                    </button>
-                  )}
-                  <EditProjetoButton
-                    projeto={{
-                      id: p.id,
-                      nome: p.nome,
-                      clienteId: p.clienteId,
-                      tipo: p.tipo,
-                      slaRespostaHoras: p.slaRespostaHoras,
-                      slaEntregaDias: p.slaEntregaDias,
-                      orcamentoHoras: p.orcamentoHoras,
-                    }}
-                    clientes={clienteOptions}
-                  />
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      className="iconbtn"
-                      style={{ color: 'var(--danger)' }}
-                      onClick={() => runDeleteProjeto(p.id, p.nome)}
-                      title="Excluir projeto"
-                      aria-label="Excluir projeto"
-                    >
-                      <Icon name="trash" size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          {projetosVisiveis.length === 0 && <EmptyState label="Nenhum projeto cadastrado." icon="folder" />}
-        </div>
-      )}
+        {/* ===== Projetos ===== */}
+        {tab === 'projetos' && (
+          <table className="ds-table">
+            <thead>
+              <tr>
+                <th>Projeto</th>
+                <th style={{ width: 220 }}>Cliente</th>
+                <th style={{ width: 100, textAlign: 'right' }}>Tarefas</th>
+                <th style={{ width: 160 }} className="actions">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projetosVisiveis.map((p) => {
+                const clienteNome = clientesById.get(p.clienteId)?.nome ?? '—';
+                return (
+                  <tr key={p.id} className={cn(p.arquivadoEm && 'opacity-60')}>
+                    <td>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className="w-8 h-8 rounded-md flex items-center justify-center shrink-0"
+                          style={{ background: 'var(--surface-3)', color: 'var(--ink-soft)' }}
+                        >
+                          <Icon name="folder" size={16} />
+                        </span>
+                        <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium text-[color:var(--ink)]">{p.nome}</span>
+                          <Chip show={!!p.tipo} label={p.tipo || ''} variant="muted" />
+                          {p.slaEntregaDias != null && (
+                            <Chip show label={`SLA ${p.slaEntregaDias}d`} variant="muted" />
+                          )}
+                          {p.orcamentoHoras != null && (
+                            <Chip show label={`${p.orcamentoHoras}h`} variant="muted" />
+                          )}
+                          <Chip show={!!p.arquivadoEm} label="arquivado" variant="muted" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="text-[color:var(--ink-soft)]">{clienteNome}</td>
+                    <td className="num" style={{ textAlign: 'right' }}>{tasksByProjeto.get(p.id) ?? 0}</td>
+                    <td className="actions">
+                      {!p.arquivadoEm ? (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          onClick={() => runArquivarProjeto(p.id)}
+                          title="Arquivar projeto"
+                          aria-label="Arquivar projeto"
+                        >
+                          <Icon name="archive" size={14} />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          onClick={() => runDesarquivarProjeto(p.id)}
+                          title="Desarquivar projeto"
+                          aria-label="Desarquivar projeto"
+                        >
+                          <Icon name="refresh" size={14} />
+                        </button>
+                      )}
+                      <EditProjetoButton
+                        projeto={{
+                          id: p.id,
+                          nome: p.nome,
+                          clienteId: p.clienteId,
+                          tipo: p.tipo,
+                          slaRespostaHoras: p.slaRespostaHoras,
+                          slaEntregaDias: p.slaEntregaDias,
+                          orcamentoHoras: p.orcamentoHoras,
+                        }}
+                        clientes={clienteOptions}
+                      />
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          style={{ color: 'var(--danger)' }}
+                          onClick={() => runDeleteProjeto(p.id, p.nome)}
+                          title="Excluir projeto"
+                          aria-label="Excluir projeto"
+                        >
+                          <Icon name="trash" size={14} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {projetosVisiveis.length === 0 && (
+                <tr>
+                  <td colSpan={4}>
+                    <EmptyState label="Nenhum projeto cadastrado." icon="folder" />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
 
-      {/* Pessoas */}
-      {tab === 'pessoas' && (
-        <div className="card divide-y divide-[color:var(--line)] overflow-hidden">
-          {pessoas.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between gap-3 flex-wrap px-3 md:px-4 py-3 md:py-4 transition-colors hover:bg-[color:var(--surface-3)]"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                  style={{ background: 'var(--green-soft)', color: 'var(--green)' }}
-                >
-                  {p.nome.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap text-sm font-medium text-[color:var(--ink)]">
-                    <span>{p.nome}</span>
-                    <Chip show={p.role === 'admin'} label="admin" variant="green" />
-                    <Chip show={p.role === 'cliente'} label="cliente externo" variant="warning" />
-                    {p.senioridade && p.role !== 'cliente' && (
-                      <Chip show label={p.senioridade} variant="muted" />
-                    )}
-                    <Chip show={!!p.invited_at && !!p.user_id} label="acesso ativo" variant="green" />
-                    <Chip show={!!p.invited_at && !p.user_id} label="aguardando 1º login" variant="warning" />
-                    <Chip show={!p.invited_at && !!p.email} label="inativa" variant="muted" />
-                  </div>
-                  <p className="text-xs text-muted font-mono truncate mt-0.5">{p.email ?? '—'}</p>
-                </div>
-              </div>
-              <div className="flex gap-1 flex-wrap justify-end items-center">
-                {isAdmin && p.role === 'cliente' && !p.invited_at && (
-                  <button
-                    type="button"
-                    className="iconbtn"
-                    onClick={() => runConvidarPessoa(p.id, p.nome, p.email)}
-                    title="Convidar (magic link de acesso ao Portal)"
-                    aria-label="Convidar"
-                  >
-                    <Icon name="mention" size={14} />
-                  </button>
-                )}
-                {isAdmin && p.role === 'cliente' && !!p.invited_at && (
-                  <button
-                    type="button"
-                    className="iconbtn"
-                    onClick={() => runConvidarPessoa(p.id, p.nome, p.email)}
-                    title="Reenviar magic link"
-                    aria-label="Reenviar convite"
-                  >
-                    <Icon name="refresh" size={14} />
-                  </button>
-                )}
-                {isAdmin && p.role !== 'cliente' && !p.invited_at && (
-                  <button
-                    type="button"
-                    className="iconbtn"
-                    style={{ color: 'var(--green)' }}
-                    onClick={() => runAtivarPessoa(p.id, p.nome, p.email)}
-                    title="Ativar (liberar login via Google)"
-                    aria-label="Ativar pessoa"
-                  >
-                    <Icon name="check-circle" size={14} />
-                  </button>
-                )}
-                {isAdmin && !!p.invited_at && (
-                  <button
-                    type="button"
-                    className="iconbtn"
-                    onClick={() => runDesativarPessoa(p.id, p.nome)}
-                    title="Revogar acesso"
-                    aria-label="Inativar pessoa"
-                  >
-                    <Icon name="lock" size={14} />
-                  </button>
-                )}
-                <EditPessoaButton
-                  pessoa={{
-                    id: p.id,
-                    nome: p.nome,
-                    email: p.email,
-                    role: p.role,
-                    clienteId: p.cliente_id,
-                    clientePrincipalId: p.cliente_principal_id,
-                    clienteSecundarioId: p.cliente_secundario_id,
-                    capacidadeHorasSemana: p.capacidade_horas_semana,
-                    skills: p.skills ?? [],
-                    senioridade: p.senioridade,
-                  }}
-                  clientes={clienteOptions}
-                />
-                {isAdmin && (
-                  <button
-                    type="button"
-                    className="iconbtn"
-                    style={{ color: 'var(--danger)' }}
-                    onClick={() => runDeletePessoa(p.id, p.nome)}
-                    title="Excluir pessoa"
-                    aria-label="Excluir pessoa"
-                  >
-                    <Icon name="trash" size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-          {pessoas.length === 0 && <EmptyState label="Nenhuma pessoa cadastrada." icon="users" />}
-        </div>
-      )}
+        {/* ===== Pessoas ===== */}
+        {tab === 'pessoas' && (
+          <table className="ds-table">
+            <thead>
+              <tr>
+                <th>Pessoa</th>
+                <th style={{ width: 200 }}>Papel</th>
+                <th style={{ width: 100, textAlign: 'right' }}>Tarefas</th>
+                <th style={{ width: 200 }} className="actions">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pessoas.map((p) => {
+                const papelLabel =
+                  p.role === 'cliente'
+                    ? 'Cliente externo'
+                    : p.senioridade
+                      ? p.senioridade.charAt(0).toUpperCase() + p.senioridade.slice(1)
+                      : p.role === 'admin'
+                        ? 'Admin'
+                        : 'Interno';
+                return (
+                  <tr key={p.id}>
+                    <td>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar label={p.nome} shape="circle" />
+                        <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium text-[color:var(--ink)]">{p.nome}</span>
+                          <Chip show={p.role === 'admin'} label="admin" variant="green" />
+                          <Chip show={!!p.invited_at && !!p.user_id} label="acesso ativo" variant="green" />
+                          <Chip show={!!p.invited_at && !p.user_id} label="aguardando 1º login" variant="warning" />
+                          <Chip show={!p.invited_at && !!p.email} label="inativa" variant="muted" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="text-[color:var(--ink-soft)]">{papelLabel}</td>
+                    <td className="num" style={{ textAlign: 'right' }}>{tasksByPessoa.get(p.id) ?? 0}</td>
+                    <td className="actions">
+                      {isAdmin && p.role === 'cliente' && !p.invited_at && (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          onClick={() => runConvidarPessoa(p.id, p.nome, p.email)}
+                          title="Convidar (magic link de acesso ao Portal)"
+                          aria-label="Convidar"
+                        >
+                          <Icon name="mention" size={14} />
+                        </button>
+                      )}
+                      {isAdmin && p.role === 'cliente' && !!p.invited_at && (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          onClick={() => runConvidarPessoa(p.id, p.nome, p.email)}
+                          title="Reenviar magic link"
+                          aria-label="Reenviar convite"
+                        >
+                          <Icon name="refresh" size={14} />
+                        </button>
+                      )}
+                      {isAdmin && p.role !== 'cliente' && !p.invited_at && (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          style={{ color: 'var(--green)' }}
+                          onClick={() => runAtivarPessoa(p.id, p.nome, p.email)}
+                          title="Ativar (liberar login via Google)"
+                          aria-label="Ativar pessoa"
+                        >
+                          <Icon name="check-circle" size={14} />
+                        </button>
+                      )}
+                      {isAdmin && !!p.invited_at && (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          onClick={() => runDesativarPessoa(p.id, p.nome)}
+                          title="Revogar acesso"
+                          aria-label="Inativar pessoa"
+                        >
+                          <Icon name="lock" size={14} />
+                        </button>
+                      )}
+                      <EditPessoaButton
+                        pessoa={{
+                          id: p.id,
+                          nome: p.nome,
+                          email: p.email,
+                          role: p.role,
+                          clienteId: p.cliente_id,
+                          clientePrincipalId: p.cliente_principal_id,
+                          clienteSecundarioId: p.cliente_secundario_id,
+                          capacidadeHorasSemana: p.capacidade_horas_semana,
+                          skills: p.skills ?? [],
+                          senioridade: p.senioridade,
+                        }}
+                        clientes={clienteOptions}
+                      />
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          style={{ color: 'var(--danger)' }}
+                          onClick={() => runDeletePessoa(p.id, p.nome)}
+                          title="Excluir pessoa"
+                          aria-label="Excluir pessoa"
+                        >
+                          <Icon name="trash" size={14} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {pessoas.length === 0 && (
+                <tr>
+                  <td colSpan={4}>
+                    <EmptyState label="Nenhuma pessoa cadastrada." icon="users" />
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
+  );
+}
+
+/** Avatar com iniciais (1-2 letras), quadrado pra clientes e redondo pra pessoas. */
+function Avatar({ label, shape }: { label: string; shape: 'square' | 'circle' }) {
+  const initials = label
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('');
+  return (
+    <span
+      className={cn(
+        'w-8 h-8 flex items-center justify-center text-[11px] font-semibold shrink-0 tracking-wide',
+        shape === 'square' ? 'rounded-md' : 'rounded-full',
+      )}
+      style={{ background: 'var(--surface-3)', color: 'var(--ink-soft)' }}
+      aria-hidden
+    >
+      {initials || '?'}
+    </span>
   );
 }
 
