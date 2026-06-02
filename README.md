@@ -1,8 +1,6 @@
-# tasks 360 — Next.js (Onda 0 ✅ feature-complete · pré-cutover)
+# tasks 360 — Next.js (✅ em produção · jun/2026)
 
-App em **`feat/onda-0`** com paridade UX 100% vs Alpine, em preview Vercel. Subindo pra prod no Bloco 5 (cutover de domínio).
-
-App Alpine legado segue em prod no Netlify a partir do repo `Kliente-360/tasks-360-mvp` até o cutover de domínio (Bloco 5).
+App em produção no Vercel desde jun/2026. Alpine (`Kliente-360/tasks-360-mvp`) desativado.
 
 ## Stack
 
@@ -62,9 +60,9 @@ Em CI (GitHub Actions) e em smoke local podem ser **placeholders** (`https://pla
 │   │   │   ├── foco/
 │   │   │   ├── calendario/
 │   │   │   ├── cadastros/
-│   │   │   ├── briefing/          # placeholder · parking
-│   │   │   ├── dashboard/         # placeholder · parking
-│   │   │   ├── portal/            # placeholder · parking
+│   │   │   ├── briefing/
+│   │   │   ├── dashboard/
+│   │   │   ├── portal/
 │   │   │   └── layout.tsx         # Provider stack
 │   │   ├── (auth)/login/          # Magic link + 2FA
 │   │   ├── auth/callback/         # OAuth callback
@@ -126,17 +124,8 @@ Em CI (GitHub Actions) e em smoke local podem ser **placeholders** (`https://pla
 - **Job `static`**: lint + typecheck + vitest + build (env Supabase com placeholders).
 - **Job `e2e`**: Playwright após static passar; upload de `playwright-report` como artifact em failure.
 
-## Status da Onda 0
+## Status
 
-Tudo dos blocos 1-4.J entregue. Status table completa em **`ONDA0.md`** (final do arquivo).
+Onda 0 completa · cutover executado · Alpine desativado (jun/2026).
 
-**Próximo**: Bloco 5 · Cutover Vercel. Checklist em `ONDA0.md`.
-
-## Roadmap pós-cutover
-
-Consolidado completo (Now / Next / Later / Cold) em **`ROADMAP.md` §9.3 · Roadmap pós-Onda 0**.
-
-Highlights:
-- **Now** (~8h): cutover + realtime publication + Sentry + JWT exp 1h.
-- **Next** (1-2 meses): Dashboard + Briefing + `ai-suggest` (1ª IA) + Push notifications.
-- **Later** (3-6 meses): Portal cliente + cronômetro start/stop + `ai-chat` + Templates de projeto.
+Estado atual e backlog em **`STATUS.md`**. Histórico completo em **`ROADMAP.md` §9.3**.

@@ -1,8 +1,8 @@
 # Onda 0 — Plano de migração de stack
 
-> **Status: ✅ feature-complete · paridade auditada · cutover parqueado · v1.02.186** (mai/2026)
+> **Status: ✅ concluída · cutover executado · Alpine desativado · jun/2026**
 >
-> Todos os blocos 1-4.J entregues. Branch ativa `feat/onda-0` em preview Vercel. Time validando em preview antes do cutover. **Bloco 5 (cutover do domínio principal) está parqueado — será executado manualmente quando o responsável sinalizar.**
+> Todos os blocos 1-5 entregues. App Next no Vercel é o único ambiente de produção desde jun/2026. Alpine (repo `tasks-360-mvp`) desativado.
 >
 > **Roadmap pós-Onda 0** (próximas ondas, IA, time tracking, Portal cliente, etc.): ver **`ROADMAP.md` §9.3 · Roadmap pós-Onda 0**.
 >

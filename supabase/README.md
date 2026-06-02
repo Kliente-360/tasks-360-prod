@@ -5,7 +5,7 @@ supabase/
 ├── README.md                  ← este arquivo
 ├── schema.sql                 baseline original (rodar UMA vez ao criar projeto)
 ├── seed.sql                   dados de exemplo opcionais
-├── realtime.sql               configuração de Realtime (pré-requisito)
+├── realtime.sql               configuração de Realtime (✅ aplicado em jun/2026)
 ├── functions/                 Edge Functions ativas
 │   ├── ingest-task/            cria/atualiza task (SF + automações IA)
 │   ├── ingest-comment/         puxa comentários do Chatter
@@ -16,7 +16,7 @@ supabase/
 ├── migrations/
 │   ├── README.md              regras de migration
 │   ├── applied/               patches já rodados em produção (histórico)
-│   └── *.sql                  migrations na raiz = ainda não movidas pra applied/
+│   └── *.sql                  migrations na raiz = pendentes de aplicar e mover pra applied/
 └── seeds/                     scripts de import de dados pontuais
     └── import_2026-05-09.sql  carga inicial via CSV
 ```
