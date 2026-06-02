@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { Icon } from '@/components/icons';
-import { PriChip, TaskAvatar, PrazoLabel, TagIA } from '@/components/task-card/primitives';
+import { TaskAvatar } from '@/components/task-card/primitives';
+import { TaskCard } from '@/components/task-card/task-card';
 import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
@@ -897,30 +898,17 @@ function DashboardMobilePanel({
           {atencao.length === 0 ? (
             <div className="text-muted text-xs italic text-center py-2">Nada urgente. Bom dia.</div>
           ) : (
-            atencao.map((t) => {
-              const cliente = clientesById.get(t.clienteId)?.nome ?? '—';
-              const projeto = projetosById.get(t.projetoId)?.nome;
-              const respNome = pessoasById.get(t.pessoaId)?.nome ?? '—';
-              const firstName = respNome.split(/\s+/)[0] ?? respNome;
-              return (
-                <div key={t.id} className="tcard" onClick={() => onOpen(t.id)}>
-                  <div className="top">
-                    <div style={{ minWidth: 0 }}>
-                      <div className="ttl">{t.titulo}</div>
-                      <div className="sub">{cliente}{projeto ? ' · ' + projeto : ''}</div>
-                    </div>
-                    <PriChip prio={t.prioridade} />
-                  </div>
-                  <div className="meta">
-                    <TaskAvatar name={respNome} />
-                    <span className="text-xs text-muted">{firstName}</span>
-                    <span className="sp" />
-                    {t.criadoPorIa && <TagIA />}
-                    <PrazoLabel task={t} />
-                  </div>
-                </div>
-              );
-            })
+            atencao.map((t) => (
+              <TaskCard
+                key={t.id}
+                task={t}
+                cliente={clientesById.get(t.clienteId)?.nome ?? '—'}
+                projeto={projetosById.get(t.projetoId)?.nome}
+                respNome={pessoasById.get(t.pessoaId)?.nome ?? '—'}
+                size="md"
+                onClick={() => onOpen(t.id)}
+              />
+            ))
           )}
         </div>
       </div>
