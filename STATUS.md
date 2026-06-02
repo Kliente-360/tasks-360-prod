@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.025 · **Atualizado**: 04/06/2026 · branch `main`
+> **Versão**: v1.03.029 · **Atualizado**: 04/06/2026 · branch `main`
 
 ---
 
@@ -31,7 +31,7 @@
 - ✅ Audit completo · stack 100% homogêneo · Drizzle removido · Cadastros 75% mais rápido (v1.02.226–229)
 - ✅ Docs HOWTO + ONBOARDING atualizados pós-cutover (v1.02.230)
 
-### Ciclo redesign DS (jun/2026 · v1.03.001 → v1.03.025)
+### Ciclo redesign DS (jun/2026 · v1.03.001 → v1.03.029)
 Bump MINOR 02→03 marcou o fechamento desse ciclo. Concluídos:
 - ✅ **A.1 · Design system aplicado** · tokens DS (Inter + JetBrains Mono, verde editorial #007A3D, aperture com gradiente horário, frosted-glass header), ícones Lucide via `<Icon>` wrapper, modais task/cadastros, dark mode global auditado (zero cores Tailwind hardcoded fora do permitido)
 - ✅ **A.2 · FilterBar único** · componente padrão em Backlog/Kanban/Calendário/Dashboard/Timesheet, search 150px + 4 selects 150px largura fixa, X (Limpar) sempre presente como último elemento, leftSlot pra Kanban (toggle) e Calendário (setas de mês), busca full-text em todos os campos, gramática fixa
@@ -42,6 +42,7 @@ Bump MINOR 02→03 marcou o fechamento desse ciclo. Concluídos:
 - ✅ **Vercel só main** · `vercel.json` com `ignoreCommand` bloqueia preview builds
 - ✅ **Cards primeira-linha padronizados em 116px** · min-h uniforme + content centralizado em todas as tabs (Foco/Backlog/Dashboard/Timesheet); 2ª linha nasce no mesmo Y
 - ✅ **Webhook gate ajustado** · só dispara pra clientes com `webhook_enabled=true` (VB/CTF) E comments com `visivel_cliente=true`. Notas internas não vazam pro Salesforce
+- ✅ **Dark mode finalizado** (v1.03.027-029) · aliasou os tokens novos do DS (`--green*`, `--fg*`, `--bg-app`, `--bg-alt`, `--line-soft`, `--danger-soft`, `--warn-soft`) pros equivalentes brand/ink/surface já existentes no dark; header frosted-glass com tonalidade dark correta; profile menu fecha ao clicar fora via `useClickAway` (overlay z-30 não bastava contra header z-40)
 
 ---
 
@@ -69,8 +70,8 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | A.12 | **Dashboard × Portal cliente · padrão técnico** · auditar tecnologia/framework de cada um (parecem diferentes — Portal usa header verde escuro `--bg-portal`, Dashboard usa surface normal; estruturas de card divergem). Definir padrão único (componentes, tokens, hierarquia) e refazer ambos na versão final convergente. | 1-2 semanas | Alto — fecha o ciclo de DS nessas duas telas |
 | A.13 | **Triagem · redesign UX-first** · hoje é uma lista de chips clicáveis sem affordance forte. Refazer com cards no padrão "ícone contextual à esquerda · título + sub-info · meta (tempo/chip) à direita · hover suave", agrupando por tipo de pendência (cliente respondeu / criada por IA / sem responsável). Cada card abre ação rápida inline (atribuir, marcar triada, dispensar) sem precisar entrar no modal full. Inspiração: print enviado pelo Felipe — chip do tipo no canto inferior direito, ícone com cor semântica à esquerda. | 1-2 semanas | Alto — triagem é o ponto mais friccionado do fluxo diário |
 | A.14 | **Kanban card · versão clean** · cards atuais mostram nome completo do responsável em texto ("JD", "MA" hoje já são iniciais, mas o padrão pode evoluir). Migrar pra **avatar circular com iniciais** no canto inferior direito do card, alinhado com a prioridade no canto inferior esquerdo. Aplicar mesmo padrão de avatar em qualquer outro lugar onde card mostra responsável (mobile inclusive). Inspiração: print enviado pelo Felipe — título + cliente·projeto + linha de meta com prioridade colorida + avatar. | 3-5 dias | Médio-alto — densidade informacional + coesão visual com Cadastros (que já usa avatar circular) |
-| A.16 | **Revisar bulk actions** · auditar BulkBar (seleção múltipla no Backlog) — UX da seleção, ações disponíveis (atribuir cliente/projeto/pessoa/prazo/prioridade/esforço, arquivar, excluir), feedback visual (sticky bar com contador), comportamento mobile (não aparece hoje). Decidir: manter no Backlog desktop, levar pro Kanban também, adicionar atalhos teclado (ESC limpa seleção, Cmd+A seleciona tudo filtrado), confirmações pra ações destrutivas. | 3-5 dias | Médio — produtividade em operações repetitivas |
 | A.15 | **Mobile · fechamento (Step 4 + validação real)** · 🟡 parcial: shell + 4 telas + Portal polish entregues (PRs #21-#27). Falta: (1) **Task modal full-screen mobile** (Step 4 — PR isolado, suspeito do crash v1.03.009; estratégia: dual-render desktop+mobile com CSS `display:none/block`, NÃO usar `matchMedia` em render path); (2) validar viewport/scroll em iPhone SE/Plus/iPad portrait reais; (3) tap targets ≥44px conforme HIG; (4) gestos (swipe-to-delete em listas? tap longo?); (5) Briefing "Clientes em atenção" mobile · checar se safe-cast roda em prod; (6) Portal mobile · avaliar se vale port fiel ao handoff (hoje só esconde storytelling). | 1-2 semanas | Alto — fecha o ciclo mobile com qualidade |
+| A.16 | **Revisar bulk actions** · auditar BulkBar (seleção múltipla no Backlog) — UX da seleção, ações disponíveis (atribuir cliente/projeto/pessoa/prazo/prioridade/esforço, arquivar, excluir), feedback visual (sticky bar com contador), comportamento mobile (não aparece hoje). Decidir: manter no Backlog desktop, levar pro Kanban também, adicionar atalhos teclado (ESC limpa seleção, Cmd+A seleciona tudo filtrado), confirmações pra ações destrutivas. | 3-5 dias | Médio — produtividade em operações repetitivas |
 
 #### A.2 · detalhamento
 
@@ -159,13 +160,15 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## Próximo passo imediato
 
-A.1, A.2 e A.10 entregues no ciclo redesign DS. Próximas frentes em ordem de prioridade sugerida:
+Ciclo redesign DS **fechou** com dark mode + polish (v1.03.029).
+A.1, A.2, A.10 entregues. Frentes em aberto, em ordem sugerida:
 
 1. **A.15 · Mobile fechamento** · Task modal full-screen mobile (Step 4) com estratégia anti-hidratação (dual-render via CSS, não matchMedia em render). Validar em dispositivos reais. Custo: 3-5 dias.
 2. **A.13 · Triagem redesign UX-first** · ponto mais friccionado do fluxo diário; tem mock de referência do Felipe. Custo: 1-2 semanas.
 3. **A.9 · Timesheet · entrada manual + permissões** · destrava retro-lançamento e fecha gap de controle. Custo: 3-5 dias.
-4. **A.11 · Briefing × Dashboard · clarear papel** · evita duplicação conceitual. Custo: 2-3 dias.
-5. **A.14 · Kanban card clean (avatar circular)** · quick win de densidade visual, coeso com Cadastros. Custo: 3-5 dias.
+4. **A.16 · Revisar bulk actions** · produtividade em operações repetitivas. Custo: 3-5 dias.
+5. **A.11 · Briefing × Dashboard · clarear papel** · evita duplicação conceitual. Custo: 2-3 dias.
+6. **A.14 · Kanban card clean (avatar circular)** · quick win de densidade visual. Custo: 3-5 dias.
 
 Em paralelo (outra pessoa/sessão): **B.1 · `ai-suggest`** como primeira IA em prod — fecha o gap "diferenciação por IA" das promessas centrais (mais barato/seguro pra validar). Custo: ~1 semana.
 
