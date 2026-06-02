@@ -853,7 +853,7 @@ export function BacklogClient() {
       </div>
 
       {/* ============ Cards de stats · min-h padroniza Y da 2ª linha entre tabs ============ */}
-      <div className="hidden md:grid grid-cols-5 gap-3 mb-4 min-h-[132px]">
+      <div className="hidden md:grid grid-cols-5 gap-3 mb-4 min-h-[116px]">
         <StatCard label="Total filtrado" value={cards.total} />
         <StatCard label="Backlog" value={cards.backlog} borderColor="var(--line-strong)" />
         <StatCard label="Em andamento" value={cards.andamento} borderColor="var(--brand)" />
@@ -1274,7 +1274,7 @@ function StatCard({
   valueColor?: string;
 }) {
   return (
-    <div className="card p-3 md:p-4" style={borderColor ? { borderLeft: `3px solid ${borderColor}` } : undefined}>
+    <div className="card p-3 md:p-4 flex flex-col justify-center" style={borderColor ? { borderLeft: `3px solid ${borderColor}` } : undefined}>
       <div className="text-[10px] uppercase tracking-wider text-muted font-mono">{label}</div>
       <div
         className="font-brand text-2xl md:text-3xl font-semibold mt-1"

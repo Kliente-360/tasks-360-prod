@@ -474,7 +474,7 @@ export function CadastrosClient() {
                 <th style={{ width: 180 }}>Cliente</th>
                 <th style={{ width: 120 }}>Tipo</th>
                 <th style={{ width: 110, textAlign: 'right' }}>SLA Resp</th>
-                <th style={{ width: 110, textAlign: 'right' }}>SLA Entrega</th>
+                <th style={{ width: 110, textAlign: 'right' }}>Entrega</th>
                 <th style={{ width: 110, textAlign: 'right' }}>Orçamento</th>
                 <th style={{ width: 90, textAlign: 'right' }}>Tarefas</th>
                 <th style={{ width: 160 }} className="actions">&nbsp;</th>
@@ -582,8 +582,8 @@ export function CadastrosClient() {
                 <th>Nome</th>
                 <th style={{ width: 220 }}>Email</th>
                 <th style={{ width: 130 }}>Papel</th>
-                <th style={{ width: 160 }}>Cliente Principal</th>
-                <th style={{ width: 160 }}>Cliente Secundário</th>
+                <th style={{ width: 160 }}>Principal</th>
+                <th style={{ width: 160 }}>Secundário</th>
                 <th style={{ width: 120 }}>Senioridade</th>
                 <th style={{ width: 110, textAlign: 'right' }}>Capacidade</th>
                 <th style={{ width: 200 }} className="actions">&nbsp;</th>
@@ -606,12 +606,7 @@ export function CadastrosClient() {
                     <td>
                       <div className="flex items-center gap-3 min-w-0">
                         <Avatar label={p.nome} shape="circle" />
-                        <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
-                          <span className="font-medium text-[color:var(--ink)]">{p.nome}</span>
-                          <Chip show={!!p.invited_at && !!p.user_id} label="ativo" variant="green" />
-                          <Chip show={!!p.invited_at && !p.user_id} label="aguardando" variant="warning" />
-                          <Chip show={!p.invited_at && !!p.email} label="inativa" variant="muted" />
-                        </div>
+                        <span className="font-medium text-[color:var(--ink)] truncate">{p.nome}</span>
                       </div>
                     </td>
                     <td className="text-[color:var(--ink-soft)] font-mono text-xs truncate" style={{ maxWidth: 220 }}>
