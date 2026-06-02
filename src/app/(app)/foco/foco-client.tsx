@@ -226,9 +226,9 @@ export function FocoClient() {
       {/* Painel de foco · DESKTOP */}
       {hasFocus && (
         <div className="hidden md:block space-y-4 md:space-y-5">
-          {/* Narrativa · min-h padroniza o Y da 2ª linha entre tabs */}
+          {/* Narrativa · min-h padroniza o Y da 2ª linha entre tabs (132px) */}
           {focoNarrativa && (
-            <div className="card p-4 md:p-5 min-h-[96px]" style={{ borderLeft: '3px solid var(--brand)' }}>
+            <div className="card p-4 md:p-5 min-h-[132px]" style={{ borderLeft: '3px solid var(--brand)' }}>
               <div className="text-[10px] uppercase tracking-wider text-muted font-mono mb-1">
                 Seu dia · {todayLabel}
               </div>
@@ -251,8 +251,8 @@ export function FocoClient() {
             </div>
           )}
 
-          {/* KPIs · min-h padroniza o Y da 2ª linha entre tabs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 min-h-[96px]">
+          {/* KPIs · min-h padroniza o Y da 2ª linha entre tabs (132px) */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 min-h-[132px]">
             <Kpi label="Atrasadas" value={counts.atrasadas.length} dangerIfPositive />
             <Kpi label="Para hoje" value={counts.hoje.length} />
             <Kpi label="Bloqueadas" value={counts.bloqueadas.length} dangerIfPositive />

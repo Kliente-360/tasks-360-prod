@@ -1682,13 +1682,23 @@ body {
   border-radius: var(--r-sm);
   background: var(--bg);
   min-width: 0;
-  /* Padronizado pra mesma largura dos fselect (124px). Largura fixa
-     mesmo focado — não expande. */
-  width: 124px;
+  /* Padronizado pra mesma largura dos fselect (150px — comporta
+     "Responsável"). Largura fixa mesmo focado — não expande. */
+  width: 150px;
   height: 34px;
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   box-sizing: border-box;
 }
+/* Estado disabled (Dashboard): visualmente cinza, mantém o slot na bar */
+.search.is-disabled,
+.search:has(input:disabled) {
+  background: var(--surface-2);
+  border-color: var(--line);
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.search.is-disabled input,
+.search input:disabled { cursor: not-allowed; }
 .search .ic { color: var(--fg-muted); flex: none; }
 .search input {
   border: 0; outline: 0;
@@ -1715,9 +1725,10 @@ body {
   font-weight: 500;
   color: var(--fg-soft);
   cursor: pointer;
-  /* Largura fixa: não expande quando uma opção é selecionada — a bar
-     mantém o mesmo offset entre elementos independentemente do valor. */
-  width: 124px;
+  /* Largura fixa: comporta o label mais longo ("Responsável") sem
+     truncar. Mesma largura em TODOS os filtros pra que selecionar
+     uma opção não shifte os vizinhos. */
+  width: 150px;
   flex: none;
   transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
   height: 34px;
