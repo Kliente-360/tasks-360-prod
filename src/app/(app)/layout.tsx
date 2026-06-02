@@ -34,8 +34,10 @@ export default function AppLayout({
                       <AppNav />
                       {/* Main alinha EXATAMENTE com .hdr-v2-top: max-width 1320px
                           (var(--container)) + padding 16px. Conteúdo começa no mesmo X
-                          do logo aperture e termina no mesmo X do avatar/perfil. */}
-                      <main className="max-w-[1320px] mx-auto px-4 py-6">{children}</main>
+                          do logo aperture e termina no mesmo X do avatar/perfil.
+                          app-main-mobile-safe reserva padding-bottom em mobile pra
+                          conteúdo não ficar atrás da .m-tabbar fixa. */}
+                      <main className="app-main-mobile-safe max-w-[1320px] mx-auto px-4 py-6">{children}</main>
                     </div>
                     <MobileFab />
                     <BadgeSync />
