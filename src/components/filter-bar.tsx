@@ -261,9 +261,9 @@ export function FilterBar({
         />
       )}
 
-      {/* Botão Limpar sempre presente — evita deslocamento da bar quando
-          filtros entram/saem. Desabilitado/cinza sem filtros, ativo em
-          vermelho com contador quando há filtros aplicados. */}
+      {/* Botão Limpar sempre presente, com largura fixa: o slot do contador
+          é renderizado mesmo sem filtros (visibility hidden), pra que ativar
+          um filtro não desloque os elementos vizinhos. */}
       <button
         type="button"
         className={cn('fselect clear', active === 0 && 'is-empty')}
@@ -273,7 +273,13 @@ export function FilterBar({
         aria-label={active > 0 ? `Limpar ${active} filtros` : 'Sem filtros'}
       >
         <Icon name="x" size={14} className="ic" />
-        {active > 0 && <span className="font-mono">{active}</span>}
+        <span
+          className="font-mono"
+          style={{ visibility: active > 0 ? 'visible' : 'hidden' }}
+          aria-hidden={active === 0}
+        >
+          {active > 0 ? active : 0}
+        </span>
       </button>
 
       {moreItems && <MoreMenu items={moreItems} />}

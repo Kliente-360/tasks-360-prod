@@ -1694,8 +1694,12 @@ body {
 .fselect.clear {
   color: var(--danger);
   border-color: transparent;
-  min-width: 0;          /* sobrescreve min-width 124px → fica compacto */
+  /* Largura fixa pra que o slot do contador (visibility hidden quando
+     vazio) ocupe o mesmo espaço sempre — não desloca a bar ao ativar
+     o primeiro filtro. */
+  min-width: 52px;
   padding: 7px 9px;
+  justify-content: center;
 }
 .fselect.clear:hover { border-color: var(--danger); background: var(--danger-soft); }
 .fselect.clear .ic { color: var(--danger); }
