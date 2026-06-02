@@ -6,25 +6,61 @@ export const metadata: Metadata = {
   title: 'Entrar · tasks 360',
 };
 
-// Shell Server Component. Toda a interação (envio de magic link, verify OTP,
-// Google OAuth) fica no LoginForm Client Component.
+/**
+ * Login · split-screen no desktop (≥900px) · form único no mobile.
+ *
+ * Layout (ref: docs/design_handoff_tasks360_mobile_login/README.md §4):
+ *   [ painel marca escuro · aperture marca d'água ]  [ formulário ]
+ *
+ * Mobile: o painel some, o form herda a marca (aperture + tasks 360)
+ * sem o subtítulo "por Kliente 360".
+ */
 export default function LoginPage() {
   return (
-    <div className="fixed inset-0 z-[55] flex items-center justify-center bg-elev p-4">
-      <div className="card max-w-sm w-full p-6 md:p-8">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="k360-mark">
-            <span></span><span></span><span></span><span></span>
-          </div>
-          <div className="leading-none">
-            <div className="font-brand text-[22px] font-semibold text-brand">tasks 360</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted mt-1.5 font-mono">por Kliente 360</div>
-          </div>
+    <div className="login-split">
+      {/* ============ Painel de marca · ≥900px ============ */}
+      <aside className="login-brand">
+        {/* aperture marca d'água gigante no canto inferior direito */}
+        <span className="mark login-brand-wm" aria-hidden>
+          <span /><span /><span /><span />
+        </span>
+
+        <div className="login-brand-top">
+          <span className="mark sz-28" aria-hidden>
+            <span /><span /><span /><span />
+          </span>
+          <b>tasks 360</b>
         </div>
-        <Suspense fallback={<div className="text-sm text-muted">Carregando…</div>}>
-          <LoginForm />
-        </Suspense>
-      </div>
+
+        <div className="login-brand-body">
+          <div className="login-brand-eyebrow">Acesso · time &amp; clientes</div>
+          <h1 className="login-brand-headline">
+            Conhecimento aplicado, <em>como serviço.</em>
+          </h1>
+          <p className="login-brand-lead">
+            Gestão do time, dos prazos e dos clientes em um só lugar.
+          </p>
+        </div>
+
+        <div className="login-brand-foot">por Kliente 360 · {new Date().getFullYear()}</div>
+      </aside>
+
+      {/* ============ Formulário ============ */}
+      <main className="login-form-wrap">
+        <div className="login-form-inner">
+          {/* Marca inline · só aparece <900px */}
+          <div className="login-form-mark">
+            <span className="mark sz-28" aria-hidden>
+              <span /><span /><span /><span />
+            </span>
+            <b>tasks 360</b>
+          </div>
+
+          <Suspense fallback={<div className="text-sm text-muted">Carregando…</div>}>
+            <LoginForm />
+          </Suspense>
+        </div>
+      </main>
     </div>
   );
 }

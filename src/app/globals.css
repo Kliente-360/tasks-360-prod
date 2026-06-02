@@ -1314,6 +1314,82 @@ body {
 .mark.loading-pulse { animation: mark-pulse 1.2s ease-in-out infinite; }
 @keyframes mark-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
+/* ============ LOGIN · split-screen + responsivo ============
+   ≥900px: painel de marca escuro à esquerda + formulário à direita.
+   <900px: painel some, form ganha logo no topo. */
+.login-split {
+  position: fixed; inset: 0; z-index: 55;
+  display: grid; grid-template-columns: 1fr;
+  background: var(--surface-1);
+}
+@media (min-width: 900px) {
+  .login-split { grid-template-columns: 1.05fr 1fr; }
+}
+
+.login-brand {
+  display: none;
+  position: relative;
+  background: var(--bg-dark);
+  color: #fff;
+  padding: 48px 56px;
+  overflow: hidden;
+}
+@media (min-width: 900px) { .login-brand { display: flex; flex-direction: column; justify-content: space-between; } }
+
+.login-brand-wm {
+  position: absolute; right: -120px; bottom: -120px;
+  width: 480px; height: 480px;
+  opacity: 0.10;
+  pointer-events: none;
+}
+.login-brand-wm span { background: var(--logo-green); }
+.login-brand-wm span:nth-child(1) { width: 160px; height: 160px; }
+.login-brand-wm span:nth-child(2) { width: 160px; height: 160px; }
+.login-brand-wm span:nth-child(3) { width: 160px; height: 160px; }
+.login-brand-wm span:nth-child(4) { width: 160px; height: 160px; }
+
+.login-brand-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; }
+.login-brand-top b { font-size: 18px; font-weight: 600; letter-spacing: -.015em; color: #fff; }
+
+.login-brand-body { position: relative; z-index: 2; max-width: 520px; }
+.login-brand-eyebrow {
+  font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,255,255,0.55); font-family: var(--font-mono);
+  margin-bottom: 28px;
+}
+.login-brand-headline {
+  font-family: var(--sans);
+  font-size: clamp(28px, 3.6vw, 44px);
+  font-weight: 700; line-height: 1.1; letter-spacing: -.025em;
+  margin-bottom: 16px;
+  color: #fff;
+}
+.login-brand-headline em {
+  font-style: italic; color: var(--green); font-weight: 700;
+}
+.login-brand-lead {
+  font-size: 16px; line-height: 1.5; color: rgba(255,255,255,0.7);
+  max-width: 420px;
+}
+.login-brand-foot {
+  position: relative; z-index: 2;
+  font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,255,255,0.4); font-family: var(--font-mono);
+}
+
+.login-form-wrap {
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  background: var(--surface-1);
+  overflow-y: auto;
+}
+.login-form-inner { width: 100%; max-width: 380px; }
+
+/* Marca inline (só em mobile, quando .login-brand está escondido) */
+.login-form-mark { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.login-form-mark b { font-size: 22px; font-weight: 600; letter-spacing: -.015em; color: var(--fg); }
+@media (min-width: 900px) { .login-form-mark { display: none; } }
+
 /* ============ HEADER do app (shell) ============ */
 .hdr-v2 {
   position: sticky; top: 0; z-index: 40;
