@@ -188,7 +188,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const refreshClientes = useCallback(async () => {
     const { data, error } = await sb
       .from('clientes')
-      .select('id,nome,tier,eh_interno,arquivado_em,dominios,webhook_enabled')
+      .select('id,nome,tier,eh_interno,arquivado_em,dominios,webhook_enabled,cor_portal,cor_portal_texto')
       .order('nome');
     if (error) return;
     setClientes((data ?? []).map(clienteFromDb));

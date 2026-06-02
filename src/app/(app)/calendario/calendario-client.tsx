@@ -19,7 +19,11 @@ import {
 } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
+import { PageHeader } from '@/components/page-header';
+import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
+import { Icon } from '@/components/icons';
 import { createClient } from '@/lib/supabase/client';
+import type { Filters as StdFilters } from '@/lib/filters';
 import {
   agingDays,
   agingLevel,
@@ -82,18 +86,27 @@ export function CalendarioClient() {
     projeto: string;
     pessoa: string;
     status: string;
+    prazo: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
   }>({
     cliente: '',
     projeto: '',
     pessoa: '',
     status: 'abertas',
+    prazo: '',
   });
+  const [qDraft, setQDraft] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
+  const [onlyIA, setOnlyIA] = useState(false);
+  const [onlyHumano, setOnlyHumano] = useState(false);
 
   // g+l global → limpa filtros (status volta pro default 'abertas').
   useEffect(() => {
     const handler = () => {
-      setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas' });
+      setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas', prazo: '' });
       setSelectedIso('');
+      setQDraft('');
+      setOnlyIA(false);
+      setOnlyHumano(false);
     };
     window.addEventListener(CLEAR_FILTERS_EVENT, handler);
     return () => window.removeEventListener(CLEAR_FILTERS_EVENT, handler);
@@ -157,8 +170,13 @@ export function CalendarioClient() {
     const start = new Date(y, m, 1 - offset);
     const today = isoLocal(new Date());
 
-    const hasFilter = !!(filters.cliente || filters.projeto || filters.pessoa);
+    const hasFilter = !!(filters.cliente || filters.projeto || filters.pessoa || filters.prazo || qDraft || onlyIA || onlyHumano);
+    const q = qDraft.trim().toLowerCase();
+    const todayIso = today;
+    const in7d = new Date(); in7d.setDate(in7d.getDate() + 7);
+    const in7dIso = in7d.toISOString().slice(0, 10);
     const matchFilters = (t: Task) => {
+      if (!showArchived && t.arquivadoEm) return false;
       if (filters.cliente === EMPTY) {
         if (t.clienteId) return false;
       } else if (filters.cliente && t.clienteId !== filters.cliente) return false;
@@ -168,6 +186,26 @@ export function CalendarioClient() {
       if (filters.pessoa === EMPTY) {
         if (t.pessoaId) return false;
       } else if (filters.pessoa && t.pessoaId !== filters.pessoa) return false;
+      if (onlyIA && !t.criadoPorIa) return false;
+      if (onlyHumano && t.criadoPorIa) return false;
+      if (filters.prazo === 'atrasadas' && !atrasada(t)) return false;
+      if (filters.prazo === 'hoje' && t.prazo !== todayIso) return false;
+      if (filters.prazo === 'sem' && t.prazo) return false;
+      if (filters.prazo === 'semana') {
+        if (!t.prazo) return false;
+        if (t.prazo < todayIso || t.prazo > in7dIso) return false;
+      }
+      if (q) {
+        const cli = clientesById.get(t.clienteId)?.nome ?? '';
+        const proj = projetosById.get(t.projetoId)?.nome ?? '';
+        const pess = pessoasById.get(t.pessoaId)?.nome ?? '';
+        const hay = [
+          t.titulo, cli, proj, pess, t.descricao ?? '',
+          t.prioridade, t.status, t.subetapa,
+          (t.tags ?? []).join(' '),
+        ].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     };
     const matchStatus = (t: Task) => {
@@ -209,7 +247,7 @@ export function CalendarioClient() {
       });
     }
     return out;
-  }, [cursor, tasks, filters]);
+  }, [cursor, tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, clientesById, projetosById, pessoasById]);
 
   // Versão mobile: tira fim de semana pra caber 5 colunas no viewport
   // estreito; matem a ordem segunda → sexta.
@@ -287,99 +325,76 @@ export function CalendarioClient() {
 
   return (
     <div>
-      {/* Desktop page bar */}
-      <div className="page-bar hidden md:flex">
-        <div className="page-bar-info">
-          <span className="page-bar-narrative">{monthLabel}</span>
-        </div>
-        <div className="page-bar-controls">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              className="more-menu-btn"
-              onClick={goPrev}
-              title="Mês anterior"
-              aria-label="Mês anterior"
-            >
-              ‹
-            </button>
-            <button type="button" className="btn btn-ghost text-xs" onClick={goToday}>
-              hoje
-            </button>
-            <button
-              type="button"
-              className="more-menu-btn"
-              onClick={goNext}
-              title="Próximo mês"
-              aria-label="Próximo mês"
-            >
-              ›
-            </button>
-          </div>
-          <select
-            className={`inp ${filters.cliente ? 'is-active' : ''}`}
-            style={{ width: 160 }}
-            value={filters.cliente}
-            onChange={(e) => {
-              const v = e.target.value;
-              setFilters({
-                ...filters,
-                cliente: v,
-                projeto: v && v !== EMPTY ? filters.projeto : '',
-              });
-            }}
-          >
-            <option value="">Cliente</option>
-            <option value={EMPTY}>— sem cliente</option>
-            {clientesAtivos.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome}
-              </option>
-            ))}
-          </select>
-          <select
-            className={`inp ${filters.projeto ? 'is-active' : ''}`}
-            style={{ width: 160 }}
-            value={filters.projeto}
-            disabled={!filters.cliente || filters.cliente === EMPTY}
-            onChange={(e) => setFilters({ ...filters, projeto: e.target.value })}
-          >
-            <option value="">Projeto</option>
-            <option value={EMPTY}>— sem projeto</option>
-            {projetosFiltrados.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-          <select
-            className={`inp ${filters.pessoa ? 'is-active' : ''}`}
-            style={{ width: 140 }}
-            value={filters.pessoa}
-            onChange={(e) => setFilters({ ...filters, pessoa: e.target.value })}
-          >
-            <option value="">Responsável</option>
-            <option value={EMPTY}>— sem responsável</option>
-            {pessoasNaoCliente.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-          <select
-            className={`inp ${filters.status !== 'abertas' ? 'is-active' : ''}`}
-            style={{ width: 130 }}
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          >
-            <option value="abertas">Abertas</option>
-            <option value="todas">Todas</option>
-            <option value="backlog">Backlog</option>
-            <option value="andamento">Em andamento</option>
-            <option value="bloqueado">Bloqueado</option>
-            <option value="concluido">Concluído</option>
-          </select>
-        </div>
+      {/* Desktop · PageHeader + setas no titleAside + FilterBar (sem Status, vira cor no bloquinho) */}
+      <div className="hidden md:block">
+        <PageHeader
+          title={monthLabel}
+          titleAside={
+            <div className="flex items-center gap-1 ml-2">
+              <button
+                type="button"
+                className="iconbtn bordered"
+                onClick={goPrev}
+                title="Mês anterior"
+                aria-label="Mês anterior"
+              >
+                <Icon name="chevron-left" size={16} />
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost text-xs px-3"
+                onClick={goToday}
+              >
+                hoje
+              </button>
+              <button
+                type="button"
+                className="iconbtn bordered"
+                onClick={goNext}
+                title="Próximo mês"
+                aria-label="Próximo mês"
+              >
+                <Icon name="chevron-right" size={16} />
+              </button>
+            </div>
+          }
+          right={
+            <FilterBar
+              f={{
+                q: qDraft,
+                cliente: filters.cliente,
+                projeto: filters.projeto,
+                resp: filters.pessoa,
+                prazo: filters.prazo,
+              } satisfies StdFilters}
+              set={(key, value) => {
+                if (key === 'q') setQDraft(value);
+                else if (key === 'cliente') setFilters({ ...filters, cliente: value, projeto: value ? filters.projeto : '' });
+                else if (key === 'projeto') setFilters({ ...filters, projeto: value });
+                else if (key === 'resp') setFilters({ ...filters, pessoa: value });
+                else if (key === 'prazo') setFilters({ ...filters, prazo: value as typeof filters.prazo });
+              }}
+              onClear={() => {
+                setQDraft('');
+                setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas', prazo: '' });
+                setOnlyIA(false);
+                setOnlyHumano(false);
+              }}
+              clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
+              projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
+              pessoaOptions={pessoasNaoCliente.map((p) => ({ v: p.id, label: p.nome }))}
+              moreItems={[
+                { key: 'group-resp', label: 'Agrupar: Responsável', enabled: false, kind: 'action', icon: 'users' },
+                { key: 'group-cli', label: 'Agrupar: Cliente', enabled: false, kind: 'action', icon: 'building' },
+                { key: 'group-status', label: 'Agrupar: Status', enabled: false, kind: 'action', icon: 'list-filter' },
+                { key: 'div1', label: '---' },
+                { key: 'arquivadas', label: 'Mostrar arquivadas', kind: 'toggle', active: showArchived, onClick: () => setShowArchived((v) => !v) },
+                { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
+                { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
+              ] satisfies MoreMenuItem[]}
+            />
+          }
+        />
       </div>
 
       {/* Mobile filters */}
@@ -517,7 +532,7 @@ export function CalendarioClient() {
                   {cell.tasks.slice(0, 8).map((t) => (
                     <span
                       key={t.id}
-                      className={`cal-dot ${t.status === 'concluido' ? 'done' : ''} ${atrasada(t) ? 'late' : ''}`}
+                      className={`cal-dot status-${t.status === 'concluido' ? 'done' : atrasada(t) ? 'late' : t.status === 'bloqueado' ? 'blocked' : t.status === 'andamento' ? 'active' : 'backlog'}`}
                       title={t.titulo}
                     />
                   ))}
@@ -527,7 +542,7 @@ export function CalendarioClient() {
                   {cell.tasks.slice(0, 4).map((t) => (
                     <span
                       key={t.id}
-                      className={`cal-task ${t.status === 'concluido' ? 'done' : ''} ${atrasada(t) ? 'late' : ''}`}
+                      className={`cal-task status-${t.status === 'concluido' ? 'done' : atrasada(t) ? 'late' : t.status === 'bloqueado' ? 'blocked' : t.status === 'andamento' ? 'active' : 'backlog'}`}
                       onClick={(e) => {
                         e.stopPropagation();
                         openEdit(t.id);
@@ -654,17 +669,26 @@ export function CalendarioClient() {
           </div>
         )}
 
-        {/* Legenda */}
+        {/* Legenda · cores dos bloquinhos (status) */}
         <div className="text-[10px] text-muted font-mono mt-3 flex items-center gap-3 flex-wrap">
           <span>
             <strong className="text-ink-soft">{stats.total}</strong> no mês
           </span>
-          <span>
-            <span className="cal-dot" /> no prazo
+          <span className="inline-flex items-center gap-1.5">
+            <span className="cal-dot status-backlog" /> backlog
           </span>
-          <span>
-            <span className="cal-dot late" /> atrasada
+          <span className="inline-flex items-center gap-1.5">
+            <span className="cal-dot status-active" /> andamento
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="cal-dot status-blocked" /> bloqueado
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="cal-dot status-late" /> atrasada
             {stats.late > 0 ? ` (${stats.late})` : ''}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="cal-dot status-done" /> concluído
           </span>
         </div>
       </div>

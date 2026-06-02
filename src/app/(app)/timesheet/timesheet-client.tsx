@@ -1,10 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useData, useTasksById, usePessoasById } from '@/lib/data-store';
+import { useData, useTasksById, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { useTaskModal } from '@/components/task-modal';
+import { PageHeader } from '@/components/page-header';
+import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
+import { atrasada } from '@/lib/task-utils';
+import type { Filters as StdFilters } from '@/lib/filters';
 
 function fmtTime(ms: number) {
   return new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -15,28 +19,89 @@ function fmtDateTime(ms: number) {
 }
 
 export function TimesheetClient() {
-  const { currentPessoa, viewerRole, loading, timeEntries, removeTimeEntry } = useData();
+  const { currentPessoa, viewerRole, clientes, projetos, loading, timeEntries, removeTimeEntry } = useData();
   const { activeEntry, startTimer } = useTimer();
   const tasksById = useTasksById();
+  const clientesById = useClientesById();
+  const projetosById = useProjetosById();
   const pessoasById = usePessoasById();
   const { openEdit } = useTaskModal();
 
   const isAdmin = viewerRole === 'admin';
-  const [onlyMine, setOnlyMine] = useState(false);
+  const [qDraft, setQDraft] = useState('');
+  const [filterCliente, setFilterCliente] = useState('');
+  const [filterProjeto, setFilterProjeto] = useState('');
   const [filterPessoaId, setFilterPessoaId] = useState('');
+  const [filterPrazo, setFilterPrazo] = useState<'' | 'atrasadas' | 'hoje' | 'semana' | 'sem'>('');
+  const [groupBy, setGroupBy] = useState<'' | 'resp' | 'cli' | 'task'>('');
 
-  // Filtra in-memory (sem fetch). timeEntries vem do DataProvider, já
-  // populado no boot. Render instantâneo igual às outras abas.
+  const clientesAtivos = useMemo(() => clientes.filter((c) => !c.arquivadoEm), [clientes]);
+  const projetosFiltrados = useMemo(
+    () => projetos.filter((p) => !p.arquivadoEm && (!filterCliente || p.clienteId === filterCliente)),
+    [projetos, filterCliente],
+  );
+
+  // Filtra entries cruzando com a task vinculada (que tem cliente/projeto/prazo).
   const entries = useMemo(() => {
     if (!currentPessoa) return [];
-    if (!isAdmin || onlyMine) {
-      return timeEntries.filter((e) => e.pessoaId === currentPessoa.id);
+    const q = qDraft.trim().toLowerCase();
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const in7 = new Date(); in7.setDate(in7.getDate() + 7);
+    const in7Iso = in7.toISOString().slice(0, 10);
+    return timeEntries.filter((e) => {
+      // Não-admin sempre vê só os próprios
+      if (!isAdmin && e.pessoaId !== currentPessoa.id) return false;
+      // Filtro de pessoa (admin)
+      if (filterPessoaId && e.pessoaId !== filterPessoaId) return false;
+      // Filtros vinculados à task (cliente/projeto/prazo/busca)
+      const t = tasksById.get(e.taskId);
+      if (filterCliente && t?.clienteId !== filterCliente) return false;
+      if (filterProjeto && t?.projetoId !== filterProjeto) return false;
+      if (filterPrazo && t) {
+        if (filterPrazo === 'atrasadas' && !atrasada(t)) return false;
+        if (filterPrazo === 'hoje' && t.prazo !== todayIso) return false;
+        if (filterPrazo === 'sem' && t.prazo) return false;
+        if (filterPrazo === 'semana') {
+          if (!t.prazo || t.prazo < todayIso || t.prazo > in7Iso) return false;
+        }
+      }
+      if (q) {
+        const taskTitle = t?.titulo ?? '';
+        const cliNome = t ? (clientesById.get(t.clienteId)?.nome ?? '') : '';
+        const projNome = t ? (projetosById.get(t.projetoId)?.nome ?? '') : '';
+        const pessNome = pessoasById.get(e.pessoaId)?.nome ?? '';
+        const hay = [taskTitle, cliNome, projNome, pessNome, e.note ?? ''].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [timeEntries, currentPessoa, isAdmin, filterPessoaId, filterCliente, filterProjeto, filterPrazo, qDraft, tasksById, clientesById, projetosById, pessoasById]);
+
+  // Agrupamento (quando groupBy != '')
+  const grouped = useMemo(() => {
+    if (!groupBy) return null;
+    const groups = new Map<string, { label: string; items: typeof entries; totalMs: number }>();
+    for (const e of entries) {
+      const t = tasksById.get(e.taskId);
+      let key: string;
+      let label: string;
+      if (groupBy === 'resp') {
+        key = e.pessoaId;
+        label = pessoasById.get(e.pessoaId)?.nome ?? '—';
+      } else if (groupBy === 'cli') {
+        key = t?.clienteId ?? '__';
+        label = t ? (clientesById.get(t.clienteId)?.nome ?? '—') : '—';
+      } else {
+        key = e.taskId;
+        label = t?.titulo ?? '(task removida)';
+      }
+      const cur = groups.get(key) ?? { label, items: [], totalMs: 0 };
+      cur.items.push(e);
+      cur.totalMs += (e.endedAt ?? Date.now()) - e.startedAt;
+      groups.set(key, cur);
     }
-    if (filterPessoaId) {
-      return timeEntries.filter((e) => e.pessoaId === filterPessoaId);
-    }
-    return timeEntries;
-  }, [timeEntries, currentPessoa, isAdmin, onlyMine, filterPessoaId]);
+    return [...groups.values()].sort((a, b) => b.totalMs - a.totalMs);
+  }, [groupBy, entries, tasksById, clientesById, pessoasById]);
 
   async function deleteEntry(id: string) {
     const supabase = createClient();
@@ -54,7 +119,9 @@ export function TimesheetClient() {
   );
 
   const staffPessoas = useMemo(
-    () => [...pessoasById.values()].filter((p) => p.role === 'admin' || p.role === 'interno'),
+    () => [...pessoasById.values()]
+      .filter((p) => p.role === 'admin' || p.role === 'interno')
+      .sort((a, b) => a.nome.localeCompare(b.nome)),
     [pessoasById],
   );
 
@@ -67,40 +134,49 @@ export function TimesheetClient() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="font-brand text-2xl font-semibold">Timesheet</h1>
-          <p className="text-sm text-muted mt-0.5">Registros de tempo por tarefa</p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap justify-end">
-          {isAdmin && (
-            <>
-              <label className="flex items-center gap-1.5 text-sm text-muted select-none cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={onlyMine}
-                  onChange={(e) => { setOnlyMine(e.target.checked); setFilterPessoaId(''); }}
-                />
-                somente o meu
-              </label>
-              {!onlyMine && (
-                <select
-                  className="inp text-sm w-auto"
-                  value={filterPessoaId}
-                  onChange={(e) => setFilterPessoaId(e.target.value)}
-                >
-                  <option value="">Todas as pessoas</option>
-                  {staffPessoas.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nome}</option>
-                  ))}
-                </select>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Timesheet"
+        right={
+          <FilterBar
+            f={{
+              q: qDraft,
+              cliente: filterCliente,
+              projeto: filterProjeto,
+              resp: filterPessoaId,
+              prazo: filterPrazo,
+            } satisfies StdFilters}
+            set={(key, value) => {
+              if (key === 'q') setQDraft(value);
+              else if (key === 'cliente') { setFilterCliente(value); setFilterProjeto(''); }
+              else if (key === 'projeto') setFilterProjeto(value);
+              else if (key === 'resp') setFilterPessoaId(value);
+              else if (key === 'prazo') setFilterPrazo(value as typeof filterPrazo);
+            }}
+            onClear={() => {
+              setQDraft('');
+              setFilterCliente('');
+              setFilterProjeto('');
+              setFilterPessoaId('');
+              setFilterPrazo('');
+            }}
+            clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
+            projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
+            pessoaOptions={staffPessoas.map((p) => ({ v: p.id, label: p.nome }))}
+            // Não-admin não filtra por responsável (sempre vê só os próprios registros)
+            show={isAdmin ? ['cliente', 'projeto', 'resp', 'prazo'] : ['cliente', 'projeto', 'prazo']}
+            moreItems={[
+              { key: 'group-resp', label: groupBy === 'resp' ? 'Agrupando: Responsável ✓' : 'Agrupar: Responsável', kind: 'action', icon: 'users', enabled: isAdmin, onClick: () => setGroupBy(groupBy === 'resp' ? '' : 'resp') },
+              { key: 'group-cli', label: groupBy === 'cli' ? 'Agrupando: Cliente ✓' : 'Agrupar: Cliente', kind: 'action', icon: 'building', onClick: () => setGroupBy(groupBy === 'cli' ? '' : 'cli') },
+              { key: 'group-task', label: groupBy === 'task' ? 'Agrupando: Tarefa ✓' : 'Agrupar: Tarefa', kind: 'action', icon: 'list-filter', onClick: () => setGroupBy(groupBy === 'task' ? '' : 'task') },
+              { key: 'div1', label: '---' },
+              { key: 'arquivadas', label: 'Mostrar arquivadas', enabled: false, kind: 'toggle', hint: 'time entries não arquivam' },
+              { key: 'ia', label: 'Somente criadas por IA', enabled: false, kind: 'toggle' },
+              { key: 'humano', label: 'Somente criadas por humanos', enabled: false, kind: 'toggle' },
+            ] satisfies MoreMenuItem[]}
+          />
+        }
+      />
 
       {/* Summary card */}
       <div className="card p-4 mb-6 flex items-center gap-6">
@@ -124,7 +200,7 @@ export function TimesheetClient() {
               <tr className="border-b border-line text-xs text-muted uppercase tracking-wide">
                 <th className="text-left px-4 py-2.5 font-medium">Data</th>
                 <th className="text-left px-4 py-2.5 font-medium">Tarefa</th>
-                {isAdmin && !onlyMine && (
+                {isAdmin && !filterPessoaId && (
                   <th className="text-left px-4 py-2.5 font-medium hidden md:table-cell">Pessoa</th>
                 )}
                 <th className="text-left px-4 py-2.5 font-medium hidden sm:table-cell">Início</th>
@@ -134,58 +210,72 @@ export function TimesheetClient() {
               </tr>
             </thead>
             <tbody>
-              {entries.map((e) => {
-                const task = tasksById.get(e.taskId);
-                const pessoa = pessoasById.get(e.pessoaId);
-                const durMs = e.endedAt ? e.endedAt - e.startedAt : Date.now() - e.startedAt;
-                const isRunning = !e.endedAt;
-                const canDel = viewerRole === 'admin' || e.pessoaId === currentPessoa?.id;
-                return (
-                  <tr key={e.id} className="border-b border-line last:border-0 hover:bg-[var(--surface-3)] transition-colors">
-                    <td className="px-4 py-2.5 text-muted font-mono text-xs">{fmtDateTime(e.startedAt)}</td>
-                    <td className="px-4 py-2.5 max-w-[200px]">
-                      {task ? (
-                        <button
-                          type="button"
-                          className="text-left hover:text-brand hover:underline truncate max-w-full block"
-                          onClick={() => openEdit(e.taskId)}
-                        >
-                          {task.titulo}
-                        </button>
-                      ) : (
-                        <span className="text-muted">{e.taskId.slice(0, 8)}…</span>
-                      )}
-                      {e.note && (
-                        <span className="text-xs text-muted italic block truncate max-w-[180px]">{e.note}</span>
-                      )}
-                    </td>
-                    {isAdmin && !onlyMine && (
-                      <td className="px-4 py-2.5 text-muted hidden md:table-cell">{pessoa?.nome ?? '—'}</td>
-                    )}
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted hidden sm:table-cell">{fmtTime(e.startedAt)}</td>
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted hidden sm:table-cell">
-                      {e.endedAt ? fmtTime(e.endedAt) : (
-                        <span className="text-[color:var(--brand)]">em andamento</span>
-                      )}
-                    </td>
-                    <td className={`px-4 py-2.5 text-right font-mono font-medium ${isRunning ? 'text-[color:var(--brand)]' : ''}`}>
-                      {fmtDuration(durMs)}
-                    </td>
-                    <td className="px-2 py-2.5 text-center">
-                      {canDel && !isRunning && (
-                        <button
-                          type="button"
-                          className="text-muted hover:text-danger text-base leading-none"
-                          onClick={() => deleteEntry(e.id)}
-                          title="Excluir registro"
-                        >
-                          ×
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {(grouped ?? [{ label: '', items: entries, totalMs }]).map((group) => (
+                <Fragment key={group.label || '__all__'}>
+                  {grouped && (
+                    <tr className="bg-[var(--bg-alt)] border-b border-line-strong">
+                      <td colSpan={isAdmin && !filterPessoaId ? 7 : 6} className="px-4 py-1.5">
+                        <span className="font-semibold text-sm text-ink">{group.label}</span>
+                        <span className="ml-3 text-xs text-muted font-mono">
+                          {fmtDuration(group.totalMs)} · {group.items.length} registro{group.items.length !== 1 ? 's' : ''}
+                        </span>
+                      </td>
+                    </tr>
+                  )}
+                  {group.items.map((e) => {
+                    const task = tasksById.get(e.taskId);
+                    const pessoa = pessoasById.get(e.pessoaId);
+                    const durMs = e.endedAt ? e.endedAt - e.startedAt : Date.now() - e.startedAt;
+                    const isRunning = !e.endedAt;
+                    const canDel = viewerRole === 'admin' || e.pessoaId === currentPessoa?.id;
+                    return (
+                      <tr key={e.id} className="border-b border-line last:border-0 hover:bg-[var(--surface-3)] transition-colors">
+                        <td className="px-4 py-2.5 text-muted font-mono text-xs">{fmtDateTime(e.startedAt)}</td>
+                        <td className="px-4 py-2.5 max-w-[200px]">
+                          {task ? (
+                            <button
+                              type="button"
+                              className="text-left hover:text-brand hover:underline truncate max-w-full block"
+                              onClick={() => openEdit(e.taskId)}
+                            >
+                              {task.titulo}
+                            </button>
+                          ) : (
+                            <span className="text-muted">{e.taskId.slice(0, 8)}…</span>
+                          )}
+                          {e.note && (
+                            <span className="text-xs text-muted italic block truncate max-w-[180px]">{e.note}</span>
+                          )}
+                        </td>
+                        {isAdmin && !filterPessoaId && (
+                          <td className="px-4 py-2.5 text-muted hidden md:table-cell">{pessoa?.nome ?? '—'}</td>
+                        )}
+                        <td className="px-4 py-2.5 font-mono text-xs text-muted hidden sm:table-cell">{fmtTime(e.startedAt)}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-muted hidden sm:table-cell">
+                          {e.endedAt ? fmtTime(e.endedAt) : (
+                            <span className="text-[color:var(--brand)]">em andamento</span>
+                          )}
+                        </td>
+                        <td className={`px-4 py-2.5 text-right font-mono font-medium ${isRunning ? 'text-[color:var(--brand)]' : ''}`}>
+                          {fmtDuration(durMs)}
+                        </td>
+                        <td className="px-2 py-2.5 text-center">
+                          {canDel && !isRunning && (
+                            <button
+                              type="button"
+                              className="text-muted hover:text-danger text-base leading-none"
+                              onClick={() => deleteEntry(e.id)}
+                              title="Excluir registro"
+                            >
+                              ×
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </Fragment>
+              ))}
             </tbody>
           </table>
         </div>

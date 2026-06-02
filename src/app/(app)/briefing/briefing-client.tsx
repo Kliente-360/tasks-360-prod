@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useData } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
+import { PageHeader } from '@/components/page-header';
+import { Icon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { atrasada } from '@/lib/task-utils';
 import {
@@ -298,19 +300,23 @@ export function BriefingClient() {
   return (
     <div className="flex flex-col gap-4 md:gap-6">
 
-      {/* ── Page bar ── */}
-      <div className="page-bar hidden md:flex">
-        <div className="page-bar-info">
-          <span className="page-bar-narrative">
-            Briefing
-            <span className="text-muted font-normal text-sm ml-2">
-              {refreshing ? '· atualizando…' : '· portfólio ao vivo'}
-            </span>
-          </span>
-        </div>
-        <div className="page-bar-controls">
-          <button onClick={() => window.print()} className="btn btn-ghost text-xs">Exportar PDF</button>
-        </div>
+      {/* ── PageHeader (DS) ── */}
+      <div className="hidden md:block">
+        <PageHeader
+          title="Briefing"
+          right={
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="iconbtn bordered text-xs px-3"
+              style={{ width: 'auto', gap: 6 }}
+              title="Exportar PDF (impressão do navegador)"
+            >
+              <Icon name="download" size={14} />
+              Exportar PDF
+            </button>
+          }
+        />
       </div>
 
       {/* ── Bloco 1 · Velocidade da operação (não colapsável) ── */}

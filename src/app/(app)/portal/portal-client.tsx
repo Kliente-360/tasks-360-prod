@@ -145,8 +145,17 @@ export function PortalClient() {
   // ---- Conteúdo do portal ----
   return (
     <div className="fade-up space-y-5 md:space-y-6">
-      {/* 1. HEADER */}
-      <div className="portal-header relative">
+      {/* 1. HEADER · cor + texto customizáveis por cliente (cadastro do cliente) */}
+      <div
+        className={`portal-header relative${
+          portalCliente?.corPortalTexto === 'dark' ? ' theme-dark-text' : ''
+        }`}
+        style={
+          portalCliente?.corPortal
+            ? { background: portalCliente.corPortal }
+            : undefined
+        }
+      >
         <div className="portal-header-eyebrow">Portal · Kliente 360</div>
         <div className="portal-header-name">{portalCliente?.nome ?? ''}</div>
         <div className="portal-header-sub">{headline}</div>

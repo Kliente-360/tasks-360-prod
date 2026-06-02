@@ -10,75 +10,53 @@
 :root {
   /* color-scheme: light por default. Quando o ThemeProvider aplica
      a classe `dark` no <html>, a regra `.dark { color-scheme: dark }`
-     toma conta dos controles nativos (date picker, scrollbar). */
+     toma conta dos controles nativos (date picker, scrollbar).
+     Dark mode tokens recalibrados em PR separado. */
   color-scheme: light;
 
-  /* === BRAND === */
-  --brand:       #009900;
-  --brand-dark:  #007A00;
-  --brand-light: #00B300;
-  --brand-soft:  #E6F5E6;
-  --brand-tint:  #F2FAF2;
+  /* ============================================================
+   * DESIGN SYSTEM KLIENTE 360 · tokens canônicos (light-first)
+   * Fonte: docs/design_handoff_tasks360_repaginacao/prototype/hifi/app.css
+   * ============================================================ */
 
-  /* === PORTAL HEADER === */
-  --header-portal:      #0A3A1F;
-  --header-portal-soft: #14532D;
+  /* === MARCA · 2 verdes (regra P0: logo-green SÓ no símbolo aperture) === */
+  --green:       #007A3D;   /* editorial · CTAs, links, aba ativa, foco, hover */
+  --green-hover: #00692F;
+  --green-soft:  #E7F1EA;
+  --green-tint:  #F2F8F4;
+  --logo-green:  #009900;   /* SÓ o símbolo aperture (4 círculos) */
 
-  /* === NAVY === */
-  --navy:      #1f2937;
-  --navy-soft: #374151;
+  /* === NEUTROS · ink/text === */
+  --fg:       #0E1116;
+  --fg-soft:  #3A3F46;
+  --fg-muted: #6B7178;
 
-  /* === HEADERS SEMÂNTICOS === */
-  --header-task:        #0F172A;
-  --header-task-soft:   #1E293B;
-  --header-portal:      #0A3A1F;
-  --header-portal-soft: #14532D;
+  /* === LINHAS === */
+  --line:        #E7E6E1;
+  --line-soft:   #F0EFEA;
+  --line-strong: #D6D4CC;
 
-  /* === TRIAGEM === */
-  --triage:      #B45309;
-  --triage-soft: #FEF3C7;
-
-  /* === FONT FAMILIES === */
-  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --font-brand: var(--font-sans);
-
-  /* === CYAN === */
-  --cyan:      #0084E1;
-  --cyan-soft: #E6F3FB;
-
-  /* === YELLOW === */
-  --yellow:      #F8DF61;
-  --yellow-soft: #FAE992;
+  /* === SUPERFÍCIES === */
+  --bg:        #FFFFFF;
+  --bg-alt:    #F5F5F2;
+  --bg-app:    #F7F7F4;
+  --bg-dark:   #0E1320;   /* header de task modal */
+  --bg-portal: #0A3A1F;   /* header do Portal cliente + modais de cadastro */
 
   /* === STATUS / PRIORIDADE === */
-  --p0:      #C8392B;
-  --p0-soft: #FBEAE7;
-  --p1:      #C77A1A;
-  --p1-soft: #FAEFDD;
-  --p2:      #0084E1;
-  --p2-soft: #E6F3FB;
-  --p3:      #7D8185;
-  --p3-soft: #ECEEEC;
+  --p0:      #C0392B;   --p0-soft: #FBECEA;
+  --p1:      #B7791F;   --p1-soft: #FAF1E0;
+  --p2:      #2C72B8;   --p2-soft: #EAF2FA;
+  --p3:      #7D8185;   --p3-soft: #F1F1EE;
 
-  --warn:   #C77A1A;
-  --danger: #C8392B;
-
-  /* === NEUTROS === */
-  --ink:         #000000;
-  --ink-soft:    #2A2A2A;
-  --muted:       #7D8185;
-  --line:        #E6E6E6;
-  --line-strong: #D4D6D2;
-
-  /* === SURFACES === */
-  --surface-1: #FFFFFF;
-  --surface-2: #F1F2F0;
-  --surface-3: #FAFAF8;
-  --bg:        var(--surface-2);
-  --bg-elev:   var(--surface-1);
+  --danger:      #C0392B;   --danger-soft: #FBECEA;
+  --warn:        #B7791F;   --warn-soft:   #FAF1E0;
+  --ok:          #1E8A4C;   --ok-soft:     #E7F1EA;
 
   /* === TIPOGRAFIA === */
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+
   --fs-xs:   12px;
   --fs-sm:   14px;
   --fs-base: 16px;
@@ -89,49 +67,106 @@
   --fs-3xl:  40px;
 
   /* === SPACING === */
-  --sp-1:  4px;
-  --sp-2:  8px;
-  --sp-3:  12px;
-  --sp-4:  16px;
-  --sp-5:  20px;
-  --sp-6:  24px;
-  --sp-8:  32px;
-  --sp-10: 40px;
-  --sp-12: 48px;
-  --sp-16: 64px;
+  --sp-1:  4px;   --sp-2:  8px;   --sp-3:  12px;   --sp-4:  16px;
+  --sp-5:  20px;  --sp-6:  24px;  --sp-8:  32px;   --sp-10: 40px;
+  --sp-12: 48px;  --sp-16: 64px;
 
-  /* === RADIUS === */
-  --r-sm: 6px;
-  --r-md: 8px;
-  --r-lg: 12px;
+  /* === RAIO === */
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   16px;
+  --r-xl:   24px;
+  --r-pill: 999px;
 
-  /* === ELEVATION === */
-  --shadow-card:  0 1px 2px rgba(0,0,0,.04), 0 1px 0 rgba(0,0,0,.02);
-  --shadow-modal: 0 12px 32px -8px rgba(0,0,0,.18);
+  /* === SOMBRA · Apple-sutil (cards repousam sem sombra, sobem no hover) === */
+  --sh-xs: 0 1px 2px rgba(16,19,22,.05);
+  --sh-sm: 0 2px 8px rgba(16,19,22,.06);
+  --sh-md: 0 8px 24px rgba(16,19,22,.08);
+  --sh-lg: 0 24px 56px rgba(16,19,22,.14);
 
-  /* === MISC === */
-  --kcol-bg:  rgba(31,41,55,0.03);
-  --modal-bg: rgba(31,41,55,0.45);
+  /* === MOVIMENTO === */
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --dur:  .15s;
 
-  /* botão primário */
-  --btn-primary-bg:       var(--brand);
-  --btn-primary-bg-hover: var(--brand-dark);
+  /* === LAYOUT === */
+  --container: 1320px;
+
+  /* ============================================================
+   * ALIASES · mantêm compatibilidade com classes existentes
+   * que ainda usam os nomes antigos. Quando re-skinar cada
+   * componente, substituir os usos por tokens canônicos acima.
+   * ============================================================ */
+
+  /* Brand antigos → novo --green */
+  --brand:       var(--green);
+  --brand-dark:  var(--green-hover);
+  --brand-light: var(--green);          /* dropa --brand-light, usa --green direto */
+  --brand-soft:  var(--green-soft);
+  --brand-tint:  var(--green-tint);
+
+  /* Ink antigos → --fg */
+  --ink:         var(--fg);
+  --ink-soft:    var(--fg-soft);
+  --muted:       var(--fg-muted);
+
+  /* Surface antigos → novos bg */
+  --surface-1: var(--bg);
+  --surface-2: var(--bg-alt);
+  --surface-3: var(--bg-app);
+  --bg-elev:   var(--bg);
+
+  /* Headers antigos → semânticos novos */
+  --header-portal:      var(--bg-portal);
+  --header-portal-soft: #14532D;
+  --header-task:        var(--bg-dark);
+  --header-task-soft:   #1E293B;
+
+  /* Navy (legado) — só pra bulk-bar atual; transição vira bg-dark */
+  --navy:      var(--bg-dark);
+  --navy-soft: #1E293B;
+
+  /* Cyan (legado) — alguns chips ainda usam */
+  --cyan:      var(--p2);
+  --cyan-soft: var(--p2-soft);
+
+  /* Yellow (legado) — aging chips */
+  --yellow:      #F8DF61;
+  --yellow-soft: #FAE992;
+
+  /* Triagem (legado) */
+  --triage:      var(--warn);
+  --triage-soft: var(--warn-soft);
+
+  /* Font family aliases (legacy class names) */
+  --font-sans:  var(--sans);
+  --font-mono:  var(--mono);
+  --font-brand: var(--sans);
+
+  /* Spacing/radius/shadow aliases (legacy names) */
+  --shadow-card:  var(--sh-xs);
+  --shadow-modal: var(--sh-lg);
+  --kcol-bg:  rgba(14,19,32,.03);
+  --modal-bg: rgba(14,19,32,.45);
+
+  /* Botão primário */
+  --btn-primary-bg:       var(--green);
+  --btn-primary-bg-hover: var(--green-hover);
   --btn-primary-fg:       #FFFFFF;
 
-  /* foco */
-  --ring-focus: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--cyan);
+  /* Foco verde editorial */
+  --ring-focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--green);
 
-  /* paleta semafórica */
-  --sig-red:         #dc2626;
-  --sig-red-strong:  #b91c1c;
-  --sig-red-bg:      #fef2f2;
-  --sig-amber:       #f59e0b;
-  --sig-amber-bg:    #fff7ed;
-  --sig-amber-fg:    #b45309;
-  --sig-green:       #16a34a;
-  --sig-green-strong:#166534;
-  --sig-green-bg:    #f0fdf4;
-  --sig-green-soft:  #bbf7d0;
+  /* Paleta semafórica (briefing/dashboard charts) */
+  --sig-red:         var(--danger);
+  --sig-red-strong:  #8E2A20;
+  --sig-red-bg:      var(--danger-soft);
+  --sig-amber:       var(--warn);
+  --sig-amber-bg:    var(--warn-soft);
+  --sig-amber-fg:    #8C5A14;
+  --sig-green:       var(--ok);
+  --sig-green-strong:#0F5A30;
+  --sig-green-bg:    var(--ok-soft);
+  --sig-green-soft:  var(--green-tint);
 }
 
 /* Dark mode — suporta .dark (Tailwind) e [data-theme="dark"] (Alpine) */
@@ -157,8 +192,8 @@
   --triage:      #F59E0B;
   --triage-soft: rgba(245,158,11,0.14);
 
-  --font-sans:  'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  --font-mono:  'IBM Plex Mono', ui-monospace, monospace;
+  --font-sans:  var(--sans);
+  --font-mono:  var(--mono);
   --font-brand: var(--font-sans);
 
   --cyan:      #2A9DEE;
@@ -215,17 +250,28 @@
 }
 
 /* ============ BASE ============ */
+html {
+  /* Reserva espaço fixo pra scrollbar — sem isso, telas curtas (Timesheet,
+     Foco sem pessoa, Portal sem cliente) ficam sem scrollbar e empurram
+     todo o layout 15px pra direita quando comparado a telas longas.
+
+     `scrollbar-gutter: stable` cobre Chrome/Firefox/Edge modernos.
+     `overflow-y: scroll` é fallback que força scrollbar sempre presente
+     em Safari + browsers antigos. Combinados eliminam o jump. */
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+}
 html, body {
   background: var(--bg);
   color: var(--ink);
-  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  font-family: var(--sans);
   letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-.font-brand { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 600; letter-spacing: -0.01em; }
-.font-mono  { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-feature-settings: 'tnum' 1, 'zero' 1; letter-spacing: 0; }
+.font-brand { font-family: var(--sans); font-weight: 600; letter-spacing: -0.01em; }
+.font-mono  { font-family: var(--mono); font-feature-settings: 'tnum' 1, 'zero' 1; letter-spacing: 0; }
 
 /* ============ UTILITY ALIASES ============ */
 .border-line        { border-color: var(--line); }
@@ -277,7 +323,7 @@ html, body {
 /* ============ CHIPS DE PRIORIDADE ============ */
 .pri {
   display:inline-flex; align-items:center; gap: var(--sp-1);
-  font-family:'IBM Plex Mono', ui-monospace, monospace;
+  font-family:var(--mono);
   font-feature-settings: 'tnum' 1;
   font-size: var(--fs-xs); font-weight: 500;
   padding: 2px var(--sp-2); border-radius: var(--r-sm);
@@ -296,7 +342,7 @@ html, body {
 /* complexidade */
 .cx {
   display:inline-flex; align-items:center; gap: var(--sp-1);
-  font-family:'IBM Plex Mono', ui-monospace, monospace;
+  font-family:var(--mono);
   font-size: var(--fs-xs); font-weight: 500;
   padding: 2px var(--sp-2); border-radius: var(--r-sm); white-space: nowrap;
   border: 1px solid var(--line); background: var(--surface-1); color: var(--muted);
@@ -651,7 +697,7 @@ input[type="checkbox"] { accent-color: var(--brand); }
 .aging-badge {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: 600;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: var(--mono);
   font-feature-settings: 'tnum' 1;
   padding: 1px var(--sp-2); border-radius: 999px;
   border: 1px solid transparent; line-height: 1.4; white-space: nowrap;
@@ -723,14 +769,14 @@ input[type="checkbox"] { accent-color: var(--brand); }
 .kcol-op[data-m="backlog"]::before,   .kcol-exec[data-m="backlog"]::before   { background: var(--line-strong); }
 .kcol-op-crumb {
   font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
-  color: var(--muted); font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  color: var(--muted); font-family: var(--mono);
   display: flex; align-items: center; gap: var(--sp-1);
 }
-.kcol-op-name { font-family: 'IBM Plex Sans', sans-serif; font-size: var(--fs-sm); font-weight: 600; line-height: 1.2; color: var(--ink); margin-top: 3px; }
-.view-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-elev); }
-.view-toggle button { padding: 6px 12px; font-size: 12px; font-weight: 500; color: var(--muted); border: none; background: transparent; cursor: pointer; transition: all 0.15s; }
-.view-toggle button:hover { color: var(--ink); }
-.view-toggle button.active { background: var(--brand); color: #fff; }
+.kcol-op-name { font-family: var(--sans); font-size: var(--fs-sm); font-weight: 600; line-height: 1.2; color: var(--ink); margin-top: 3px; }
+.view-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-sm); overflow: hidden; background: var(--bg); height: 34px; box-sizing: border-box; }
+.view-toggle button { padding: 0 12px; font-size: 12.5px; font-weight: 500; color: var(--fg-muted); border: none; background: transparent; cursor: pointer; transition: all 0.15s; height: 100%; display: inline-flex; align-items: center; }
+.view-toggle button:hover { color: var(--fg); }
+.view-toggle button.active { background: var(--green-tint); color: var(--green); font-weight: 600; }
 .kcol-readonly { opacity: 0.95; }
 .kcol-readonly .kcard { cursor: pointer; }
 
@@ -740,8 +786,10 @@ input[type="checkbox"] { accent-color: var(--brand); }
    no viewport estreito. Calendário client usa só esta variante. */
 .cal-grid-mobile { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .cal-head { font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; color: var(--muted); padding: 4px 6px; font-family: var(--font-mono); }
-.cal-cell { background: var(--bg-elev); border: 1px solid var(--line); border-radius: 4px; min-height: 64px; padding: 4px 5px; cursor: default; overflow: hidden; transition: box-shadow 0.15s, border-color 0.15s; }
-@media (min-width: 768px) { .cal-cell { min-height: 120px; padding: 6px 8px; } }
+/* Altura FIXA (não min-height) — célula mantém tamanho mesmo quando
+   filtro reduz conteúdo. Layout estável independente de 0 ou 5 tasks. */
+.cal-cell { background: var(--bg-elev); border: 1px solid var(--line); border-radius: 4px; height: 64px; padding: 4px 5px; cursor: default; overflow: hidden; transition: box-shadow 0.15s, border-color 0.15s; }
+@media (min-width: 768px) { .cal-cell { height: 130px; padding: 6px 8px; } }
 .cal-cell.has-tasks { cursor: pointer; }
 .cal-cell.muted { opacity: 0.45; }
 .cal-cell.today { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
@@ -753,9 +801,9 @@ input[type="checkbox"] { accent-color: var(--brand); }
 .cal-task.late { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
 .cal-task.done { background: var(--bg-elev); color: var(--muted); border-color: var(--line); text-decoration: line-through; }
 .dark .cal-task.late { background: rgba(220,38,38,0.18); color: #fca5a5; border-color: #b91c1c; }
-.cal-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--brand); margin-right: 2px; vertical-align: middle; }
+.cal-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); vertical-align: middle; flex: none; }
 .cal-dot.late { background: var(--p0); }
-.cal-dot.done { background: var(--p3); opacity: 0.5; }
+.cal-dot.done { background: var(--p3); opacity: 0.7; }
 
 /* tabs scroll — display: none em mobile pra não brigar com o dropdown
    de navegação (regra solta ganhava de "hidden" do Tailwind). */
@@ -1215,4 +1263,454 @@ input[type="checkbox"] { accent-color: var(--brand); }
   background: linear-gradient(90deg, var(--brand) 0%, var(--brand-dark) 100%);
   border-radius: 999px;
   transition: width 220ms ease-out;
+}
+
+/* ============================================================
+ * F2 · DESIGN SYSTEM · novos componentes
+ * Portado de docs/design_handoff_tasks360_repaginacao/prototype/hifi/app.css
+ * Mantém compat com classes legadas (.card, .btn, .inp etc) — substituições
+ * gradativas tela a tela.
+ * ============================================================ */
+
+/* ---- Base · suaviza tipografia e ajusta corpo ---- */
+body {
+  font-family: var(--sans);
+  font-feature-settings: "ss01", "cv11";
+  color: var(--fg);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* mono utility */
+.mono { font-family: var(--mono); font-feature-settings: "tnum" 1, "zero" 1; }
+
+/* eyebrow (mono UPPER 10px) — usado em labels de KPI, headers de tabela, etc */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+/* ============ MARK · aperture com gradiente de opacidade ============
+   4 círculos: top .45 · left .65 · right .85 · bottom 1.0 (anti-horário) */
+.mark { position: relative; flex: none; }
+.mark span { position: absolute; border-radius: 50%; background: var(--logo-green); }
+.mark.sz-20 { width: 20px; height: 20px; } .mark.sz-20 span { width: 7px; height: 7px; }
+.mark.sz-24 { width: 24px; height: 24px; } .mark.sz-24 span { width: 8px; height: 8px; }
+.mark.sz-28 { width: 28px; height: 28px; } .mark.sz-28 span { width: 9px; height: 9px; }
+.mark.sz-32 { width: 32px; height: 32px; } .mark.sz-32 span { width: 10px; height: 10px; }
+.mark span:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); opacity: .45; }
+.mark span:nth-child(2) { top: 50%; left: 0; transform: translateY(-50%); opacity: .65; }
+.mark span:nth-child(3) { top: 50%; right: 0; transform: translateY(-50%); opacity: .85; }
+.mark span:nth-child(4) { bottom: 0; left: 50%; transform: translateX(-50%); opacity: 1; }
+.mark.loading-pulse { animation: mark-pulse 1.2s ease-in-out infinite; }
+@keyframes mark-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+
+/* ============ HEADER do app (shell) ============ */
+.hdr-v2 {
+  position: sticky; top: 0; z-index: 40;
+  background: rgba(255, 255, 255, .8);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--line);
+}
+.hdr-v2-top {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.hdr-brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.hdr-brand b { font-weight: 600; font-size: 16px; letter-spacing: -.015em; color: var(--fg); }
+.hdr-spacer { flex: 1; }
+.hdr-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.hdr-sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; flex: none; }
+.hdr-v2-tabs {
+  max-width: var(--container); margin: 0 auto;
+  padding: 0 16px;
+  display: flex; gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.hdr-v2-tabs::-webkit-scrollbar { display: none; }
+
+.tab-v2 {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 14px;
+  font-size: 13px; font-weight: 500;
+  color: var(--fg-muted);
+  border: 0; background: transparent; cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.tab-v2:hover { color: var(--fg); }
+.tab-v2.active { color: var(--green); border-bottom-color: var(--green); }
+
+/* ============ ICON BUTTON ============ */
+.iconbtn {
+  position: relative;
+  width: 34px; height: 34px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--fg-soft);
+  cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all var(--dur) var(--ease);
+}
+.iconbtn:hover { background: rgba(16,19,22,.05); color: var(--fg); }
+.iconbtn:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.iconbtn.bordered { border-color: var(--line); background: var(--bg); }
+.iconbtn .dot-badge {
+  position: absolute; top: 6px; right: 7px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--p0);
+  border: 1.5px solid var(--bg);
+}
+
+/* ============ AVATAR (v2) ============ */
+.av {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px; font-weight: 600;
+  background: var(--bg-alt); color: var(--fg-soft);
+}
+.av.green { background: var(--green-soft); color: var(--green); }
+.av.sm { width: 22px; height: 22px; font-size: 10px; }
+
+/* ============ TIMER BUTTON (cronômetro no header) ============ */
+.timer-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  height: 28px;             /* compacto · não estoura altura do cluster do header */
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--bg);
+  color: var(--fg-soft);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-feature-settings: "tnum";
+  cursor: pointer;
+  transition: all var(--dur) var(--ease);
+}
+.timer-btn:hover { border-color: var(--fg-muted); color: var(--fg); }
+/* Rodando = REC vermelho (analogia de gravação) — convenção universal */
+.timer-btn.running {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
+}
+.timer-btn.running::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: timer-pulse 1.4s ease-in-out infinite;
+  margin-right: -1px;
+}
+@keyframes timer-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
+/* ============ PAGE HEADER (interno de cada tela) ============
+   PADRONIZAÇÃO Y/X entre telas (Dashboard/Backlog/Kanban/Calendário/...):
+   - min-height fixo → mesma altura mesmo com/sem context+titleAside
+   - ph-titles min-width fixo → aside começa no mesmo X em todas as telas
+     (toggle Kanban alinha com setas Calendário e selector Foco)
+   - margin-bottom fixo → primeiro elemento abaixo (KPIs, tabela, etc)
+     começa no mesmo Y em qualquer tela
+   - narr min-height fixo → mesma altura com ou sem texto de contexto */
+.pageheader {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  min-height: 64px;
+  margin-bottom: 24px;
+}
+.ph-left {
+  display: flex; align-items: center; gap: 12px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+.ph-titles {
+  min-width: 200px;
+}
+.ph-titles h1 {
+  font-family: var(--sans);
+  font-size: clamp(21px, 2.4vw, 26px);
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1.15;
+  color: var(--fg);
+  margin: 0;
+}
+.ph-titles .narr {
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+  min-height: 18px;
+}
+.ph-titles .narr b { color: var(--fg); font-weight: 600; }
+.ph-right {
+  display: flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Em mobile: PageHeader empilha; controles full-width */
+@media (max-width: 860px) {
+  .pageheader { flex-direction: column; align-items: stretch; }
+  .ph-right { width: 100%; }
+}
+
+/* ============ FILTERBAR ============ */
+.filterbar {
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+}
+.filterbar.inline { margin-bottom: 0; }
+
+.search {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  min-width: 0;
+  width: 240px;
+  height: 34px;
+  transition: all var(--dur) var(--ease);
+  box-sizing: border-box;
+}
+.search .ic { color: var(--fg-muted); flex: none; }
+.search input {
+  border: 0; outline: 0;
+  background: transparent;
+  font: inherit; font-size: 13px;
+  width: 100%;
+  color: var(--fg);
+}
+.search input::placeholder { color: var(--fg-muted); }
+.search:focus-within {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-soft);
+}
+
+.fs-wrap { position: relative; display: inline-flex; }
+
+.fselect {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fg-soft);
+  cursor: pointer;
+  transition: all var(--dur) var(--ease);
+  height: 34px;
+  min-width: 124px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+.fselect > span:not(.ic):first-of-type {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fselect:hover { border-color: var(--fg); color: var(--fg); }
+.fselect .ic { color: var(--fg-muted); }
+.fselect.on {
+  border-color: var(--green);
+  background: var(--green-tint);
+  color: var(--green);
+}
+.fselect.on .ic { color: var(--green); }
+.fselect.clear {
+  color: var(--danger);
+  border-color: transparent;
+  min-width: 0;          /* sobrescreve min-width 124px → fica compacto */
+  padding: 7px 9px;
+}
+.fselect.clear:hover { border-color: var(--danger); background: var(--danger-soft); }
+.fselect.clear .ic { color: var(--danger); }
+
+.fmenu {
+  position: absolute;
+  top: calc(100% + 6px); left: 0;
+  min-width: 200px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-md);
+  padding: 4px;
+  z-index: 50;
+  display: flex; flex-direction: column;
+}
+.fmenu.more { right: 0; left: auto; min-width: 236px; }
+.fmenu button {
+  display: flex; align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0; background: transparent;
+  font: inherit; font-size: 13px;
+  color: var(--fg);
+  text-align: left;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.fmenu button:hover { background: var(--bg-alt); }
+.fmenu button.sel { color: var(--green); }
+.fmenu button .grow { flex: 1; }
+.fmenu-div {
+  height: 1px;
+  background: var(--line);
+  margin: 4px 0;
+}
+
+/* ⋯ MoreMenu items */
+.more-item.disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+.more-item.disabled:hover { background: transparent; }
+.more-hint {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--fg-muted);
+}
+.mini-toggle {
+  position: relative;
+  width: 26px; height: 14px;
+  border-radius: var(--r-pill);
+  background: var(--line-strong);
+  flex: none;
+  transition: background var(--dur) var(--ease);
+}
+.mini-toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--bg);
+  transition: left var(--dur) var(--ease);
+}
+.mini-toggle.on { background: var(--green); }
+.mini-toggle.on::after { left: 14px; }
+.mini-spacer { width: 14px; flex: none; }
+
+/* ============ PILLS FILTER (Foco/Triagem) ============ */
+.pills {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px;
+  background: var(--bg-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+}
+.pill-f {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px;
+  border: 0; background: transparent;
+  border-radius: var(--r-pill);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--fg-soft);
+  cursor: pointer;
+  transition: all var(--dur) var(--ease);
+}
+.pill-f:hover { color: var(--fg); }
+.pill-f.on {
+  background: var(--green-soft);
+  color: var(--green);
+  font-weight: 600;
+}
+.pf-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: inherit;
+  opacity: .75;
+  font-feature-settings: "tnum";
+}
+
+/* Em mobile: pills viram lista horizontal scrollável */
+@media (max-width: 640px) {
+  .pills { overflow-x: auto; max-width: 100%; }
+}
+
+/* ============ F4 · Calendário · status como cor do bloquinho ============
+   Substitui o filtro de status (que saiu da FilterBar) por código visual:
+     active   = brand (andamento)
+     blocked  = âmbar (bloqueado)
+     late     = vermelho (atrasada vencida)
+     done     = ok-soft com riscado (concluído)
+     backlog  = neutro (default)
+   Mantém .late/.done legacy como aliases por retrocompat. */
+.cal-task.status-active   { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+.cal-task.status-blocked  { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+.cal-task.status-late     { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+.cal-task.status-done     { background: var(--bg-alt); color: var(--fg-muted); border-color: var(--line); text-decoration: line-through; }
+.cal-task.status-backlog  { background: var(--bg-alt); color: var(--fg-soft); border-color: var(--line); }
+.cal-dot.status-active    { background: var(--green); }
+.cal-dot.status-blocked   { background: var(--warn); }
+.cal-dot.status-late      { background: var(--danger); }
+.cal-dot.status-done      { background: var(--p3); }
+.cal-dot.status-backlog   { background: var(--fg-muted); }
+
+/* ============ F8 · Harmonização visual das toolbars do PageHeader ============
+   Todos os elementos dentro de .ph-right alinham por altura (34px) e box. */
+.ph-right .btn,
+.ph-right .iconbtn,
+.ph-right .view-toggle,
+.ph-right .search,
+.ph-right .fselect,
+.ph-right .inp,
+.ph-right select.inp {
+  height: 34px;
+  box-sizing: border-box;
+}
+.ph-right .btn { padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; }
+.ph-right select.inp { padding-top: 0; padding-bottom: 0; }
+
+/* Mesma altura no titleAside (setas Calendário, toggle Kanban) */
+.ph-left .iconbtn,
+.ph-left .btn,
+.ph-left .view-toggle {
+  height: 34px;
+  box-sizing: border-box;
+}
+.ph-left .btn { padding: 0 12px; display: inline-flex; align-items: center; }
+
+/* No mobile, deixa o conteúdo voltar a fluir */
+@media (max-width: 860px) {
+  .ph-right .search { width: 100%; }
+  .ph-right .fselect { min-width: 0; }
+}
+
+/* ============ Portal · header com cor customizada por cliente ============
+   Quando o cliente define cor_portal_texto='dark', o header usa texto
+   preto (em vez do branco padrão). Útil pra fundos claros customizados. */
+.portal-header.theme-dark-text { color: #0E1116; }
+.portal-header.theme-dark-text .portal-header-eyebrow { color: rgba(14,17,22,.55); }
+.portal-header.theme-dark-text .portal-header-name { color: #0E1116; }
+.portal-header.theme-dark-text .portal-header-sub { color: rgba(14,17,22,.7); }
+.portal-header.theme-dark-text .portal-header-switch-sel {
+  background: rgba(14,17,22,.08); color: rgba(14,17,22,.8);
+  border-color: rgba(14,17,22,.2);
+}
+.portal-header.theme-dark-text .portal-header-switch-sel:hover {
+  background: rgba(14,17,22,.14); border-color: rgba(14,17,22,.35);
+}
+.portal-header.theme-dark-text .portal-header-switch-sel option {
+  background: var(--bg); color: #0E1116;
 }

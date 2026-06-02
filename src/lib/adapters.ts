@@ -59,6 +59,7 @@ export function taskFromDb(r: Row): Task {
 }
 
 export function clienteFromDb(r: Row): Cliente {
+  const corTxt = r.cor_portal_texto;
   return {
     id: str(r.id),
     nome: str(r.nome),
@@ -67,6 +68,8 @@ export function clienteFromDb(r: Row): Cliente {
     arquivadoEm: dateIso(r.arquivado_em),
     dominios: arr<string>(r.dominios),
     webhookEnabled: r.webhook_enabled === true,
+    corPortal: r.cor_portal ? String(r.cor_portal) : null,
+    corPortalTexto: corTxt === 'light' || corTxt === 'dark' ? corTxt : null,
   };
 }
 

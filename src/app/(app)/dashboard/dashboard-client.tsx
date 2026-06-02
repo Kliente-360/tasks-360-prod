@@ -3,8 +3,11 @@
 import { useMemo, useState } from 'react';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
+import { PageHeader } from '@/components/page-header';
+import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { cn } from '@/lib/utils';
 import { atrasada, agingDays, effEsforco } from '@/lib/task-utils';
+import type { Filters as StdFilters } from '@/lib/filters';
 import {
   computeThroughput12w,
   computeEntregasSemanas,
@@ -99,21 +102,35 @@ export function DashboardClient() {
   const [filterCliente, setFilterCliente] = useState('');
   const [filterPessoa, setFilterPessoa] = useState('');
   const [filterProjeto, setFilterProjeto] = useState('');
+  const [filterPrazo, setFilterPrazo] = useState<'' | 'atrasadas' | 'hoje' | 'semana' | 'sem'>('');
+  const [onlyIA, setOnlyIA] = useState(false);
+  const [onlyHumano, setOnlyHumano] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const hasFilter = !!(filterCliente || filterPessoa || filterProjeto);
+  const hasFilter = !!(filterCliente || filterPessoa || filterProjeto || filterPrazo || onlyIA || onlyHumano);
 
   const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm), [tasks]);
 
-  const filteredTasks = useMemo(
-    () => baseTasks.filter((t) => {
+  const filteredTasks = useMemo(() => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const in7 = new Date(); in7.setDate(in7.getDate() + 7);
+    const in7Iso = in7.toISOString().slice(0, 10);
+    return baseTasks.filter((t) => {
       if (filterCliente && t.clienteId !== filterCliente) return false;
       if (filterPessoa && t.pessoaId !== filterPessoa) return false;
       if (filterProjeto && t.projetoId !== filterProjeto) return false;
+      if (onlyIA && !t.criadoPorIa) return false;
+      if (onlyHumano && t.criadoPorIa) return false;
+      if (filterPrazo === 'atrasadas' && !atrasada(t)) return false;
+      if (filterPrazo === 'hoje' && t.prazo !== todayIso) return false;
+      if (filterPrazo === 'sem' && t.prazo) return false;
+      if (filterPrazo === 'semana') {
+        if (!t.prazo) return false;
+        if (t.prazo < todayIso || t.prazo > in7Iso) return false;
+      }
       return true;
-    }),
-    [baseTasks, filterCliente, filterPessoa, filterProjeto],
-  );
+    });
+  }, [baseTasks, filterCliente, filterPessoa, filterProjeto, filterPrazo, onlyIA, onlyHumano]);
 
   // ── KPIs
   const kpiAndamento = useMemo(() => filteredTasks.filter((t) => t.status === 'andamento'), [filteredTasks]);
@@ -210,7 +227,14 @@ export function DashboardClient() {
     [projetos, filterCliente],
   );
 
-  function clearFilters() { setFilterCliente(''); setFilterPessoa(''); setFilterProjeto(''); }
+  function clearFilters() {
+    setFilterCliente('');
+    setFilterPessoa('');
+    setFilterProjeto('');
+    setFilterPrazo('');
+    setOnlyIA(false);
+    setOnlyHumano(false);
+  }
 
   if (loading) return <div className="text-muted text-sm py-8">Carregando…</div>;
 
@@ -219,20 +243,45 @@ export function DashboardClient() {
   return (
     <div className="flex flex-col gap-4 md:gap-6">
 
-      {/* ── Page bar ── */}
-      <div className="page-bar hidden md:flex">
-        <div className="page-bar-info">
-          <span className="page-bar-narrative">
-            Dashboard
-            <span className="text-muted font-normal text-sm ml-2">
-              {refreshing ? '· atualizando…' : '· cockpit operacional'}
-            </span>
-          </span>
-        </div>
-        <div className="page-bar-controls" />
+      {/* ── PageHeader + FilterBar (desktop) ── */}
+      <div className="hidden md:block">
+        <PageHeader
+          title="Dashboard"
+          right={
+            <FilterBar
+              f={{
+                q: '',
+                cliente: filterCliente,
+                projeto: filterProjeto,
+                resp: filterPessoa,
+                prazo: filterPrazo,
+              } satisfies StdFilters}
+              set={(key, value) => {
+                if (key === 'cliente') { setFilterCliente(value); setFilterProjeto(''); }
+                else if (key === 'projeto') setFilterProjeto(value);
+                else if (key === 'resp') setFilterPessoa(value);
+                else if (key === 'prazo') setFilterPrazo(value as typeof filterPrazo);
+                // 'q' não tem efeito (Dashboard agrega dados — busca textual não faz sentido)
+              }}
+              onClear={clearFilters}
+              clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
+              projetoOptions={projetosAtivos.map((p) => ({ v: p.id, label: p.nome }))}
+              pessoaOptions={pessoasAtivas.map((p) => ({ v: p.id, label: p.nome }))}
+              moreItems={[
+                { key: 'group-resp', label: 'Agrupar: Responsável', enabled: false, kind: 'action', icon: 'users' },
+                { key: 'group-cli', label: 'Agrupar: Cliente', enabled: false, kind: 'action', icon: 'building' },
+                { key: 'group-status', label: 'Agrupar: Status', enabled: false, kind: 'action', icon: 'list-filter' },
+                { key: 'div1', label: '---' },
+                { key: 'arquivadas', label: 'Mostrar arquivadas', enabled: false, kind: 'toggle', hint: 'Dashboard ignora' },
+                { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
+                { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
+              ] satisfies MoreMenuItem[]}
+            />
+          }
+        />
       </div>
 
-      {/* ── Filtros ── */}
+      {/* ── Filtros (mobile legacy — refactor em PR futuro) ── */}
       <div>
         <div className="flex items-center gap-2 md:hidden">
           <button
@@ -271,21 +320,7 @@ export function DashboardClient() {
             </select>
           </div>
         )}
-        <div className="hidden md:flex flex-wrap gap-2">
-          <select value={filterCliente} onChange={(e) => { setFilterCliente(e.target.value); setFilterProjeto(''); }} className={selCls}>
-            <option value="">Todos clientes</option>
-            {clientesAtivos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-          </select>
-          <select value={filterPessoa} onChange={(e) => setFilterPessoa(e.target.value)} className={selCls}>
-            <option value="">Todas pessoas</option>
-            {pessoasAtivas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-          </select>
-          <select value={filterProjeto} onChange={(e) => setFilterProjeto(e.target.value)} className={selCls}>
-            <option value="">Todos projetos</option>
-            {projetosAtivos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-          </select>
-          {hasFilter && <button onClick={clearFilters} className="text-xs text-muted hover:text-ink underline px-1">Limpar filtros</button>}
-        </div>
+        {/* Desktop filtros agora vivem dentro do FilterBar no PageHeader acima */}
       </div>
 
       {/* ── 1. KPIs ── */}

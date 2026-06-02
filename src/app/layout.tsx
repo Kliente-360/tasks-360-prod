@@ -1,16 +1,18 @@
 import type { Metadata, Viewport } from 'next';
-import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
-const plexSans = IBM_Plex_Sans({
+const fontSans = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-sans',
+  display: 'swap',
 });
-const plexMono = IBM_Plex_Mono({
+const fontMono = JetBrains_Mono({
   subsets: ['latin'],
   weight: ['400', '500'],
   variable: '--font-mono',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -76,7 +78,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" className={`${plexSans.variable} ${plexMono.variable}`}>
+    <html lang="pt-BR" className={`${fontSans.variable} ${fontMono.variable}`}>
       <head>
         {/* color-scheme reage ao toggle manual (.dark no <html>). Sem
             `only` agora — Auto Dark do Chrome só age quando o usuário
