@@ -33,6 +33,7 @@ import { createClient } from '@/lib/supabase/client';
 import { agingDays, agingLevel, atrasada, fmtDateShort, fmtTempoEtapa, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
+import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import type { Filters as StdFilters } from '@/lib/filters';
 import type { Task } from '@/lib/types';
 
@@ -62,12 +63,32 @@ export function KanbanClient() {
     projeto: string;
     pessoa: string;
     prazo: PrazoFilter;
-  }>({
-    cliente: '',
-    projeto: '',
-    pessoa: '',
-    prazo: '',
+  }>(() => {
+    const s = getSharedFilters();
+    // Kanban's PrazoFilter é diferente do shared (tem d7/d15/mes em vez de
+    // hoje/sem). Só restaura os valores compatíveis.
+    const sharedPrazo: PrazoFilter =
+      s.prazo === 'atrasadas' || s.prazo === 'semana' ? s.prazo : '';
+    return {
+      cliente: s.cliente,
+      projeto: s.projeto,
+      pessoa: s.pessoa,
+      prazo: sharedPrazo,
+    };
   });
+  useEffect(() => {
+    // Só propaga prazo se for um valor que o shared store entende.
+    const prazoForShare =
+      filters.prazo === 'atrasadas' || filters.prazo === 'semana'
+        ? filters.prazo
+        : '';
+    patchSharedFilters({
+      cliente: filters.cliente,
+      projeto: filters.projeto,
+      pessoa: filters.pessoa,
+      prazo: prazoForShare,
+    });
+  }, [filters.cliente, filters.projeto, filters.pessoa, filters.prazo]);
   const [qDraft, setQDraft] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [onlyIA, setOnlyIA] = useState(false);
@@ -79,6 +100,7 @@ export function KanbanClient() {
     const handler = () => {
       setFilters({ cliente: '', projeto: '', pessoa: '', prazo: '' });
       setQDraft('');
+      clearSharedFilters();
     };
     window.addEventListener(CLEAR_FILTERS_EVENT, handler);
     return () => window.removeEventListener(CLEAR_FILTERS_EVENT, handler);
@@ -291,6 +313,7 @@ export function KanbanClient() {
               onClear={() => {
                 setQDraft('');
                 setFilters({ cliente: '', projeto: '', pessoa: '', prazo: '' });
+                clearSharedFilters();
               }}
               clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
               projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}

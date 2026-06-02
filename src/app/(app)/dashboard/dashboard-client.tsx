@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
@@ -8,6 +8,7 @@ import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { cn } from '@/lib/utils';
 import { atrasada, agingDays, effEsforco } from '@/lib/task-utils';
 import type { Filters as StdFilters } from '@/lib/filters';
+import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import {
   computeThroughput12w,
   computeEntregasSemanas,
@@ -99,10 +100,18 @@ export function DashboardClient() {
   const pessoasById = usePessoasById();
   const { openEdit } = useTaskModal();
 
-  const [filterCliente, setFilterCliente] = useState('');
-  const [filterPessoa, setFilterPessoa] = useState('');
-  const [filterProjeto, setFilterProjeto] = useState('');
-  const [filterPrazo, setFilterPrazo] = useState<'' | 'atrasadas' | 'hoje' | 'semana' | 'sem'>('');
+  const [filterCliente, setFilterCliente] = useState(() => getSharedFilters().cliente);
+  const [filterPessoa, setFilterPessoa] = useState(() => getSharedFilters().pessoa);
+  const [filterProjeto, setFilterProjeto] = useState(() => getSharedFilters().projeto);
+  const [filterPrazo, setFilterPrazo] = useState<'' | 'atrasadas' | 'hoje' | 'semana' | 'sem'>(() => getSharedFilters().prazo);
+  useEffect(() => {
+    patchSharedFilters({
+      cliente: filterCliente,
+      projeto: filterProjeto,
+      pessoa: filterPessoa,
+      prazo: filterPrazo,
+    });
+  }, [filterCliente, filterProjeto, filterPessoa, filterPrazo]);
   const [onlyIA, setOnlyIA] = useState(false);
   const [onlyHumano, setOnlyHumano] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -234,6 +243,7 @@ export function DashboardClient() {
     setFilterPrazo('');
     setOnlyIA(false);
     setOnlyHumano(false);
+    clearSharedFilters();
   }
 
   if (loading) return <div className="text-muted text-sm py-8">Carregando…</div>;
