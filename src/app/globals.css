@@ -1675,3 +1675,21 @@ body {
   .ph-right .search { width: 100%; }
   .ph-right .fselect { min-width: 0; }
 }
+
+/* ============ Portal · header com cor customizada por cliente ============
+   Quando o cliente define cor_portal_texto='dark', o header usa texto
+   preto (em vez do branco padrão). Útil pra fundos claros customizados. */
+.portal-header.theme-dark-text { color: #0E1116; }
+.portal-header.theme-dark-text .portal-header-eyebrow { color: rgba(14,17,22,.55); }
+.portal-header.theme-dark-text .portal-header-name { color: #0E1116; }
+.portal-header.theme-dark-text .portal-header-sub { color: rgba(14,17,22,.7); }
+.portal-header.theme-dark-text .portal-header-switch-sel {
+  background: rgba(14,17,22,.08); color: rgba(14,17,22,.8);
+  border-color: rgba(14,17,22,.2);
+}
+.portal-header.theme-dark-text .portal-header-switch-sel:hover {
+  background: rgba(14,17,22,.14); border-color: rgba(14,17,22,.35);
+}
+.portal-header.theme-dark-text .portal-header-switch-sel option {
+  background: var(--bg); color: #0E1116;
+}

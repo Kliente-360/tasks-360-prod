@@ -21,6 +21,10 @@ type ClienteInitial = {
   tier: string | null;
   ehInterno: boolean;
   dominios: string[];
+  /** Hex #RRGGBB · cor do header do Portal cliente. Null = default DS. */
+  corPortal?: string | null;
+  /** light=texto branco · dark=texto preto sobre corPortal. */
+  corPortalTexto?: 'light' | 'dark' | null;
 };
 
 const BLANK: ClienteInitial = {
@@ -29,6 +33,8 @@ const BLANK: ClienteInitial = {
   tier: '',
   ehInterno: false,
   dominios: [],
+  corPortal: null,
+  corPortalTexto: null,
 };
 
 function ClienteModal({
@@ -42,6 +48,10 @@ function ClienteModal({
   const [tier, setTier] = useState(initial.tier ?? '');
   const [dominios, setDominios] = useState<string[]>(initial.dominios);
   const [newDominio, setNewDominio] = useState('');
+  const [corPortal, setCorPortal] = useState<string>(initial.corPortal ?? '');
+  const [corPortalTexto, setCorPortalTexto] = useState<'light' | 'dark'>(
+    initial.corPortalTexto ?? 'light',
+  );
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const nomeRef = useRef<HTMLInputElement | null>(null);
@@ -82,9 +92,19 @@ function ClienteModal({
       new Set(dominios.map((d) => normalizeDominio(d)).filter(Boolean)),
     );
     const tierVal = tier || null;
+    // Hex normalizado: aceita #RRGGBB ou vazio (= null). Valida formato básico.
+    const corHex = corPortal.trim().toUpperCase();
+    const corPortalVal = corHex && /^#[0-9A-F]{6}$/.test(corHex) ? corHex : null;
+    const corPortalTextoVal = corPortalVal ? corPortalTexto : null;
     startTransition(async () => {
       const sb = createClient();
-      const baseRow = { nome: nomeTrim, tier: tierVal, dominios: dominiosNorm };
+      const baseRow = {
+        nome: nomeTrim,
+        tier: tierVal,
+        dominios: dominiosNorm,
+        cor_portal: corPortalVal,
+        cor_portal_texto: corPortalTextoVal,
+      };
       const { data, error } = initial.id
         ? await sb
             .from('clientes')
@@ -104,7 +124,7 @@ function ClienteModal({
       upsertCliente(clienteFromDb(data as Record<string, unknown>));
       onClose();
     });
-  }, [initial.id, nome, tier, dominios, onClose, upsertCliente]);
+  }, [initial.id, nome, tier, dominios, corPortal, corPortalTexto, onClose, upsertCliente]);
 
   return (
     <div
@@ -194,6 +214,81 @@ function ClienteModal({
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* === Tema do Portal cliente · cor + texto light/dark === */}
+              <div>
+                <label className="lbl">Cor do header no Portal</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={corPortal || '#0A3A1F'}
+                    onChange={(e) => setCorPortal(e.target.value.toUpperCase())}
+                    title="Escolher cor"
+                    className="w-10 h-9 rounded border border-line cursor-pointer p-0"
+                    style={{ background: 'transparent' }}
+                  />
+                  <input
+                    type="text"
+                    className="inp flex-1 font-mono"
+                    placeholder="#0A3A1F"
+                    value={corPortal}
+                    onChange={(e) => setCorPortal(e.target.value.toUpperCase())}
+                    maxLength={7}
+                  />
+                  {corPortal && (
+                    <button
+                      type="button"
+                      className="btn-ghost-sm text-xs text-muted"
+                      onClick={() => setCorPortal('')}
+                      title="Usar default Kliente"
+                    >
+                      usar padrão
+                    </button>
+                  )}
+                </div>
+                {corPortal && (
+                  <>
+                    <div className="text-[11px] text-muted mt-2 mb-1">Cor do texto sobre essa cor:</div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCorPortalTexto('light')}
+                        className={`flex-1 text-xs px-2 py-1.5 rounded border ${
+                          corPortalTexto === 'light'
+                            ? 'border-[color:var(--green)] bg-[color:var(--green-tint)] text-[color:var(--green)] font-medium'
+                            : 'border-line text-muted'
+                        }`}
+                      >
+                        Branco (light)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCorPortalTexto('dark')}
+                        className={`flex-1 text-xs px-2 py-1.5 rounded border ${
+                          corPortalTexto === 'dark'
+                            ? 'border-[color:var(--green)] bg-[color:var(--green-tint)] text-[color:var(--green)] font-medium'
+                            : 'border-line text-muted'
+                        }`}
+                      >
+                        Preto (dark)
+                      </button>
+                    </div>
+                    {/* Preview */}
+                    <div
+                      className="mt-2 px-3 py-2 rounded text-sm font-medium"
+                      style={{
+                        background: corPortal,
+                        color: corPortalTexto === 'dark' ? '#0E1116' : '#FFFFFF',
+                      }}
+                    >
+                      Portal · {nome || 'Cliente'}
+                    </div>
+                  </>
+                )}
+                <div className="text-[11px] text-muted mt-1">
+                  Aplica skin de marca no header do Portal cliente. Vazio = padrão Kliente (verde).
+                </div>
               </div>
             </>
           )}

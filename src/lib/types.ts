@@ -68,6 +68,12 @@ export interface Cliente {
   /** Quando true, modal de task NÃO autosalva — usuário precisa clicar Salvar
    *  pra disparar o webhook pro Salesforce. */
   webhookEnabled: boolean;
+  /** Hex #RRGGBB usado como background do header do Portal cliente.
+   *  Null = default DS (--bg-portal verde Kliente escuro). */
+  corPortal: string | null;
+  /** 'light' (texto branco) ou 'dark' (texto preto) sobre cor_portal.
+   *  Null = light (default). */
+  corPortalTexto: 'light' | 'dark' | null;
 }
 
 export interface Projeto {

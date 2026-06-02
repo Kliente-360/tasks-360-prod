@@ -380,6 +380,8 @@ export function CadastrosClient() {
                     tier: c.tier,
                     ehInterno: c.ehInterno,
                     dominios: c.dominios,
+                    corPortal: c.corPortal,
+                    corPortalTexto: c.corPortalTexto,
                   }}
                 />
                 {!c.ehInterno && isAdmin && (
