@@ -215,17 +215,6 @@ export function FocoClient() {
               ? <>Foco de {pessoasById.get(focusPessoaId)?.nome ?? '—'}</>
               : (isAdmin ? 'Foco' : 'Foco indisponível')
           }
-          context={
-            hasFocus && (counts.atrasadas.length + counts.hoje.length + counts.bloqueadas.length > 0) ? (
-              <>
-                {counts.atrasadas.length > 0 && <><b>{counts.atrasadas.length}</b> atrasadas</>}
-                {counts.atrasadas.length > 0 && counts.hoje.length > 0 && ' · '}
-                {counts.hoje.length > 0 && <><b>{counts.hoje.length}</b> para hoje</>}
-                {(counts.atrasadas.length > 0 || counts.hoje.length > 0) && counts.bloqueadas.length > 0 && ' · '}
-                {counts.bloqueadas.length > 0 && <><b>{counts.bloqueadas.length}</b> bloqueadas</>}
-              </>
-            ) : (isAdmin && !hasFocus ? 'Selecione uma pessoa pra ver o foco' : undefined)
-          }
           right={
             isAdmin ? (
               <select

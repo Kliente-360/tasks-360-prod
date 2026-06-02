@@ -304,7 +304,6 @@ export function BriefingClient() {
       <div className="hidden md:block">
         <PageHeader
           title="Briefing"
-          context={refreshing ? 'atualizando…' : 'portfólio ao vivo'}
           right={
             <button
               type="button"

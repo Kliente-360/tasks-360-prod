@@ -249,13 +249,6 @@ export function KanbanClient() {
       <div className="hidden md:block">
         <PageHeader
           title="Kanban"
-          context={
-            kanbanView === 'op' ? (
-              <>Operacional · <b>11</b> colunas detalhadas</>
-            ) : (
-              <>Executiva · <b>4</b> colunas macro</>
-            )
-          }
           titleAside={
             <div className="view-toggle" role="tablist" aria-label="Visão do kanban">
               <button

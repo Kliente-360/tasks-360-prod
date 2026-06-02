@@ -247,14 +247,6 @@ export function DashboardClient() {
       <div className="hidden md:block">
         <PageHeader
           title="Dashboard"
-          context={
-            <>
-              {refreshing ? 'atualizando…' : 'cockpit operacional'}
-              {hasFilter && (
-                <> · <b>{[filterCliente, filterPessoa, filterProjeto].filter(Boolean).length}</b> filtro(s) ativo(s)</>
-              )}
-            </>
-          }
           right={
             <FilterBar
               f={{

@@ -522,14 +522,6 @@ export function BacklogClient() {
       <div className="hidden md:block">
         <PageHeader
           title="Backlog"
-          context={
-            <>
-              <b>{backlogTotalAbertas}</b> tarefas
-              {activeFiltersCount > 0 && (
-                <> · <b>{filtered.length}</b> após filtros</>
-              )}
-            </>
-          }
           right={
             <FilterBar
               f={{

@@ -32,7 +32,10 @@ export default function AppLayout({
                     <AppSplash />
                     <div className="min-h-screen">
                       <AppNav />
-                      <main className="max-w-[1400px] mx-auto px-4 md:px-8 py-6">{children}</main>
+                      {/* Main alinha EXATAMENTE com .hdr-v2-top: max-width 1320px
+                          (var(--container)) + padding 16px. Conteúdo começa no mesmo X
+                          do logo aperture e termina no mesmo X do avatar/perfil. */}
+                      <main className="max-w-[1320px] mx-auto px-4 py-6">{children}</main>
                     </div>
                     <MobileFab />
                     <BadgeSync />

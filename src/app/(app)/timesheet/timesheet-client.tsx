@@ -73,7 +73,6 @@ export function TimesheetClient() {
     <div>
       <PageHeader
         title="Timesheet"
-        context="Registros de tempo por tarefa"
         right={
           <FilterBar
             f={{

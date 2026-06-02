@@ -206,13 +206,6 @@ export function TriagemClient() {
         <div className="hidden md:block">
           <PageHeader
             title="Triagem"
-            context={
-              <>
-                <b>{filtered.length}</b>
-                {anyFilter && <> / {triagemTasks.length}</>}
-                {' '}tarefa{filtered.length !== 1 ? 's' : ''} pra triar
-              </>
-            }
             right={
               <div className="flex items-center gap-2 flex-wrap">
                 <FilterChip
