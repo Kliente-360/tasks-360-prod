@@ -1546,14 +1546,13 @@ body {
   border-radius: var(--r-sm);
   background: var(--bg);
   min-width: 0;
-  /* Padronizado pra mesma largura dos fselect (124px) — uniformidade visual */
+  /* Padronizado pra mesma largura dos fselect (124px). Largura fixa
+     mesmo focado — não expande. */
   width: 124px;
   height: 34px;
-  transition: all var(--dur) var(--ease);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
   box-sizing: border-box;
 }
-/* Quando focado, expande pra dar espaço de digitar sem perder o alinhamento
-   da grid colapsada — UX boa pra busca, padrão coletivo permanece. */
 .search .ic { color: var(--fg-muted); flex: none; }
 .search input {
   border: 0; outline: 0;
@@ -1564,7 +1563,6 @@ body {
 }
 .search input::placeholder { color: var(--fg-muted); }
 .search:focus-within {
-  width: 240px;
   border-color: var(--green);
   box-shadow: 0 0 0 3px var(--green-soft);
 }

@@ -342,37 +342,28 @@ export function CalendarioClient() {
       <div className="hidden md:block">
         <PageHeader
           title={monthLabel}
-          titleAside={
-            <div className="flex items-center gap-1 ml-2">
-              <button
-                type="button"
-                className="iconbtn bordered"
-                onClick={goPrev}
-                title="Mês anterior"
-                aria-label="Mês anterior"
-              >
-                <Icon name="chevron-left" size={16} />
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost text-xs px-3"
-                onClick={goToday}
-              >
-                hoje
-              </button>
-              <button
-                type="button"
-                className="iconbtn bordered"
-                onClick={goNext}
-                title="Próximo mês"
-                aria-label="Próximo mês"
-              >
-                <Icon name="chevron-right" size={16} />
-              </button>
-            </div>
-          }
           right={
             <FilterBar
+              leftSlot={
+                <div className="view-toggle view-toggle-icons" role="group" aria-label="Navegação de mês">
+                  <button
+                    type="button"
+                    onClick={goPrev}
+                    title="Mês anterior"
+                    aria-label="Mês anterior"
+                  >
+                    <Icon name="chevron-left" size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    title="Próximo mês"
+                    aria-label="Próximo mês"
+                  >
+                    <Icon name="chevron-right" size={15} />
+                  </button>
+                </div>
+              }
               f={{
                 q: qDraft,
                 cliente: filters.cliente,

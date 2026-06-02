@@ -276,30 +276,30 @@ export function KanbanClient() {
       <div className="hidden md:block">
         <PageHeader
           title="Kanban"
-          titleAside={
-            <div className="view-toggle view-toggle-icons" role="tablist" aria-label="Visão do kanban">
-              <button
-                type="button"
-                className={kanbanView === 'op' ? 'active' : ''}
-                onClick={() => setKanbanView('op')}
-                title="Operacional — colunas detalhadas (11 colunas)"
-                aria-label="Visão operacional"
-              >
-                <Icon name="columns" size={15} />
-              </button>
-              <button
-                type="button"
-                className={kanbanView === 'exec' ? 'active' : ''}
-                onClick={() => setKanbanView('exec')}
-                title="Executiva — colunas macro (4 colunas)"
-                aria-label="Visão executiva"
-              >
-                <Icon name="square" size={15} />
-              </button>
-            </div>
-          }
           right={
             <FilterBar
+              leftSlot={
+                <div className="view-toggle view-toggle-icons" role="tablist" aria-label="Visão do kanban">
+                  <button
+                    type="button"
+                    className={kanbanView === 'op' ? 'active' : ''}
+                    onClick={() => setKanbanView('op')}
+                    title="Operacional — colunas detalhadas (11 colunas)"
+                    aria-label="Visão operacional"
+                  >
+                    <Icon name="columns" size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className={kanbanView === 'exec' ? 'active' : ''}
+                    onClick={() => setKanbanView('exec')}
+                    title="Executiva — colunas macro (4 colunas)"
+                    aria-label="Visão executiva"
+                  >
+                    <Icon name="square" size={15} />
+                  </button>
+                </div>
+              }
               f={{
                 q: qDraft,
                 cliente: filters.cliente,
