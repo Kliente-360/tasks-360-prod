@@ -10,75 +10,53 @@
 :root {
   /* color-scheme: light por default. Quando o ThemeProvider aplica
      a classe `dark` no <html>, a regra `.dark { color-scheme: dark }`
-     toma conta dos controles nativos (date picker, scrollbar). */
+     toma conta dos controles nativos (date picker, scrollbar).
+     Dark mode tokens recalibrados em PR separado. */
   color-scheme: light;
 
-  /* === BRAND === */
-  --brand:       #009900;
-  --brand-dark:  #007A00;
-  --brand-light: #00B300;
-  --brand-soft:  #E6F5E6;
-  --brand-tint:  #F2FAF2;
+  /* ============================================================
+   * DESIGN SYSTEM KLIENTE 360 · tokens canônicos (light-first)
+   * Fonte: docs/design_handoff_tasks360_repaginacao/prototype/hifi/app.css
+   * ============================================================ */
 
-  /* === PORTAL HEADER === */
-  --header-portal:      #0A3A1F;
-  --header-portal-soft: #14532D;
+  /* === MARCA · 2 verdes (regra P0: logo-green SÓ no símbolo aperture) === */
+  --green:       #007A3D;   /* editorial · CTAs, links, aba ativa, foco, hover */
+  --green-hover: #00692F;
+  --green-soft:  #E7F1EA;
+  --green-tint:  #F2F8F4;
+  --logo-green:  #009900;   /* SÓ o símbolo aperture (4 círculos) */
 
-  /* === NAVY === */
-  --navy:      #1f2937;
-  --navy-soft: #374151;
+  /* === NEUTROS · ink/text === */
+  --fg:       #0E1116;
+  --fg-soft:  #3A3F46;
+  --fg-muted: #6B7178;
 
-  /* === HEADERS SEMÂNTICOS === */
-  --header-task:        #0F172A;
-  --header-task-soft:   #1E293B;
-  --header-portal:      #0A3A1F;
-  --header-portal-soft: #14532D;
+  /* === LINHAS === */
+  --line:        #E7E6E1;
+  --line-soft:   #F0EFEA;
+  --line-strong: #D6D4CC;
 
-  /* === TRIAGEM === */
-  --triage:      #B45309;
-  --triage-soft: #FEF3C7;
-
-  /* === FONT FAMILIES === */
-  --font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --font-brand: var(--font-sans);
-
-  /* === CYAN === */
-  --cyan:      #0084E1;
-  --cyan-soft: #E6F3FB;
-
-  /* === YELLOW === */
-  --yellow:      #F8DF61;
-  --yellow-soft: #FAE992;
+  /* === SUPERFÍCIES === */
+  --bg:        #FFFFFF;
+  --bg-alt:    #F5F5F2;
+  --bg-app:    #F7F7F4;
+  --bg-dark:   #0E1320;   /* header de task modal */
+  --bg-portal: #0A3A1F;   /* header do Portal cliente + modais de cadastro */
 
   /* === STATUS / PRIORIDADE === */
-  --p0:      #C8392B;
-  --p0-soft: #FBEAE7;
-  --p1:      #C77A1A;
-  --p1-soft: #FAEFDD;
-  --p2:      #0084E1;
-  --p2-soft: #E6F3FB;
-  --p3:      #7D8185;
-  --p3-soft: #ECEEEC;
+  --p0:      #C0392B;   --p0-soft: #FBECEA;
+  --p1:      #B7791F;   --p1-soft: #FAF1E0;
+  --p2:      #2C72B8;   --p2-soft: #EAF2FA;
+  --p3:      #7D8185;   --p3-soft: #F1F1EE;
 
-  --warn:   #C77A1A;
-  --danger: #C8392B;
-
-  /* === NEUTROS === */
-  --ink:         #000000;
-  --ink-soft:    #2A2A2A;
-  --muted:       #7D8185;
-  --line:        #E6E6E6;
-  --line-strong: #D4D6D2;
-
-  /* === SURFACES === */
-  --surface-1: #FFFFFF;
-  --surface-2: #F1F2F0;
-  --surface-3: #FAFAF8;
-  --bg:        var(--surface-2);
-  --bg-elev:   var(--surface-1);
+  --danger:      #C0392B;   --danger-soft: #FBECEA;
+  --warn:        #B7791F;   --warn-soft:   #FAF1E0;
+  --ok:          #1E8A4C;   --ok-soft:     #E7F1EA;
 
   /* === TIPOGRAFIA === */
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+
   --fs-xs:   12px;
   --fs-sm:   14px;
   --fs-base: 16px;
@@ -89,49 +67,106 @@
   --fs-3xl:  40px;
 
   /* === SPACING === */
-  --sp-1:  4px;
-  --sp-2:  8px;
-  --sp-3:  12px;
-  --sp-4:  16px;
-  --sp-5:  20px;
-  --sp-6:  24px;
-  --sp-8:  32px;
-  --sp-10: 40px;
-  --sp-12: 48px;
-  --sp-16: 64px;
+  --sp-1:  4px;   --sp-2:  8px;   --sp-3:  12px;   --sp-4:  16px;
+  --sp-5:  20px;  --sp-6:  24px;  --sp-8:  32px;   --sp-10: 40px;
+  --sp-12: 48px;  --sp-16: 64px;
 
-  /* === RADIUS === */
-  --r-sm: 6px;
-  --r-md: 8px;
-  --r-lg: 12px;
+  /* === RAIO === */
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   16px;
+  --r-xl:   24px;
+  --r-pill: 999px;
 
-  /* === ELEVATION === */
-  --shadow-card:  0 1px 2px rgba(0,0,0,.04), 0 1px 0 rgba(0,0,0,.02);
-  --shadow-modal: 0 12px 32px -8px rgba(0,0,0,.18);
+  /* === SOMBRA · Apple-sutil (cards repousam sem sombra, sobem no hover) === */
+  --sh-xs: 0 1px 2px rgba(16,19,22,.05);
+  --sh-sm: 0 2px 8px rgba(16,19,22,.06);
+  --sh-md: 0 8px 24px rgba(16,19,22,.08);
+  --sh-lg: 0 24px 56px rgba(16,19,22,.14);
 
-  /* === MISC === */
-  --kcol-bg:  rgba(31,41,55,0.03);
-  --modal-bg: rgba(31,41,55,0.45);
+  /* === MOVIMENTO === */
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --dur:  .15s;
 
-  /* botão primário */
-  --btn-primary-bg:       var(--brand);
-  --btn-primary-bg-hover: var(--brand-dark);
+  /* === LAYOUT === */
+  --container: 1320px;
+
+  /* ============================================================
+   * ALIASES · mantêm compatibilidade com classes existentes
+   * que ainda usam os nomes antigos. Quando re-skinar cada
+   * componente, substituir os usos por tokens canônicos acima.
+   * ============================================================ */
+
+  /* Brand antigos → novo --green */
+  --brand:       var(--green);
+  --brand-dark:  var(--green-hover);
+  --brand-light: var(--green);          /* dropa --brand-light, usa --green direto */
+  --brand-soft:  var(--green-soft);
+  --brand-tint:  var(--green-tint);
+
+  /* Ink antigos → --fg */
+  --ink:         var(--fg);
+  --ink-soft:    var(--fg-soft);
+  --muted:       var(--fg-muted);
+
+  /* Surface antigos → novos bg */
+  --surface-1: var(--bg);
+  --surface-2: var(--bg-alt);
+  --surface-3: var(--bg-app);
+  --bg-elev:   var(--bg);
+
+  /* Headers antigos → semânticos novos */
+  --header-portal:      var(--bg-portal);
+  --header-portal-soft: #14532D;
+  --header-task:        var(--bg-dark);
+  --header-task-soft:   #1E293B;
+
+  /* Navy (legado) — só pra bulk-bar atual; transição vira bg-dark */
+  --navy:      var(--bg-dark);
+  --navy-soft: #1E293B;
+
+  /* Cyan (legado) — alguns chips ainda usam */
+  --cyan:      var(--p2);
+  --cyan-soft: var(--p2-soft);
+
+  /* Yellow (legado) — aging chips */
+  --yellow:      #F8DF61;
+  --yellow-soft: #FAE992;
+
+  /* Triagem (legado) */
+  --triage:      var(--warn);
+  --triage-soft: var(--warn-soft);
+
+  /* Font family aliases (legacy class names) */
+  --font-sans:  var(--sans);
+  --font-mono:  var(--mono);
+  --font-brand: var(--sans);
+
+  /* Spacing/radius/shadow aliases (legacy names) */
+  --shadow-card:  var(--sh-xs);
+  --shadow-modal: var(--sh-lg);
+  --kcol-bg:  rgba(14,19,32,.03);
+  --modal-bg: rgba(14,19,32,.45);
+
+  /* Botão primário */
+  --btn-primary-bg:       var(--green);
+  --btn-primary-bg-hover: var(--green-hover);
   --btn-primary-fg:       #FFFFFF;
 
-  /* foco */
-  --ring-focus: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--cyan);
+  /* Foco verde editorial */
+  --ring-focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--green);
 
-  /* paleta semafórica */
-  --sig-red:         #dc2626;
-  --sig-red-strong:  #b91c1c;
-  --sig-red-bg:      #fef2f2;
-  --sig-amber:       #f59e0b;
-  --sig-amber-bg:    #fff7ed;
-  --sig-amber-fg:    #b45309;
-  --sig-green:       #16a34a;
-  --sig-green-strong:#166534;
-  --sig-green-bg:    #f0fdf4;
-  --sig-green-soft:  #bbf7d0;
+  /* Paleta semafórica (briefing/dashboard charts) */
+  --sig-red:         var(--danger);
+  --sig-red-strong:  #8E2A20;
+  --sig-red-bg:      var(--danger-soft);
+  --sig-amber:       var(--warn);
+  --sig-amber-bg:    var(--warn-soft);
+  --sig-amber-fg:    #8C5A14;
+  --sig-green:       var(--ok);
+  --sig-green-strong:#0F5A30;
+  --sig-green-bg:    var(--ok-soft);
+  --sig-green-soft:  var(--green-tint);
 }
 
 /* Dark mode — suporta .dark (Tailwind) e [data-theme="dark"] (Alpine) */
@@ -157,8 +192,8 @@
   --triage:      #F59E0B;
   --triage-soft: rgba(245,158,11,0.14);
 
-  --font-sans:  'IBM Plex Sans', system-ui, -apple-system, sans-serif;
-  --font-mono:  'IBM Plex Mono', ui-monospace, monospace;
+  --font-sans:  var(--sans);
+  --font-mono:  var(--mono);
   --font-brand: var(--font-sans);
 
   --cyan:      #2A9DEE;
@@ -218,14 +253,14 @@
 html, body {
   background: var(--bg);
   color: var(--ink);
-  font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  font-family: var(--sans);
   letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-.font-brand { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-weight: 600; letter-spacing: -0.01em; }
-.font-mono  { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-feature-settings: 'tnum' 1, 'zero' 1; letter-spacing: 0; }
+.font-brand { font-family: var(--sans); font-weight: 600; letter-spacing: -0.01em; }
+.font-mono  { font-family: var(--mono); font-feature-settings: 'tnum' 1, 'zero' 1; letter-spacing: 0; }
 
 /* ============ UTILITY ALIASES ============ */
 .border-line        { border-color: var(--line); }
@@ -277,7 +312,7 @@ html, body {
 /* ============ CHIPS DE PRIORIDADE ============ */
 .pri {
   display:inline-flex; align-items:center; gap: var(--sp-1);
-  font-family:'IBM Plex Mono', ui-monospace, monospace;
+  font-family:var(--mono);
   font-feature-settings: 'tnum' 1;
   font-size: var(--fs-xs); font-weight: 500;
   padding: 2px var(--sp-2); border-radius: var(--r-sm);
@@ -296,7 +331,7 @@ html, body {
 /* complexidade */
 .cx {
   display:inline-flex; align-items:center; gap: var(--sp-1);
-  font-family:'IBM Plex Mono', ui-monospace, monospace;
+  font-family:var(--mono);
   font-size: var(--fs-xs); font-weight: 500;
   padding: 2px var(--sp-2); border-radius: var(--r-sm); white-space: nowrap;
   border: 1px solid var(--line); background: var(--surface-1); color: var(--muted);
@@ -651,7 +686,7 @@ input[type="checkbox"] { accent-color: var(--brand); }
 .aging-badge {
   display: inline-flex; align-items: center;
   font-size: 10px; font-weight: 600;
-  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-family: var(--mono);
   font-feature-settings: 'tnum' 1;
   padding: 1px var(--sp-2); border-radius: 999px;
   border: 1px solid transparent; line-height: 1.4; white-space: nowrap;
@@ -723,10 +758,10 @@ input[type="checkbox"] { accent-color: var(--brand); }
 .kcol-op[data-m="backlog"]::before,   .kcol-exec[data-m="backlog"]::before   { background: var(--line-strong); }
 .kcol-op-crumb {
   font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
-  color: var(--muted); font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  color: var(--muted); font-family: var(--mono);
   display: flex; align-items: center; gap: var(--sp-1);
 }
-.kcol-op-name { font-family: 'IBM Plex Sans', sans-serif; font-size: var(--fs-sm); font-weight: 600; line-height: 1.2; color: var(--ink); margin-top: 3px; }
+.kcol-op-name { font-family: var(--sans); font-size: var(--fs-sm); font-weight: 600; line-height: 1.2; color: var(--ink); margin-top: 3px; }
 .view-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--bg-elev); }
 .view-toggle button { padding: 6px 12px; font-size: 12px; font-weight: 500; color: var(--muted); border: none; background: transparent; cursor: pointer; transition: all 0.15s; }
 .view-toggle button:hover { color: var(--ink); }
