@@ -200,7 +200,7 @@ export function TriagemClient() {
   if (error) return <div className="text-[color:var(--danger)] text-sm">Erro: {error}</div>;
 
   return (
-    <div className="max-w-[1100px] mx-auto space-y-4 md:space-y-5">
+    <div className="space-y-4 md:space-y-5">
       {/* Desktop · PageHeader + chips filtros (mantém comportamento existente, visual novo) */}
       {triagemTasks.length > 0 && (
         <div className="hidden md:block">

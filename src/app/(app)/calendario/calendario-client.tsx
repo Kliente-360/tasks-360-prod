@@ -657,17 +657,26 @@ export function CalendarioClient() {
           </div>
         )}
 
-        {/* Legenda */}
+        {/* Legenda · cores dos bloquinhos (status) */}
         <div className="text-[10px] text-muted font-mono mt-3 flex items-center gap-3 flex-wrap">
           <span>
             <strong className="text-ink-soft">{stats.total}</strong> no mês
           </span>
-          <span>
-            <span className="cal-dot" /> no prazo
+          <span className="inline-flex items-center gap-1.5">
+            <span className="cal-dot status-backlog" /> backlog
           </span>
-          <span>
-            <span className="cal-dot late" /> atrasada
+          <span className="inline-flex items-center gap-1.5">
+            <span className="cal-dot status-active" /> andamento
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="cal-dot status-blocked" /> bloqueado
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="cal-dot status-late" /> atrasada
             {stats.late > 0 ? ` (${stats.late})` : ''}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="cal-dot status-done" /> concluído
           </span>
         </div>
       </div>

@@ -272,7 +272,7 @@ export function CadastrosClient() {
   const projetosVisiveis = showArquivados ? projetos : projetosAtivos;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div className="space-y-5">
       {/* Page bar */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <p className="text-sm text-muted">

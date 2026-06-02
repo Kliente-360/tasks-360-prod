@@ -70,7 +70,7 @@ export function TimesheetClient() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div>
       <PageHeader
         title="Timesheet"
         context="Registros de tempo por tarefa"
