@@ -3,82 +3,107 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.02.225 · **Atualizado**: 02/06/2026
+> **Versão**: v1.02.230 · **Atualizado**: 02/06/2026
 
 ---
 
-## ✅ Cutover concluído (§9.3.9 · jun/2026)
+## ✅ Marcos concluídos
 
-- ✅ Fase A · Vercel + Netlify fallback + Realtime publication ativada
-- ✅ Fase B · Monitoramento (Vercel logs · sem incidente)
-- ✅ Fase C · JWT 1h (já estava configurado) · Realtime token refresh fix · Sentry/PostHog descartados
-- ✅ Fase D · `usage_events` + `task_dependencies` dropadas · 18 migrations movidas pra `applied/`
-- ✅ Fase D · Alpine no Netlify desativado (jun/2026)
+### Cutover (jun/2026)
+- ✅ Vercel + Netlify fallback + Realtime publication ativada
+- ✅ JWT 1h + refresh token via `TOKEN_REFRESHED`
+- ✅ `usage_events` + `task_dependencies` + `task_status_history` dropadas
+- ✅ Alpine no Netlify desativado
 
----
-
-## NEXT · pós-cutover · sem IA (§9.3.2)
-
-### ✅ Entregues
-
-- ✅ Dashboard (mai/2026)
-- ✅ Briefing (mai/2026)
+### Pós-cutover (jun/2026)
+- ✅ Dashboard cockpit operacional (mai/2026)
+- ✅ Briefing executivo + colapsável + conquistas W-1 (mai/2026)
+- ✅ Portal cliente v2 portado pro Next (jun/2026)
 - ✅ Calendário · filtro de Status
 - ✅ Bloqueado exige `bloqueadoPor` + comentário inline
 - ✅ Kliente 360 · só admin cria task neste cliente
-- ✅ Escopo da task (`tasks.escopo text[]`) + `pessoas.skills` já existia (jun/2026)
-- ✅ Briefing · dot de comentário novo (jun/2026)
-- ✅ Cronômetro start/stop + aba Timesheet (jun/2026)
-
-### ⏳ Pendentes
-
-- [ ] Push notifications · Badge API ✅ · falta VAPID + Edge Function `send-push` + UI de permissão
-- [ ] Triagem obrigatória para tasks criadas por IA (flag `triada_em`)
-- [ ] Saved views / filtros nomeados
-- [ ] Sticky thead Backlog
+- ✅ Escopo da task + skills da pessoa (matching no dropdown)
+- ✅ Briefing · disciplina de comentário + dot de novo comentário
+- ✅ Cronômetro start/stop + aba Timesheet
+- ✅ Mobile FAB + Badge PWA (atrasadas)
+- ✅ Tasks criadas por IA · chip 🤖 + filtros
+- ✅ Notificações por tipo (mention/assigned/status/cliente_respondeu)
+- ✅ Audit completo · stack 100% homogêneo · Drizzle removido · Cadastros 75% mais rápido (v1.02.226–229)
+- ✅ Docs HOWTO + ONBOARDING atualizados pós-cutover (v1.02.230)
 
 ---
 
-## LATER · só IA (§9.3.3)
+## 🎯 Roadmap ativo
 
-Pré-req: ter chave Anthropic em env do Supabase. Sequência recomendada:
+> 3 buckets temáticos. Cada item tem tipo (sem IA / com IA / heurística), esforço estimado e impacto previsto. Ordem dentro de cada bucket é sugestão de prioridade, não obrigação.
 
-- [ ] `ai-suggest` (Haiku · ~R$0,015/exec) ⭐ — começar aqui
-- [ ] `ai-weekly-summary` (Sonnet + cron sáb) ⭐⭐
-- [ ] `ai-risk-scanner` (Sonnet · cron diário)
-- [ ] Resumir thread de task · "TL;DR" (Sonnet · botão no modal)
-- [ ] `ai-suggest-tags` (Haiku · depende de Tags — ver abaixo)
-- [ ] Auto-triage com IA (depende de `ai-suggest` + Triagem obrigatória)
-- [ ] Aba Foco com IA leve
+### Bucket A · UX e Melhorias Gerais (sem IA)
+
+Comportamento, performance UX, novos componentes, polimento visual. **Não invoca LLM.**
+
+| # | Item | Esforço | Impacto |
+|---|---|---|---|
+| A.1 | **Aplicar novo design system uniformemente** (pasta `docs/kliente360-design-system/`) | 3-6 semanas | Alto — coesão visual + base pra evoluções |
+| A.2 | **Push notifications** · VAPID + Edge Function `send-push` + UI de permissão (Badge API já ✅) | 2-3 semanas | Alto — comportamental forte, iOS 16.4+ PWA |
+| A.3 | **Triagem obrigatória pra tasks criadas por IA** · flag `triada_em` + filtro próprio | 3-5 dias | Médio — governance pré-IA |
+| A.4 | **Saved views / filtros nomeados** · "Minhas atrasadas", "Aguardando cliente X" | 2-3 dias | Quick win UX alto impacto |
+| A.5 | **Sticky thead Backlog** · cabeçalho fixo em scroll longo | 2-3 dias | Quick win UX |
+| A.6 | **PDF Resumo Executivo** · consolidar Briefing+Dashboard em documento navegável | 1-2 semanas | Médio — reuniões offline |
+| A.7 | **Workspaces · 3 pilares** (Salesforce · Dados · IA) · switcher topo + `workspace_id` em tabelas core + RLS por workspace | ⚠️ M-L · precisa spec própria | Estratégico — separação completa de ambientes |
+
+### Bucket B · Features com IA
+
+Tarefas que invocam LLM (Claude Haiku/Sonnet) pra produzir saída útil ao usuário. **Pré-req comum**: chave Anthropic em env do Supabase + Edge Function pattern + observabilidade de custo/uso.
+
+| # | Item | Modelo · Custo | Esforço | Impacto |
+|---|---|---|---|---|
+| B.1 | **`ai-suggest`** · sugere cliente/projeto/responsável ao criar task | Haiku · ~R$0,015/exec | ~1 semana | ⭐ Fecha gap competitivo #1. Bom ponto de entrada de IA. |
+| B.2 | **`ai-weekly-summary`** · resumo executivo da semana, cron sábado | Sonnet · ~R$0,10/exec semanal | 4-5 dias | ⭐⭐ Aba "Insights". Sócio lê portfólio em 5min. |
+| B.3 | **Resumir thread de task** · botão "TL;DR" no modal | Sonnet · ~R$0,05/exec sob demanda | ~1 dia | Quick win — primeira IA low-risk/high-value visível ao usuário |
+| B.4 | **Auto-triage com IA** · classifica tasks criadas por IA antes da Triagem | Haiku · ~R$0,02/exec | M (depende de A.3) | Combina com `ai-suggest`. Limpa fila da Triagem. |
+| B.5 | **Aba Foco com IA leve** · resumo do dia + 3 tasks priorizadas | Haiku · ~R$0,02/exec por usuário/dia | M | Personalização real do Meu foco |
+| B.6 | **`ai-chat` com tool use** · chat com backlog via ⌘K (busca + filtros + agregações) | Sonnet · custo variável | L (precisa cuidado com prompt injection) | Diferenciador real, mas adiar até B.1+B.2 validados em prod |
+
+### Bucket C · Heurísticas para Advanced Analytics
+
+Detecção de padrões e insights avançados sobre o estado da operação. Pode usar IA ou puro SQL/agregação. **Output é insight/score/alerta** consumido em Dashboard ou Briefing.
+
+| # | Item | Tipo | Esforço | Impacto |
+|---|---|---|---|---|
+| C.1 | **`ai-risk-scanner`** · banner "🚨 N sinais hoje" no Dashboard (cron diário) | IA (Sonnet) · ~R$0,30/dia | ~1 semana | ⭐ Premium-perception alta. Depende de Dashboard estar no ar. |
+| C.2 | **Capacidade prevista** · heurística "estoura em N semanas" baseada em throughput vs backlog | Pura (SQL + agregação) | M (precisa `weekly_capacity_snapshots` + job semanal) | Antecipa contratação/desaceleração |
+| C.3 | **Skill mismatch** · task de escopo X atribuída a pessoa sem skill | Pura (cruzamento `tasks.escopo` × `pessoas.skills`) | 3-5 dias | Qualidade de alocação |
+| C.4 | **Senioridade malalocada** · júnior fazendo task de complexidade alta (ou inverso) | Pura | 3-5 dias | Risco de qualidade / desperdício |
+| C.5 | **Churn risk por cliente** · sinal composto (lead time + reclamações + comments negativos) | Pura + opcional IA pra sentimento | M | Antecipa perda de cliente |
+| C.6 | **Cliente em fricção via NLP** · análise de comments públicos pra detectar tom | IA (Sonnet) | M | Sinal precoce, complementa C.5 |
+| C.7 | **Bottleneck por sub-etapa** · histograma de tempo médio em cada subetapa, identifica gargalo | Pura | 3-5 dias | Otimização de fluxo |
+| C.8 | **SLA breach rate** · % de SLA violados por cliente/projeto na janela | Pura | 2-3 dias | Métrica contratual |
+| C.9 | **Margem por hora vs ticket** · custo de pessoa × tempo × tipo de projeto | Pura (precisa custo/h da pessoa) | M | Precificação data-driven |
 
 ---
 
-## COLD · parqueado conscientemente (§9.3.4)
+## ❌ Descontinuados (não repropor sem novo input)
 
-- `ai-chat` com tool use — adiar até `ai-suggest` + `ai-risk-scanner` validados em prod
-- Workspaces 3 pilares (Salesforce · Dados · IA) — precisa spec própria
-- Heurísticas: Skill mismatch · Senioridade malalocada · Churn risk · Cliente em fricção
+Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly · Sentry · PostHog
 
 ---
 
-## DESCONTINUADOS (§9.3.5)
-
-Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly
-
----
-
-## Promessas centrais
+## 📜 Promessas centrais
 
 | Promessa | Status |
 |---|---|
 | Visibilidade gerencial (Dashboard + Briefing) | ✅ Entregue mai/2026 |
 | Colaboração viva (realtime) | ✅ Ativo desde cutover jun/2026 |
-| Diferenciação por IA | ❌ Zero em prod — 1ª prioridade pós-cutover |
 | Portal cliente | ✅ Entregue jun/2026 |
 | Time tracking (cronômetro) | ✅ Entregue jun/2026 |
+| Stack homogêneo e enxuto | ✅ Auditado e limpo (v1.02.226–229) |
+| Diferenciação por IA | ❌ Zero em prod — atacar via Bucket B |
+| Analytics avançado | ⚠️ Heurísticas Onda A-D entregues — Bucket C adiciona profundidade |
 
 ---
 
 ## Próximo passo imediato
 
-→ **100% Vercel.** Próximo: atacar NEXT — sugestão: **Push notifications** ou **`ai-suggest`** (LATER).
+→ **Design system (A.1)** primeiro pra evitar retrabalho visual em features novas.
+→ Em paralelo: **`ai-suggest` (B.1)** como primeira IA em prod (mais barato/seguro de validar).
+→ Depois disso, escolher entre completar Bucket A (B.2+) ou avançar Bucket C (C.1+).

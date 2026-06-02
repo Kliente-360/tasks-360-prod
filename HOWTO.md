@@ -4,14 +4,14 @@
 >
 > **Dentro do app**: clique no botão **?** no topo (ou ⌘K → "Manual") pra abrir esse documento renderizado bonito, com índice navegável.
 >
-> Última atualização: 16/05/2026 · v1.02.050 · Resumo Executivo PDF (8 seções), tasks criadas por IA (chip 🤖 + filtros), domínios de email no cliente, integração de automação externa (Cowork).
+> Última atualização: jun/2026 · v1.02.229 · pós-cutover. Cronômetro start/stop + Timesheet, Portal cliente v2 ativo, Briefing colapsável + conquistas W-1, disciplina de comentário, escopo + skills, bloqueado exige justificativa, badge PWA, tasks criadas por IA (chip 🤖 + filtros), integração Salesforce + Cowork.
 
 ---
 
 ## Sumário
 
 1. [Visão geral](#visão-geral)
-2. [Abas do app](#abas-do-app) — Notificações · Meu foco · Briefing · Triagem · Backlog · Kanban · Calendário · Dashboard · Cadastros · Portal
+2. [Abas do app](#abas-do-app) — Notificações · Meu foco · Briefing · Triagem · Backlog · Kanban · Calendário · Dashboard · Portal · Timesheet · Cadastros
 3. [Modelo de uma tarefa](#modelo-de-uma-tarefa)
 4. [Modal de uma tarefa (4 abas)](#modal-de-uma-tarefa-4-abas)
 5. [Criando, editando e movendo tarefas](#criando-editando-e-movendo-tarefas)
@@ -19,13 +19,14 @@
 7. [Atalhos de teclado e command palette](#atalhos-de-teclado-e-command-palette)
 8. [Bulk actions na tabela](#bulk-actions-na-tabela)
 9. [Comentários](#comentários)
-10. [Checklist da tarefa](#checklist-da-tarefa)
-11. [Anexos (imagens via paste)](#anexos-imagens-via-paste)
-12. [Tasks criadas por IA](#tasks-criadas-por-ia)
-13. [Exportar (PDF / CSV)](#exportar-pdf--csv)
-14. [Login (quando ativado)](#login-quando-ativado)
-15. [Tema, mobile, PWA](#tema-mobile-pwa)
-16. [Glossário](#glossário)
+10. [Cronômetro e Timesheet](#cronômetro-e-timesheet)
+11. [Checklist da tarefa](#checklist-da-tarefa)
+12. [Anexos (imagens via paste)](#anexos-imagens-via-paste)
+13. [Tasks criadas por IA](#tasks-criadas-por-ia)
+14. [Exportar (CSV)](#exportar-csv)
+15. [Login](#login)
+16. [Tema, mobile, PWA](#tema-mobile-pwa)
+17. [Glossário](#glossário)
 
 ---
 
@@ -35,7 +36,7 @@ A **tasks 360** é a ferramenta de gestão executiva de backlog da Kliente 360. 
 
 Quem você é determina como usa:
 
-- **Sócio / liderança** → começa pelo **Dashboard** (KPIs + charts) e pelo **PDF executivo**.
+- **Sócio / liderança** → começa pelo **Briefing** (resumo de 1 min com ação) e pelo **Dashboard** (KPIs + charts).
 - **PM / consultor** → começa pelo **Meu foco** (urgências do dia) e usa o **Backlog** + **Kanban** pra operar.
 - **Time externo (Salesforce)** → não precisa abrir o app; o que vier do SF aparece com badge "SF".
 
@@ -118,7 +119,7 @@ Tabela mestre. Cabeçalho ordenável por qualquer coluna (clique). Colunas: Tare
 - **Agrupar por** (menu ⋯ no topo da tabela): default sem agrupamento (lista plana). Opções: Responsável · Cliente · Projeto · Status · Etapa · Prioridade · Complexidade. Cada grupo vira um header colapsável (clique pra expandir/recolher) com contagem e total de horas.
 - **Ordenar**: no desktop, click no cabeçalho da coluna alterna asc/desc/none. No mobile, botão "Ordenar: [chave] ↑↓" abre painel com 10 opções; click na mesma chave alterna direção, click em outra ativa em ascendente. Etapa segue ordem natural do fluxo, não alfabética.
 - **Ordem manual**: botão "≡ ordem manual" → arraste linhas pra reordenar (desabilitado quando há agrupamento; só desktop)
-- **Filtros**: cliente, projeto, pessoa, status, prioridade, tag (ver [Filtros](#filtros-e-busca)). No menu ⋯ também há "mostrar arquivadas" e os toggles "somente criadas por 🤖 IA" / "somente criadas por humanos".
+- **Filtros**: cliente, projeto, pessoa, status, prioridade, complexidade (ver [Filtros](#filtros-e-busca)). No menu ⋯ também há "mostrar arquivadas" e os toggles "somente criadas por 🤖 IA" / "somente criadas por humanos".
 - **Bulk actions**: checkbox por linha (ver [Bulk actions](#bulk-actions-na-tabela))
 - **Pagination**: cada grupo mostra até 100 rows por padrão; botão **"mostrando X de Y · carregar mais"** no fim da lista pra revelar o restante. Mantém o render leve mesmo com centenas de tasks.
 
@@ -171,9 +172,8 @@ Em **Pessoas**, o botão "editar" abre modal com nome, email, perfil (Admin / Ti
 Tasks têm contador `reopenCount` automático (incrementado por trigger SQL quando voltam de "concluído" pra qualquer outro status). Aparece como badge "reaberta Nx" no header do modal. Tarefas reabertas 2+ vezes viram alerta na heurística.
 
 Tasks também ganham 3 atributos extras (Onda C):
-- **Tipo de trabalho** (bug/feature/discovery/manutenção/admin) — analytics + futura IA.
-- **Tempo real (horas)** — opcional, manual. Se >1.5x do esforço estimado, vira alerta.
-- **Dependências** — chips com tasks que precisam ser concluídas antes. Candidatas filtram por mesmo cliente, exceto a própria e as já concluídas. Se uma task em backlog tem dependência aberta e prazo ≤14d, vira alerta de severidade alta.
+- **Escopo** (`escopo`, multi-valor) — classificação técnica da task: `SF Admin`, `SF Clouds`, `IA/Conversacional`, etc. Usado pra match com `skills` da pessoa no dropdown de responsável.
+- **Tempo real (horas)** — opcional, manual ou via cronômetro (ver [Cronômetro e Timesheet](#cronômetro-e-timesheet)). Se >1.5x do esforço estimado, vira alerta.
 
 Botões de acesso variam por perfil:
 - **Cliente externo** (login via magic link): "convidar" / "reenviar link" / "inativar"
@@ -191,6 +191,16 @@ Aba dedicada para o cliente externo. Layout simples com 4 cards (Aguardando voc�
 
 - *Admin/Interno*: aparece um seletor "visualizar como cliente" — escolhe qual cliente simular. Persistido no localStorage.
 - *Cliente externo logado*: seletor some, ele só vê o próprio cliente (vinculado via `pessoas.cliente_id`). Tab "Portal" é a única visível.
+
+### Timesheet
+
+Aba (admin/interno · desktop) que mostra o histórico de registros do **cronômetro**. Cada linha é uma sessão de trabalho (`time_entries`): task, início, fim, duração, nota opcional.
+
+- *Admin*: vê todos os registros, com filtro "somente o meu" e seletor de pessoa.
+- *Interno*: vê só os próprios registros.
+- Click numa linha abre o modal da task. Lixeira deleta o registro (sem confirmação — undo é recriar).
+
+Detalhes de uso do cronômetro em si na seção [Cronômetro e Timesheet](#cronômetro-e-timesheet).
 
 ---
 
@@ -222,19 +232,18 @@ Banner no topo do **Dashboard** mostra alertas determinísticos (sem IA) baseado
 5. **Júnior + complexidade alta** — task de alta complexidade atribuída a pessoa júnior
 6. **Reaberturas crônicas** — task com `reopen_count ≥ 2`
 
-**Onda C — dependências** (2):
-7. **Bloqueio por dependência** — task em backlog com prazo ≤14d e dependência ainda aberta
-8. **Estimativa furada** — `tempo_real_horas > 1.5x esforço`
+**Onda C — execução** (1):
+7. **Estimativa furada** — `tempo_real_horas > 1.5x esforço`
 
 **Onda D — capacidade semanal** (5):
-9. **Pessoa sobrecarregada na semana** — horas alocadas na semana > capacidade
-10. **Sustentação estourando** — projeto de sustentação acima do orçamento semanal
-11. **Sustentação ociosa** — sustentação muito abaixo do contratado por semanas seguidas
-12. **Projeto estourando escopo** — projeto fechado acima do orçamento total
-13. **Projeto em risco de estouro** — projeto fechado próximo do limite de orçamento
+8. **Pessoa sobrecarregada na semana** — horas alocadas na semana > capacidade
+9. **Sustentação estourando** — projeto de sustentação acima do orçamento semanal
+10. **Sustentação ociosa** — sustentação muito abaixo do contratado por semanas seguidas
+11. **Projeto estourando escopo** — projeto fechado acima do orçamento total
+12. **Projeto em risco de estouro** — projeto fechado próximo do limite de orçamento
 
 **Operacional** (1):
-14. **Triagem represada** — N tasks precisando de triagem (sem responsável / cliente / prazo / esforço em etapa onde aplica). Alta se ≥10, média caso contrário.
+13. **Triagem represada** — N tasks precisando de triagem (sem responsável / cliente / prazo / esforço em etapa onde aplica). Alta se ≥10, média caso contrário.
 
 > A antiga heurística "sobrecarga acumulada" (Onda A) foi aposentada na Onda D — mascarava sazonalidade. A versão semanal (#9) a substitui.
 
@@ -262,7 +271,7 @@ Campos:
 |   | • Em andamento → em desenvolvimento · em homologação · em revisão · pronto p/ produção · em implantação |
 |   | • Bloqueado → bloqueado |
 |   | • Concluído → concluído |
-| **Tags** | Lista livre, lowercase, hífens. Filtráveis e clicáveis. (UI escondida atualmente — ver `HABILITAR_DEPOIS.md`.) |
+| **Escopo** | Array de skills técnicas da task (`SF Admin`, `SF Clouds`, `IA/Conversacional`, etc). Combina com `skills` da pessoa pra destaque no dropdown de responsável. |
 | **Checklist** | Lista de mini-tasks (`{ id, body, done }[]`). Colapsável no modal, contador done/total no header. Detalhes em [Checklist](#checklist-da-tarefa). |
 | **Visível ao cliente** | Boolean. Se `true`, task aparece no Portal cliente. Default `true` — exclua selecionando "—" não. |
 | **Anexos** | Imagens coladas via ⌘V/Ctrl+V (PNG/JPG/WebP até 2MB). Persistidas em Storage. Detalhes em [Anexos](#anexos-imagens-via-paste). |
@@ -358,7 +367,7 @@ Quando a etapa muda atravessando macros (ex: backlog → em desenvolvimento), o 
 ### Filtros do Backlog
 
 - **Busca por título** (campo livre)
-- **Cliente · Projeto · Pessoa · Pri · Cmplx · Status · Tag** (selects, na mesma ordem das colunas da tabela)
+- **Cliente · Projeto · Pessoa · Pri · Cmplx · Status** (selects, na mesma ordem das colunas da tabela)
 - Filtros viram URL: pode compartilhar o link e o destinatário vê a mesma visão.
 - Botão **✕ limpar filtros** com contador aparece quando há ao menos um filtro ativo.
 
@@ -380,7 +389,7 @@ Cliente e responsável aparecem como selects no topo da própria aba.
 Abre busca global por:
 - Tarefas (título e descrição) → abre o detalhe
 - Clientes / Projetos / Pessoas → filtra Backlog
-- Ações: nova tarefa, **captura rápida**, ir pra qualquer aba, exportar PDF/CSV, limpar filtros, alternar tema, recarregar, abrir ajuda
+- Ações: nova tarefa, **captura rápida**, ir pra qualquer aba, exportar CSV, limpar filtros, alternar tema, recarregar, abrir ajuda
 
 100% teclado: ↑↓ navegar · ↵ confirmar · Esc fechar.
 
@@ -403,9 +412,10 @@ A tarefa entra em `backlog` sem cliente, responsável nem prazo — vai direto p
 | `g f` | Ir pra Meu foco |
 | `g b` | Ir pra Backlog |
 | `g k` | Ir pra Kanban |
-| `g l` | Ir pra Calendário |
+| `g c` | Ir pra Calendário |
 | `g d` | Ir pra Dashboard |
-| `g c` | Ir pra Cadastros |
+| `g t` | Ir pra Triagem |
+| `g l` | Limpar filtros da tela atual |
 | `?` | Abrir/fechar overlay com lista completa |
 | `⌘↵` / `Ctrl↵` | No composer de comentário/reply: envia. No edit-comment: salva. |
 | `Esc` | Encadeado: picker → linha-checklist-vazia → linha-checklist-com-texto → edit-comment → reply → lightbox → modal |
@@ -481,6 +491,43 @@ Botão "↳ responder" abre textarea encadeada abaixo do comentário. Pode respo
 - **Assignment**: quando um responsável muda, o novo recebe notif. (Não é via comentário, é via mudança de campo.)
 - **Comentário em task sua**: dono da task recebe notif quando alguém comenta.
 - **Cliente respondeu**: cliente externo posta no Portal ou marca "Já respondi" → responsável recebe notif `cliente_respondeu`.
+
+---
+
+## Cronômetro e Timesheet
+
+Time tracking opcional por task. Substitui (ou complementa) o preenchimento manual de `tempo_real_horas`.
+
+### Iniciar/parar cronômetro
+
+Botão **▶** no header (desktop) abre seletor de task ativa. Clica em alguma task em `em_desenvolvimento` → inicia o timer. Botão troca pra **⏸** com o tempo decorrido (atualiza a cada segundo).
+
+- **Apenas uma sessão ativa por pessoa**. Se você inicia um timer em outra task, o anterior é fechado automaticamente (sem perda — vira registro fechado em `time_entries`).
+- **Ao parar**, opcional adicionar uma nota curta sobre o que fez na sessão.
+- O cronômetro **não pausa automaticamente** quando você troca de aba ou fecha o navegador — continua contando até você explicitamente parar.
+
+### Aba Timesheet
+
+Lista todos os registros (`time_entries`) da janela de 90 dias mais recente. Cada linha:
+
+| Coluna | Descrição |
+|---|---|
+| Data/início | Quando o cronômetro começou |
+| Task | Título com link (click abre modal) |
+| Pessoa | Quem rodou (admin vê todas; outros, só as suas) |
+| Duração | `endedAt - startedAt`. Em andamento mostra "rodando ⋯" com tempo vivo |
+| Nota | O que escreveu ao parar (opcional) |
+| 🗑 | Remove o registro (sem confirmação) |
+
+Total acumulado no topo. Filtros (admin): "somente o meu" / seletor de pessoa.
+
+### Relação com `tempo_real_horas`
+
+O cronômetro **NÃO** preenche automaticamente o `tempo_real_horas` da task. Os dois campos coexistem:
+- `tempo_real_horas`: total declarado pelo analista ao fechar a task (uma única medida agregada).
+- `time_entries`: log granular de cada sessão de trabalho.
+
+O time entry vai virar fonte de cálculo do `tempo_real_horas` no futuro (Onda IA pra agregar automaticamente). Hoje, ainda preenche os dois.
 
 ---
 
@@ -561,34 +608,16 @@ Tasks criadas por IA sem cliente identificado caem direto na **Triagem** pra um 
 
 ---
 
-## Exportar (PDF / CSV)
+## Exportar (CSV)
 
-Botão **↓ exportar** no canto superior direito.
+Botão **↓ exportar** no canto superior direito (ou ⌘K → "Exportar").
 
-### PDF · Resumo Executivo
+- Exporta as **tasks visíveis** (respeita filtros aplicados na tela atual)
+- Inclui todos os campos relevantes: cliente, projeto, responsável, prioridade, esforço, prazo, status, subetapa, tempo real, escopo, tags
+- UTF-8 com BOM pra abrir sem dor de acentuação no Excel
+- Arquivo: `kliente360-tarefas-<data>.csv`
 
-Snapshot **completo** (ignora filtros). Documento narrativo único — **"Resumo Executivo · tasks 360 · semana N"** — pensado pra sócios/CEO, gerado semanalmente ou sob demanda. Seções concatenadas (sem quebras de página, espaçamento por linhas em branco):
-
-1. **Capa + sumário** — sinal geral da operação + sumário executivo
-2. **Performance** — eficiência da operação (entrega no prazo, reabertura, aguardando cliente, bloqueios, aging) + charts de throughput e lead time
-3. **Saúde dos clientes** — sinal por cliente
-4. **Saúde das pessoas** — carga por pessoa (inclui quem está com 0 tasks)
-5. **Gaps & desvios** — análises quantitativas de risco
-6. **Capacidade** — análise semanal + sugestões de redistribuição
-7. **Decisões** — decisões pendentes + sinais positivos
-8. **Anexos**
-
-Seções sem dado mostram explicitamente o porquê de estarem vazias (em vez de sumir).
-
-> **Convenção de horas em charts e PDF**: tarefas com esforço 0 contam como 4h padrão. Em listas e tabelas operacionais (Backlog/Kanban) mostra-se o valor real informado.
-
-Usa o diálogo nativo de impressão do navegador → **Salvar como PDF**.
-
-### CSV (visão atual)
-
-- Respeita filtros aplicados (visão atual)
-- Inclui todos os campos
-- Pra abrir no Excel sem dor de UTF-8
+> **Resumo Executivo PDF** está parqueado — leitura semanal hoje vem do Briefing direto. Quando entrar, deve consolidar Briefing + Dashboard num documento navegável pra reuniões offline.
 
 ---
 
