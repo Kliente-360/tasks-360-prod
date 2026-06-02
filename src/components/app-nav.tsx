@@ -14,7 +14,7 @@ import { ExportIconButton } from '@/components/export';
 import { NotifBell } from '@/components/notif-bell';
 import { TimerButton } from '@/components/timer-button';
 
-const APP_VERSION = 'v1.02.228';
+const APP_VERSION = 'v1.02.229';
 
 /** Barra de navegação superior — espelha o header do app Alpine. */
 export function AppNav() {

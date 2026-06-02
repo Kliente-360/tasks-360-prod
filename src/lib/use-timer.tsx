@@ -1,6 +1,15 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+/**
+ * Cronômetro start/stop. State derivado do DataProvider:
+ *   - activeEntry = time entry com ended_at NULL do currentPessoa
+ *   - start/stop fazem write no banco e refletem in-memory via mutators
+ *
+ * Não faz fetch local. Tela Timesheet e este hook compartilham a mesma
+ * fonte de verdade (DataProvider.timeEntries), eliminando flashes.
+ */
+
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from './supabase/client';
 import { useData } from './data-store';
 import { timeEntryFromDb } from './adapters';
@@ -18,30 +27,21 @@ interface TimerState {
 const TimerContext = createContext<TimerState | null>(null);
 
 export function TimerProvider({ children }: { children: React.ReactNode }) {
-  const { currentPessoa } = useData();
-  const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
+  const { currentPessoa, timeEntries, upsertTimeEntry } = useData();
   const [elapsed, setElapsed] = useState(0);
   const [starting, setStarting] = useState(false);
   const [stopping, setStopping] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // On boot: check for any open entry (ended_at IS NULL)
-  useEffect(() => {
-    if (!currentPessoa?.id) return;
-    const supabase = createClient();
-    supabase
-      .from('time_entries')
-      .select('*')
-      .eq('pessoa_id', currentPessoa.id)
-      .is('ended_at', null)
-      .limit(1)
-      .single()
-      .then(({ data }) => {
-        if (data) setActiveEntry(timeEntryFromDb(data));
-      });
-  }, [currentPessoa?.id]);
+  // Active entry derivado: time entry do currentPessoa sem ended_at.
+  const activeEntry = useMemo<TimeEntry | null>(() => {
+    if (!currentPessoa?.id) return null;
+    return (
+      timeEntries.find((e) => e.pessoaId === currentPessoa.id && e.endedAt == null) ?? null
+    );
+  }, [timeEntries, currentPessoa?.id]);
 
-  // Tick when running
+  // Tick when running.
   useEffect(() => {
     if (!activeEntry) {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -56,49 +56,61 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     };
   }, [activeEntry]);
 
-  const startTimer = useCallback(async (taskId: string) => {
-    if (!currentPessoa?.id || starting) return;
-    setStarting(true);
-    try {
-      const supabase = createClient();
-      // Close any existing open entry first
-      if (activeEntry) {
-        await supabase
+  const startTimer = useCallback(
+    async (taskId: string) => {
+      if (!currentPessoa?.id || starting) return;
+      setStarting(true);
+      try {
+        const supabase = createClient();
+        // Fecha entry aberta anterior se houver.
+        if (activeEntry) {
+          const endedIso = new Date().toISOString();
+          const { data: closed } = await supabase
+            .from('time_entries')
+            .update({ ended_at: endedIso })
+            .eq('id', activeEntry.id)
+            .select()
+            .single();
+          if (closed) upsertTimeEntry(timeEntryFromDb(closed));
+        }
+        const { data } = await supabase
           .from('time_entries')
-          .update({ ended_at: new Date().toISOString() })
-          .eq('id', activeEntry.id);
+          .insert({
+            task_id: taskId,
+            pessoa_id: currentPessoa.id,
+            started_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+        if (data) upsertTimeEntry(timeEntryFromDb(data));
+      } finally {
+        setStarting(false);
       }
-      const { data } = await supabase
-        .from('time_entries')
-        .insert({
-          task_id: taskId,
-          pessoa_id: currentPessoa.id,
-          started_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-      if (data) setActiveEntry(timeEntryFromDb(data));
-    } finally {
-      setStarting(false);
-    }
-  }, [currentPessoa?.id, activeEntry, starting]);
+    },
+    [currentPessoa?.id, activeEntry, starting, upsertTimeEntry],
+  );
 
-  const stopTimer = useCallback(async (note?: string) => {
-    if (!activeEntry || stopping) return;
-    setStopping(true);
-    try {
-      const supabase = createClient();
-      const update: Record<string, unknown> = { ended_at: new Date().toISOString() };
-      if (note) update.note = note;
-      await supabase
-        .from('time_entries')
-        .update(update)
-        .eq('id', activeEntry.id);
-      setActiveEntry(null);
-    } finally {
-      setStopping(false);
-    }
-  }, [activeEntry, stopping]);
+  const stopTimer = useCallback(
+    async (note?: string) => {
+      if (!activeEntry || stopping) return;
+      setStopping(true);
+      try {
+        const supabase = createClient();
+        const update: Record<string, unknown> = { ended_at: new Date().toISOString() };
+        if (note) update.note = note;
+        const { data } = await supabase
+          .from('time_entries')
+          .update(update)
+          .eq('id', activeEntry.id)
+          .select()
+          .single();
+        if (data) upsertTimeEntry(timeEntryFromDb(data));
+      } finally {
+        setStopping(false);
+      }
+    },
+    [activeEntry, stopping, upsertTimeEntry],
+  );
 
   return (
     <TimerContext.Provider value={{ activeEntry, elapsed, starting, stopping, startTimer, stopTimer }}>

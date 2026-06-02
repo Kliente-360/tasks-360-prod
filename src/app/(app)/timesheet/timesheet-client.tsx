@@ -1,12 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useData, useTasksById, usePessoasById } from '@/lib/data-store';
-import { timeEntryFromDb } from '@/lib/adapters';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { useTaskModal } from '@/components/task-modal';
-import type { TimeEntry } from '@/lib/types';
 
 function fmtTime(ms: number) {
   return new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -17,53 +15,33 @@ function fmtDateTime(ms: number) {
 }
 
 export function TimesheetClient() {
-  const { currentPessoa, viewerRole, loading } = useData();
+  const { currentPessoa, viewerRole, loading, timeEntries, removeTimeEntry } = useData();
   const { activeEntry, startTimer } = useTimer();
   const tasksById = useTasksById();
   const pessoasById = usePessoasById();
   const { openEdit } = useTaskModal();
 
   const isAdmin = viewerRole === 'admin';
-  const [entries, setEntries] = useState<TimeEntry[]>([]);
-  const [fetching, setFetching] = useState(true);
   const [onlyMine, setOnlyMine] = useState(false);
   const [filterPessoaId, setFilterPessoaId] = useState('');
 
-  const fetchEntries = useCallback(async () => {
-    if (!currentPessoa) return;
-    setFetching(true);
-    const supabase = createClient();
-    let q = supabase
-      .from('time_entries')
-      .select('*')
-      .order('started_at', { ascending: false })
-      .limit(500);
-
+  // Filtra in-memory (sem fetch). timeEntries vem do DataProvider, já
+  // populado no boot. Render instantâneo igual às outras abas.
+  const entries = useMemo(() => {
+    if (!currentPessoa) return [];
     if (!isAdmin || onlyMine) {
-      q = q.eq('pessoa_id', currentPessoa.id);
-    } else if (filterPessoaId) {
-      q = q.eq('pessoa_id', filterPessoaId);
+      return timeEntries.filter((e) => e.pessoaId === currentPessoa.id);
     }
-
-    const { data } = await q;
-    setEntries((data ?? []).map(timeEntryFromDb));
-    setFetching(false);
-  }, [currentPessoa, isAdmin, onlyMine, filterPessoaId]);
-
-  useEffect(() => {
-    if (!loading) fetchEntries();
-  }, [loading, fetchEntries]);
-
-  // Refresh when active timer stops
-  useEffect(() => {
-    if (!activeEntry) fetchEntries();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeEntry]);
+    if (filterPessoaId) {
+      return timeEntries.filter((e) => e.pessoaId === filterPessoaId);
+    }
+    return timeEntries;
+  }, [timeEntries, currentPessoa, isAdmin, onlyMine, filterPessoaId]);
 
   async function deleteEntry(id: string) {
     const supabase = createClient();
     await supabase.from('time_entries').delete().eq('id', id);
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    removeTimeEntry(id);
   }
 
   const totalMs = useMemo(
@@ -137,9 +115,7 @@ export function TimesheetClient() {
       </div>
 
       {/* Table */}
-      {fetching ? (
-        <div className="text-center py-12 text-muted text-sm">carregando registros…</div>
-      ) : entries.length === 0 ? (
+      {entries.length === 0 ? (
         <div className="text-center py-12 text-muted text-sm">Nenhum registro encontrado.</div>
       ) : (
         <div className="card overflow-hidden">

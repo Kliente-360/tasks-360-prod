@@ -12,12 +12,14 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from './supabase/client';
-import { TASK_LIGHT_COLS, clienteFromDb, pessoaFromDb, projetoFromDb, taskFromDb } from './adapters';
-import type { Cliente, Pessoa, Projeto, Task } from './types';
+import { TASK_LIGHT_COLS, clienteFromDb, pessoaFromDb, projetoFromDb, taskFromDb, timeEntryFromDb } from './adapters';
+import type { Cliente, Pessoa, Projeto, Task, TimeEntry } from './types';
 import { useToastSafe } from '@/components/toast';
 
 /** Janela de tasks concluídas trazidas no boot (resto vem sob demanda). */
 const TASKS_CONCLUIDAS_WINDOW_DAYS = 60;
+/** Janela de time_entries trazidas no boot (timesheet UI mostra 500 mais recentes). */
+const TIME_ENTRIES_WINDOW_DAYS = 90;
 
 export type RealtimeStatus = 'idle' | 'connecting' | 'subscribed' | 'error' | 'closed';
 
@@ -26,6 +28,9 @@ interface DataState {
   clientes: Cliente[];
   projetos: Projeto[];
   pessoas: Pessoa[];
+  /** Time entries dos últimos N dias. Cronômetro start/stop e Timesheet
+   *  consomem daqui (sem fetch local). RLS filtra por pessoa pra não-admin. */
+  timeEntries: TimeEntry[];
   /** True só durante a primeira carga (boot). Pós-boot fica sempre false. */
   loading: boolean;
   /** True durante refetches manuais pós-boot — alimenta indicador "Atualizando…". */
@@ -61,6 +66,10 @@ interface DataActions {
   upsertPessoa: (p: Pessoa) => void;
   removePessoa: (id: string) => void;
 
+  // Mutators in-memory de time_entries (usados pelo TimerProvider e Timesheet).
+  upsertTimeEntry: (e: TimeEntry) => void;
+  removeTimeEntry: (id: string) => void;
+
   /** Registra que o usuário corrente acabou de salvar essa task. Usado
    *  pra escopar toasts de sync (só toasta o autor da edição, ignora
    *  ações de outros usuários no mesmo workspace). TTL ~30s. */
@@ -90,6 +99,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [pessoas, setPessoas] = useState<Pessoa[]>([]);
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -202,6 +212,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setPessoas((data ?? []).map(pessoaFromDb));
   }, [sb]);
 
+  const refreshTimeEntries = useCallback(async () => {
+    // Janela de 90d na ordem decrescente. RLS filtra pessoa pra não-admin
+    // (pessoa só vê as suas; admin vê todas).
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - TIME_ENTRIES_WINDOW_DAYS);
+    const { data, error } = await sb
+      .from('time_entries')
+      .select('id,task_id,pessoa_id,started_at,ended_at,note,criado_em')
+      .gte('started_at', cutoff.toISOString())
+      .order('started_at', { ascending: false })
+      .limit(500);
+    if (error) return;
+    setTimeEntries((data ?? []).map(timeEntryFromDb));
+  }, [sb]);
+
   const refreshAll = useCallback(async () => {
     // `loading` é só sinal de "primeira carga não terminou". Refetches
     // subsequentes acontecem em background sem trocar o flag — replica
@@ -211,14 +236,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setRefreshing(true);
     try {
-      await Promise.all([refreshClientes(), refreshProjetos(), refreshPessoas(), refreshTasks()]);
+      await Promise.all([refreshClientes(), refreshProjetos(), refreshPessoas(), refreshTasks(), refreshTimeEntries()]);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [refreshClientes, refreshProjetos, refreshPessoas, refreshTasks]);
+  }, [refreshClientes, refreshProjetos, refreshPessoas, refreshTasks, refreshTimeEntries]);
 
   const scheduleRefetch = useCallback(
     (which: 'tasks' | 'clientes' | 'projetos' | 'pessoas') => {
@@ -492,6 +517,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setPessoas((cur) => cur.filter((p) => p.id !== id));
   }, []);
 
+  // ===== Mutators in-memory de time_entries =====
+  // Mantém ordem desc por started_at (mais recente primeiro), igual ao refresh.
+  const upsertTimeEntry = useCallback<DataActions['upsertTimeEntry']>((e) => {
+    setTimeEntries((cur) => {
+      const i = cur.findIndex((x) => x.id === e.id);
+      const out = i >= 0 ? cur.map((x) => (x.id === e.id ? e : x)) : [e, ...cur];
+      return out.sort((a, b) => b.startedAt - a.startedAt);
+    });
+  }, []);
+  const removeTimeEntry = useCallback<DataActions['removeTimeEntry']>((id) => {
+    setTimeEntries((cur) => cur.filter((e) => e.id !== id));
+  }, []);
+
   const viewerRole: DataState['viewerRole'] = currentPessoa ? currentPessoa.role : null;
   const isCEO = !!currentPessoa?.is_ceo;
 
@@ -529,6 +567,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       clientes: visibleClientes,
       projetos: visibleProjetos,
       pessoas,
+      timeEntries,
       loading,
       refreshing,
       error,
@@ -549,15 +588,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       removeProjeto,
       upsertPessoa,
       removePessoa,
+      upsertTimeEntry,
+      removeTimeEntry,
       markUserEditedTask,
     }),
     [
-      visibleTasks, visibleClientes, visibleProjetos, pessoas,
+      visibleTasks, visibleClientes, visibleProjetos, pessoas, timeEntries,
       loading, refreshing, error, realtimeStatus,
       currentPessoa, viewerRole, isCEO,
       refreshAll,
       patchTask, patchTasks, replaceTask, upsertTask, removeTask, removeTasks,
       upsertCliente, removeCliente, upsertProjeto, removeProjeto, upsertPessoa, removePessoa,
+      upsertTimeEntry, removeTimeEntry,
       markUserEditedTask,
     ],
   );
