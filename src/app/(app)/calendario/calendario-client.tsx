@@ -227,7 +227,7 @@ export function CalendarioClient() {
       });
     }
     return out;
-  }, [cursor, tasks, filters]);
+  }, [cursor, tasks, filters, qDraft, showArchived, onlyIA, clientesById, projetosById, pessoasById]);
 
   // Versão mobile: tira fim de semana pra caber 5 colunas no viewport
   // estreito; matem a ordem segunda → sexta.

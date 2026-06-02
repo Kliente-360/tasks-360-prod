@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.02.231 · **Atualizado**: 02/06/2026
+> **Versão**: v1.02.232 · **Atualizado**: 03/06/2026 · branch `feat/design-system-repaginacao`
 
 ---
 
@@ -43,8 +43,8 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 
 | # | Item | Esforço | Impacto |
 |---|---|---|---|
-| A.1 | **Aplicar novo design system uniformemente** (pasta `docs/kliente360-design-system/`) | 3-6 semanas | Alto — coesão visual + base pra evoluções |
-| A.2 | **Filtros padronizados · barra reutilizável + Calendário redesign** (detalhes abaixo) | 1-2 semanas | Alto — coesão entre Backlog/Kanban/Calendário/Dashboard + correção da busca |
+| A.1 | **Aplicar novo design system** · 🟡 em validação na branch `feat/design-system-repaginacao` (tokens DS, Inter+JetBrains Mono, frosted-glass header, aperture com gradiente, ícones Lucide). Modais task/cadastros + dark mode ficam em PR seguinte. | 3-6 semanas | Alto — coesão visual + base pra evoluções |
+| A.2 | **Filtros padronizados + Calendário redesign** · 🟡 em validação junto com A.1. Componente `<FilterBar>` único reutilizável em Backlog/Kanban/Calendário/Dashboard/Timesheet. PillsFilter em Foco/Triagem. Calendário: status como cor no bloquinho + setas ‹ › ao lado do title. | 1-2 semanas | Alto — coesão entre Backlog/Kanban/Calendário/Dashboard + correção da busca |
 | A.3 | **Push notifications** · VAPID + Edge Function `send-push` + UI de permissão (Badge API já ✅) | 2-3 semanas | Alto — comportamental forte, iOS 16.4+ PWA |
 | A.4 | **Triagem obrigatória pra tasks criadas por IA** · flag `triada_em` + filtro próprio | 3-5 dias | Médio — governance pré-IA |
 | A.5 | **Saved views / filtros nomeados** · "Minhas atrasadas", "Aguardando cliente X". Depende de A.2. | 2-3 dias | Quick win UX alto impacto |
