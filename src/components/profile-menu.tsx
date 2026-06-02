@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useData } from '@/lib/data-store';
 import { createClient } from '@/lib/supabase/client';
 import { NAV } from '@/lib/nav';
+import { useClickAway } from '@/lib/use-click-away';
 import { HelpMenuItem } from '@/components/help-modal';
 import { OnboardingMenuItem } from '@/components/onboarding-modal';
 import { ThemeMenuItem } from '@/components/theme-toggle';
@@ -37,7 +38,13 @@ export function ProfileMenu() {
   if (!sbRef.current) sbRef.current = createClient();
   const sb = sbRef.current;
 
-  // Fecha ao clicar fora — usa um overlay invisível.
+  // Fecha ao clicar fora — useClickAway escuta document mousedown
+  // direto, funciona mesmo com o header z-40 acima de overlays.
+  const wrapRef = useClickAway<HTMLDivElement>(() => {
+    if (open) setOpen(false);
+  });
+
+  // Esc fecha
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -60,7 +67,7 @@ export function ProfileMenu() {
   const profileItems = NAV.filter((n) => n.inProfileMenu && n.roles.includes(viewerRole ?? 'interno'));
 
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapRef}>
       <button
         type="button"
         className="btn btn-ghost btn-icon text-xs"
@@ -74,10 +81,8 @@ export function ProfileMenu() {
         </span>
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
-            className="fixed md:absolute top-14 md:top-full right-3 md:right-0 mt-0 md:mt-1 bg-[color:var(--bg-elev)] border border-line rounded-lg shadow-xl py-2 w-[260px] max-w-[calc(100vw-24px)] md:w-[260px] z-40"
+            className="fixed md:absolute top-14 md:top-full right-3 md:right-0 mt-0 md:mt-1 bg-[color:var(--bg-elev)] border border-line rounded-lg shadow-xl py-2 w-[260px] max-w-[calc(100vw-24px)] md:w-[260px] z-50"
           >
             {/* 1. Identidade — apenas nome + email, sem "logado como" */}
             <div className="px-3 pt-2 pb-0.5 text-sm font-medium text-ink truncate">
@@ -158,7 +163,6 @@ export function ProfileMenu() {
               {APP_VERSION}
             </div>
           </div>
-        </>
       )}
     </div>
   );

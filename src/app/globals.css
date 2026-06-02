@@ -1445,6 +1445,13 @@ body {
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   border-bottom: 1px solid var(--line);
 }
+/* Em dark, o branco translúcido virava cinza estranho sobre fundo escuro.
+   Usa surface-2 (mesmo do --bg) translúcido pra manter o efeito frosted
+   sem o brilho leitoso. */
+.dark .hdr-v2,
+[data-theme="dark"] .hdr-v2 {
+  background: rgba(10, 12, 18, .78);
+}
 .hdr-v2-top {
   max-width: var(--container);
   margin: 0 auto;
