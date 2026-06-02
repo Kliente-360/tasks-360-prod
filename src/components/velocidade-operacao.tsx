@@ -34,14 +34,32 @@ export function VelocidadeOperacao({ vel }: VelocidadeOperacaoProps) {
         </span>
       </div>
       <div className="p-3 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
-        {/* Card 1 · Throughput W-0 (esta semana) */}
+        {/* Card 1 · Throughput W-1 (semana passada — número fechado, baseline) */}
+        <VelCard
+          label="Throughput W-1"
+          value={String(vel.throughputW1)}
+          meta="meta ≥ 25/sem"
+          sub="tasks concluídas na semana anterior"
+          status={vel.throughputW1 >= 25 ? 'ok' : vel.throughputW1 >= 12 ? 'warn' : 'danger'}
+          delta={
+            vel.throughputW1 !== vel.throughputW2
+              ? `${vel.throughputW1 > vel.throughputW2 ? '+' : ''}${vel.throughputW1 - vel.throughputW2} vs sem ant`
+              : 'igual à sem ant'
+          }
+          deltaSign={
+            vel.throughputW1 > vel.throughputW2 ? 'up'
+            : vel.throughputW1 < vel.throughputW2 ? 'down' : 'neutral'
+          }
+        />
+
+        {/* Card 2 · Throughput W-0 (esta semana · projeção) */}
         <VelCard
           label="Throughput W-0"
           value={String(vel.throughputW0)}
           meta={
             vel.throughputW0Projected != null
-              ? `proj. ${vel.throughputW0Projected} · meta ≥ 8/sem`
-              : 'meta ≥ 8/sem'
+              ? `proj. ${vel.throughputW0Projected} · meta ≥ 25/sem`
+              : 'meta ≥ 25/sem'
           }
           sub={
             vel.throughputW0Projected != null
@@ -50,9 +68,9 @@ export function VelocidadeOperacao({ vel }: VelocidadeOperacaoProps) {
           }
           status={
             vel.throughputW0Projected == null
-              ? vel.throughputW0 >= 4 ? 'ok' : 'muted'
-              : vel.throughputW0Projected >= 8 ? 'ok'
-              : vel.throughputW0Projected >= 4 ? 'warn' : 'danger'
+              ? vel.throughputW0 >= 12 ? 'ok' : 'muted'
+              : vel.throughputW0Projected >= 25 ? 'ok'
+              : vel.throughputW0Projected >= 12 ? 'warn' : 'danger'
           }
           delta={
             vel.throughputW0Trend == null
@@ -66,51 +84,59 @@ export function VelocidadeOperacao({ vel }: VelocidadeOperacaoProps) {
           deltaSign={vel.throughputW0Trend ?? 'neutral'}
         />
 
-        {/* Card 2 · Throughput W-1 (semana passada) */}
-        <VelCard
-          label="Throughput W-1"
-          value={String(vel.throughputW1)}
-          meta="meta ≥ 8/sem"
-          sub="tasks concluídas na semana anterior"
-          status={vel.throughputW1 >= 8 ? 'ok' : vel.throughputW1 >= 4 ? 'warn' : 'danger'}
-          delta={
-            vel.throughputW1 !== vel.throughputW2
-              ? `${vel.throughputW1 > vel.throughputW2 ? '+' : ''}${vel.throughputW1 - vel.throughputW2} vs sem ant`
-              : 'igual à sem ant'
-          }
-          deltaSign={
-            vel.throughputW1 > vel.throughputW2 ? 'up'
-            : vel.throughputW1 < vel.throughputW2 ? 'down' : 'neutral'
-          }
-        />
-
-        {/* Card 3 · Ciclo */}
+        {/* Card 3 · Ciclo · 30d vs 30d anterior */}
         <VelCard
           label="Ciclo"
           value={vel.cycleDias != null ? `${vel.cycleDias}d` : '—'}
-          meta="meta ≤ 5d"
-          sub="andamento → concluído · 30d"
+          meta="meta ≤ 5d · 30d"
+          sub="andamento → concluído"
           status={
             vel.cycleDias == null ? 'muted'
             : vel.cycleDias <= 5 ? 'ok'
             : vel.cycleDias <= 10 ? 'warn' : 'danger'
           }
+          delta={
+            vel.cycleDias != null && vel.cycleDiasPrev != null && vel.cycleDias !== vel.cycleDiasPrev
+              ? `${vel.cycleDias < vel.cycleDiasPrev ? '−' : '+'}${Math.abs(Math.round((vel.cycleDias - vel.cycleDiasPrev) * 10) / 10)}d vs 30d ant`
+              : vel.cycleDiasPrev == null && vel.cycleDias != null
+              ? 'sem comparativo anterior'
+              : undefined
+          }
+          // Menor ciclo = melhoria → 'up' (verde). Maior ciclo = piora → 'down' (vermelho).
+          deltaSign={
+            vel.cycleDias == null || vel.cycleDiasPrev == null ? 'neutral'
+            : vel.cycleDias < vel.cycleDiasPrev ? 'up'
+            : vel.cycleDias > vel.cycleDiasPrev ? 'down' : 'neutral'
+          }
         />
 
-        {/* Card 4 · % no prazo */}
+        {/* Card 4 · % no prazo · 30d vs 30d anterior */}
         <VelCard
           label="% no prazo"
           value={vel.pctNoPrazo != null ? `${vel.pctNoPrazo}%` : '—'}
-          meta="meta ≥ 80%"
+          meta="meta ≥ 80% · 30d"
           sub={
             vel.pctNoPrazoBases > 0
-              ? `${vel.pctNoPrazoOk}/${vel.pctNoPrazoBases} entregas com prazo · 30d`
+              ? `${vel.pctNoPrazoOk}/${vel.pctNoPrazoBases} entregas com prazo`
               : 'sem entregas com prazo em 30d'
           }
           status={
             vel.pctNoPrazo == null ? 'muted'
             : vel.pctNoPrazo >= 80 ? 'ok'
             : vel.pctNoPrazo >= 50 ? 'warn' : 'danger'
+          }
+          delta={
+            vel.pctNoPrazo != null && vel.pctNoPrazoPrev != null && vel.pctNoPrazo !== vel.pctNoPrazoPrev
+              ? `${vel.pctNoPrazo > vel.pctNoPrazoPrev ? '+' : ''}${vel.pctNoPrazo - vel.pctNoPrazoPrev}pp vs 30d ant`
+              : vel.pctNoPrazoPrev == null && vel.pctNoPrazo != null
+              ? 'sem comparativo anterior'
+              : undefined
+          }
+          // Mais % no prazo = melhoria
+          deltaSign={
+            vel.pctNoPrazo == null || vel.pctNoPrazoPrev == null ? 'neutral'
+            : vel.pctNoPrazo > vel.pctNoPrazoPrev ? 'up'
+            : vel.pctNoPrazo < vel.pctNoPrazoPrev ? 'down' : 'neutral'
           }
         />
       </div>
