@@ -387,6 +387,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         resolveCurrentPessoa(session);
+        if (event === 'TOKEN_REFRESHED' && session?.access_token) {
+          sb.realtime.setAuth(session.access_token);
+        }
       }
     });
 
