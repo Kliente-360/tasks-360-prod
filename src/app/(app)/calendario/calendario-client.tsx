@@ -381,6 +381,7 @@ export function CalendarioClient() {
               onClear={() => {
                 setQDraft('');
                 setFilters({ cliente: '', projeto: '', pessoa: '', status: 'abertas', prazo: '' });
+                setShowArchived(false);
                 setOnlyIA(false);
                 setOnlyHumano(false);
                 clearSharedFilters();

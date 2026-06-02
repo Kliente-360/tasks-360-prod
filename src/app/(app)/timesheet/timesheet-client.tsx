@@ -42,7 +42,7 @@ export function TimesheetClient() {
       prazo: filterPrazo,
     });
   }, [filterCliente, filterProjeto, filterPessoaId, filterPrazo]);
-  const [groupBy, setGroupBy] = useState<'' | 'resp' | 'cli' | 'task'>('');
+  const [groupBy, setGroupBy] = useState<'' | 'resp' | 'cli' | 'status'>('');
 
   const clientesAtivos = useMemo(() => clientes.filter((c) => !c.arquivadoEm), [clientes]);
   const projetosFiltrados = useMemo(
@@ -101,8 +101,16 @@ export function TimesheetClient() {
         key = t?.clienteId ?? '__';
         label = t ? (clientesById.get(t.clienteId)?.nome ?? '—') : '—';
       } else {
-        key = e.taskId;
-        label = t?.titulo ?? '(task removida)';
+        // groupBy === 'status' — agrupa pelo status da task vinculada
+        key = t?.status ?? '__sem_task__';
+        const STATUS_LABEL: Record<string, string> = {
+          backlog: 'Backlog',
+          andamento: 'Em andamento',
+          bloqueado: 'Bloqueado',
+          concluido: 'Concluído',
+          __sem_task__: '(task removida)',
+        };
+        label = STATUS_LABEL[key] ?? key;
       }
       const cur = groups.get(key) ?? { label, items: [], totalMs: 0 };
       cur.items.push(e);
@@ -168,6 +176,7 @@ export function TimesheetClient() {
               setFilterProjeto('');
               setFilterPessoaId('');
               setFilterPrazo('');
+              setGroupBy('');
               clearSharedFilters();
             }}
             clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
@@ -178,9 +187,9 @@ export function TimesheetClient() {
             moreItems={[
               { key: 'group-resp', label: groupBy === 'resp' ? 'Agrupando: Responsável ✓' : 'Agrupar: Responsável', kind: 'action', icon: 'users', enabled: isAdmin, onClick: () => setGroupBy(groupBy === 'resp' ? '' : 'resp') },
               { key: 'group-cli', label: groupBy === 'cli' ? 'Agrupando: Cliente ✓' : 'Agrupar: Cliente', kind: 'action', icon: 'building', onClick: () => setGroupBy(groupBy === 'cli' ? '' : 'cli') },
-              { key: 'group-task', label: groupBy === 'task' ? 'Agrupando: Tarefa ✓' : 'Agrupar: Tarefa', kind: 'action', icon: 'list-filter', onClick: () => setGroupBy(groupBy === 'task' ? '' : 'task') },
+              { key: 'group-status', label: groupBy === 'status' ? 'Agrupando: Status ✓' : 'Agrupar: Status', kind: 'action', icon: 'list-filter', onClick: () => setGroupBy(groupBy === 'status' ? '' : 'status') },
               { key: 'div1', label: '---' },
-              { key: 'arquivadas', label: 'Mostrar arquivadas', enabled: false, kind: 'toggle', hint: 'time entries não arquivam' },
+              { key: 'arquivadas', label: 'Mostrar arquivadas', enabled: false, kind: 'toggle' },
               { key: 'ia', label: 'Somente criadas por IA', enabled: false, kind: 'toggle' },
               { key: 'humano', label: 'Somente criadas por humanos', enabled: false, kind: 'toggle' },
             ] satisfies MoreMenuItem[]}

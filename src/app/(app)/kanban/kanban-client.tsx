@@ -316,13 +316,16 @@ export function KanbanClient() {
               onClear={() => {
                 setQDraft('');
                 setFilters({ cliente: '', projeto: '', pessoa: '', prazo: '' });
+                setShowArchived(false);
+                setOnlyIA(false);
+                setOnlyHumano(false);
                 clearSharedFilters();
               }}
               clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
               projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
               pessoaOptions={pessoasNaoCliente.map((p) => ({ v: p.id, label: p.nome }))}
               moreItems={[
-                { key: 'group-resp', label: 'Agrupar: Responsável', enabled: false, kind: 'action', icon: 'users', hint: 'kanban agrupa por etapa' },
+                { key: 'group-resp', label: 'Agrupar: Responsável', enabled: false, kind: 'action', icon: 'users' },
                 { key: 'group-cli', label: 'Agrupar: Cliente', enabled: false, kind: 'action', icon: 'building' },
                 { key: 'group-status', label: 'Agrupar: Status', enabled: false, kind: 'action', icon: 'list-filter' },
                 { key: 'div1', label: '---' },
