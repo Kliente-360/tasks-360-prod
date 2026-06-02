@@ -12,6 +12,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Icon } from '@/components/icons';
+import { cn } from '@/lib/utils';
 import { useSearchParams } from 'next/navigation';
 import { useData, useClientesById, useProjetosById, usePessoasById, useProjetosByCliente } from '@/lib/data-store';
 import { createClient } from '@/lib/supabase/client';
@@ -25,7 +27,7 @@ import { STATUS, SUB_LABELS, SUBS_FLAT, SUBS_FLAT_ORDER } from '@/lib/task-const
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import type { Filters as StdFilters } from '@/lib/filters';
-import type { Task } from '@/lib/types';
+import type { Cliente, Pessoa, Task } from '@/lib/types';
 
 // Sort manual (DnD) foi removido do Backlog do Alpine — não portamos.
 // Sort fica sempre em chain (asc/desc por coluna) ou vazio (criação desc).
@@ -651,8 +653,25 @@ export function BacklogClient() {
         />
       </div>
 
-      {/* ============ Mobile filters ============ */}
-      <div className="grid grid-cols-2 gap-2 mb-4 md:hidden">
+      {/* ============ MOBILE · MBacklog (handoff §3.1) ============ */}
+      <BacklogMobilePanel
+        tasks={filtered}
+        clientesById={clientesById}
+        projetosById={projetosById}
+        pessoasById={pessoasById}
+        qDraft={qDraft}
+        setQDraft={setQDraft}
+        f={f}
+        setF={setF}
+        clientesAtivos={clientesAtivos}
+        pessoasNaoCliente={pessoasNaoCliente}
+        onOpen={openEdit}
+        clearFilters={clearFilters}
+      />
+
+      {/* ============ Mobile filters (LEGADO — escondido pela nova
+           BacklogMobilePanel; manter source pra restore se necessário) ============ */}
+      <div className="hidden md:hidden grid grid-cols-2 gap-2 mb-4" style={{ display: 'none' }}>
         <div className="col-span-1">
           <input
             type="text"
@@ -763,8 +782,8 @@ export function BacklogClient() {
         )}
       </div>
 
-      {/* ============ Mobile: agrupar + ordenar ============ */}
-      <div className="md:hidden grid grid-cols-2 gap-2 mb-3">
+      {/* ============ Mobile: agrupar + ordenar (LEGADO escondido) ============ */}
+      <div className="hidden md:hidden grid grid-cols-2 gap-2 mb-3" style={{ display: 'none' }}>
         <select
           className="inp text-xs py-1.5"
           value={groupBy}
@@ -1036,8 +1055,8 @@ export function BacklogClient() {
         </table>
       </div>
 
-      {/* ============ Mobile cards ============ */}
-      <div className="md:hidden space-y-3">
+      {/* ============ Mobile cards (LEGADO escondido) ============ */}
+      <div className="hidden md:hidden space-y-3" style={{ display: 'none' }}>
         {grouped.map((g) => (
           <div key={g.key}>
             {!g.isAll && (
@@ -1290,5 +1309,294 @@ function SortableTh({
     >
       {label} <span className="text-[10px] ml-1 text-ink">{sortIcon(sortKey)}</span>
     </th>
+  );
+}
+
+// ============================================================
+// MOBILE · MBacklog (handoff §3.1)
+// ============================================================
+// Painel mobile do Backlog: m-pagetitle + m-filterbar (search + filter
+// button com badge) + chips de filtros ativos removíveis + m-list de
+// tcard. O filter button abre um bottom sheet com 4 rows (cliente /
+// responsável / prioridade / prazo).
+//
+// Reusa o estado de filtros do componente pai (props f/setF, qDraft/
+// setQDraft) pra que mudanças mobile sincronizem com desktop ao trocar
+// de viewport.
+function BacklogMobilePanel({
+  tasks,
+  clientesById,
+  projetosById,
+  pessoasById,
+  qDraft,
+  setQDraft,
+  f,
+  setF,
+  clientesAtivos,
+  pessoasNaoCliente,
+  onOpen,
+  clearFilters,
+}: {
+  tasks: Task[];
+  clientesById: Map<string, { nome: string }>;
+  projetosById: Map<string, { nome: string }>;
+  pessoasById: Map<string, { nome: string }>;
+  qDraft: string;
+  setQDraft: (v: string) => void;
+  f: Filters;
+  setF: (next: Filters) => void;
+  clientesAtivos: Cliente[];
+  pessoasNaoCliente: Pessoa[];
+  onOpen: (t: Task) => void;
+  clearFilters: () => void;
+}) {
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Compat: f.pessoa/f.pri/f.prazo (existem em Filters). Count ativos
+  // que serão mostrados como chip removível.
+  const activeChips: Array<{ key: keyof Filters; label: string }> = [];
+  if (f.cliente) {
+    const nome = clientesById.get(f.cliente)?.nome ?? '—';
+    activeChips.push({ key: 'cliente', label: nome });
+  }
+  if (f.pessoa) {
+    const nome = pessoasById.get(f.pessoa)?.nome ?? '—';
+    activeChips.push({ key: 'pessoa', label: nome.split(' ')[0] });
+  }
+  if (f.pri) activeChips.push({ key: 'pri', label: f.pri });
+  if (f.prazo) activeChips.push({ key: 'prazo', label: f.prazo === 'atrasadas' ? 'Atrasadas' : f.prazo });
+  const nActive = activeChips.length;
+
+  const atrasadasCount = tasks.filter((t) => atrasada(t)).length;
+  const totalHoras = tasks.reduce((a, t) => a + (t.esforco || 0), 0);
+
+  const closeSheet = () => setSheetOpen(false);
+
+  return (
+    <div className="md:hidden">
+      <div className="m-pagetitle">
+        <h1>Backlog</h1>
+        <div className="narr">
+          <b>{tasks.length}</b> abertas
+          <span className="sep">·</span>
+          <b>{atrasadasCount}</b> atrasadas
+          <span className="sep">·</span>
+          <b>{totalHoras}h</b>
+        </div>
+      </div>
+
+      <div className="m-filterbar">
+        <label className="m-search">
+          <Icon name="search" size={16} className="ic" />
+          <input
+            type="text"
+            value={qDraft}
+            onChange={(e) => setQDraft(e.target.value)}
+            placeholder="Buscar tudo…"
+          />
+        </label>
+        <button
+          type="button"
+          className={cn('m-fbtn', nActive > 0 && 'on')}
+          onClick={() => setSheetOpen(true)}
+          aria-label="Abrir filtros"
+        >
+          <Icon name="filter" size={16} />
+          {nActive > 0 && <span className="badge">{nActive}</span>}
+        </button>
+      </div>
+
+      {nActive > 0 && (
+        <div className="m-pills" style={{ marginBottom: 12 }}>
+          {activeChips.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              className="m-pill on"
+              onClick={() => setF({ ...f, [c.key]: '' as never })}
+            >
+              {c.label}
+              <Icon name="x" size={12} />
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="m-list">
+        {tasks.length === 0 ? (
+          <div className="card text-center py-8 px-4">
+            <div className="font-brand text-base mb-2 text-ink">Nada por aqui.</div>
+            <div className="text-xs text-muted">Tente ajustar os filtros…</div>
+          </div>
+        ) : (
+          tasks.map((t) => (
+            <MobileTaskCard
+              key={t.id}
+              t={t}
+              cliente={clientesById.get(t.clienteId)?.nome ?? '—'}
+              projeto={projetosById.get(t.projetoId)?.nome}
+              respNome={pessoasById.get(t.pessoaId)?.nome ?? '—'}
+              onClick={() => onOpen(t)}
+            />
+          ))
+        )}
+      </div>
+
+      {sheetOpen && (
+        <BacklogFilterSheet
+          f={f}
+          setF={setF}
+          clientes={clientesAtivos}
+          pessoas={pessoasNaoCliente}
+          onClose={closeSheet}
+          onClear={() => {
+            clearFilters();
+            closeSheet();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Card de tarefa mobile (handoff TaskCard) — uso na lista do Backlog. */
+function MobileTaskCard({
+  t,
+  cliente,
+  projeto,
+  respNome,
+  onClick,
+}: {
+  t: Task;
+  cliente: string;
+  projeto?: string;
+  respNome: string;
+  onClick: () => void;
+}) {
+  const isLate = atrasada(t);
+  const ini = respNome.split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
+  const firstName = respNome.split(/\s+/)[0] ?? respNome;
+  return (
+    <div className="tcard" onClick={onClick}>
+      <div className="top">
+        <div style={{ minWidth: 0 }}>
+          <div className="ttl">{t.titulo}</div>
+          <div className="sub">{cliente}{projeto ? ' · ' + projeto : ''}</div>
+        </div>
+        <span className={cn('pri', `pri-${t.prioridade}`)}>
+          <span className="pri-dot" />
+          {t.prioridade}
+        </span>
+      </div>
+      <div className="meta">
+        <span
+          className="inline-flex items-center justify-center shrink-0 rounded-full font-mono font-semibold"
+          style={{
+            width: 22, height: 22, fontSize: 9,
+            background: 'var(--green-soft)', color: 'var(--green)',
+          }}
+        >
+          {ini || '?'}
+        </span>
+        <span className="text-xs text-muted">{firstName}</span>
+        <span className="sp" />
+        {t.criadoPorIa && <span className="tag-ai"><Icon name="refresh" size={9} />IA</span>}
+        {isLate
+          ? <span className="late text-xs">{t.prazo ? fmtDateShort(t.prazo) : '—'}</span>
+          : <span className="font-mono text-xs text-muted">{t.prazo ? fmtDateShort(t.prazo) : '—'}</span>}
+      </div>
+    </div>
+  );
+}
+
+/** Bottom sheet com filtros do Backlog mobile (Cliente / Resp / Pri / Prazo). */
+function BacklogFilterSheet({
+  f,
+  setF,
+  clientes,
+  pessoas,
+  onClose,
+  onClear,
+}: {
+  f: Filters;
+  setF: (next: Filters) => void;
+  clientes: Cliente[];
+  pessoas: Pessoa[];
+  onClose: () => void;
+  onClear: () => void;
+}) {
+  const [local, setLocal] = useState<Filters>(f);
+
+  // Esc fecha
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // Cycle através das opções (toca pra trocar valor)
+  const cycle = (key: keyof Filters, opts: string[]) => () => {
+    const cur = String(local[key] ?? '');
+    const i = opts.indexOf(cur);
+    const next = opts[(i + 1) % opts.length];
+    setLocal({ ...local, [key]: next as never });
+  };
+
+  const clienteNomes = ['', ...clientes.map((c) => c.id)];
+  const pessoaNomes = ['', ...pessoas.map((p) => p.id)];
+  const pris = ['', 'P0', 'P1', 'P2', 'P3'];
+  const prazos = ['', 'atrasadas', 'hoje', 'semana', 'sem'];
+
+  const labelCliente = local.cliente
+    ? (clientes.find((c) => c.id === local.cliente)?.nome ?? '—')
+    : 'Todos';
+  const labelPessoa = local.pessoa
+    ? (pessoas.find((p) => p.id === local.pessoa)?.nome.split(' ')[0] ?? '—')
+    : 'Todos';
+  const labelPri = local.pri || 'Todas';
+  const labelPrazo = local.prazo === 'atrasadas' ? 'Atrasadas'
+    : local.prazo === 'hoje' ? 'Hoje'
+    : local.prazo === 'semana' ? 'Esta semana'
+    : local.prazo === 'sem' ? 'Sem prazo'
+    : 'Qualquer';
+
+  return (
+    <div className="sheet-bg" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Filtros do backlog">
+        <div className="grab" />
+        <h2>Filtros</h2>
+        <div className="sh-sub">aplicam à lista do backlog</div>
+
+        <div className="m-group">
+          <button type="button" className="m-row" onClick={cycle('cliente', clienteNomes)}>
+            <span className="ric"><Icon name="building" size={16} /></span>
+            <div className="rbody"><div className="rt">Cliente</div></div>
+            <span className="val">{labelCliente}</span>
+          </button>
+          <button type="button" className="m-row" onClick={cycle('pessoa', pessoaNomes)}>
+            <span className="ric"><Icon name="users" size={16} /></span>
+            <div className="rbody"><div className="rt">Responsável</div></div>
+            <span className="val">{labelPessoa}</span>
+          </button>
+          <button type="button" className="m-row" onClick={cycle('pri', pris)}>
+            <span className="ric"><Icon name="alert" size={16} /></span>
+            <div className="rbody"><div className="rt">Prioridade</div></div>
+            <span className="val">{labelPri}</span>
+          </button>
+          <button type="button" className="m-row" onClick={cycle('prazo', prazos)}>
+            <span className="ric"><Icon name="calendar" size={16} /></span>
+            <div className="rbody"><div className="rt">Prazo</div></div>
+            <span className="val">{labelPrazo}</span>
+          </button>
+        </div>
+
+        <div className="filter-actions">
+          <button type="button" className="btn" onClick={onClear}>Limpar</button>
+          <button type="button" className="btn btn-primary" onClick={() => { setF(local); onClose(); }}>
+            Aplicar
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
