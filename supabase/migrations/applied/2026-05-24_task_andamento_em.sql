@@ -25,23 +25,18 @@ comment on column tasks.andamento_em is
 
 -- 2. Backfill retroativo: para cada task que JÁ esteve em andamento
 --    em algum momento (histórico), preencher com o occurred_at mais
---    recente da transição → 'andamento'. Cobre tanto task_field_history
---    (novo) quanto task_status_history (legado).
+--    recente da transição → 'andamento'.
+--
+-- Nota: a tabela legada `task_status_history` foi dropada do banco em
+-- algum momento posterior ao `auth_history_patch.sql` (drift de
+-- bookkeeping — o DROP não foi commitado). Backfill usa só
+-- `task_field_history` (substituta vigente desde mai/2026).
 update tasks t
 set andamento_em = sub.last_andamento
 from (
   select task_id, max(occurred_at) as last_andamento
-  from (
-    -- Transições registradas via task_field_history (campo = 'status')
-    select task_id, occurred_at
-    from task_field_history
-    where field = 'status' and to_value = 'andamento'
-    union all
-    -- Transições registradas via task_status_history (legado)
-    select task_id, occurred_at
-    from task_status_history
-    where to_status = 'andamento'
-  ) all_hist
+  from task_field_history
+  where field = 'status' and to_value = 'andamento'
   group by task_id
 ) sub
 where t.id = sub.task_id
