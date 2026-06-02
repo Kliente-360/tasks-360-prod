@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.038 · **Atualizado**: 04/06/2026 · branch `main`
+> **Versão**: v1.03.042 · **Atualizado**: 04/06/2026 · branch `main`
 
 ---
 
@@ -31,7 +31,7 @@
 - ✅ Audit completo · stack 100% homogêneo · Drizzle removido · Cadastros 75% mais rápido (v1.02.226–229)
 - ✅ Docs HOWTO + ONBOARDING atualizados pós-cutover (v1.02.230)
 
-### Ciclo redesign DS (jun/2026 · v1.03.001 → v1.03.038)
+### Ciclo redesign DS (jun/2026 · v1.03.001 → v1.03.042)
 Bump MINOR 02→03 marcou o fechamento desse ciclo. Concluídos:
 - ✅ **A.1 · Design system aplicado** · tokens DS (Inter + JetBrains Mono, verde editorial #007A3D, aperture com gradiente horário, frosted-glass header), ícones Lucide via `<Icon>` wrapper, modais task/cadastros, dark mode global auditado (zero cores Tailwind hardcoded fora do permitido)
 - ✅ **A.2 · FilterBar único** · componente padrão em Backlog/Kanban/Calendário/Dashboard/Timesheet, search 150px + 4 selects 150px largura fixa, X (Limpar) sempre presente como último elemento, leftSlot pra Kanban (toggle) e Calendário (setas de mês), busca full-text em todos os campos, gramática fixa
@@ -44,6 +44,8 @@ Bump MINOR 02→03 marcou o fechamento desse ciclo. Concluídos:
 - ✅ **Webhook gate ajustado** · só dispara pra clientes com `webhook_enabled=true` (VB/CTF) E comments com `visivel_cliente=true`. Notas internas não vazam pro Salesforce
 - ✅ **Dark mode finalizado** (v1.03.027-029) · aliasou os tokens novos do DS (`--green*`, `--fg*`, `--bg-app`, `--bg-alt`, `--line-soft`, `--danger-soft`, `--warn-soft`) pros equivalentes brand/ink/surface já existentes no dark; header frosted-glass com tonalidade dark correta; profile menu fecha ao clicar fora via `useClickAway` (overlay z-30 não bastava contra header z-40)
 - 🟡 **A.14 · Card de task unificado (PARCIAL · só técnico)** (v1.03.032-038, 8 PRs) · sub-primitivas `<PriChip>`/`<TaskAvatar>`/`<PrazoLabel>`/`<TagIA>` extraídas + wrapper `<TaskCard>` criado, mas UI ficou idêntica ao que já era. A unificação VISUAL ficou pendente — virou A.17 (replanjar do zero)
+- ✅ **A.11 · Briefing × Dashboard · clarear papel** (v1.03.041-042) · Velocidade da operação migrou do Briefing pro Dashboard. Briefing = leitura editorial (alertas + clientes em atenção + conquistas). Dashboard = números (Velocidade da operação + Entregas + Calendário + Carga por pessoa + Atenção). Card "Lead time" substituído por "Throughput W-0" com projeção; meta 8→25/sem; Ciclo e % no prazo agora com delta vs 30d anteriores
+- ✅ **Calendário · concluídas visíveis** (v1.03.041) · filtro default 'abertas'→'todas' + cor distintiva (verde clarinho desbotado + line-through) em vez de cinza que confundia com backlog
 
 ---
 
@@ -67,7 +69,7 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | A.8 | **Workspaces · 3 pilares** (Salesforce · Dados · IA) · switcher topo + `workspace_id` em tabelas core + RLS por workspace | ⚠️ M-L · precisa spec própria | Estratégico — separação completa de ambientes |
 | A.9 | **Timesheet · entrada manual + permissões** · permitir criar registros sem cronômetro (data/hora início + duração + task + nota); **excluir** só dono ou admin; **editar** desabilitado (registro é imutável após salvo — corrige criando novo + deletando o errado, mantém audit trail limpo) | 3-5 dias | Médio — desbloqueia retro-lançamento e fecha gap de controle |
 | ~~A.10~~ | ~~**Cadastros · tabelas com colunas plenas**~~ | ✅ Entregue v1.03.022 + polish v1.03.023 (ver ciclo redesign DS acima) |
-| A.11 | **Briefing × Dashboard** · revisar overlap conceitual (ambos mostram KPIs operacionais, alertas, semáforo de clientes). Decidir: Briefing = leitura editorial diária / Dashboard = exploração analítica. Ajustar conteúdos pra cada cumprir seu papel sem duplicar. | 2-3 dias | Alto — clareza de propósito por tela |
+| ~~A.11~~ | ~~**Briefing × Dashboard · clarear papel**~~ | ✅ Entregue v1.03.041-042. Velocidade da operação migrou do Briefing pro Dashboard; Briefing fica editorial (alertas + clientes em atenção + conquistas); Dashboard concentra números (Velocidade + Entregas + Calendário + Carga). Card W-0 substituiu Lead time; meta throughput atualizada pra 25/sem; Ciclo e % no prazo ganharam delta vs 30d anteriores. |
 | A.12 | **Dashboard × Portal cliente · padrão técnico** · auditar tecnologia/framework de cada um (parecem diferentes — Portal usa header verde escuro `--bg-portal`, Dashboard usa surface normal; estruturas de card divergem). Definir padrão único (componentes, tokens, hierarquia) e refazer ambos na versão final convergente. | 1-2 semanas | Alto — fecha o ciclo de DS nessas duas telas |
 | A.13 | **Triagem · redesign UX-first** · hoje é uma lista de chips clicáveis sem affordance forte. Refazer com cards no padrão "ícone contextual à esquerda · título + sub-info · meta (tempo/chip) à direita · hover suave", agrupando por tipo de pendência (cliente respondeu / criada por IA / sem responsável). Cada card abre ação rápida inline (atribuir, marcar triada, dispensar) sem precisar entrar no modal full. Inspiração: print enviado pelo Felipe — chip do tipo no canto inferior direito, ícone com cor semântica à esquerda. | 1-2 semanas | Alto — triagem é o ponto mais friccionado do fluxo diário |
 | A.14 (parcial) | **Card de task unificado** · 🟡 **só camada técnica entregue, sem mudança visual perceptível.** v1.03.032-038 dedupou JSX repetido em primitivas (`PriChip`/`TaskAvatar`/`PrazoLabel`/`TagIA`) e criou wrapper `<TaskCard>` com variantes `sm/md/lg/checkable/selected`. Mas as telas mantiveram seus markups específicos (Foco desktop = FocoCard próprio, Backlog desktop = `<table>`, Kanban = .kcard, Triagem = card-com-chips, Calendário = .kcard). Resultado: código mais limpo, **UI essencialmente idêntica ao que era antes**. | (já feito, parcial) | Médio (técnico, invisível ao usuário) |
@@ -164,13 +166,13 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 Ciclo redesign DS fechou com dark mode. A.14 entregou só camada técnica
 (dedup) — **a unificação visual real virou A.17, precisa plano novo**.
-A.1, A.2, A.10 plenamente entregues. Frentes em aberto, em ordem sugerida:
+A.1, A.2, A.10, A.11 plenamente entregues. Frentes em aberto, em ordem sugerida:
 
 1. **A.15 · Mobile fechamento** · Task modal full-screen mobile (Step 4) com estratégia anti-hidratação (dual-render via CSS, não matchMedia em render). Validar em dispositivos reais. Custo: 3-5 dias.
 2. **A.13 · Triagem redesign UX-first** · ponto mais friccionado do fluxo diário; tem mock de referência do Felipe. TaskAlertRow vai ser introduzido aqui. Custo: 1-2 semanas.
 3. **A.9 · Timesheet · entrada manual + permissões** · destrava retro-lançamento e fecha gap de controle. Custo: 3-5 dias.
 4. **A.16 · Revisar bulk actions** · produtividade em operações repetitivas. Custo: 3-5 dias.
-5. **A.11 · Briefing × Dashboard · clarear papel** · evita duplicação conceitual. Custo: 2-3 dias.
+5. **A.17 · Card de task VISUAL** · replan do zero do que A.14 não cumpriu (consistência visual real entre Foco/Backlog/Kanban/Calendário/Triagem). Custo: 1-2 semanas.
 
 Em paralelo (outra pessoa/sessão): **B.1 · `ai-suggest`** como primeira IA em prod — fecha o gap "diferenciação por IA" das promessas centrais (mais barato/seguro pra validar). Custo: ~1 semana.
 
