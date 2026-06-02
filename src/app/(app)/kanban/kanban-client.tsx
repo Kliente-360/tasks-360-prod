@@ -29,6 +29,7 @@ import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
+import { Icon } from '@/components/icons';
 import { createClient } from '@/lib/supabase/client';
 import { agingDays, agingLevel, atrasada, fmtDateShort, fmtTempoEtapa, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
@@ -276,22 +277,24 @@ export function KanbanClient() {
         <PageHeader
           title="Kanban"
           titleAside={
-            <div className="view-toggle" role="tablist" aria-label="Visão do kanban">
+            <div className="view-toggle view-toggle-icons" role="tablist" aria-label="Visão do kanban">
               <button
                 type="button"
                 className={kanbanView === 'op' ? 'active' : ''}
                 onClick={() => setKanbanView('op')}
-                title="Operacional — colunas detalhadas"
+                title="Operacional — colunas detalhadas (11 colunas)"
+                aria-label="Visão operacional"
               >
-                Operacional
+                <Icon name="columns" size={15} />
               </button>
               <button
                 type="button"
                 className={kanbanView === 'exec' ? 'active' : ''}
                 onClick={() => setKanbanView('exec')}
-                title="Executiva — colunas macro"
+                title="Executiva — colunas macro (4 colunas)"
+                aria-label="Visão executiva"
               >
-                Executiva
+                <Icon name="square" size={15} />
               </button>
             </div>
           }

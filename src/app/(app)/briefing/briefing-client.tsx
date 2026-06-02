@@ -297,13 +297,20 @@ export function BriefingClient() {
     return <div className="text-muted text-sm py-8">Carregando…</div>;
   }
 
-  return (
-    <div className="flex flex-col gap-4 md:gap-6">
+  // Data do dia · pt-BR · "terça, 2 de jun"
+  const todayLabel = new Date().toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'short',
+  }).replace('.', '').replace('-feira', '');
 
-      {/* ── PageHeader (DS) ── */}
+  return (
+    <div>
+      {/* ── PageHeader (DS) — bare div: pageheader.margin-bottom: 24px controla o Y do primeiro elemento abaixo ── */}
       <div className="hidden md:block">
         <PageHeader
           title="Briefing"
+          context={<>{todayLabel}</>}
           right={
             <button
               type="button"
@@ -319,6 +326,7 @@ export function BriefingClient() {
         />
       </div>
 
+      <div className="space-y-4 md:space-y-6">
       {/* ── Bloco 1 · Velocidade da operação (não colapsável) ── */}
       <div className="bg-elev border border-line rounded-xl overflow-hidden">
         <div className="px-3 md:px-4 py-3 border-b border-line flex items-center justify-between">
@@ -727,6 +735,7 @@ export function BriefingClient() {
         )}
       </div>
 
+      </div>
     </div>
   );
 }

@@ -17,7 +17,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useData, usePessoasById, useClientesById, useProjetosById } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
-import { PillsFilter } from '@/components/pills-filter';
 import {
   agingDays,
   agingLevel,
@@ -210,7 +209,7 @@ export function FocoClient() {
 
   return (
     <div>
-      {/* Desktop · PageHeader + PillsFilter (Minhas/Atrasadas/Hoje) + selector "atuando como" pra admin */}
+      {/* Desktop · PageHeader + selector "atuando como" pra admin (pills Minhas/Atrasadas/Hoje removidos — redundantes com as seções abaixo) */}
       <div className="hidden md:block">
         <PageHeader
           title={
@@ -236,20 +235,6 @@ export function FocoClient() {
             ) : undefined
           }
         />
-        {/* PillsFilter visual abaixo do header — apenas indicador, não filtra (futuro: state de view) */}
-        {hasFocus && (counts.atrasadas.length + counts.hoje.length > 0) && (
-          <div className="-mt-2 mb-4 hidden md:block">
-            <PillsFilter
-              options={[
-                { v: 'all', label: 'Minhas', count: counts.atrasadas.length + counts.hoje.length + counts.bloqueadas.length },
-                { v: 'atrasadas', label: 'Atrasadas', count: counts.atrasadas.length },
-                { v: 'hoje', label: 'Hoje', count: counts.hoje.length },
-              ]}
-              value="all"
-              onChange={() => { /* scroll-to-section futuro */ }}
-            />
-          </div>
-        )}
       </div>
 
       {/* Mobile selector — só admin */}

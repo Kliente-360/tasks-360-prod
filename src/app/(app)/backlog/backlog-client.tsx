@@ -546,8 +546,8 @@ export function BacklogClient() {
     // do page-bar desktop não conta, então o gap caía no primeiro
     // filho visível do mobile. Com flex+gap, elementos display:none
     // são totalmente ignorados.
-    <div className="flex flex-col gap-4">
-      {/* ============ Desktop · PageHeader + FilterBar (DS) ============ */}
+    <div>
+      {/* ============ Desktop · PageHeader + FilterBar (DS) — bare div: pageheader.mb:24 controla Y do primeiro elemento ============ */}
       <div className="hidden md:block">
         <PageHeader
           title="Backlog"
