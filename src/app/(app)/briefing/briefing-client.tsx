@@ -13,6 +13,7 @@ import {
   computeHeuristicAlerts,
   computeVelocidade,
   type HeuristicAlert,
+  type ProjetoSaude,
 } from '@/lib/heuristics';
 
 // ─────────────────────────────────────────────────────────
@@ -326,7 +327,16 @@ export function BriefingClient() {
         />
       </div>
 
-      <div className="space-y-4 md:space-y-6">
+      {/* ── Mobile · MBriefing (handoff §3) ── */}
+      <BriefingMobilePanel
+        todayLabel={todayLabel}
+        alerts={heuristicAlerts}
+        countAlta={countAlta}
+        countMedia={countMedia}
+        projetosSaude={projetosSaude}
+      />
+
+      <div className="hidden md:block space-y-4 md:space-y-6">
       {/* ── Bloco 1 · Velocidade da operação (não colapsável) ── */}
       <div className="bg-elev border border-line rounded-xl overflow-hidden">
         <div className="px-3 md:px-4 py-3 border-b border-line flex items-center justify-between">
@@ -736,6 +746,128 @@ export function BriefingClient() {
       </div>
 
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MOBILE · MBriefing (handoff §3 · BriefingMobilePanel)
+// ============================================================
+function BriefingMobilePanel({
+  todayLabel,
+  alerts,
+  countAlta,
+  countMedia,
+  projetosSaude,
+}: {
+  todayLabel: string;
+  alerts: HeuristicAlert[];
+  countAlta: number;
+  countMedia: number;
+  projetosSaude: ProjetoSaude[];
+}) {
+  const altas = alerts.filter((a) => a.severity === 'alta').slice(0, 4);
+  const medias = alerts.filter((a) => a.severity === 'media').slice(0, 3);
+
+  // Agrega projetosSaude por cliente, mantendo o pior sinal
+  const clientesAtencao = useMemo(() => {
+    type Linha = { clienteId: string; nome: string; sinal: ProjetoSaude['sinal']; nAtrasadas: number };
+    const ord: Record<ProjetoSaude['sinal'], number> = { vermelho: 0, amarelo: 1, verde: 2 };
+    const m = new Map<string, Linha>();
+    for (const p of projetosSaude) {
+      const cur = m.get(p.clienteId);
+      if (!cur || ord[p.sinal] < ord[cur.sinal]) {
+        m.set(p.clienteId, {
+          clienteId: p.clienteId,
+          nome: p.nomeCliente,
+          sinal: p.sinal,
+          nAtrasadas: p.nAtrasadas,
+        });
+      } else if (cur) {
+        cur.nAtrasadas += p.nAtrasadas;
+      }
+    }
+    return [...m.values()]
+      .filter((c) => c.sinal !== 'verde')
+      .sort((a, b) => ord[a.sinal] - ord[b.sinal] || b.nAtrasadas - a.nAtrasadas)
+      .slice(0, 5);
+  }, [projetosSaude]);
+
+  return (
+    <div className="md:hidden">
+      <div className="m-pagetitle">
+        <h1>Briefing</h1>
+        <div className="narr">
+          resumo operacional<span className="sep">·</span><b>{todayLabel}</b>
+        </div>
+      </div>
+
+      <div className="m-sec">
+        <div className="b-seehead">
+          <div className="t">
+            <h3>Alertas</h3>
+            <span className="b-counts">
+              {countAlta > 0 && <span className="b-count crit">{countAlta} críticos</span>}
+              {countMedia > 0 && <span className="b-count att">{countMedia} atenção</span>}
+            </span>
+          </div>
+          {alerts.length > altas.length + medias.length && (
+            <span className="b-link">ver todos ({alerts.length})</span>
+          )}
+        </div>
+        <div className="b-alerts">
+          {altas.map((a, i) => (
+            <div key={'c' + i} className="b-alert crit">
+              <span className="dot" />
+              <div>
+                <div className="at">{a.titulo}</div>
+                <div className="ad">{a.detalhe}</div>
+              </div>
+            </div>
+          ))}
+          {medias.map((a, i) => (
+            <div key={'a' + i} className="b-alert att">
+              <span className="dot" />
+              <div>
+                <div className="at">{a.titulo}</div>
+                <div className="ad">{a.detalhe}</div>
+              </div>
+            </div>
+          ))}
+          {altas.length === 0 && medias.length === 0 && (
+            <div className="text-muted text-xs italic text-center py-3">Sem alertas hoje.</div>
+          )}
+        </div>
+      </div>
+
+      {clientesAtencao.length > 0 && (
+        <div className="m-sec mt14">
+          <div className="b-seehead">
+            <div className="t"><h3>Clientes em atenção</h3></div>
+            <span className="font-mono text-xs text-muted">{clientesAtencao.length} clientes</span>
+          </div>
+          <div>
+            {clientesAtencao.map((c) => {
+              const sinalColor =
+                c.sinal === 'vermelho' ? 'var(--danger)' :
+                c.sinal === 'amarelo' ? 'var(--warn)' : 'var(--green)';
+              return (
+                <div key={c.clienteId} className="b-cli">
+                  <div className="top">
+                    <span className="sd" style={{ background: sinalColor }} />
+                    <span className="nm">{c.nome}</span>
+                  </div>
+                  {c.nAtrasadas > 0 && (
+                    <div className="lt">
+                      {c.nAtrasadas} {c.nAtrasadas === 1 ? 'task atrasada' : 'tasks atrasadas'}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
