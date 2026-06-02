@@ -184,18 +184,30 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ---
 
+## 🎯 NEXT · ordem definida (jun/2026)
+
+Bloco de trabalho consolidado pelos próximos 6-11 semanas. 7 items
+priorizados pelo Felipe, ordenados em 3 ondas considerando dependências
+e perfil de risco.
+
+**Onda 1 · Quick wins** (~10 dias · isolados, baixo risco)
+1. **A.9** Timesheet · entrada manual + permissões
+2. **A.16** Revisar bulk actions (BulkBar)
+3. **C.3** Skill mismatch (heurística pura)
+
+**Onda 2 · Design coeso** (~10-20 dias · A.17 antes pra A.13 consumir)
+4. **A.17** Card de task · VISUAL (replan + execução)
+5. **A.13** Triagem · redesign UX-first (consome A.17)
+
+**Onda 3 · Closing loops** (~10-20 dias)
+6. **A.15** Mobile fechamento (Step 4 task modal + validação real)
+7. **A.12** Dashboard × Portal · padrão técnico convergente
+
+Items NÃO no NEXT (revisitar depois): A.3 Push · A.4 Triagem IA mandatory · A.5 Saved views · A.6 Sticky thead · A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.1-C.2/C.4-C.9.
+
+---
+
 ## Próximo passo imediato
 
-Ciclo redesign DS fechou com dark mode. A.14 entregou só camada técnica
-(dedup) — **a unificação visual real virou A.17, precisa plano novo**.
-A.1, A.2, A.10, A.11 plenamente entregues. Frentes em aberto, em ordem sugerida:
-
-1. **A.15 · Mobile fechamento** · Task modal full-screen mobile (Step 4) com estratégia anti-hidratação (dual-render via CSS, não matchMedia em render). Validar em dispositivos reais. Custo: 3-5 dias.
-2. **A.13 · Triagem redesign UX-first** · ponto mais friccionado do fluxo diário; tem mock de referência do Felipe. TaskAlertRow vai ser introduzido aqui. Custo: 1-2 semanas.
-3. **A.9 · Timesheet · entrada manual + permissões** · destrava retro-lançamento e fecha gap de controle. Custo: 3-5 dias.
-4. **A.16 · Revisar bulk actions** · produtividade em operações repetitivas. Custo: 3-5 dias.
-5. **A.17 · Card de task VISUAL** · replan do zero do que A.14 não cumpriu (consistência visual real entre Foco/Backlog/Kanban/Calendário/Triagem). Custo: 1-2 semanas.
-
-Em paralelo (outra pessoa/sessão): **B.1 · `ai-suggest`** como primeira IA em prod — fecha o gap "diferenciação por IA" das promessas centrais (mais barato/seguro pra validar). Custo: ~1 semana.
-
-Depois disso, escolher entre completar Bucket A (A.3+) ou avançar Bucket C (C.1+).
+Começar **Onda 1 · A.9** (Timesheet · entrada manual + permissões). Item bem
+definido, sem dependências, ~3-5 dias. Após A.9, A.16 e C.3 fechando a Onda 1.
