@@ -14,7 +14,7 @@ import { NotifBell } from '@/components/notif-bell';
 import { TimerButton } from '@/components/timer-button';
 import { Icon, type IconName } from '@/components/icons';
 
-export const APP_VERSION = 'v1.03.023';
+export const APP_VERSION = 'v1.03.024';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
