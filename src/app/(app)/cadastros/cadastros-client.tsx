@@ -359,14 +359,21 @@ export function CadastrosClient() {
       )}
 
       <div className="mt-4 card overflow-hidden">
-        {/* ===== Clientes ===== */}
+        {/* Wrapper de scroll horizontal — tabelas com 8 colunas podem
+            estourar a max-width 1320px em laptops menores. */}
+        <div className="overflow-x-auto">
+        {/* ===== Clientes — colunas: Cliente · Tier · Domínios · Cor Portal · Cor Texto · Projetos · Tarefas · Ações ===== */}
         {tab === 'clientes' && (
           <table className="ds-table">
             <thead>
               <tr>
                 <th>Cliente</th>
-                <th style={{ width: 100, textAlign: 'right' }}>Projetos</th>
-                <th style={{ width: 100, textAlign: 'right' }}>Tarefas</th>
+                <th style={{ width: 130 }}>Tier</th>
+                <th style={{ width: 200 }}>Domínios</th>
+                <th style={{ width: 130 }}>Cor Portal</th>
+                <th style={{ width: 110 }}>Cor Texto</th>
+                <th style={{ width: 90, textAlign: 'right' }}>Projetos</th>
+                <th style={{ width: 90, textAlign: 'right' }}>Tarefas</th>
                 <th style={{ width: 160 }} className="actions">&nbsp;</th>
               </tr>
             </thead>
@@ -380,13 +387,18 @@ export function CadastrosClient() {
                         <Avatar label={c.nome} shape="square" />
                         <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
                           <span className="font-medium text-[color:var(--ink)]">{c.nome}</span>
-                          <Chip show={c.tier === 'estrategico'} label="estratégico" variant="green" />
-                          <Chip show={c.tier === 'potencial'} label="potencial" variant="warning" />
-                          <Chip show={c.tier === 'descoberta'} label="descoberta" variant="muted" />
                           <Chip show={!!c.arquivadoEm} label="arquivado" variant="muted" />
                           <Chip show={isInterno} label="interno" variant="muted" />
                         </div>
                       </div>
+                    </td>
+                    <td><TierChip tier={c.tier} /></td>
+                    <td className="text-[color:var(--ink-soft)]">
+                      <DominiosCell list={c.dominios} />
+                    </td>
+                    <td><CorSwatch hex={c.corPortal} /></td>
+                    <td className="text-[color:var(--ink-soft)]">
+                      {c.corPortalTexto ? (c.corPortalTexto === 'light' ? 'Claro' : 'Escuro') : <span className="text-muted">—</span>}
                     </td>
                     <td className="num" style={{ textAlign: 'right' }}>{projetosByCliente.get(c.id) ?? 0}</td>
                     <td className="num" style={{ textAlign: 'right' }}>{tasksByCliente.get(c.id) ?? 0}</td>
@@ -444,7 +456,7 @@ export function CadastrosClient() {
               })}
               {clientesVisiveis.length === 0 && (
                 <tr>
-                  <td colSpan={4}>
+                  <td colSpan={8}>
                     <EmptyState label="Nenhum cliente cadastrado." icon="building" />
                   </td>
                 </tr>
@@ -453,14 +465,18 @@ export function CadastrosClient() {
           </table>
         )}
 
-        {/* ===== Projetos ===== */}
+        {/* ===== Projetos — colunas: Projeto · Cliente · Tipo · SLA Resp · SLA Entrega · Orçamento · Tarefas · Ações ===== */}
         {tab === 'projetos' && (
           <table className="ds-table">
             <thead>
               <tr>
                 <th>Projeto</th>
-                <th style={{ width: 220 }}>Cliente</th>
-                <th style={{ width: 100, textAlign: 'right' }}>Tarefas</th>
+                <th style={{ width: 180 }}>Cliente</th>
+                <th style={{ width: 120 }}>Tipo</th>
+                <th style={{ width: 110, textAlign: 'right' }}>SLA Resp</th>
+                <th style={{ width: 110, textAlign: 'right' }}>SLA Entrega</th>
+                <th style={{ width: 110, textAlign: 'right' }}>Orçamento</th>
+                <th style={{ width: 90, textAlign: 'right' }}>Tarefas</th>
                 <th style={{ width: 160 }} className="actions">&nbsp;</th>
               </tr>
             </thead>
@@ -479,18 +495,23 @@ export function CadastrosClient() {
                         </span>
                         <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
                           <span className="font-medium text-[color:var(--ink)]">{p.nome}</span>
-                          <Chip show={!!p.tipo} label={p.tipo || ''} variant="muted" />
-                          {p.slaEntregaDias != null && (
-                            <Chip show label={`SLA ${p.slaEntregaDias}d`} variant="muted" />
-                          )}
-                          {p.orcamentoHoras != null && (
-                            <Chip show label={`${p.orcamentoHoras}h`} variant="muted" />
-                          )}
                           <Chip show={!!p.arquivadoEm} label="arquivado" variant="muted" />
                         </div>
                       </div>
                     </td>
                     <td className="text-[color:var(--ink-soft)]">{clienteNome}</td>
+                    <td className="text-[color:var(--ink-soft)]">
+                      {p.tipo ? (p.tipo.charAt(0).toUpperCase() + p.tipo.slice(1)) : <span className="text-muted">—</span>}
+                    </td>
+                    <td className="num" style={{ textAlign: 'right' }}>
+                      {p.slaRespostaHoras != null ? `${p.slaRespostaHoras}h` : <span className="text-muted">—</span>}
+                    </td>
+                    <td className="num" style={{ textAlign: 'right' }}>
+                      {p.slaEntregaDias != null ? `${p.slaEntregaDias}d` : <span className="text-muted">—</span>}
+                    </td>
+                    <td className="num" style={{ textAlign: 'right' }}>
+                      {p.orcamentoHoras != null ? `${p.orcamentoHoras}h` : <span className="text-muted">—</span>}
+                    </td>
                     <td className="num" style={{ textAlign: 'right' }}>{tasksByProjeto.get(p.id) ?? 0}</td>
                     <td className="actions">
                       {!p.arquivadoEm ? (
@@ -544,7 +565,7 @@ export function CadastrosClient() {
               })}
               {projetosVisiveis.length === 0 && (
                 <tr>
-                  <td colSpan={4}>
+                  <td colSpan={8}>
                     <EmptyState label="Nenhum projeto cadastrado." icon="folder" />
                   </td>
                 </tr>
@@ -553,27 +574,33 @@ export function CadastrosClient() {
           </table>
         )}
 
-        {/* ===== Pessoas ===== */}
+        {/* ===== Pessoas — colunas: Nome · Email · Papel · Cliente Principal · Cliente Secundário · Senioridade · Capacidade · Ações ===== */}
         {tab === 'pessoas' && (
           <table className="ds-table">
             <thead>
               <tr>
-                <th>Pessoa</th>
-                <th style={{ width: 200 }}>Papel</th>
-                <th style={{ width: 100, textAlign: 'right' }}>Tarefas</th>
+                <th>Nome</th>
+                <th style={{ width: 220 }}>Email</th>
+                <th style={{ width: 130 }}>Papel</th>
+                <th style={{ width: 160 }}>Cliente Principal</th>
+                <th style={{ width: 160 }}>Cliente Secundário</th>
+                <th style={{ width: 120 }}>Senioridade</th>
+                <th style={{ width: 110, textAlign: 'right' }}>Capacidade</th>
                 <th style={{ width: 200 }} className="actions">&nbsp;</th>
               </tr>
             </thead>
             <tbody>
               {pessoas.map((p) => {
                 const papelLabel =
-                  p.role === 'cliente'
-                    ? 'Cliente externo'
-                    : p.senioridade
-                      ? p.senioridade.charAt(0).toUpperCase() + p.senioridade.slice(1)
-                      : p.role === 'admin'
-                        ? 'Admin'
-                        : 'Interno';
+                  p.role === 'cliente' ? 'Cliente externo' :
+                  p.role === 'admin' ? 'Admin' :
+                  'Interno';
+                const principalNome = p.cliente_principal_id
+                  ? (clientes.find((c) => c.id === p.cliente_principal_id)?.nome ?? '—')
+                  : null;
+                const secundarioNome = p.cliente_secundario_id
+                  ? (clientes.find((c) => c.id === p.cliente_secundario_id)?.nome ?? '—')
+                  : null;
                 return (
                   <tr key={p.id}>
                     <td>
@@ -581,15 +608,36 @@ export function CadastrosClient() {
                         <Avatar label={p.nome} shape="circle" />
                         <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
                           <span className="font-medium text-[color:var(--ink)]">{p.nome}</span>
-                          <Chip show={p.role === 'admin'} label="admin" variant="green" />
-                          <Chip show={!!p.invited_at && !!p.user_id} label="acesso ativo" variant="green" />
-                          <Chip show={!!p.invited_at && !p.user_id} label="aguardando 1º login" variant="warning" />
+                          <Chip show={!!p.invited_at && !!p.user_id} label="ativo" variant="green" />
+                          <Chip show={!!p.invited_at && !p.user_id} label="aguardando" variant="warning" />
                           <Chip show={!p.invited_at && !!p.email} label="inativa" variant="muted" />
                         </div>
                       </div>
                     </td>
-                    <td className="text-[color:var(--ink-soft)]">{papelLabel}</td>
-                    <td className="num" style={{ textAlign: 'right' }}>{tasksByPessoa.get(p.id) ?? 0}</td>
+                    <td className="text-[color:var(--ink-soft)] font-mono text-xs truncate" style={{ maxWidth: 220 }}>
+                      {p.email || <span className="text-muted">—</span>}
+                    </td>
+                    <td className="text-[color:var(--ink-soft)]">
+                      {p.role === 'admin' ? (
+                        <Chip show label="Admin" variant="green" />
+                      ) : (
+                        papelLabel
+                      )}
+                    </td>
+                    <td className="text-[color:var(--ink-soft)] truncate" style={{ maxWidth: 160 }}>
+                      {principalNome ?? <span className="text-muted">—</span>}
+                    </td>
+                    <td className="text-[color:var(--ink-soft)] truncate" style={{ maxWidth: 160 }}>
+                      {secundarioNome ?? <span className="text-muted">—</span>}
+                    </td>
+                    <td className="text-[color:var(--ink-soft)]">
+                      {p.senioridade
+                        ? p.senioridade.charAt(0).toUpperCase() + p.senioridade.slice(1)
+                        : <span className="text-muted">—</span>}
+                    </td>
+                    <td className="num" style={{ textAlign: 'right' }}>
+                      {p.capacidade_horas_semana != null ? `${p.capacidade_horas_semana}h/sem` : <span className="text-muted">—</span>}
+                    </td>
                     <td className="actions">
                       {isAdmin && p.role === 'cliente' && !p.invited_at && (
                         <button
@@ -669,7 +717,7 @@ export function CadastrosClient() {
               })}
               {pessoas.length === 0 && (
                 <tr>
-                  <td colSpan={4}>
+                  <td colSpan={8}>
                     <EmptyState label="Nenhuma pessoa cadastrada." icon="users" />
                   </td>
                 </tr>
@@ -677,6 +725,7 @@ export function CadastrosClient() {
             </tbody>
           </table>
         )}
+        </div>
       </div>
     </div>
   );
@@ -780,5 +829,46 @@ function EmptyState({
       )}
       <p className="text-sm italic text-muted">{label}</p>
     </div>
+  );
+}
+
+/** Chip de Tier · cor segue o código semântico (verde/amarelo/cinza). */
+function TierChip({ tier }: { tier: string | null | undefined }) {
+  if (!tier) return <span className="text-muted text-xs">—</span>;
+  if (tier === 'estrategico') return <Chip show label="Estratégico" variant="green" />;
+  if (tier === 'potencial') return <Chip show label="Potencial" variant="warning" />;
+  if (tier === 'descoberta') return <Chip show label="Descoberta" variant="muted" />;
+  return <Chip show label={tier} variant="muted" />;
+}
+
+/** Swatch de cor — quadradinho colorido + valor hex em mono. */
+function CorSwatch({ hex }: { hex: string | null | undefined }) {
+  if (!hex) return <span className="text-muted text-xs">—</span>;
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span
+        className="inline-block shrink-0 rounded"
+        style={{ width: 18, height: 18, background: hex, border: '1px solid var(--line)' }}
+        aria-hidden
+      />
+      <span className="font-mono text-xs text-[color:var(--ink-soft)]">{hex.toUpperCase()}</span>
+    </span>
+  );
+}
+
+/** Lista de domínios — exibe os 2 primeiros, "+N" se sobrar mais. */
+function DominiosCell({ list }: { list: string[] | null | undefined }) {
+  if (!list || list.length === 0) return <span className="text-muted text-xs">—</span>;
+  const shown = list.slice(0, 2);
+  const rest = list.length - shown.length;
+  return (
+    <span className="inline-flex items-center gap-1.5 flex-wrap font-mono text-xs">
+      {shown.map((d) => (
+        <span key={d} className="text-[color:var(--ink-soft)]">{d}</span>
+      ))}
+      {rest > 0 && (
+        <span className="text-muted" title={list.slice(2).join(', ')}>+{rest}</span>
+      )}
+    </span>
   );
 }

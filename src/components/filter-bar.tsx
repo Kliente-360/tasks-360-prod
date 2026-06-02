@@ -190,9 +190,10 @@ interface FilterBarProps {
   moreItems?: MoreMenuItem[];
   /** Placeholder do campo busca */
   searchPlaceholder?: string;
-  /** Esconde a busca completamente (Dashboard agrega dados — busca textual
-   *  não faz sentido). Por default a busca aparece. */
-  hideSearch?: boolean;
+  /** Desabilita o input de busca mas mantém visível (Dashboard agrega
+   *  dados — busca textual não faz sentido lá, mas a bar continua
+   *  com a mesma anatomia de qualquer outra tela). */
+  disableSearch?: boolean;
   /** Slot opcional à esquerda do campo de busca — usado por Kanban (toggle
    *  Operacional/Executiva) e Calendário (setas de mês). Mantém o
    *  espaçamento padrão da bar. */
@@ -211,24 +212,24 @@ export function FilterBar({
   pessoaOptions = [],
   moreItems,
   searchPlaceholder = 'Buscar',
-  hideSearch = false,
+  disableSearch = false,
   leftSlot,
 }: FilterBarProps) {
   const active = countActive(f);
   return (
     <div className="filterbar inline">
       {leftSlot}
-      {!hideSearch && (
-        <label className="search">
-          <Icon name="search" size={14} className="ic" />
-          <input
-            type="text"
-            value={f.q}
-            placeholder={searchPlaceholder}
-            onChange={(e) => set('q', e.target.value)}
-          />
-        </label>
-      )}
+      <label className={cn('search', disableSearch && 'is-disabled')}>
+        <Icon name="search" size={14} className="ic" />
+        <input
+          type="text"
+          value={f.q}
+          placeholder={disableSearch ? '—' : searchPlaceholder}
+          onChange={(e) => set('q', e.target.value)}
+          disabled={disableSearch}
+          title={disableSearch ? 'Busca textual não se aplica a esta tela' : undefined}
+        />
+      </label>
 
       {show.includes('cliente') && (
         <FilterSelect
@@ -267,9 +268,11 @@ export function FilterBar({
         />
       )}
 
-      {/* Botão Limpar sempre presente, com largura fixa: o slot do contador
-          é renderizado mesmo sem filtros (visibility hidden), pra que ativar
-          um filtro não desloque os elementos vizinhos. */}
+      {/* Ordem dos utilitários: ⋯ (MoreMenu) → X (Limpar). O X fica
+          ENCOSTADO à direita seguindo o padrão dos demais botões da
+          header-bar (ações destrutivas/finais sempre na ponta). */}
+      {moreItems && <MoreMenu items={moreItems} />}
+
       <button
         type="button"
         className={cn('fselect clear', active === 0 && 'is-empty')}
@@ -287,8 +290,6 @@ export function FilterBar({
           {active > 0 ? active : 0}
         </span>
       </button>
-
-      {moreItems && <MoreMenu items={moreItems} />}
     </div>
   );
 }
