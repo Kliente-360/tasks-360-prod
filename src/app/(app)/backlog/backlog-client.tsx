@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
-import { PriChip, TaskAvatar, PrazoLabel, TagIA } from '@/components/task-card/primitives';
+import { TaskCard } from '@/components/task-card/task-card';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'next/navigation';
 import { useData, useClientesById, useProjetosById, usePessoasById, useProjetosByCliente } from '@/lib/data-store';
@@ -1431,12 +1431,13 @@ function BacklogMobilePanel({
           </div>
         ) : (
           tasks.map((t) => (
-            <MobileTaskCard
+            <TaskCard
               key={t.id}
-              t={t}
+              task={t}
               cliente={clientesById.get(t.clienteId)?.nome ?? '—'}
               projeto={projetosById.get(t.projetoId)?.nome}
               respNome={pessoasById.get(t.pessoaId)?.nome ?? '—'}
+              size="md"
               onClick={() => onOpen(t)}
             />
           ))
@@ -1456,41 +1457,6 @@ function BacklogMobilePanel({
           }}
         />
       )}
-    </div>
-  );
-}
-
-/** Card de tarefa mobile (handoff TaskCard) — uso na lista do Backlog. */
-function MobileTaskCard({
-  t,
-  cliente,
-  projeto,
-  respNome,
-  onClick,
-}: {
-  t: Task;
-  cliente: string;
-  projeto?: string;
-  respNome: string;
-  onClick: () => void;
-}) {
-  const firstName = respNome.split(/\s+/)[0] ?? respNome;
-  return (
-    <div className="tcard" onClick={onClick}>
-      <div className="top">
-        <div style={{ minWidth: 0 }}>
-          <div className="ttl">{t.titulo}</div>
-          <div className="sub">{cliente}{projeto ? ' · ' + projeto : ''}</div>
-        </div>
-        <PriChip prio={t.prioridade} />
-      </div>
-      <div className="meta">
-        <TaskAvatar name={respNome} />
-        <span className="text-xs text-muted">{firstName}</span>
-        <span className="sp" />
-        {t.criadoPorIa && <TagIA />}
-        <PrazoLabel task={t} />
-      </div>
     </div>
   );
 }
