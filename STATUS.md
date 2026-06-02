@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.02.230 · **Atualizado**: 02/06/2026
+> **Versão**: v1.02.231 · **Atualizado**: 02/06/2026
 
 ---
 
@@ -44,12 +44,47 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | # | Item | Esforço | Impacto |
 |---|---|---|---|
 | A.1 | **Aplicar novo design system uniformemente** (pasta `docs/kliente360-design-system/`) | 3-6 semanas | Alto — coesão visual + base pra evoluções |
-| A.2 | **Push notifications** · VAPID + Edge Function `send-push` + UI de permissão (Badge API já ✅) | 2-3 semanas | Alto — comportamental forte, iOS 16.4+ PWA |
-| A.3 | **Triagem obrigatória pra tasks criadas por IA** · flag `triada_em` + filtro próprio | 3-5 dias | Médio — governance pré-IA |
-| A.4 | **Saved views / filtros nomeados** · "Minhas atrasadas", "Aguardando cliente X" | 2-3 dias | Quick win UX alto impacto |
-| A.5 | **Sticky thead Backlog** · cabeçalho fixo em scroll longo | 2-3 dias | Quick win UX |
-| A.6 | **PDF Resumo Executivo** · consolidar Briefing+Dashboard em documento navegável | 1-2 semanas | Médio — reuniões offline |
-| A.7 | **Workspaces · 3 pilares** (Salesforce · Dados · IA) · switcher topo + `workspace_id` em tabelas core + RLS por workspace | ⚠️ M-L · precisa spec própria | Estratégico — separação completa de ambientes |
+| A.2 | **Filtros padronizados · barra reutilizável + Calendário redesign** (detalhes abaixo) | 1-2 semanas | Alto — coesão entre Backlog/Kanban/Calendário/Dashboard + correção da busca |
+| A.3 | **Push notifications** · VAPID + Edge Function `send-push` + UI de permissão (Badge API já ✅) | 2-3 semanas | Alto — comportamental forte, iOS 16.4+ PWA |
+| A.4 | **Triagem obrigatória pra tasks criadas por IA** · flag `triada_em` + filtro próprio | 3-5 dias | Médio — governance pré-IA |
+| A.5 | **Saved views / filtros nomeados** · "Minhas atrasadas", "Aguardando cliente X". Depende de A.2. | 2-3 dias | Quick win UX alto impacto |
+| A.6 | **Sticky thead Backlog** · cabeçalho fixo em scroll longo | 2-3 dias | Quick win UX |
+| A.7 | **PDF Resumo Executivo** · consolidar Briefing+Dashboard em documento navegável | 1-2 semanas | Médio — reuniões offline |
+| A.8 | **Workspaces · 3 pilares** (Salesforce · Dados · IA) · switcher topo + `workspace_id` em tabelas core + RLS por workspace | ⚠️ M-L · precisa spec própria | Estratégico — separação completa de ambientes |
+
+#### A.2 · detalhamento
+
+**Objetivo**: criar um **componente único `<FilterBar>`** reutilizável em Backlog / Kanban / Calendário / Dashboard, eliminando inconsistências e habilitando saved views (A.5) sem refactor.
+
+**Filtros padronizados** (todos as 4 abas):
+- 🔍 **Buscar** — full-text em **todos os campos** (título, descrição, comentários, tags, etc), não só no título como hoje
+- **Cliente** (select)
+- **Projeto** (select dependente de Cliente)
+- **Responsável** (select)
+- **Prazo** (range / quick-picks: hoje · esta semana · este mês · atrasadas · sem prazo)
+
+**Menu ⋯ contextual** (padrão em todas as 4 abas, opções habilitadas conforme contexto):
+- **Backlog** (referência canônica): Grupar por · Mostrar arquivadas · Somente criadas por IA / só humanos
+- **Kanban**: Mostrar arquivadas · Somente criadas por IA — Grupar fica disabled (kanban já agrupa por subetapa)
+- **Calendário**: Mostrar arquivadas — Grupar e filtro IA ficam disabled
+- **Dashboard**: Somente criadas por IA / só humanos — Grupar disabled, Mostrar arquivadas disabled (dashboard ignora arquivadas por design)
+
+**Calendário · redesign visual**:
+- Filtro de Status SAI da barra → vira **código de cor em cada bloquinho** de task dentro do dia (verde=concluído, brand=andamento, âmbar=bloqueado, cinza=backlog)
+- Botões **‹ ›** de avançar/voltar mês saem do canto direito → ficam **ao lado do title do mês** (ex: `‹ Junho 2026 ›`)
+- Resto da FilterBar aplica normal
+
+**Dashboard · exceções**:
+- Alguns elementos/cards podem ser definidos como **"não afetados por filtros"** (ex: KPIs globais, heatmap de capacidade do time inteiro, throughput agregado). Marcação via prop no card — UX mostra um ícone discreto "🔒 visão global" quando filtros estão ativos mas o card ignora.
+- Filtros padrão aplicam ao resto do Dashboard.
+
+**Implementação técnica sugerida**:
+- Novo componente `src/components/filter-bar.tsx` com props tipadas (lista de filtros habilitados, callbacks, slot de menu ⋯)
+- Estado de filtros vira hook `useFilters(scope)` que persiste em URL/localStorage por tela (habilita deep-link e saved views)
+- Cada tela passa só os filtros que faz sentido (mas todas usam o mesmo componente)
+- A.5 (Saved views) reusa esse `useFilters` direto — quase grátis depois desse refactor
+
+**Pré-req**: idealmente sai junto com A.1 (Design System) — barra de filtros é componente visível em 4 telas, vale aplicar tokens novos de uma vez só pra evitar reapplicar depois.
 
 ### Bucket B · Features com IA
 
@@ -104,6 +139,6 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## Próximo passo imediato
 
-→ **Design system (A.1)** primeiro pra evitar retrabalho visual em features novas.
-→ Em paralelo: **`ai-suggest` (B.1)** como primeira IA em prod (mais barato/seguro de validar).
-→ Depois disso, escolher entre completar Bucket A (B.2+) ou avançar Bucket C (C.1+).
+→ **Design system (A.1) + Filtros padronizados (A.2)** juntos — barra de filtros é componente visível em 4 telas, vale aplicar tokens novos de uma vez. Evita retrabalho.
+→ Em paralelo (outra pessoa/sessão): **`ai-suggest` (B.1)** como primeira IA em prod (mais barato/seguro de validar).
+→ Depois disso, escolher entre completar Bucket A (A.3+) ou avançar Bucket C (C.1+).
