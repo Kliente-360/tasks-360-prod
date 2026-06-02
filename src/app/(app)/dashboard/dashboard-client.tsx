@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { Icon } from '@/components/icons';
+import { PriChip, TaskAvatar, PrazoLabel, TagIA } from '@/components/task-card/primitives';
 import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
@@ -868,18 +869,9 @@ function DashboardMobilePanel({
           {cargaPessoa.slice(0, 8).map((c) => {
             const pct = Math.round((c.total / maxCarga) * 100);
             const over = pct > 85;
-            const ini = c.nome.split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
             return (
               <div key={c.pessoaId} className="loadrow">
-                <span
-                  className="inline-flex items-center justify-center shrink-0 rounded-full font-mono font-semibold"
-                  style={{
-                    width: 22, height: 22, fontSize: 9,
-                    background: 'var(--green-soft)', color: 'var(--green)',
-                  }}
-                >
-                  {ini || '?'}
-                </span>
+                <TaskAvatar name={c.nome} />
                 <div className="track">
                   <div className={cn('fill', over && 'over')} style={{ width: `${Math.min(pct, 100)}%` }} />
                 </div>
@@ -910,8 +902,6 @@ function DashboardMobilePanel({
               const projeto = projetosById.get(t.projetoId)?.nome;
               const respNome = pessoasById.get(t.pessoaId)?.nome ?? '—';
               const firstName = respNome.split(/\s+/)[0] ?? respNome;
-              const ini = respNome.split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
-              const isLate = atrasada(t);
               return (
                 <div key={t.id} className="tcard" onClick={() => onOpen(t.id)}>
                   <div className="top">
@@ -919,25 +909,14 @@ function DashboardMobilePanel({
                       <div className="ttl">{t.titulo}</div>
                       <div className="sub">{cliente}{projeto ? ' · ' + projeto : ''}</div>
                     </div>
-                    <span className={cn('pri', `pri-${t.prioridade}`)}>
-                      <span className="pri-dot" />
-                      {t.prioridade}
-                    </span>
+                    <PriChip prio={t.prioridade} />
                   </div>
                   <div className="meta">
-                    <span
-                      className="inline-flex items-center justify-center shrink-0 rounded-full font-mono font-semibold"
-                      style={{
-                        width: 22, height: 22, fontSize: 9,
-                        background: 'var(--green-soft)', color: 'var(--green)',
-                      }}
-                    >
-                      {ini || '?'}
-                    </span>
+                    <TaskAvatar name={respNome} />
                     <span className="text-xs text-muted">{firstName}</span>
                     <span className="sp" />
-                    {t.criadoPorIa && <span className="tag-ai"><Icon name="refresh" size={9} />IA</span>}
-                    {isLate && t.prazo && <span className="late text-xs">{t.prazo}</span>}
+                    {t.criadoPorIa && <TagIA />}
+                    <PrazoLabel task={t} />
                   </div>
                 </div>
               );
