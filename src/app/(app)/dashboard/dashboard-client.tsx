@@ -19,6 +19,21 @@ import {
 //  Helpers
 // ─────────────────────────────────────────────────────────
 
+function linearRegression(values: number[]): number[] {
+  const n = values.length;
+  if (n < 2) return values.slice();
+  const xMean = (n - 1) / 2;
+  const yMean = values.reduce((s, v) => s + v, 0) / n;
+  let num = 0, den = 0;
+  for (let i = 0; i < n; i++) {
+    num += (i - xMean) * (values[i] - yMean);
+    den += (i - xMean) ** 2;
+  }
+  const slope = den !== 0 ? num / den : 0;
+  const intercept = yMean - slope * xMean;
+  return values.map((_, i) => slope * i + intercept);
+}
+
 function sinalDot(sinal: string) {
   if (sinal === 'vermelho') return 'bg-[var(--danger)]';
   if (sinal === 'amarelo') return 'bg-[var(--warn)]';
@@ -118,6 +133,7 @@ export function DashboardClient() {
   // ── Throughput 12w (sem filtro — histórico)
   const throughput12 = useMemo(() => computeThroughput12w(baseTasks), [baseTasks]);
   const maxTotal = Math.max(...throughput12.map((w) => w.total), 1);
+  const trendLine = useMemo(() => linearRegression(throughput12.map((w) => w.total)), [throughput12]);
 
   // ── Entregas + calendário
   const entregasSemanas = useMemo(() => computeEntregasSemanas(filteredTasks), [filteredTasks]);
@@ -296,35 +312,60 @@ export function DashboardClient() {
               <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#fca5a5' }} />
               com atraso
             </span>
+            <span className="flex items-center gap-1">
+              <span className="w-5 border-t border-dashed inline-block" style={{ borderColor: 'rgba(148,163,184,0.6)' }} />
+              tendência
+            </span>
           </div>
         </div>
-        <div className="flex items-end gap-1 h-36">
-          {throughput12.map((week, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-              <div className="text-[8px] text-muted tabular-nums">{week.total || ''}</div>
-              <div
-                className="w-full overflow-hidden"
-                style={{
-                  height: `${Math.max(3, (week.total / maxTotal) * 110)}px`,
-                  borderRadius: '3px 3px 0 0',
-                  background: week.total === 0 ? 'var(--surface-3)' : undefined,
-                }}
-              >
-                {week.atrasada > 0 && (
-                  <div style={{
-                    height: `${(week.atrasada / week.total) * 100}%`,
-                    background: week.isCurrent ? '#ef4444' : '#fca5a5',
-                  }} />
-                )}
-                {week.noPrazo > 0 && (
-                  <div style={{
-                    height: `${(week.noPrazo / week.total) * 100}%`,
-                    background: week.isCurrent ? 'var(--brand)' : 'var(--brand-soft)',
-                  }} />
-                )}
+        <div className="relative">
+          <div className="flex items-end gap-1 h-36">
+            {throughput12.map((week, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                <div className="text-[8px] text-muted tabular-nums">{week.total || ''}</div>
+                <div
+                  className="w-full overflow-hidden"
+                  style={{
+                    height: `${Math.max(3, (week.total / maxTotal) * 110)}px`,
+                    borderRadius: '3px 3px 0 0',
+                    background: week.total === 0 ? 'var(--surface-3)' : undefined,
+                  }}
+                >
+                  {week.atrasada > 0 && (
+                    <div style={{
+                      height: `${(week.atrasada / week.total) * 100}%`,
+                      background: week.isCurrent ? '#ef4444' : '#fca5a5',
+                    }} />
+                  )}
+                  {week.noPrazo > 0 && (
+                    <div style={{
+                      height: `${(week.noPrazo / week.total) * 100}%`,
+                      background: week.isCurrent ? 'var(--brand)' : 'var(--brand-soft)',
+                    }} />
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          {/* Trend line overlay — viewBox 0 0 12 144 maps to bar area (h-36 = 144px) */}
+          <svg
+            viewBox="0 0 12 144"
+            preserveAspectRatio="none"
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            aria-hidden="true"
+          >
+            <polyline
+              vectorEffect="non-scaling-stroke"
+              points={trendLine.map((v, i) => {
+                const y = 144 - Math.max(3, (Math.max(0, v) / maxTotal) * 110);
+                return `${i + 0.5},${y}`;
+              }).join(' ')}
+              fill="none"
+              stroke="rgba(148,163,184,0.6)"
+              strokeWidth="1.5"
+              strokeDasharray="4 3"
+            />
+          </svg>
         </div>
         <div className="flex gap-1 mt-1.5">
           {throughput12.map((week, i) => (
@@ -436,10 +477,22 @@ export function DashboardClient() {
             {volumeCliente.map((v) => (
               <div key={v.clienteId} className="flex items-center gap-2">
                 <div className="w-24 text-xs text-right text-muted truncate shrink-0">{v.nome}</div>
-                <div className="flex-1 h-5 bg-[var(--surface-3)] rounded-sm overflow-hidden flex">
-                  <div style={{ width: `${((v.count - v.nAtrasadas) / maxVolume) * 100}%`, background: 'var(--brand)', flexShrink: 0 }} />
+                <div className="flex-1 h-5 flex">
+                  {(v.count - v.nAtrasadas) > 0 && (
+                    <div style={{
+                      width: `${((v.count - v.nAtrasadas) / maxVolume) * 100}%`,
+                      background: 'var(--brand)',
+                      flexShrink: 0,
+                      borderRadius: v.nAtrasadas === 0 ? 3 : '3px 0 0 3px',
+                    }} />
+                  )}
                   {v.nAtrasadas > 0 && (
-                    <div style={{ width: `${(v.nAtrasadas / maxVolume) * 100}%`, background: '#ef4444', flexShrink: 0 }} />
+                    <div style={{
+                      width: `${(v.nAtrasadas / maxVolume) * 100}%`,
+                      background: '#ef4444',
+                      flexShrink: 0,
+                      borderRadius: (v.count - v.nAtrasadas) === 0 ? 3 : '0 3px 3px 0',
+                    }} />
                   )}
                 </div>
                 <span className="text-[10px] font-mono text-muted w-6 text-right shrink-0">{v.count}</span>
@@ -456,10 +509,22 @@ export function DashboardClient() {
             {cargaPessoa.map((p) => (
               <div key={p.pessoaId} className="flex items-center gap-2">
                 <div className="w-16 text-xs text-right text-muted truncate shrink-0">{p.nome.split(' ')[0]}</div>
-                <div className="flex-1 h-5 bg-[var(--surface-3)] rounded-sm overflow-hidden flex">
-                  <div style={{ width: `${((p.total - p.nAtrasadas) / maxCarga) * 100}%`, background: 'var(--brand)', flexShrink: 0 }} />
+                <div className="flex-1 h-5 flex">
+                  {(p.total - p.nAtrasadas) > 0 && (
+                    <div style={{
+                      width: `${((p.total - p.nAtrasadas) / maxCarga) * 100}%`,
+                      background: 'var(--brand)',
+                      flexShrink: 0,
+                      borderRadius: p.nAtrasadas === 0 ? 3 : '3px 0 0 3px',
+                    }} />
+                  )}
                   {p.nAtrasadas > 0 && (
-                    <div style={{ width: `${(p.nAtrasadas / maxCarga) * 100}%`, background: '#ef4444', flexShrink: 0 }} />
+                    <div style={{
+                      width: `${(p.nAtrasadas / maxCarga) * 100}%`,
+                      background: '#ef4444',
+                      flexShrink: 0,
+                      borderRadius: (p.total - p.nAtrasadas) === 0 ? 3 : '0 3px 3px 0',
+                    }} />
                   )}
                 </div>
                 <span className="text-[10px] font-mono text-muted w-6 text-right shrink-0">{p.total}</span>
