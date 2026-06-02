@@ -856,21 +856,26 @@ export interface VolumeCliente {
   clienteId: string;
   nome: string;
   count: number;
+  nAtrasadas: number;
 }
 
 export function computeVolumeByCliente(tasks: Task[], clientes: Cliente[]): VolumeCliente[] {
   const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
   const countMap = new Map<string, number>();
+  const atrasMap = new Map<string, number>();
   for (const t of abertas) {
     if (!t.clienteId) continue;
     countMap.set(t.clienteId, (countMap.get(t.clienteId) ?? 0) + 1);
+    if (atrasada(t)) {
+      atrasMap.set(t.clienteId, (atrasMap.get(t.clienteId) ?? 0) + 1);
+    }
   }
   const clientesById = new Map(clientes.map((c) => [c.id, c]));
   const result: VolumeCliente[] = [];
   for (const [clienteId, count] of countMap) {
     const c = clientesById.get(clienteId);
     if (!c || c.arquivadoEm) continue;
-    result.push({ clienteId, nome: c.nome, count });
+    result.push({ clienteId, nome: c.nome, count, nAtrasadas: atrasMap.get(clienteId) ?? 0 });
   }
   result.sort((a, b) => b.count - a.count);
   return result;

@@ -25,21 +25,6 @@ function sinalDot(sinal: string) {
   return 'bg-[var(--brand)]';
 }
 
-function linearRegression(values: number[]): number[] {
-  const n = values.length;
-  if (n < 2) return values.slice();
-  const xMean = (n - 1) / 2;
-  const yMean = values.reduce((s, v) => s + v, 0) / n;
-  let num = 0, den = 0;
-  for (let i = 0; i < n; i++) {
-    num += (i - xMean) * (values[i] - yMean);
-    den += (i - xMean) ** 2;
-  }
-  const slope = den !== 0 ? num / den : 0;
-  const intercept = yMean - slope * xMean;
-  return values.map((_, i) => slope * i + intercept);
-}
-
 function calDayBg(dia: { count: number; isPast: boolean }) {
   if (dia.count === 0) return '';
   if (dia.isPast || dia.count >= 5) return 'bg-red-100';
@@ -133,17 +118,6 @@ export function DashboardClient() {
   // ── Throughput 12w (sem filtro — histórico)
   const throughput12 = useMemo(() => computeThroughput12w(baseTasks), [baseTasks]);
   const maxTotal = Math.max(...throughput12.map((w) => w.total), 1);
-  const trendLine = useMemo(() => linearRegression(throughput12.map((w) => w.total)), [throughput12]);
-
-  // SVG chart constants
-  const SVG_W = 600;
-  const SVG_H = 130;   // área de barras
-  const PAD_T = 14;    // espaço topo p/ labels de valor
-  const LABEL_H = 16;  // altura da faixa de labels de semana (dentro do SVG)
-  const BAR_AREA = SVG_W / 12;
-  const BAR_W = BAR_AREA - 4;
-  const BAR_GAP = 2;
-  const SVG_TOTAL_H = PAD_T + SVG_H + LABEL_H;
 
   // ── Entregas + calendário
   const entregasSemanas = useMemo(() => computeEntregasSemanas(filteredTasks), [filteredTasks]);
@@ -308,83 +282,54 @@ export function DashboardClient() {
 
       {/* ── 2. Throughput 12 semanas ── */}
       <div className="bg-elev border border-line rounded-xl p-3 md:p-4">
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-sm font-semibold text-ink">Throughput · 12 semanas</h2>
             <p className="text-[10px] text-muted">tasks concluídas por semana</p>
           </div>
-          <div className="hidden md:flex items-center gap-3 text-[10px] text-muted">
+          <div className="flex items-center gap-3 text-[10px] text-muted">
             <span className="flex items-center gap-1">
-              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#86efac' }} />
+              <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: 'var(--brand-soft)' }} />
               no prazo
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#fca5a5' }} />
               com atraso
             </span>
-            <span className="flex items-center gap-1">
-              <span className="w-5 border-t-2 border-dashed inline-block" style={{ borderColor: '#8b5cf6' }} />
-              tendência
-            </span>
           </div>
         </div>
-        <svg
-          viewBox={`0 0 ${SVG_W} ${SVG_TOTAL_H}`}
-          preserveAspectRatio="none"
-          className="w-full hidden md:block"
-          style={{ height: 180 }}
-          aria-hidden="true"
-        >
-          {throughput12.map((week, i) => {
-            const x = i * BAR_AREA + BAR_GAP;
-            const cx = x + BAR_W / 2;
-            const npH = (week.noPrazo / maxTotal) * SVG_H;
-            const atH = (week.atrasada / maxTotal) * SVG_H;
-            const totalH = npH + atH;
-            const baseY = PAD_T + SVG_H;
-            // verde embaixo, vermelho em cima
-            const npY = baseY - npH;
-            const atY = npY - atH;
-            return (
-              <g key={i}>
-                {npH > 0 && (
-                  <rect x={x} y={npY} width={BAR_W} height={npH}
-                    fill={week.isCurrent ? '#22c55e' : '#86efac'} rx="1" />
-                )}
-                {atH > 0 && (
-                  <rect x={x} y={atY} width={BAR_W} height={atH}
-                    fill={week.isCurrent ? '#ef4444' : '#fca5a5'} rx="1" />
-                )}
-                {week.total > 0 && (
-                  <text x={cx} y={baseY - totalH - 3}
-                    textAnchor="middle" fontSize="9" fill="#6b7280">
-                    {week.total}
-                  </text>
-                )}
-                {/* Label de semana alinhada à barra */}
-                <text x={cx} y={SVG_TOTAL_H - 3}
-                  textAnchor="middle" fontSize="9" fill="#9ca3af">
-                  {week.label}
-                </text>
-              </g>
-            );
-          })}
-          {/* Trend line */}
-          <polyline
-            points={trendLine.map((v, i) => {
-              const cx = i * BAR_AREA + BAR_GAP + BAR_W / 2;
-              const cy = PAD_T + SVG_H - (Math.max(0, v) / maxTotal) * SVG_H;
-              return `${cx},${cy}`;
-            }).join(' ')}
-            fill="none" stroke="#8b5cf6" strokeWidth="2" strokeDasharray="5 3" opacity="0.75"
-          />
-        </svg>
-        {/* Mobile: barras simples sem SVG */}
-        <div className="flex items-end gap-1 h-24 md:hidden">
+        <div className="flex items-end gap-1 h-36">
           {throughput12.map((week, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
               <div className="text-[8px] text-muted tabular-nums">{week.total || ''}</div>
-              <div className="w-full rounded-t-sm" style={{ height: `${Math.max(2, (week.total / maxTotal) * 70)}px`, background: week.isCurrent ? '#22c55e' : '#86efac' }} />
+              <div
+                className="w-full overflow-hidden"
+                style={{
+                  height: `${Math.max(3, (week.total / maxTotal) * 110)}px`,
+                  borderRadius: '3px 3px 0 0',
+                  background: week.total === 0 ? 'var(--surface-3)' : undefined,
+                }}
+              >
+                {week.atrasada > 0 && (
+                  <div style={{
+                    height: `${(week.atrasada / week.total) * 100}%`,
+                    background: week.isCurrent ? '#ef4444' : '#fca5a5',
+                  }} />
+                )}
+                {week.noPrazo > 0 && (
+                  <div style={{
+                    height: `${(week.noPrazo / week.total) * 100}%`,
+                    background: week.isCurrent ? 'var(--brand)' : 'var(--brand-soft)',
+                  }} />
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-1 mt-1.5">
+          {throughput12.map((week, i) => (
+            <div key={i} className="flex-1 text-center text-[8px] truncate text-muted">
+              {week.label}
             </div>
           ))}
         </div>
@@ -485,17 +430,17 @@ export function DashboardClient() {
 
         {/* Volume por cliente */}
         <div className="bg-elev border border-line rounded-xl">
-          <SectionHeader title="Volume por cliente" sub="tasks abertas por cliente" />
+          <SectionHeader title="Volume por cliente" sub="tasks abertas · vermelho = atrasadas" />
           <div className="p-3 md:p-4 flex flex-col gap-1.5">
             {volumeCliente.length === 0 && <p className="text-xs text-muted">Sem dados</p>}
             {volumeCliente.map((v) => (
               <div key={v.clienteId} className="flex items-center gap-2">
                 <div className="w-24 text-xs text-right text-muted truncate shrink-0">{v.nome}</div>
-                <div className="flex-1 relative h-5 bg-[var(--surface-3)] rounded-sm overflow-hidden">
-                  <div
-                    className="h-full rounded-sm transition-all"
-                    style={{ width: `${(v.count / maxVolume) * 100}%`, background: 'var(--brand)' }}
-                  />
+                <div className="flex-1 h-5 bg-[var(--surface-3)] rounded-sm overflow-hidden flex">
+                  <div style={{ width: `${((v.count - v.nAtrasadas) / maxVolume) * 100}%`, background: 'var(--brand)', flexShrink: 0 }} />
+                  {v.nAtrasadas > 0 && (
+                    <div style={{ width: `${(v.nAtrasadas / maxVolume) * 100}%`, background: '#ef4444', flexShrink: 0 }} />
+                  )}
                 </div>
                 <span className="text-[10px] font-mono text-muted w-6 text-right shrink-0">{v.count}</span>
               </div>
