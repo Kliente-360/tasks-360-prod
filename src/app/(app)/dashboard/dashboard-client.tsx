@@ -262,6 +262,7 @@ export function DashboardClient() {
           title="Dashboard"
           right={
             <FilterBar
+              hideSearch
               f={{
                 q: '',
                 cliente: filterCliente,
@@ -352,8 +353,8 @@ export function DashboardClient() {
       </div>
 
       <div className="hidden md:block space-y-4 md:space-y-6">
-      {/* ── 1. KPIs ── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+      {/* ── 1. KPIs · min-h padroniza Y da 2ª linha entre tabs ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 min-h-[96px]">
         <KpiCard label="Em andamento" value={kpiAndamento.length} sub={`${kpiAndamentoHoras}h alocadas`} />
         <KpiCard label="Backlog" value={kpiBacklog.length} sub={`${kpiBacklogHoras}h previstas`} />
         <KpiCard label="Bloqueadas" value={kpiBloqueadas.length} sub="aguardando ação" danger={kpiBloqueadas.length > 0} />

@@ -852,8 +852,8 @@ export function BacklogClient() {
         )}
       </div>
 
-      {/* ============ Cards de stats ============ */}
-      <div className="hidden md:grid grid-cols-5 gap-3 mb-4">
+      {/* ============ Cards de stats · min-h padroniza Y da 2ª linha entre tabs ============ */}
+      <div className="hidden md:grid grid-cols-5 gap-3 mb-4 min-h-[96px]">
         <StatCard label="Total filtrado" value={cards.total} />
         <StatCard label="Backlog" value={cards.backlog} borderColor="var(--line-strong)" />
         <StatCard label="Em andamento" value={cards.andamento} borderColor="var(--brand)" />
