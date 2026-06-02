@@ -256,9 +256,15 @@ export function FilterBar({
       )}
 
       {active > 0 && (
-        <button type="button" className="fselect clear" onClick={onClear}>
+        <button
+          type="button"
+          className="fselect clear"
+          onClick={onClear}
+          title={`Limpar ${active} filtro${active > 1 ? 's' : ''}`}
+          aria-label={`Limpar ${active} filtros`}
+        >
           <Icon name="x" size={14} className="ic" />
-          Limpar ({active})
+          <span className="font-mono">{active}</span>
         </button>
       )}
 

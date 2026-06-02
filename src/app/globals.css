@@ -1525,8 +1525,14 @@ body {
   color: var(--green);
 }
 .fselect.on .ic { color: var(--green); }
-.fselect.clear { color: var(--danger); border-color: transparent; }
+.fselect.clear {
+  color: var(--danger);
+  border-color: transparent;
+  min-width: 0;          /* sobrescreve min-width 124px → fica compacto */
+  padding: 7px 9px;
+}
 .fselect.clear:hover { border-color: var(--danger); background: var(--danger-soft); }
+.fselect.clear .ic { color: var(--danger); }
 
 .fmenu {
   position: absolute;

@@ -199,7 +199,11 @@ export function CalendarioClient() {
         const cli = clientesById.get(t.clienteId)?.nome ?? '';
         const proj = projetosById.get(t.projetoId)?.nome ?? '';
         const pess = pessoasById.get(t.pessoaId)?.nome ?? '';
-        const hay = `${t.titulo} ${cli} ${proj} ${pess} ${t.descricao ?? ''}`.toLowerCase();
+        const hay = [
+          t.titulo, cli, proj, pess, t.descricao ?? '',
+          t.prioridade, t.status, t.subetapa,
+          (t.tags ?? []).join(' '),
+        ].join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;

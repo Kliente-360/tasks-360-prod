@@ -177,7 +177,17 @@ export function BacklogClient() {
     const q = f.q.trim().toLowerCase();
     const base = showArchived ? tasks : tasks.filter((t) => !t.arquivadoEm);
     const arr = base.filter((t) => {
-      if (q && !(t.titulo + ' ' + (t.descricao ?? '')).toLowerCase().includes(q)) return false;
+      if (q) {
+        const cli = clientesById.get(t.clienteId)?.nome ?? '';
+        const proj = projetosById.get(t.projetoId)?.nome ?? '';
+        const pess = pessoasById.get(t.pessoaId)?.nome ?? '';
+        const hay = [
+          t.titulo, t.descricao ?? '', cli, proj, pess,
+          t.prioridade, t.status, t.subetapa,
+          (t.tags ?? []).join(' '),
+        ].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       if (f.cliente === EMPTY) {
         if (t.clienteId) return false;
       } else if (f.cliente && t.clienteId !== f.cliente) return false;
