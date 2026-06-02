@@ -3,11 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTimer, fmtElapsed } from '@/lib/use-timer';
 import { useData, useClientesById } from '@/lib/data-store';
+import { useClickAway } from '@/lib/use-click-away';
 import { Icon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
 const MAX_NOTE = 120;
 
+/**
+ * Modal pra registrar nota ao parar o cronômetro. Posicionado no topo
+ * (items-start pt-[15vh]) — mesma âncora visual do popover de seleção
+ * de task. Padrão único pra ambos os fluxos.
+ */
 function NoteModal({
   onConfirm,
   onCancel,
@@ -30,7 +36,7 @@ function NoteModal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center modal-bg px-4"
+      className="fixed inset-0 z-[70] flex items-start justify-center modal-bg pt-[15vh] px-4"
       onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div className="card w-full max-w-sm p-5" role="dialog" aria-label="Parar cronômetro">
@@ -67,7 +73,12 @@ function NoteModal({
   );
 }
 
-function TaskPickerModal({
+/**
+ * Popover dropdown ancorado no botão TimerButton. Substitui o modal
+ * fullscreen anterior (que cobria header inteiro com overlay cinza —
+ * UX ruim pra escolha rápida). Padrão similar ao NotifBell.
+ */
+function TaskPickerPopover({
   onSelect,
   onClose,
 }: {
@@ -78,6 +89,7 @@ function TaskPickerModal({
   const clientesById = useClientesById();
   const [q, setQ] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const ref = useClickAway<HTMLDivElement>(onClose);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -110,34 +122,35 @@ function TaskPickerModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-start justify-center modal-bg pt-[15vh] px-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      ref={ref}
+      className="absolute top-full right-0 mt-2 z-50 w-[360px] max-w-[calc(100vw-24px)] bg-bg-elev border border-line rounded-lg shadow-xl overflow-hidden"
+      role="dialog"
+      aria-label="Selecionar tarefa"
     >
-      <div className="card w-full max-w-md p-4" role="dialog" aria-label="Selecionar tarefa">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-2 h-2 rounded-full bg-[var(--brand)] shrink-0" />
-          <span className="text-sm font-medium">Iniciar cronômetro</span>
-          <button type="button" className="icon-btn text-muted ml-auto" onClick={onClose} aria-label="Fechar">×</button>
-        </div>
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-line">
+        <div className="w-2 h-2 rounded-full bg-[color:var(--green)] shrink-0" />
+        <span className="text-sm font-medium">Iniciar cronômetro</span>
+      </div>
+      <div className="p-3">
         <input
           ref={inputRef}
           type="text"
-          className="inp mb-3"
+          className="inp text-sm w-full mb-2"
           placeholder="Buscar tarefa em andamento…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
         {candidates.length === 0 ? (
-          <p className="text-sm text-muted text-center py-4">Nenhuma tarefa em andamento encontrada.</p>
+          <p className="text-sm text-muted text-center py-4">Nenhuma tarefa em andamento.</p>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted text-center py-4">Nenhum resultado.</p>
         ) : (
-          <ul className="max-h-64 overflow-y-auto divide-y divide-line">
+          <ul className="max-h-72 overflow-y-auto divide-y divide-line -mx-1">
             {filtered.map((t) => (
               <li key={t.id}>
                 <button
                   type="button"
-                  className="w-full text-left px-2 py-2.5 hover:bg-[var(--surface-3)] transition-colors rounded"
+                  className="w-full text-left px-2 py-2 hover:bg-bg-alt transition-colors rounded"
                   onClick={() => onSelect(t.id)}
                 >
                   <div className="text-sm font-medium text-ink truncate">{t.titulo}</div>
@@ -170,7 +183,7 @@ export function TimerButton() {
     await stopTimer(note || undefined);
   }
 
-  // Rodando: pill verde com tempo HH:MM:SS visível + dot pulsando + ícone square (stop)
+  // Rodando: pill verde com tempo HH:MM:SS + dot pulsando + ícone square (stop)
   if (activeEntry) {
     return (
       <>
@@ -191,23 +204,23 @@ export function TimerButton() {
     );
   }
 
-  // Parado: pill neutra com ícone play
+  // Parado: ícone-only (compacto, igual ao padrão de utilitários do header).
+  // Ao clicar, abre popover dropdown ancorado embaixo — não modal fullscreen.
   return (
-    <>
+    <div className="relative inline-flex">
       <button
         type="button"
         onClick={() => setPicking(true)}
         disabled={starting}
         title="Iniciar cronômetro"
-        className={cn('timer-btn', starting && 'opacity-60')}
+        className={cn('iconbtn', starting && 'opacity-60')}
         aria-label="Iniciar cronômetro"
       >
-        <Icon name="play" size={13} />
-        <span>Iniciar</span>
+        <Icon name="timer" size={18} />
       </button>
       {picking && (
-        <TaskPickerModal onSelect={handleSelect} onClose={() => setPicking(false)} />
+        <TaskPickerPopover onSelect={handleSelect} onClose={() => setPicking(false)} />
       )}
-    </>
+    </div>
   );
 }
