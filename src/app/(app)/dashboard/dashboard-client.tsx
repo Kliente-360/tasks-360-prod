@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
+import { Icon } from '@/components/icons';
 import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
@@ -17,7 +18,10 @@ import {
   computeCargaByPessoa,
   computeProjetosSaude,
   computeSaudePorPessoa,
+  type ThroughputWeek12,
+  type CargaPessoa,
 } from '@/lib/heuristics';
+import type { Task } from '@/lib/types';
 
 // ─────────────────────────────────────────────────────────
 //  Helpers
@@ -290,8 +294,23 @@ export function DashboardClient() {
         />
       </div>
 
-      {/* ── Filtros (mobile legacy — refactor em PR futuro) ── */}
-      <div>
+      {/* ── Mobile · MDashboard (handoff §3 · novo painel) ── */}
+      <DashboardMobilePanel
+        filteredTasks={filteredTasks}
+        kpiAndamento={kpiAndamento.length}
+        kpiBacklog={kpiBacklog.length}
+        kpiBloqueadas={kpiBloqueadas.length}
+        kpiAtrasadas={kpiAtrasadas.length}
+        throughput12={throughput12}
+        cargaPessoa={cargaPessoa}
+        clientesById={clientesById}
+        projetosById={projetosById}
+        pessoasById={pessoasById}
+        onOpen={openEdit}
+      />
+
+      {/* ── Filtros (mobile legacy — escondido pela DashboardMobilePanel; source preservado) ── */}
+      <div className="hidden" style={{ display: 'none' }}>
         <div className="flex items-center gap-2 md:hidden">
           <button
             onClick={() => setFiltersOpen((v) => !v)}
@@ -332,7 +351,7 @@ export function DashboardClient() {
         {/* Desktop filtros agora vivem dentro do FilterBar no PageHeader acima */}
       </div>
 
-      <div className="space-y-4 md:space-y-6">
+      <div className="hidden md:block space-y-4 md:space-y-6">
       {/* ── 1. KPIs ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
         <KpiCard label="Em andamento" value={kpiAndamento.length} sub={`${kpiAndamentoHoras}h alocadas`} />
@@ -740,6 +759,200 @@ export function DashboardClient() {
 
       </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// MOBILE · MDashboard (handoff §3 · DashboardMobilePanel)
+// ============================================================
+// 4 KPIs em grid 2x2 + 3 .m-sec: Throughput (12 bars · última verde),
+// Carga por pessoa (loadrow com fill verde / warn se >85%), Precisa de
+// atenção (top 3 tasks atrasadas ou P0 como tcard). Sem filtros próprios
+// — usa o estado da árvore desktop (compartilhado via shared-filters).
+
+function DashboardMobilePanel({
+  filteredTasks,
+  kpiAndamento,
+  kpiBacklog,
+  kpiBloqueadas,
+  kpiAtrasadas,
+  throughput12,
+  cargaPessoa,
+  clientesById,
+  projetosById,
+  pessoasById,
+  onOpen,
+}: {
+  filteredTasks: Task[];
+  kpiAndamento: number;
+  kpiBacklog: number;
+  kpiBloqueadas: number;
+  kpiAtrasadas: number;
+  throughput12: ThroughputWeek12[];
+  cargaPessoa: CargaPessoa[];
+  clientesById: Map<string, { nome: string }>;
+  projetosById: Map<string, { nome: string }>;
+  pessoasById: Map<string, { nome: string }>;
+  onOpen: (id: string) => void;
+}) {
+  const totalAbertas = kpiAndamento + kpiBacklog + kpiBloqueadas;
+  const throughputAtual = throughput12[throughput12.length - 1]?.total ?? 0;
+  const maxTotal = Math.max(...throughput12.map((w) => w.total), 1);
+  const maxCarga = Math.max(...cargaPessoa.map((p) => p.total), 1);
+
+  // Top 3 "precisa de atenção": atrasadas + P0 abertas (sem repetir)
+  const atencao = useMemo(() => {
+    const set = new Set<string>();
+    const out: Task[] = [];
+    for (const t of filteredTasks) {
+      if (t.status === 'concluido') continue;
+      const isAtrasada = atrasada(t);
+      const isP0 = t.prioridade === 'P0';
+      if (!isAtrasada && !isP0) continue;
+      if (set.has(t.id)) continue;
+      set.add(t.id);
+      out.push(t);
+      if (out.length >= 3) break;
+    }
+    return out;
+  }, [filteredTasks]);
+
+  return (
+    <div className="md:hidden">
+      <div className="m-pagetitle">
+        <h1>Visão geral</h1>
+        <div className="narr">
+          <b>{totalAbertas}</b> ativas
+          <span className="sep">·</span>
+          throughput <b>{throughputAtual}</b>/sem
+        </div>
+      </div>
+
+      {/* KPIs 2×2 */}
+      <div className="m-kpis">
+        <MobileKpi label="Em andamento" value={kpiAndamento} />
+        <MobileKpi label="Backlog" value={kpiBacklog} />
+        <MobileKpi label="Bloqueadas" value={kpiBloqueadas} />
+        <MobileKpi label="Atrasadas" value={kpiAtrasadas} danger={kpiAtrasadas > 0} />
+      </div>
+
+      {/* Throughput 12 semanas */}
+      <div className="m-sec mt14">
+        <div className="h">
+          <div>
+            <h3>Throughput</h3>
+            <div className="sub">concluídas / semana · 12 sem</div>
+          </div>
+        </div>
+        <div className="body">
+          <div className="bars">
+            {throughput12.map((w, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+                <div
+                  className={cn('bar', i === throughput12.length - 1 && 'now')}
+                  style={{ height: `${(w.total / maxTotal) * 100}%` }}
+                  title={`${w.label}: ${w.total}`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Carga por pessoa */}
+      <div className="m-sec mt14">
+        <div className="h"><h3>Carga por pessoa</h3></div>
+        <div className="body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {cargaPessoa.slice(0, 8).map((c) => {
+            const pct = Math.round((c.total / maxCarga) * 100);
+            const over = pct > 85;
+            const ini = c.nome.split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
+            return (
+              <div key={c.pessoaId} className="loadrow">
+                <span
+                  className="inline-flex items-center justify-center shrink-0 rounded-full font-mono font-semibold"
+                  style={{
+                    width: 22, height: 22, fontSize: 9,
+                    background: 'var(--green-soft)', color: 'var(--green)',
+                  }}
+                >
+                  {ini || '?'}
+                </span>
+                <div className="track">
+                  <div className={cn('fill', over && 'over')} style={{ width: `${Math.min(pct, 100)}%` }} />
+                </div>
+                <span className="pct">{pct}%</span>
+              </div>
+            );
+          })}
+          {cargaPessoa.length === 0 && (
+            <div className="text-muted text-xs italic text-center py-2">Sem dados de carga.</div>
+          )}
+        </div>
+      </div>
+
+      {/* Precisa de atenção */}
+      <div className="m-sec mt14">
+        <div className="h">
+          <div>
+            <h3>Precisa de atenção</h3>
+            <div className="sub">priorize hoje</div>
+          </div>
+        </div>
+        <div className="m-list" style={{ padding: 12, gap: 9 }}>
+          {atencao.length === 0 ? (
+            <div className="text-muted text-xs italic text-center py-2">Nada urgente. Bom dia.</div>
+          ) : (
+            atencao.map((t) => {
+              const cliente = clientesById.get(t.clienteId)?.nome ?? '—';
+              const projeto = projetosById.get(t.projetoId)?.nome;
+              const respNome = pessoasById.get(t.pessoaId)?.nome ?? '—';
+              const firstName = respNome.split(/\s+/)[0] ?? respNome;
+              const ini = respNome.split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
+              const isLate = atrasada(t);
+              return (
+                <div key={t.id} className="tcard" onClick={() => onOpen(t.id)}>
+                  <div className="top">
+                    <div style={{ minWidth: 0 }}>
+                      <div className="ttl">{t.titulo}</div>
+                      <div className="sub">{cliente}{projeto ? ' · ' + projeto : ''}</div>
+                    </div>
+                    <span className={cn('pri', `pri-${t.prioridade}`)}>
+                      <span className="pri-dot" />
+                      {t.prioridade}
+                    </span>
+                  </div>
+                  <div className="meta">
+                    <span
+                      className="inline-flex items-center justify-center shrink-0 rounded-full font-mono font-semibold"
+                      style={{
+                        width: 22, height: 22, fontSize: 9,
+                        background: 'var(--green-soft)', color: 'var(--green)',
+                      }}
+                    >
+                      {ini || '?'}
+                    </span>
+                    <span className="text-xs text-muted">{firstName}</span>
+                    <span className="sp" />
+                    {t.criadoPorIa && <span className="tag-ai"><Icon name="refresh" size={9} />IA</span>}
+                    {isLate && t.prazo && <span className="late text-xs">{t.prazo}</span>}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MobileKpi({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
+  return (
+    <div className={cn('kpi', danger && 'danger')}>
+      <div className="lab">{label}</div>
+      <div className="val">{value}</div>
     </div>
   );
 }
