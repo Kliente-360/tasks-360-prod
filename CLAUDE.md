@@ -30,7 +30,7 @@ Convenções do projeto que valem pra qualquer sessão.
 
 ## Vercel
 
-- **Só `main` faz deploy.** Previews de branch/PR foram desligados via `vercel.json` (`git.deploymentEnabled: { main: true }`) — economia de build minutes + um único alvo de validação.
+- **Só `main` faz deploy.** Previews de branch/PR estão bloqueados pelo `vercel.json` via **`ignoreCommand`** (`exit 1` só se a ref do commit for `main`, senão `exit 0` pula o build). O `git.deploymentEnabled.main: true` sozinho NÃO basta porque branches não listadas default pra enabled no Vercel — daí o ignoreCommand.
 - Se precisar testar uma branch antes de mergear: `vercel --prebuilt` local ou trigger manual no dashboard.
 
 ## Git workflow
