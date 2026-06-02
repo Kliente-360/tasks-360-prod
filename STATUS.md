@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.001 · **Atualizado**: 02/06/2026 · branch `main`
+> **Versão**: v1.03.025 · **Atualizado**: 04/06/2026 · branch `main`
 
 ---
 
@@ -31,6 +31,18 @@
 - ✅ Audit completo · stack 100% homogêneo · Drizzle removido · Cadastros 75% mais rápido (v1.02.226–229)
 - ✅ Docs HOWTO + ONBOARDING atualizados pós-cutover (v1.02.230)
 
+### Ciclo redesign DS (jun/2026 · v1.03.001 → v1.03.025)
+Bump MINOR 02→03 marcou o fechamento desse ciclo. Concluídos:
+- ✅ **A.1 · Design system aplicado** · tokens DS (Inter + JetBrains Mono, verde editorial #007A3D, aperture com gradiente horário, frosted-glass header), ícones Lucide via `<Icon>` wrapper, modais task/cadastros, dark mode global auditado (zero cores Tailwind hardcoded fora do permitido)
+- ✅ **A.2 · FilterBar único** · componente padrão em Backlog/Kanban/Calendário/Dashboard/Timesheet, search 150px + 4 selects 150px largura fixa, X (Limpar) sempre presente como último elemento, leftSlot pra Kanban (toggle) e Calendário (setas de mês), busca full-text em todos os campos, gramática fixa
+- ✅ **A.10 · Cadastros · tabelas com colunas plenas** · Clientes (Cliente·Tier·Domínios·Cor Portal·Cor Texto·Projetos·Tarefas), Projetos (Projeto·Cliente·Tipo·SLA Resp·Entrega·Orçamento·Tarefas), Pessoas (Nome·Email·Papel·Principal·Secundário·Senioridade·Capacidade) + subabas DS
+- ✅ **Login** · split-screen escuro com aperture marca d'água (≥900px), form solo com marca no topo (<900px), copy do time aplicada
+- ✅ **Mobile shell + 5 telas (Steps 1-3e)** · header reduzido, bottom tab bar fixa com 5 abas (Briefing·Foco·Backlog·Dashboard·Portal), CSS port das classes m-*/tcard/sheet/detail, telas Foco/Backlog/Dashboard/Briefing adaptadas com cards próprios, Portal polish (esconde storytelling em mobile). Task modal full-screen mobile **NÃO** entregue ainda (Step 4 isolado por causa do crash em v1.03.009)
+- ✅ **Notif system DS pass** · SVGs inline trocados por `<Icon>` Lucide, tokens semânticos
+- ✅ **Vercel só main** · `vercel.json` com `ignoreCommand` bloqueia preview builds
+- ✅ **Cards primeira-linha padronizados em 116px** · min-h uniforme + content centralizado em todas as tabs (Foco/Backlog/Dashboard/Timesheet); 2ª linha nasce no mesmo Y
+- ✅ **Webhook gate ajustado** · só dispara pra clientes com `webhook_enabled=true` (VB/CTF) E comments com `visivel_cliente=true`. Notas internas não vazam pro Salesforce
+
 ---
 
 ## 🎯 Roadmap ativo
@@ -43,8 +55,8 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 
 | # | Item | Esforço | Impacto |
 |---|---|---|---|
-| A.1 | **Aplicar novo design system** · 🟡 em validação na branch `feat/design-system-repaginacao` (tokens DS, Inter+JetBrains Mono, frosted-glass header, aperture com gradiente, ícones Lucide). Modais task/cadastros + dark mode ficam em PR seguinte. | 3-6 semanas | Alto — coesão visual + base pra evoluções |
-| A.2 | **Filtros padronizados + Calendário redesign** · 🟡 em validação junto com A.1. Componente `<FilterBar>` único reutilizável em Backlog/Kanban/Calendário/Dashboard/Timesheet. PillsFilter em Foco/Triagem. Calendário: status como cor no bloquinho + setas ‹ › ao lado do title. | 1-2 semanas | Alto — coesão entre Backlog/Kanban/Calendário/Dashboard + correção da busca |
+| ~~A.1~~ | ~~**Aplicar novo design system**~~ | ✅ Entregue em v1.03 (ver ciclo redesign DS acima) |
+| ~~A.2~~ | ~~**Filtros padronizados + Calendário redesign**~~ | ✅ Entregue em v1.03 |
 | A.3 | **Push notifications** · VAPID + Edge Function `send-push` + UI de permissão (Badge API já ✅) | 2-3 semanas | Alto — comportamental forte, iOS 16.4+ PWA |
 | A.4 | **Triagem obrigatória pra tasks criadas por IA** · flag `triada_em` + filtro próprio | 3-5 dias | Médio — governance pré-IA |
 | A.5 | **Saved views / filtros nomeados** · "Minhas atrasadas", "Aguardando cliente X". Depende de A.2. | 2-3 dias | Quick win UX alto impacto |
@@ -52,12 +64,12 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | A.7 | **PDF Resumo Executivo** · consolidar Briefing+Dashboard em documento navegável | 1-2 semanas | Médio — reuniões offline |
 | A.8 | **Workspaces · 3 pilares** (Salesforce · Dados · IA) · switcher topo + `workspace_id` em tabelas core + RLS por workspace | ⚠️ M-L · precisa spec própria | Estratégico — separação completa de ambientes |
 | A.9 | **Timesheet · entrada manual + permissões** · permitir criar registros sem cronômetro (data/hora início + duração + task + nota); **excluir** só dono ou admin; **editar** desabilitado (registro é imutável após salvo — corrige criando novo + deletando o errado, mantém audit trail limpo) | 3-5 dias | Médio — desbloqueia retro-lançamento e fecha gap de controle |
-| A.10 | **Cadastros · tabelas com mais colunas, menos chips** · hoje cada linha tem 1-3 chips inline (tier, sem domínio, SLA, orçamento, etc). Migrar isso pra colunas dedicadas (ex: Clientes ganha colunas Tier/Domínio/Faturamento; Projetos ganha Tipo/SLA/Orçamento). Melhora scan visual + permite sort por coluna. | 3-5 dias | Médio — densidade informacional sobe sem poluir |
+| ~~A.10~~ | ~~**Cadastros · tabelas com colunas plenas**~~ | ✅ Entregue v1.03.022 + polish v1.03.023 (ver ciclo redesign DS acima) |
 | A.11 | **Briefing × Dashboard** · revisar overlap conceitual (ambos mostram KPIs operacionais, alertas, semáforo de clientes). Decidir: Briefing = leitura editorial diária / Dashboard = exploração analítica. Ajustar conteúdos pra cada cumprir seu papel sem duplicar. | 2-3 dias | Alto — clareza de propósito por tela |
 | A.12 | **Dashboard × Portal cliente · padrão técnico** · auditar tecnologia/framework de cada um (parecem diferentes — Portal usa header verde escuro `--bg-portal`, Dashboard usa surface normal; estruturas de card divergem). Definir padrão único (componentes, tokens, hierarquia) e refazer ambos na versão final convergente. | 1-2 semanas | Alto — fecha o ciclo de DS nessas duas telas |
 | A.13 | **Triagem · redesign UX-first** · hoje é uma lista de chips clicáveis sem affordance forte. Refazer com cards no padrão "ícone contextual à esquerda · título + sub-info · meta (tempo/chip) à direita · hover suave", agrupando por tipo de pendência (cliente respondeu / criada por IA / sem responsável). Cada card abre ação rápida inline (atribuir, marcar triada, dispensar) sem precisar entrar no modal full. Inspiração: print enviado pelo Felipe — chip do tipo no canto inferior direito, ícone com cor semântica à esquerda. | 1-2 semanas | Alto — triagem é o ponto mais friccionado do fluxo diário |
 | A.14 | **Kanban card · versão clean** · cards atuais mostram nome completo do responsável em texto ("JD", "MA" hoje já são iniciais, mas o padrão pode evoluir). Migrar pra **avatar circular com iniciais** no canto inferior direito do card, alinhado com a prioridade no canto inferior esquerdo. Aplicar mesmo padrão de avatar em qualquer outro lugar onde card mostra responsável (mobile inclusive). Inspiração: print enviado pelo Felipe — título + cliente·projeto + linha de meta com prioridade colorida + avatar. | 3-5 dias | Médio-alto — densidade informacional + coesão visual com Cadastros (que já usa avatar circular) |
-| A.15 | **Mobile · revisão completa** · steps 1-3e do redesign mobile foram entregues incrementalmente (PRs #21-#27); validar em devices reais e fechar gaps: (1) Task modal full-screen mobile (Step 4 — fica em PR isolado por ter sido o ponto de falha em jun/2026 v1.03.009); (2) revisão de viewport/altura/scroll em iPhone SE / Plus / iPad portrait; (3) tap targets ≥44px conforme HIG; (4) gestos esperados (swipe pra deletar item de lista? tap longo no card?); (5) Briefing "Clientes em atenção" mobile renderiza só quando há dados — checar se o derivador safe-cast roda em prod; (6) Portal mobile não usa o padrão MPortal do handoff completo (decidi esconder storytelling em vez de redesenhar tudo) — avaliar se vale fazer o port fiel. | 1-2 semanas | Alto — fecha o ciclo mobile com qualidade |
+| A.15 | **Mobile · fechamento (Step 4 + validação real)** · 🟡 parcial: shell + 4 telas + Portal polish entregues (PRs #21-#27). Falta: (1) **Task modal full-screen mobile** (Step 4 — PR isolado, suspeito do crash v1.03.009; estratégia: dual-render desktop+mobile com CSS `display:none/block`, NÃO usar `matchMedia` em render path); (2) validar viewport/scroll em iPhone SE/Plus/iPad portrait reais; (3) tap targets ≥44px conforme HIG; (4) gestos (swipe-to-delete em listas? tap longo?); (5) Briefing "Clientes em atenção" mobile · checar se safe-cast roda em prod; (6) Portal mobile · avaliar se vale port fiel ao handoff (hoje só esconde storytelling). | 1-2 semanas | Alto — fecha o ciclo mobile com qualidade |
 
 #### A.2 · detalhamento
 
@@ -146,6 +158,14 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## Próximo passo imediato
 
-→ **Design system (A.1) + Filtros padronizados (A.2)** juntos — barra de filtros é componente visível em 4 telas, vale aplicar tokens novos de uma vez. Evita retrabalho.
-→ Em paralelo (outra pessoa/sessão): **`ai-suggest` (B.1)** como primeira IA em prod (mais barato/seguro de validar).
-→ Depois disso, escolher entre completar Bucket A (A.3+) ou avançar Bucket C (C.1+).
+A.1, A.2 e A.10 entregues no ciclo redesign DS. Próximas frentes em ordem de prioridade sugerida:
+
+1. **A.15 · Mobile fechamento** · Task modal full-screen mobile (Step 4) com estratégia anti-hidratação (dual-render via CSS, não matchMedia em render). Validar em dispositivos reais. Custo: 3-5 dias.
+2. **A.13 · Triagem redesign UX-first** · ponto mais friccionado do fluxo diário; tem mock de referência do Felipe. Custo: 1-2 semanas.
+3. **A.9 · Timesheet · entrada manual + permissões** · destrava retro-lançamento e fecha gap de controle. Custo: 3-5 dias.
+4. **A.11 · Briefing × Dashboard · clarear papel** · evita duplicação conceitual. Custo: 2-3 dias.
+5. **A.14 · Kanban card clean (avatar circular)** · quick win de densidade visual, coeso com Cadastros. Custo: 3-5 dias.
+
+Em paralelo (outra pessoa/sessão): **B.1 · `ai-suggest`** como primeira IA em prod — fecha o gap "diferenciação por IA" das promessas centrais (mais barato/seguro pra validar). Custo: ~1 semana.
+
+Depois disso, escolher entre completar Bucket A (A.3+) ou avançar Bucket C (C.1+).
