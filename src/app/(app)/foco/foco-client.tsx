@@ -17,6 +17,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useData, usePessoasById, useClientesById, useProjetosById } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
+import { Icon } from '@/components/icons';
+import { cn } from '@/lib/utils';
 import {
   agingDays,
   agingLevel,
@@ -269,9 +271,20 @@ export function FocoClient() {
         </div>
       )}
 
-      {/* Painel de foco */}
+      {/* ============ Painel de foco · MOBILE (handoff §3 · MFoco) ============ */}
       {hasFocus && (
-        <div className="space-y-4 md:space-y-5">
+        <FocoMobilePanel
+          focusPessoaId={focusPessoaId}
+          tasks={tasks}
+          openEdit={openEdit}
+          clientesById={clientesById}
+          projetosById={projetosById}
+        />
+      )}
+
+      {/* Painel de foco · DESKTOP */}
+      {hasFocus && (
+        <div className="hidden md:block space-y-4 md:space-y-5">
           {/* Narrativa */}
           {focoNarrativa && (
             <div className="card p-4 md:p-5" style={{ borderLeft: '3px solid var(--brand)' }}>
@@ -353,6 +366,142 @@ export function FocoClient() {
 }
 
 // ====================== Sub-componentes ======================
+
+// ── Mobile · MFoco (handoff §3) ─────────────────────────────────────────────
+//
+// Versão mobile-only do painel de foco. Renderiza title "Foco de hoje"
+// com narr de stats, pills Minhas/Atrasadas/Hoje (com contadores) e
+// lista de tcard.check (checkbox + título + sub cliente·projeto + Pri
+// + chip mono de horas).
+//
+// O checkbox marca a task como done localmente (visual) — não persiste
+// pra evitar conclusão acidental por tap. Pra concluir de verdade, abre
+// o modal tocando no corpo do card.
+
+function FocoMobilePanel({
+  focusPessoaId,
+  tasks,
+  openEdit,
+  clientesById,
+  projetosById,
+}: {
+  focusPessoaId: string;
+  tasks: Task[];
+  openEdit: (id: string) => void;
+  clientesById: ReturnType<typeof useClientesById>;
+  projetosById: ReturnType<typeof useProjetosById>;
+}) {
+  const [seg, setSeg] = useState<'minhas' | 'atrasadas' | 'hoje'>('minhas');
+  const [done, setDone] = useState<Set<string>>(() => new Set());
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  const mine = useMemo(
+    () => tasks.filter(
+      (t) => t.pessoaId === focusPessoaId && t.status !== STATUS.CONCLUIDO && !t.arquivadoEm,
+    ),
+    [tasks, focusPessoaId],
+  );
+  const atrasadasList = useMemo(() => mine.filter((t) => atrasada(t)), [mine]);
+  const hojeList = useMemo(
+    () => mine.filter((t) => t.prazo === todayIso || atrasada(t)),
+    [mine, todayIso],
+  );
+
+  const list = seg === 'atrasadas' ? atrasadasList : seg === 'hoje' ? hojeList : mine;
+  const totalHoras = list.reduce((a, t) => a + (t.esforco || 0), 0);
+  const toggle = (id: string) =>
+    setDone((d) => {
+      const next = new Set(d);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const pills = [
+    { v: 'minhas' as const, label: 'Minhas', ct: mine.length },
+    { v: 'atrasadas' as const, label: 'Atrasadas', ct: atrasadasList.length },
+    { v: 'hoje' as const, label: 'Hoje', ct: hojeList.length },
+  ];
+
+  return (
+    <div className="md:hidden">
+      <div className="m-pagetitle">
+        <h1>Foco de <em>hoje</em></h1>
+        <div className="narr">
+          <b>{list.length}</b> tarefas
+          <span className="sep">·</span>
+          <b>{totalHoras}h</b> previstas
+        </div>
+      </div>
+
+      <div className="m-pills">
+        {pills.map((p) => (
+          <button
+            key={p.v}
+            type="button"
+            className={cn('m-pill', seg === p.v && 'on')}
+            onClick={() => setSeg(p.v)}
+          >
+            {p.label}
+            <span className="ct">{p.ct}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="m-list">
+        {list.length === 0 ? (
+          <div className="card text-center py-6 px-3 text-muted text-xs italic">
+            {seg === 'atrasadas' ? 'Nada atrasado. Bom dia.'
+              : seg === 'hoje' ? 'Nada com prazo hoje.'
+              : 'Sem tarefas abertas.'}
+          </div>
+        ) : (
+          list.map((t) => {
+            const isDone = done.has(t.id);
+            const cli = clientesById.get(t.clienteId)?.nome ?? '—';
+            const proj = projetosById.get(t.projetoId)?.nome;
+            return (
+              <div key={t.id} className={cn('tcard check', isDone && 'done')}>
+                <button
+                  type="button"
+                  className="iconbtn"
+                  onClick={() => toggle(t.id)}
+                  aria-label={isDone ? 'Desmarcar' : 'Marcar como feito'}
+                  style={{ width: 28, height: 28, border: '1.5px solid var(--line-strong)', borderRadius: 6 }}
+                >
+                  {isDone && <Icon name="check" size={14} className="text-[color:var(--green)]" />}
+                </button>
+                <div className="body" onClick={() => openEdit(t.id)}>
+                  <div className="ttl">{t.titulo}</div>
+                  <div className="sub">{cli}{proj ? ' · ' + proj : ''}</div>
+                </div>
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <MobilePri p={t.prioridade} />
+                  {t.esforco > 0 && (
+                    <span className="chip font-mono" style={{ padding: '1px 7px', fontSize: 10 }}>
+                      {t.esforco}h
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Chip de prioridade mobile (P0/P1/P2/P3) — reusa .pri-P* do DS. */
+function MobilePri({ p }: { p: string }) {
+  return (
+    <span className={cn('pri', `pri-${p}`)}>
+      <span className="pri-dot" />
+      {p}
+    </span>
+  );
+}
 
 // ── Sem comentário hoje ──────────────────────────────────────────────────────
 
