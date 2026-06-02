@@ -1379,14 +1379,27 @@ body {
 
 .login-form-wrap {
   display: flex; align-items: center; justify-content: center;
-  padding: 24px;
+  /* Padding vertical generoso pra dar respiro — o painel da esquerda
+     ocupa a tela inteira via distribuição (top/middle/bottom). Aqui no
+     form a estratégia é centro com bastante folga vertical em vez de
+     espalhar artificialmente. */
+  padding: 64px 32px;
   background: var(--surface-1);
   overflow-y: auto;
 }
-.login-form-inner { width: 100%; max-width: 380px; }
+@media (min-width: 900px) {
+  .login-form-wrap { padding: 80px 56px; }
+}
+.login-form-inner {
+  width: 100%; max-width: 420px;
+  /* Pra que o form tenha um respiro mínimo entre topo e fundo,
+     mesmo em viewports muito altas */
+  display: flex; flex-direction: column;
+  gap: 0;
+}
 
 /* Marca inline (só em mobile, quando .login-brand está escondido) */
-.login-form-mark { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.login-form-mark { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
 .login-form-mark b { font-size: 22px; font-weight: 600; letter-spacing: -.015em; color: var(--fg); }
 @media (min-width: 900px) { .login-form-mark { display: none; } }
 
