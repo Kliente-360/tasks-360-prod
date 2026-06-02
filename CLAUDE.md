@@ -28,6 +28,11 @@ Convenções do projeto que valem pra qualquer sessão.
 - A `APP_VERSION` é exibida no rodapé do menu do perfil — mantenha visível.
 - Após commit em main, arquivos de migration vão pra `supabase/migrations/applied/` (mover manualmente — não tem automação).
 
+## Vercel
+
+- **Só `main` faz deploy.** Previews de branch/PR foram desligados via `vercel.json` (`git.deploymentEnabled: { main: true }`) — economia de build minutes + um único alvo de validação.
+- Se precisar testar uma branch antes de mergear: `vercel --prebuilt` local ou trigger manual no dashboard.
+
 ## Git workflow
 
 - Branch temporária `feat/*`/`fix/*`/`refactor/*`/`chore/*` → push → PR via `mcp__github__create_pull_request` → squash-merge via `mcp__github__merge_pull_request`. GitHub deleta a head branch automaticamente ("Automatically delete head branches" ativo). Resultado: 1 commit em `main`, zero branches sobreviventes.
