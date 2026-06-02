@@ -74,6 +74,7 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | A.13 | **Triagem · redesign UX-first** · hoje é uma lista de chips clicáveis sem affordance forte. Refazer com cards no padrão "ícone contextual à esquerda · título + sub-info · meta (tempo/chip) à direita · hover suave", agrupando por tipo de pendência (cliente respondeu / criada por IA / sem responsável). Cada card abre ação rápida inline (atribuir, marcar triada, dispensar) sem precisar entrar no modal full. Inspiração: print enviado pelo Felipe — chip do tipo no canto inferior direito, ícone com cor semântica à esquerda. | 1-2 semanas | Alto — triagem é o ponto mais friccionado do fluxo diário |
 | A.14 (parcial) | **Card de task unificado** · 🟡 **só camada técnica entregue, sem mudança visual perceptível.** v1.03.032-038 dedupou JSX repetido em primitivas (`PriChip`/`TaskAvatar`/`PrazoLabel`/`TagIA`) e criou wrapper `<TaskCard>` com variantes `sm/md/lg/checkable/selected`. Mas as telas mantiveram seus markups específicos (Foco desktop = FocoCard próprio, Backlog desktop = `<table>`, Kanban = .kcard, Triagem = card-com-chips, Calendário = .kcard). Resultado: código mais limpo, **UI essencialmente idêntica ao que era antes**. | (já feito, parcial) | Médio (técnico, invisível ao usuário) |
 | A.17 | **Card de task unificado · VISUAL** · **escopo redo**: A.14 entregou só dedup técnico. Falta a unificação visual real: cards iguais entre Foco desktop/mobile, Backlog mobile, Kanban, Triagem, Calendário detail. **Plano precisa ser refeito** — começar com auditoria visual real (prints lado-a-lado), decidir variante única por contexto, executar com mudança VISÍVEL em cada PR (não dedup invisível como A.14). Não tocar sem plano novo aprovado. | 1-2 semanas | Alto — entrega o que A.14 prometeu mas não cumpriu |
+| A.18 | **Meu foco · redesign UX-first** · refazer a tela Foco com foco em ação diária. Checkbox visual por task (marca como "feito hoje") **não persiste no DB** — só state local com timestamp do dia; ao virar a data (próximo boot ou primeiro paint após meia-noite), todo o `done` é limpo. Hoje o mobile já tem isso via `useState Set` mas reseta em qualquer remount (não respeita "dia"); desktop não tem checkbox. Unificar: desktop ganha mesma anatomia do mobile (TaskCard md checkable do A.17), persistência via `localStorage` com key `kliente360-foco-done-<YYYY-MM-DD>` (purge automático ao detectar key de dia anterior). Inspiração: GitHub commits "done today" / Todoist "concluído hoje". | 1-2 semanas | Alto — Foco é o entry point diário do operador |
 | A.15 | **Mobile · fechamento (Step 4 + validação real)** · 🟡 parcial: shell + 4 telas + Portal polish entregues (PRs #21-#27). Falta: (1) **Task modal full-screen mobile** (Step 4 — PR isolado, suspeito do crash v1.03.009; estratégia: dual-render desktop+mobile com CSS `display:none/block`, NÃO usar `matchMedia` em render path); (2) validar viewport/scroll em iPhone SE/Plus/iPad portrait reais; (3) tap targets ≥44px conforme HIG; (4) gestos (swipe-to-delete em listas? tap longo?); (5) Briefing "Clientes em atenção" mobile · checar se safe-cast roda em prod; (6) Portal mobile · avaliar se vale port fiel ao handoff (hoje só esconde storytelling). | 1-2 semanas | Alto — fecha o ciclo mobile com qualidade |
 | A.16 | **Revisar bulk actions** · auditar BulkBar (seleção múltipla no Backlog) — UX da seleção, ações disponíveis (atribuir cliente/projeto/pessoa/prazo/prioridade/esforço, arquivar, excluir), feedback visual (sticky bar com contador), comportamento mobile (não aparece hoje). Decidir: manter no Backlog desktop, levar pro Kanban também, adicionar atalhos teclado (ESC limpa seleção, Cmd+A seleciona tudo filtrado), confirmações pra ações destrutivas. | 3-5 dias | Médio — produtividade em operações repetitivas |
 
@@ -186,7 +187,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## 🎯 NEXT · ordem definida (jun/2026)
 
-Bloco de trabalho consolidado pelos próximos 6-11 semanas. 7 items
+Bloco de trabalho consolidado pelos próximos 8-14 semanas. 8 items
 priorizados pelo Felipe, ordenados em 3 ondas considerando dependências
 e perfil de risco.
 
@@ -195,13 +196,14 @@ e perfil de risco.
 2. **A.16** Revisar bulk actions (BulkBar)
 3. **C.3** Skill mismatch (heurística pura)
 
-**Onda 2 · Design coeso** (~10-20 dias · A.17 antes pra A.13 consumir)
+**Onda 2 · Design coeso** (~15-25 dias · A.17 base pra A.13 + A.18)
 4. **A.17** Card de task · VISUAL (replan + execução)
-5. **A.13** Triagem · redesign UX-first (consome A.17)
+5. **A.13** Triagem · redesign UX-first (consome A.17 · TaskAlertRow)
+6. **A.18** Meu foco · redesign UX-first (consome A.17 · TaskCard md checkable + persistência local por dia)
 
 **Onda 3 · Closing loops** (~10-20 dias)
-6. **A.15** Mobile fechamento (Step 4 task modal + validação real)
-7. **A.12** Dashboard × Portal · padrão técnico convergente
+7. **A.15** Mobile fechamento (Step 4 task modal + validação real)
+8. **A.12** Dashboard × Portal · padrão técnico convergente
 
 Items NÃO no NEXT (revisitar depois): A.3 Push · A.4 Triagem IA mandatory · A.5 Saved views · A.6 Sticky thead · A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.1-C.2/C.4-C.9.
 
