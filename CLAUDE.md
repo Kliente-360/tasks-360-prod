@@ -45,7 +45,7 @@ Convenções do projeto que valem pra qualquer sessão.
 
 ## Onda 0 · migração Alpine → Next (✅ concluída · em produção jun/2026)
 
-Ver **`ONDA0.md`** pro plano completo. **Todos os blocos 1-5 entregues.**
+Plano e blocos da Onda 0 foram entregues integralmente (jun/2026); ver histórico no git ou em `ROADMAP.md` §"Onda 0 (cutover)".
 
 Arquitetura (na prática, virou **quase 100% Client Components**):
 - **Client Components com Supabase JS**: telas interativas (Backlog, Kanban, Modal, Triagem, Foco, Calendário) — boot + estado em memória + realtime channel.

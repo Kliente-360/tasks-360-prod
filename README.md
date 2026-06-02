@@ -77,7 +77,7 @@ Em CI (GitHub Actions) e em smoke local podem ser **placeholders** (`https://pla
 │   │   ├── data-store.tsx         # DataProvider + useData()
 │   │   ├── toast.tsx              # ToastProvider + useToast / useToastSafe
 │   │   ├── theme-toggle.tsx       # ThemeProvider (light/dark via .dark class)
-│   │   ├── help-modal.tsx         # HelpProvider (lê docs/HOWTO.md ou HOWTO_CLIENTE.md)
+│   │   ├── help-modal.tsx         # HelpProvider (fetch /docs/HOWTO.md ou HOWTO_CLIENTE.md de public/docs/)
 │   │   ├── onboarding-modal.tsx   # OnboardingProvider (3 personas)
 │   │   ├── notif-bell.tsx         # Sino + realtime channel
 │   │   ├── command-palette.tsx    # ⌘K
@@ -109,9 +109,10 @@ Em CI (GitHub Actions) e em smoke local podem ser **placeholders** (`https://pla
 ├── playwright.config.ts
 ├── vitest.config.ts
 ├── next.config.mjs                # Serwist plugin
-├── ONDA0.md                       # Plano + fechamento da Onda 0
 └── README.md                      # (este arquivo)
 ```
+
+> **Docs do projeto**: HOWTO, HOWTO_CLIENTE e ONBOARDING moram em `public/docs/` (servidos em runtime pelos modais Help/Onboarding). STATUS.md (estado vivo), CLAUDE.md (convenções), KPIS.md (definições) e ROADMAP.md (histórico) ficam na raiz.
 
 ## Testes
 
