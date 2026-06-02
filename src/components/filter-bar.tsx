@@ -190,6 +190,9 @@ interface FilterBarProps {
   moreItems?: MoreMenuItem[];
   /** Placeholder do campo busca */
   searchPlaceholder?: string;
+  /** Esconde a busca completamente (Dashboard agrega dados — busca textual
+   *  não faz sentido). Por default a busca aparece. */
+  hideSearch?: boolean;
   /** Slot opcional à esquerda do campo de busca — usado por Kanban (toggle
    *  Operacional/Executiva) e Calendário (setas de mês). Mantém o
    *  espaçamento padrão da bar. */
@@ -208,21 +211,24 @@ export function FilterBar({
   pessoaOptions = [],
   moreItems,
   searchPlaceholder = 'Buscar',
+  hideSearch = false,
   leftSlot,
 }: FilterBarProps) {
   const active = countActive(f);
   return (
     <div className="filterbar inline">
       {leftSlot}
-      <label className="search">
-        <Icon name="search" size={14} className="ic" />
-        <input
-          type="text"
-          value={f.q}
-          placeholder={searchPlaceholder}
-          onChange={(e) => set('q', e.target.value)}
-        />
-      </label>
+      {!hideSearch && (
+        <label className="search">
+          <Icon name="search" size={14} className="ic" />
+          <input
+            type="text"
+            value={f.q}
+            placeholder={searchPlaceholder}
+            onChange={(e) => set('q', e.target.value)}
+          />
+        </label>
+      )}
 
       {show.includes('cliente') && (
         <FilterSelect

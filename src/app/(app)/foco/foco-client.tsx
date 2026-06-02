@@ -56,7 +56,7 @@ type FocoNarrativa = {
 };
 
 export function FocoClient() {
-  const { tasks, pessoas, loading, error, currentPessoa, viewerRole } = useData();
+  const { tasks, loading, error, currentPessoa, viewerRole } = useData();
   const isAdmin = viewerRole === 'admin';
   const isCliente = viewerRole === 'cliente';
   const { openEdit } = useTaskModal();
@@ -64,39 +64,15 @@ export function FocoClient() {
   const clientesById = useClientesById();
   const projetosById = useProjetosById();
 
-  const pessoasNaoCliente = useMemo(
-    () => pessoas.filter((p) => p.role !== 'cliente'),
-    [pessoas],
-  );
-
   // ===== State =====
-  // Default = usuário logado (mesmo se admin). Admin pode trocar via
-  // dropdown — escolha persiste em localStorage entre sessões.
-  // Não-admin sempre vê a si mesmo — selector escondido, focus travado.
-  // Cliente externo cai num banner ("Foco indisponível").
-  const [focusPessoaIdState, setFocusPessoaIdState] = useState<string>('');
-  const focusPessoaId = isAdmin
-    ? (focusPessoaIdState || currentPessoa?.id || '')
-    : (currentPessoa?.id ?? '');
+  // Foco SEMPRE no usuário logado — admin ou interno, todos veem só
+  // a própria visão. Cliente externo cai no banner "Foco indisponível".
+  // (Selector de troca de visão removido — v1.03.021.)
+  const focusPessoaId = currentPessoa?.id ?? '';
 
-  // Boot: restaura do localStorage só pra admin.
+  // Cleanup do localStorage legacy (uso anterior do selector). Roda 1x.
   useEffect(() => {
-    if (!isAdmin) return;
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY) || '';
-      if (stored) setFocusPessoaIdState(stored);
-    } catch {
-      /* ok */
-    }
-  }, [isAdmin]);
-
-  const setFocus = useCallback((pid: string) => {
-    setFocusPessoaIdState(pid);
-    try {
-      localStorage.setItem(STORAGE_KEY, pid);
-    } catch {
-      /* ok */
-    }
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ok */ }
   }, []);
 
   // ===== focusGroups =====
@@ -211,51 +187,16 @@ export function FocoClient() {
 
   return (
     <div>
-      {/* Desktop · PageHeader + selector "atuando como" pra admin (pills Minhas/Atrasadas/Hoje removidos — redundantes com as seções abaixo) */}
+      {/* Desktop · PageHeader fixo no usuário logado (admin não troca de visão) */}
       <div className="hidden md:block">
         <PageHeader
           title={
             hasFocus
               ? <>Foco de {pessoasById.get(focusPessoaId)?.nome ?? '—'}</>
-              : (isAdmin ? 'Foco' : 'Foco indisponível')
-          }
-          right={
-            isAdmin ? (
-              <select
-                className={`inp ${focusPessoaId ? 'is-active' : ''}`}
-                style={{ width: 220 }}
-                value={focusPessoaId}
-                onChange={(e) => setFocus(e.target.value)}
-              >
-                <option value="">atuando como…</option>
-                {pessoasNaoCliente.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.nome}
-                  </option>
-                ))}
-              </select>
-            ) : undefined
+              : 'Foco indisponível'
           }
         />
       </div>
-
-      {/* Mobile selector — só admin */}
-      {isAdmin && (
-        <div className="md:hidden mb-4">
-          <select
-            className={`inp w-full ${focusPessoaId ? 'is-active' : ''}`}
-            value={focusPessoaId}
-            onChange={(e) => setFocus(e.target.value)}
-          >
-            <option value="">— atuando como —</option>
-            {pessoasNaoCliente.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
 
       {/* Setup banner sem pessoa */}
       {!hasFocus && (
@@ -285,9 +226,9 @@ export function FocoClient() {
       {/* Painel de foco · DESKTOP */}
       {hasFocus && (
         <div className="hidden md:block space-y-4 md:space-y-5">
-          {/* Narrativa */}
+          {/* Narrativa · min-h padroniza o Y da 2ª linha entre tabs */}
           {focoNarrativa && (
-            <div className="card p-4 md:p-5" style={{ borderLeft: '3px solid var(--brand)' }}>
+            <div className="card p-4 md:p-5 min-h-[96px]" style={{ borderLeft: '3px solid var(--brand)' }}>
               <div className="text-[10px] uppercase tracking-wider text-muted font-mono mb-1">
                 Seu dia · {todayLabel}
               </div>
@@ -310,8 +251,8 @@ export function FocoClient() {
             </div>
           )}
 
-          {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* KPIs · min-h padroniza o Y da 2ª linha entre tabs */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 min-h-[96px]">
             <Kpi label="Atrasadas" value={counts.atrasadas.length} dangerIfPositive />
             <Kpi label="Para hoje" value={counts.hoje.length} />
             <Kpi label="Bloqueadas" value={counts.bloqueadas.length} dangerIfPositive />

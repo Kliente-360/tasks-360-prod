@@ -1307,10 +1307,13 @@ body {
 .mark.sz-24 { width: 24px; height: 24px; } .mark.sz-24 span { width: 8px; height: 8px; }
 .mark.sz-28 { width: 28px; height: 28px; } .mark.sz-28 span { width: 9px; height: 9px; }
 .mark.sz-32 { width: 32px; height: 32px; } .mark.sz-32 span { width: 10px; height: 10px; }
-.mark span:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); opacity: .45; }
-.mark span:nth-child(2) { top: 50%; left: 0; transform: translateY(-50%); opacity: .65; }
-.mark span:nth-child(3) { top: 50%; right: 0; transform: translateY(-50%); opacity: .85; }
-.mark span:nth-child(4) { bottom: 0; left: 50%; transform: translateX(-50%); opacity: 1; }
+/* Opacidade aumenta em sentido HORÁRIO a partir do topo (logo oficial):
+   top → right → bottom → left = .45 → .65 → .85 → 1.0.
+   JSX renderiza spans na ordem: top(1), left(2), right(3), bottom(4). */
+.mark span:nth-child(1) { top: 0; left: 50%; transform: translateX(-50%); opacity: .45; }   /* top */
+.mark span:nth-child(2) { top: 50%; left: 0; transform: translateY(-50%); opacity: 1; }    /* left = última no horário */
+.mark span:nth-child(3) { top: 50%; right: 0; transform: translateY(-50%); opacity: .65; } /* right = 2ª */
+.mark span:nth-child(4) { bottom: 0; left: 50%; transform: translateX(-50%); opacity: .85; } /* bottom = 3ª */
 .mark.loading-pulse { animation: mark-pulse 1.2s ease-in-out infinite; }
 @keyframes mark-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 
@@ -1712,9 +1715,12 @@ body {
   font-weight: 500;
   color: var(--fg-soft);
   cursor: pointer;
-  transition: all var(--dur) var(--ease);
+  /* Largura fixa: não expande quando uma opção é selecionada — a bar
+     mantém o mesmo offset entre elementos independentemente do valor. */
+  width: 124px;
+  flex: none;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease), color var(--dur) var(--ease);
   height: 34px;
-  min-width: 124px;
   box-sizing: border-box;
   white-space: nowrap;
 }
@@ -1735,10 +1741,10 @@ body {
 .fselect.clear {
   color: var(--danger);
   border-color: transparent;
-  /* Largura fixa pra que o slot do contador (visibility hidden quando
-     vazio) ocupe o mesmo espaço sempre — não desloca a bar ao ativar
-     o primeiro filtro. */
-  min-width: 52px;
+  /* Largura fixa compacta (52px). Override de width: 124px do .fselect
+     base; o slot do contador (visibility hidden quando vazio) ocupa
+     espaço estável → não desloca a bar ao ativar/desativar filtros. */
+  width: 52px;
   padding: 7px 9px;
   justify-content: center;
 }
