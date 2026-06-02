@@ -52,6 +52,9 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | A.7 | **PDF Resumo Executivo** · consolidar Briefing+Dashboard em documento navegável | 1-2 semanas | Médio — reuniões offline |
 | A.8 | **Workspaces · 3 pilares** (Salesforce · Dados · IA) · switcher topo + `workspace_id` em tabelas core + RLS por workspace | ⚠️ M-L · precisa spec própria | Estratégico — separação completa de ambientes |
 | A.9 | **Timesheet · entrada manual + permissões** · permitir criar registros sem cronômetro (data/hora início + duração + task + nota); **excluir** só dono ou admin; **editar** desabilitado (registro é imutável após salvo — corrige criando novo + deletando o errado, mantém audit trail limpo) | 3-5 dias | Médio — desbloqueia retro-lançamento e fecha gap de controle |
+| A.10 | **Cadastros · tabelas com mais colunas, menos chips** · hoje cada linha tem 1-3 chips inline (tier, sem domínio, SLA, orçamento, etc). Migrar isso pra colunas dedicadas (ex: Clientes ganha colunas Tier/Domínio/Faturamento; Projetos ganha Tipo/SLA/Orçamento). Melhora scan visual + permite sort por coluna. | 3-5 dias | Médio — densidade informacional sobe sem poluir |
+| A.11 | **Briefing × Dashboard** · revisar overlap conceitual (ambos mostram KPIs operacionais, alertas, semáforo de clientes). Decidir: Briefing = leitura editorial diária / Dashboard = exploração analítica. Ajustar conteúdos pra cada cumprir seu papel sem duplicar. | 2-3 dias | Alto — clareza de propósito por tela |
+| A.12 | **Dashboard × Portal cliente · padrão técnico** · auditar tecnologia/framework de cada um (parecem diferentes — Portal usa header verde escuro `--bg-portal`, Dashboard usa surface normal; estruturas de card divergem). Definir padrão único (componentes, tokens, hierarquia) e refazer ambos na versão final convergente. | 1-2 semanas | Alto — fecha o ciclo de DS nessas duas telas |
 
 #### A.2 · detalhamento
 

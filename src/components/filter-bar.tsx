@@ -261,18 +261,20 @@ export function FilterBar({
         />
       )}
 
-      {active > 0 && (
-        <button
-          type="button"
-          className="fselect clear"
-          onClick={onClear}
-          title={`Limpar ${active} filtro${active > 1 ? 's' : ''}`}
-          aria-label={`Limpar ${active} filtros`}
-        >
-          <Icon name="x" size={14} className="ic" />
-          <span className="font-mono">{active}</span>
-        </button>
-      )}
+      {/* Botão Limpar sempre presente — evita deslocamento da bar quando
+          filtros entram/saem. Desabilitado/cinza sem filtros, ativo em
+          vermelho com contador quando há filtros aplicados. */}
+      <button
+        type="button"
+        className={cn('fselect clear', active === 0 && 'is-empty')}
+        onClick={active > 0 ? onClear : undefined}
+        disabled={active === 0}
+        title={active > 0 ? `Limpar ${active} filtro${active > 1 ? 's' : ''}` : 'Nenhum filtro aplicado'}
+        aria-label={active > 0 ? `Limpar ${active} filtros` : 'Sem filtros'}
+      >
+        <Icon name="x" size={14} className="ic" />
+        {active > 0 && <span className="font-mono">{active}</span>}
+      </button>
 
       {moreItems && <MoreMenu items={moreItems} />}
     </div>
