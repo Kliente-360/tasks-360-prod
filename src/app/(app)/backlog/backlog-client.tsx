@@ -19,7 +19,7 @@ import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
 import { BulkBar, BulkBarClearButton, BulkBarSep } from '@/components/bulk-bar';
 import { atrasada, agingDays, agingLevel, fmtDate, fmtDateShort, fmtTempoEtapa, lblComplex, lblStatus } from '@/lib/task-utils';
-import { STATUS, SUB_LABELS, SUBS_FLAT } from '@/lib/task-constants';
+import { STATUS, SUB_LABELS, SUBS_FLAT, SUBS_FLAT_ORDER } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import type { Task } from '@/lib/types';
 
@@ -215,8 +215,7 @@ export function BacklogClient() {
         v = ({ andamento: 0, bloqueado: 1, backlog: 2, concluido: 3 } as Record<string, number>)[String(v)] ?? 99;
       }
       if (k === 'subetapa') {
-        const o = Object.fromEntries(SUBS_FLAT.map((s, i) => [s, i])) as Record<string, number>;
-        v = o[String(v)] ?? 99;
+        v = SUBS_FLAT_ORDER[String(v)] ?? 99;
       }
       if (k === 'prioridade') v = v ? +String(v).slice(1) : 99;
       if (k === 'complexidade') {
@@ -308,8 +307,7 @@ export function BacklogClient() {
       const order: Record<string, number> = { andamento: 0, bloqueado: 1, backlog: 2, concluido: 3 };
       groups.sort((a, b) => (order[a.key] ?? 9) - (order[b.key] ?? 9));
     } else if (groupBy === 'subetapa') {
-      const order = Object.fromEntries(SUBS_FLAT.map((s, i) => [s, i])) as Record<string, number>;
-      groups.sort((a, b) => (order[a.key] ?? 99) - (order[b.key] ?? 99));
+      groups.sort((a, b) => (SUBS_FLAT_ORDER[a.key] ?? 99) - (SUBS_FLAT_ORDER[b.key] ?? 99));
     } else if (groupBy === 'complexidade') {
       const order: Record<string, number> = { alta: 0, media: 1, baixa: 2 };
       groups.sort((a, b) => (order[a.key] ?? 9) - (order[b.key] ?? 9));

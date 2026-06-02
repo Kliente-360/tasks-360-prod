@@ -510,40 +510,6 @@ export function computeHeuristicAlerts(
 }
 
 // ─────────────────────────────────────────────────────────
-//  Throughput semanal (últimas 8 semanas)
-// ─────────────────────────────────────────────────────────
-
-export interface ThroughputWeek {
-  label: string;   // 'DD/MM'
-  count: number;
-  isCurrent: boolean;
-}
-
-export function computeThroughput(tasks: Task[]): ThroughputWeek[] {
-  const completed = tasks.filter((t) => t.status === STATUS.CONCLUIDO && t.statusEm);
-  const out: ThroughputWeek[] = [];
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const offsetSeg = (now.getDay() + 6) % 7; // segunda = 0
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - offsetSeg);
-
-  for (let i = 7; i >= 0; i--) {
-    const start = new Date(monday);
-    start.setDate(monday.getDate() - i * 7);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 7);
-    const count = completed.filter((t) => {
-      const d = new Date(t.statusEm);
-      return d >= start && d < end;
-    }).length;
-    const label = start.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    out.push({ label, count, isCurrent: i === 0 });
-  }
-  return out;
-}
-
-// ─────────────────────────────────────────────────────────
 //  Velocidade da operação (30d)
 // ─────────────────────────────────────────────────────────
 

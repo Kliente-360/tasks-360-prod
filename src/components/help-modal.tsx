@@ -12,8 +12,15 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { marked } from 'marked';
 import { useData } from '@/lib/data-store';
+
+// Lazy-load marked: ~90KB gzipped só pra render de markdown nos modais.
+// Carrega só na 1ª vez que o modal abre (dynamic import vira chunk separado).
+let markedModule: typeof import('marked') | null = null;
+async function getMarked() {
+  if (!markedModule) markedModule = await import('marked');
+  return markedModule.marked;
+}
 
 // ============ Provider ============
 
@@ -71,6 +78,7 @@ async function loadDoc(file: string): Promise<ParsedDoc> {
     .replace(/^#\s+tasks 360 — manual do usuário[\s\S]*?\n---\s*\n/m, '')
     .replace(/^#\s+Portal Kliente 360[\s\S]*?\n---\s*\n/m, '')
     .trim();
+  const marked = await getMarked();
   const tmp = document.createElement('div');
   tmp.innerHTML = await marked.parse(cleaned, { gfm: true });
   const used = new Set<string>();

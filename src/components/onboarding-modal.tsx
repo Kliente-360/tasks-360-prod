@@ -13,8 +13,14 @@
  */
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { marked } from 'marked';
 import { useData } from '@/lib/data-store';
+
+// Lazy-load marked: ~90KB gzipped só pra render de markdown nos modais.
+let markedModule: typeof import('marked') | null = null;
+async function getMarked() {
+  if (!markedModule) markedModule = await import('marked');
+  return markedModule.marked;
+}
 
 type Persona = 'ceo' | 'gerente' | 'analista';
 type Personas = Record<Persona, string>;
@@ -24,6 +30,7 @@ let cached: Personas | null = null;
 
 async function loadOnboarding(): Promise<Personas> {
   if (cached) return cached;
+  const marked = await getMarked();
   const r = await fetch('/docs/ONBOARDING.md', { cache: 'no-cache' });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const md = await r.text();

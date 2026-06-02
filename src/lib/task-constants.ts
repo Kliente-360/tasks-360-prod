@@ -58,6 +58,12 @@ export const SUBS_FLAT = [
   'concluido',
 ] as const;
 
+/** Ordem visual das sub-etapas (mapa nome→índice). Pré-computado fora
+ *  de hot paths (era recriado a cada filter/sort em Backlog/Kanban). */
+export const SUBS_FLAT_ORDER: Record<string, number> = Object.fromEntries(
+  SUBS_FLAT.map((s, i) => [s, i]),
+);
+
 /** Rank das sub-etapas pra detectar tasks "incompletas" em etapa avançada. */
 export const STAGE_RANK: Record<string, number> = {
   backlog: 0,
