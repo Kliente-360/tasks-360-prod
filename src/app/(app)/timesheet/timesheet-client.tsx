@@ -198,7 +198,7 @@ export function TimesheetClient() {
       />
 
       {/* Summary card · min-h padroniza Y da 2ª linha entre tabs */}
-      <div className="card p-4 mb-6 flex items-center gap-6 min-h-[132px]">
+      <div className="card p-4 mb-6 flex items-center gap-6 min-h-[116px]">
         <div>
           <div className="text-xs text-muted uppercase tracking-wide">Total</div>
           <div className="text-2xl font-mono font-semibold text-brand">{fmtDuration(totalMs)}</div>

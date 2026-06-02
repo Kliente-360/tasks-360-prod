@@ -224,7 +224,7 @@ export function FilterBar({
         <input
           type="text"
           value={f.q}
-          placeholder={disableSearch ? '—' : searchPlaceholder}
+          placeholder={searchPlaceholder}
           onChange={(e) => set('q', e.target.value)}
           disabled={disableSearch}
           title={disableSearch ? 'Busca textual não se aplica a esta tela' : undefined}
