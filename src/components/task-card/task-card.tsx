@@ -51,6 +51,8 @@ interface TaskCardProps {
   selected?: boolean;
   /** Esconde footer com avatar+nome+IA+prazo (raro). */
   hideMeta?: boolean;
+  /** Mostra esforco (h) ao lado do prazo no footer (Foco) */
+  showEsforco?: boolean;
   /** Pra size=lg: descrição em preview (clamp 2 linhas) */
   descricaoPreview?: string;
   /** Pra size=lg: mostra chip de status no footer */
@@ -78,6 +80,7 @@ export function TaskCard({
   onToggleCheck,
   selected = false,
   hideMeta = false,
+  showEsforco = false,
   descricaoPreview,
   showStatus = false,
   onClick,
@@ -164,6 +167,9 @@ export function TaskCard({
             )}
             <span className="sp" />
             <PrazoLabel task={task} />
+            {showEsforco && task.esforco > 0 && (
+              <span className="font-mono text-xs text-muted">· {task.esforco}h</span>
+            )}
           </div>
         )}
       </div>
