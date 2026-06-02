@@ -190,6 +190,10 @@ interface FilterBarProps {
   moreItems?: MoreMenuItem[];
   /** Placeholder do campo busca */
   searchPlaceholder?: string;
+  /** Slot opcional à esquerda do campo de busca — usado por Kanban (toggle
+   *  Operacional/Executiva) e Calendário (setas de mês). Mantém o
+   *  espaçamento padrão da bar. */
+  leftSlot?: React.ReactNode;
 }
 
 const DEFAULT_SHOW: FilterKey[] = ['cliente', 'projeto', 'resp', 'prazo'];
@@ -203,11 +207,13 @@ export function FilterBar({
   projetoOptions = [],
   pessoaOptions = [],
   moreItems,
-  searchPlaceholder = 'Buscar em tudo…',
+  searchPlaceholder = 'Buscar',
+  leftSlot,
 }: FilterBarProps) {
   const active = countActive(f);
   return (
     <div className="filterbar inline">
+      {leftSlot}
       <label className="search">
         <Icon name="search" size={14} className="ic" />
         <input
