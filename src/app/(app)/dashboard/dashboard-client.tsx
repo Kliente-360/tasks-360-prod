@@ -46,15 +46,15 @@ function sinalDot(sinal: string) {
 
 function calDayBg(dia: { count: number; isPast: boolean }) {
   if (dia.count === 0) return '';
-  if (dia.isPast || dia.count >= 5) return 'bg-red-100';
-  if (dia.count >= 3) return 'bg-orange-100';
-  return 'bg-yellow-50';
+  if (dia.isPast || dia.count >= 5) return 'bg-[color:var(--danger-soft)]';
+  if (dia.count >= 3) return 'bg-[color:var(--sig-amber-bg)]';
+  return 'bg-[color:var(--warn-soft)]';
 }
 
 function calBadgeBg(dia: { count: number; isPast: boolean }) {
-  if (dia.isPast || dia.count >= 5) return 'bg-red-500';
-  if (dia.count >= 3) return 'bg-orange-400';
-  return 'bg-amber-400';
+  if (dia.isPast || dia.count >= 5) return 'bg-[color:var(--danger)]';
+  if (dia.count >= 3) return 'bg-[color:var(--sig-amber)]';
+  return 'bg-[color:var(--warn)]';
 }
 
 // ─────────────────────────────────────────────────────────
@@ -467,9 +467,9 @@ export function DashboardClient() {
               <p className="text-[10px] text-muted mt-0.5">tarefas por dia · semana passada + atual + 4</p>
             </div>
             <div className="hidden md:flex items-center gap-2 text-[9px] text-muted shrink-0">
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-yellow-100 border border-yellow-200 inline-block" />1–2</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-orange-100 border border-orange-200 inline-block" />3–4</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-red-100 border border-red-200 inline-block" />5+&nbsp;/&nbsp;ATRASADA</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[color:var(--warn-soft)] border border-[color:var(--warn)] inline-block" />1–2</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[color:var(--sig-amber-bg)] border border-[color:var(--sig-amber)] inline-block" />3–4</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-[color:var(--danger-soft)] border border-[color:var(--danger)] inline-block" />5+&nbsp;/&nbsp;ATRASADA</span>
             </div>
           </div>
           <div className="p-2 md:p-3">
@@ -492,7 +492,7 @@ export function DashboardClient() {
                       dia.isToday ? 'ring-1 ring-[var(--brand)]' : '',
                     )}
                   >
-                    <span className={cn('font-medium', dia.isPast && dia.count > 0 ? 'text-red-600' : 'text-[var(--ink)]')}>
+                    <span className={cn('font-medium', dia.isPast && dia.count > 0 ? 'text-[color:var(--danger)]' : 'text-[var(--ink)]')}>
                       {new Date(dia.date + 'T12:00:00').getDate()}
                     </span>
                     {dia.count > 0 && (

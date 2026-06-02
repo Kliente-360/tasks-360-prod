@@ -13,6 +13,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useData } from '@/lib/data-store';
+import { Icon } from '@/components/icons';
 
 // Lazy-load marked: ~90KB gzipped só pra render de markdown nos modais.
 // Carrega só na 1ª vez que o modal abre (dynamic import vira chunk separado).
@@ -148,31 +149,31 @@ export function HelpModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center px-2 md:px-4 py-4"
+      className="fixed inset-0 z-[80] bg-[color:var(--modal-bg)] flex items-center justify-center px-2 md:px-4 py-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-elev border border-line rounded-lg shadow-2xl w-full max-w-[920px] h-[92vh] flex flex-col overflow-hidden">
+      <div className="bg-[color:var(--bg-elev)] border border-line rounded-lg shadow-[var(--shadow-modal)] w-full max-w-[920px] h-[92vh] flex flex-col overflow-hidden">
         <div className="px-4 md:px-6 py-3 border-b border-line flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="font-brand font-semibold text-base md:text-lg">Manual · tasks 360</div>
+            <div className="font-brand font-semibold text-base md:text-lg text-ink">Manual · tasks 360</div>
             <span className="text-[10px] uppercase tracking-wider text-muted font-mono hidden md:inline">
               como usar a ferramenta
             </span>
           </div>
           <button
             type="button"
-            className="text-muted hover:text-ink text-xl px-2"
+            className="iconbtn text-muted hover:text-ink hover:bg-[color:var(--surface-3)] rounded-md p-1.5 transition-colors"
             onClick={onClose}
             aria-label="Fechar"
           >
-            ×
+            <Icon name="x" size={18} />
           </button>
         </div>
         <div className="flex-1 overflow-hidden grid md:grid-cols-[220px_1fr]">
           {/* TOC desktop */}
-          <aside className="hidden md:block border-r border-line overflow-y-auto bg-bg">
+          <aside className="hidden md:block border-r border-line overflow-y-auto bg-[color:var(--surface-3)]">
             <div className="px-4 py-3 text-[10px] uppercase tracking-wider text-muted font-mono font-semibold border-b border-line">
               índice
             </div>
@@ -185,7 +186,7 @@ export function HelpModal({ onClose }: { onClose: () => void }) {
                     e.preventDefault();
                     scrollTo(h.id);
                   }}
-                  className={`block px-4 py-1.5 hover:bg-brand-tint hover:text-brand-dark transition-colors text-ink-soft ${
+                  className={`block px-4 py-1.5 hover:bg-[color:var(--brand-tint)] hover:text-[color:var(--brand-dark)] transition-colors text-ink-soft ${
                     h.depth === 2 ? 'pl-7' : ''
                   }`}
                 >
@@ -195,11 +196,14 @@ export function HelpModal({ onClose }: { onClose: () => void }) {
             </nav>
           </aside>
           {/* Conteúdo */}
-          <div ref={scrollRef} className="overflow-y-auto px-5 md:px-8 py-5 md:py-7">
+          <div ref={scrollRef} className="overflow-y-auto px-5 md:px-8 py-5 md:py-7 bg-[color:var(--bg-elev)]">
             {loading && <div className="text-center text-muted py-12">carregando manual…</div>}
             {err && (
               <div className="text-center py-12">
-                <div className="text-[color:var(--p0)] mb-2">não foi possível carregar o manual</div>
+                <div className="text-[color:var(--danger)] mb-2 inline-flex items-center gap-2 justify-center">
+                  <Icon name="alert" size={16} />
+                  não foi possível carregar o manual
+                </div>
                 <div className="text-xs text-muted">{err}</div>
                 <a
                   className="btn btn-ghost text-xs mt-3 inline-block"
@@ -237,10 +241,12 @@ export function HelpMenuItem({ onClick }: { onClick?: () => void }) {
         onClick?.();
         open();
       }}
-      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-brand-tint"
+      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-ink hover:bg-[color:var(--brand-tint)] transition-colors"
     >
-      <span className="whitespace-nowrap">{label}</span>
-      <span className="text-muted text-xs whitespace-nowrap">?</span>
+      <span className="whitespace-nowrap inline-flex items-center gap-2">
+        <Icon name="help" size={14} />
+        {label}
+      </span>
     </button>
   );
 }
@@ -252,11 +258,11 @@ export function HelpIconButton() {
     <button
       type="button"
       onClick={open}
-      className="btn btn-ghost btn-icon text-xs !hidden md:!inline-flex"
+      className="btn btn-ghost btn-icon !hidden md:!inline-flex"
       title="Manual da ferramenta"
       aria-label="Ajuda"
     >
-      ?
+      <Icon name="help" size={16} />
     </button>
   );
 }

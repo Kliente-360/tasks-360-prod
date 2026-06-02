@@ -14,6 +14,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useData } from '@/lib/data-store';
+import { Icon } from '@/components/icons';
 
 // Lazy-load marked: ~90KB gzipped só pra render de markdown nos modais.
 let markedModule: typeof import('marked') | null = null;
@@ -116,20 +117,20 @@ function OnboardingModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center px-2 md:px-4 py-4"
+      className="fixed inset-0 z-[80] bg-[color:var(--modal-bg)] flex items-center justify-center px-2 md:px-4 py-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-elev border border-line rounded-lg shadow-2xl w-full max-w-[920px] h-[92vh] flex flex-col overflow-hidden">
+      <div className="bg-[color:var(--bg-elev)] border border-line rounded-lg shadow-[var(--shadow-modal)] w-full max-w-[920px] h-[92vh] flex flex-col overflow-hidden">
         <div className="px-4 md:px-6 py-3 border-b border-line flex items-center justify-between gap-3 shrink-0 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="font-brand font-semibold text-base md:text-lg">Onboarding · tasks 360</div>
+            <div className="font-brand font-semibold text-base md:text-lg text-ink">Onboarding · tasks 360</div>
             <span className="text-[10px] uppercase tracking-wider text-muted font-mono hidden md:inline">
               3 perspectivas
             </span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {/* Toggle persona */}
             <div className="flex rounded-md border border-line overflow-hidden text-sm">
               {(['ceo', 'gerente', 'analista'] as const).map((p) => (
@@ -139,8 +140,8 @@ function OnboardingModal({ onClose }: { onClose: () => void }) {
                   onClick={() => setPersona(p)}
                   className={`px-3 py-1.5 capitalize transition-colors ${
                     persona === p
-                      ? 'bg-brand-tint font-semibold text-brand-dark'
-                      : 'text-ink-soft hover:bg-brand-tint'
+                      ? 'bg-[color:var(--brand-tint)] font-semibold text-[color:var(--brand-dark)]'
+                      : 'text-ink-soft hover:bg-[color:var(--surface-3)]'
                   }`}
                 >
                   {p === 'ceo' ? 'CEO' : p}
@@ -149,19 +150,22 @@ function OnboardingModal({ onClose }: { onClose: () => void }) {
             </div>
             <button
               type="button"
-              className="text-muted hover:text-ink text-xl px-2"
+              className="iconbtn text-muted hover:text-ink hover:bg-[color:var(--surface-3)] rounded-md p-1.5 transition-colors"
               onClick={onClose}
               aria-label="Fechar"
             >
-              ×
+              <Icon name="x" size={18} />
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 md:px-8 py-5 md:py-7">
+        <div className="flex-1 overflow-y-auto px-5 md:px-8 py-5 md:py-7 bg-[color:var(--bg-elev)]">
           {loading && <div className="text-center text-muted py-12">carregando onboarding…</div>}
           {err && (
             <div className="text-center py-12">
-              <div className="text-[color:var(--p0)] mb-2">não foi possível carregar o onboarding</div>
+              <div className="text-[color:var(--danger)] mb-2 inline-flex items-center gap-2 justify-center">
+                <Icon name="alert" size={16} />
+                não foi possível carregar o onboarding
+              </div>
               <div className="text-xs text-muted">{err}</div>
               <a
                 className="btn btn-ghost text-xs mt-3 inline-block"
@@ -197,9 +201,12 @@ export function OnboardingMenuItem({ onClick }: { onClick?: () => void }) {
         onClick?.();
         open();
       }}
-      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-brand-tint"
+      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-ink hover:bg-[color:var(--brand-tint)] transition-colors"
     >
-      <span className="whitespace-nowrap">Onboarding</span>
+      <span className="whitespace-nowrap inline-flex items-center gap-2">
+        <Icon name="info" size={14} />
+        Onboarding
+      </span>
       <span className="text-muted text-xs whitespace-nowrap">3 perfis</span>
     </button>
   );
