@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTimer, fmtElapsed } from '@/lib/use-timer';
 import { useData, useClientesById } from '@/lib/data-store';
+import { Icon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 
 const MAX_NOTE = 120;
@@ -169,6 +170,7 @@ export function TimerButton() {
     await stopTimer(note || undefined);
   }
 
+  // Rodando: pill verde com tempo HH:MM:SS visível + dot pulsando + ícone square (stop)
   if (activeEntry) {
     return (
       <>
@@ -177,14 +179,10 @@ export function TimerButton() {
           onClick={() => setShowNote(true)}
           disabled={stopping}
           title={activeTask ? `Parar: ${activeTask.titulo}` : 'Parar cronômetro'}
-          className={cn(
-            'flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono font-medium transition-colors',
-            'text-[color:var(--brand)] hover:bg-[var(--brand-tint)] border border-[color:var(--brand)] border-opacity-40',
-            stopping && 'opacity-50',
-          )}
+          className={cn('timer-btn running', stopping && 'opacity-60')}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--brand)] animate-pulse shrink-0" />
-          {stopping ? '…' : fmtElapsed(elapsed)}
+          <Icon name="square" size={13} />
+          <span className="tabular-nums">{stopping ? '…' : fmtElapsed(elapsed)}</span>
         </button>
         {showNote && (
           <NoteModal onConfirm={handleNoteConfirm} onCancel={() => setShowNote(false)} />
@@ -193,6 +191,7 @@ export function TimerButton() {
     );
   }
 
+  // Parado: pill neutra com ícone play
   return (
     <>
       <button
@@ -200,24 +199,11 @@ export function TimerButton() {
         onClick={() => setPicking(true)}
         disabled={starting}
         title="Iniciar cronômetro"
-        className="icon-btn text-muted hover:text-ink"
+        className={cn('timer-btn', starting && 'opacity-60')}
         aria-label="Iniciar cronômetro"
       >
-        {/* Stopwatch icon */}
-        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-          {/* Crown bar */}
-          <line x1="7.5" y1="5" x2="12.5" y2="5" />
-          {/* Left button stem */}
-          <line x1="7.5" y1="5" x2="7.5" y2="3.5" />
-          {/* Right button stem (start trigger) */}
-          <line x1="12.5" y1="5" x2="12.5" y2="3.5" />
-          {/* Stem connecting crown to body */}
-          <line x1="10" y1="5" x2="10" y2="6.5" />
-          {/* Main dial */}
-          <circle cx="10" cy="13" r="6" />
-          {/* Hand pointing up */}
-          <line x1="10" y1="13" x2="10" y2="9.5" />
-        </svg>
+        <Icon name="play" size={13} />
+        <span>Iniciar</span>
       </button>
       {picking && (
         <TaskPickerModal onSelect={handleSelect} onClose={() => setPicking(false)} />

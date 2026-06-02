@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Padrão tasks 360 — Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="wf.css" />
+</head>
+<body>
+
+<!-- ============ ICON SPRITE (Lucide-style, stroke 2, round) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol viewBox="0 0 24 24" id="i-search"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-filter"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-sliders"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2.2" fill="#fff"/><circle cx="15" cy="12" r="2.2" fill="#fff"/><circle cx="8" cy="18" r="2.2" fill="#fff"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-plus"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-chev-down"><polyline points="6 9 12 15 18 9"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-chev-up"><polyline points="18 15 12 9 6 15"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-sort"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-arrow-up"><line x1="12" y1="19" x2="12" y2="6"/><polyline points="6 12 12 6 18 12"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-arrow-down"><line x1="12" y1="5" x2="12" y2="18"/><polyline points="18 12 12 18 6 12"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-check"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-x"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-calendar"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-grid"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-list"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3.5" y1="6" x2="3.51" y2="6"/><line x1="3.5" y1="12" x2="3.51" y2="12"/><line x1="3.5" y1="18" x2="3.51" y2="18"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-columns"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-clock"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-timer"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="8"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-users"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-folder"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-building"><rect x="5" y="2" width="14" height="20" rx="1"/><line x1="9" y1="6" x2="9" y2="6.01"/><line x1="15" y1="6" x2="15" y2="6.01"/><line x1="9" y1="10" x2="9" y2="10.01"/><line x1="15" y1="10" x2="15" y2="10.01"/><line x1="10" y1="22" x2="14" y2="22"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-bell"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-more"><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/><circle cx="5" cy="12" r="1.4"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-refresh"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-target"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-inbox"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-file"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-download"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-alert"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-trend"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-sun"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.9" y1="4.9" x2="6.3" y2="6.3"/><line x1="17.7" y1="17.7" x2="19.1" y2="19.1"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.9" y1="19.1" x2="6.3" y2="17.7"/><line x1="17.7" y1="6.3" x2="19.1" y2="4.9"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-help"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-type"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-palette"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2a10 10 0 1 0 0 20 2 2 0 0 0 2-2v-1a1 1 0 0 1 1-1h2.5a4.5 4.5 0 0 0 4.5-4.5C24 6 18.5 2 12 2z"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-ruler"><path d="M21.3 15.3 8.7 2.7a1 1 0 0 0-1.4 0L2.7 7.3a1 1 0 0 0 0 1.4l12.6 12.6a1 1 0 0 0 1.4 0l4.6-4.6a1 1 0 0 0 0-1.4Z"/><path d="m14.5 12.5-2 2"/><path d="m11.5 9.5-2 2"/><path d="m8.5 6.5-2 2"/><path d="m17.5 15.5-2 2"/></symbol>
+    <symbol viewBox="0 0 24 24" id="i-shapes"><rect x="3" y="13" width="8" height="8" rx="1"/><circle cx="17" cy="17" r="4"/><path d="M12 8 8 2 4 8z" transform="translate(4 0)"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============ DOC NAV ============ -->
+<header class="doc-nav">
+  <div class="doc-nav-inner">
+    <div class="doc-brand">
+      <span class="doc-logo"><span></span><span></span><span></span><span></span></span>
+      <div>
+        <b>Padrão tasks&nbsp;360</b>
+        <small>Wireframes · Kliente 360 DS</small>
+      </div>
+    </div>
+    <nav class="doc-tabs" id="tabs">
+      <button class="doc-tab active" data-t="intro">Princípios</button>
+      <button class="doc-tab" data-t="shell">Shell</button>
+      <button class="doc-tab" data-t="pagebar">Page-bar</button>
+      <button class="doc-tab" data-t="filtros">Filtros</button>
+      <button class="doc-tab" data-t="tabela">Tabela</button>
+      <button class="doc-tab" data-t="cards">Cards & KPIs</button>
+      <button class="doc-tab" data-t="forms">Forms & Modais</button>
+      <button class="doc-tab" data-t="botoes">Botões & Ícones</button>
+      <button class="doc-tab" data-t="telas">Telas montadas</button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- =====================================================================
+     1 · PRINCÍPIOS
+     ===================================================================== -->
+<section class="section active" data-s="intro">
+  <div class="sec-head">
+    <span class="kicker">o sistema, antes das telas</span>
+    <h1>Um padrão único pra <em>todo o app</em>.</h1>
+    <p>Estes wireframes fecham as decisões estruturais — tipografia, cor, densidade, e os 6 padrões-âncora que se repetem em todas as telas. Baixa fidelidade de propósito: blocos cinza são conteúdo, tracejado é placeholder, anotações à mão explicam o porquê. Cor só onde a marca pede.</p>
+  </div>
+
+  <div class="legend">
+    <span><i class="ph-l"></i> conteúdo / texto real</span>
+    <span><i class="dash-l"></i> área / placeholder</span>
+    <span><i class="green-l"></i> acento da marca (#007A3D)</span>
+    <span class="note" style="font-size:16px">anotação = decisão</span>
+  </div>
+
+  <div class="subhead"><h2>Fundamentos visuais</h2><span class="sub-note">migrar 100% pro DS oficial</span></div>
+  <div class="spec-grid">
+    <div class="spec">
+      <h3><svg class="ic"><use href="#i-type"/></svg> Tipografia</h3>
+      <p class="lead">Inter pra tudo. JetBrains Mono pra números, datas, eyebrows e IDs.</p>
+      <dl>
+        <dt>Display / H1</dt><dd>Inter 700 · clamp 30→44px · tracking −0.03em</dd>
+        <dt>Título seção</dt><dd>Inter 700 · 19–24px · −0.02em</dd>
+        <dt>Corpo</dt><dd>Inter 400/500 · 14–16px</dd>
+        <dt>Eyebrow</dt><dd>Mono 600 · 11px · UPPER · tracking .14em</dd>
+        <dt>Números/KPI</dt><dd>Mono ou Inter tabular · feature tnum</dd>
+        <dt>Regra verde</dt><dd>1 trecho em <em style="color:var(--green);font-style:normal">&lt;em&gt;</em> por título forte</dd>
+      </dl>
+    </div>
+    <div class="spec">
+      <h3><svg class="ic"><use href="#i-palette"/></svg> Cor</h3>
+      <p class="lead">Dois verdes, nunca confundidos. Neutros dominam, sem gradiente.</p>
+      <dl>
+        <dt><span class="swatch" style="background:#007A3D"></span>#007A3D</dt><dd>Editorial — CTA, link, eyebrow, hover, foco</dd>
+        <dt><span class="swatch" style="background:#009900"></span>#009900</dt><dd>Logo — <b>só</b> o símbolo aperture. Nunca em botão.</dd>
+        <dt><span class="swatch" style="background:#fff"></span>#fff / #f5f5f7</dt><dd>Superfícies alternam pra dar ritmo</dd>
+        <dt><span class="swatch" style="background:#0a0a0a"></span>#0a0a0a</dt><dd>Seções escuras pontuais (header de modal, portal)</dd>
+        <dt>Status</dt><dd>P0 vermelho · P1 âmbar · P2 azul · P3 neutro</dd>
+      </dl>
+    </div>
+    <div class="spec">
+      <h3><svg class="ic"><use href="#i-ruler"/></svg> Densidade & espaço</h3>
+      <p class="lead">Respiro nos cabeçalhos e KPIs; densidade nas tabelas. Base-4.</p>
+      <dl>
+        <dt>Container</dt><dd>1320px máx · editorial 820px</dd>
+        <dt>Raio</dt><dd>card 16px · input 10px · botão pill 999px</dd>
+        <dt>Linha tabela</dt><dd>44px (densa, mas toque-safe)</dd>
+        <dt>Sombra</dt><dd>4 níveis sutis, quase pretas, low-alpha</dd>
+        <dt>Movimento</dt><dd>150ms hover · ease-out · nunca bouncy</dd>
+      </dl>
+    </div>
+    <div class="spec">
+      <h3><svg class="ic"><use href="#i-shapes"/></svg> Ícones</h3>
+      <p class="lead">Um set único (Lucide), traço 2px, round. Emoji eliminado.</p>
+      <dl>
+        <dt class="dont">Antes</dt><dd class="dont">🤖 🔒 ▾ ✕ ⋯ misturados, inconsistentes</dd>
+        <dt class="do">Agora</dt><dd class="do">Lucide 16/18px, mono-traço, alinhados ao grid</dd>
+        <dt>Tom</dt><dd>Ícone só quando ganha o texto — minimalismo do DS</dd>
+        <dt>Marca</dt><dd>Aperture (4 círculos, opacidade 45→100%)</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="subhead"><h2>Os 6 padrões-âncora</h2><span class="sub-note">se repetem em 10 telas</span></div>
+  <div class="opts cols-3">
+    <div class="opt"><div class="opt-cap"><svg class="ic" style="width:18px;color:var(--green)"><use href="#i-grid"/></svg><span class="opt-name">Page-bar / hierarquia</span></div><div class="sheet"><p class="opt-why" style="margin-top:0">Título, contexto e ações na mesma régua em toda tela. Onde mora o "onde estou + o que posso fazer".</p></div></div>
+    <div class="opt"><div class="opt-cap"><svg class="ic" style="width:18px;color:var(--green)"><use href="#i-sliders"/></svg><span class="opt-name">Barra de filtros</span></div><div class="sheet"><p class="opt-why" style="margin-top:0">Hoje poluída e diferente em cada tela. Vira um componente só: busca + filtros + agrupar/ordenar + limpar.</p></div></div>
+    <div class="opt"><div class="opt-cap"><svg class="ic" style="width:18px;color:var(--green)"><use href="#i-list"/></svg><span class="opt-name">Tabela + ordenação</span></div><div class="sheet"><p class="opt-why" style="margin-top:0">Mesma anatomia de header, sort, seleção, agrupamento e linha — backlog, foco, timesheet, cadastros.</p></div></div>
+    <div class="opt"><div class="opt-cap"><svg class="ic" style="width:18px;color:var(--green)"><use href="#i-trend"/></svg><span class="opt-name">Cards & KPIs</span></div><div class="sheet"><p class="opt-why" style="margin-top:0">Um KPI só pra dashboard e portal. Mesma anatomia: label mono, valor tabular, delta.</p></div></div>
+    <div class="opt"><div class="opt-cap"><svg class="ic" style="width:18px;color:var(--green)"><use href="#i-file"/></svg><span class="opt-name">Forms & Modais</span></div><div class="sheet"><p class="opt-why" style="margin-top:0">Header, corpo, footer e estados de autosave idênticos em task, cliente, projeto e pessoa.</p></div></div>
+    <div class="opt"><div class="opt-cap"><svg class="ic" style="width:18px;color:var(--green)"><use href="#i-plus"/></svg><span class="opt-name">Botões & ícones</span></div><div class="sheet"><p class="opt-why" style="margin-top:0">Pills do DS, hierarquia clara (primário/secundário/ghost/perigo) e um set de ícones único.</p></div></div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     2 · SHELL
+     ===================================================================== -->
+<section class="section" data-s="shell">
+  <div class="sec-head">
+    <span class="kicker">a moldura de tudo</span>
+    <h1>Shell — header no topo, <em>refinado</em>.</h1>
+    <p>Mantemos o header superior com abas (sua escolha), mas organizamos as ações em clusters claros e aplicamos a marca do DS. O símbolo aperture com opacidade gradiente, frosted glass na barra, e o verde editorial só na aba ativa e no CTA.</p>
+  </div>
+
+  <div class="subhead"><h2>Antes → depois</h2></div>
+  <p class="flow-tag">hoje: ações soltas, dois verdes brigando, versão em destaque</p>
+  <div class="frame" style="margin-bottom:8px">
+    <div style="display:flex; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--line)">
+      <span class="m-ico" style="background:#009900;border:0"><span style="color:#fff;font-size:9px;font-family:var(--mono)">●●</span></span>
+      <div class="grow"><span class="ph t w20"></span></div>
+      <span class="m-btn sm" style="background:#009900;border-color:#009900;color:#fff">+ task</span>
+      <span class="m-chip mono">v1.02.227</span>
+      <span class="m-ico bare"><svg class="ic"><use href="#i-bell"/></svg></span>
+      <span class="av">JD</span>
+    </div>
+    <div style="display:flex; gap:22px; padding:0 18px"><span class="ph w20" style="margin:11px 0;height:11px"></span><span class="ph w20" style="margin:11px 0;height:11px"></span><span class="ph w20" style="margin:11px 0;height:11px"></span></div>
+  </div>
+  <div class="note ink">versão e ações de sistema competem com a navegação · #009900 no botão fere a regra do DS</div>
+
+  <p class="flow-tag mt24">depois: marca correta, clusters separados, aba ativa em verde editorial</p>
+  <div class="frame">
+    <!-- top row -->
+    <div style="display:flex; align-items:center; gap:14px; padding:14px 20px;">
+      <span class="doc-logo" style="width:24px;height:24px"><span></span><span></span><span></span><span></span></span>
+      <div style="line-height:1.1"><div style="font-weight:600;font-size:15px;letter-spacing:-.01em">tasks 360</div></div>
+      <div class="grow"></div>
+      <!-- cluster: contexto/sistema -->
+      <span class="m-ico bare" title="Cronômetro"><svg class="ic"><use href="#i-clock"/></svg></span>
+      <span class="m-ico bare" title="Exportar"><svg class="ic"><use href="#i-download"/></svg></span>
+      <span class="m-ico bare" title="Ajuda"><svg class="ic"><use href="#i-help"/></svg></span>
+      <span class="m-ico bare" title="Tema"><svg class="ic"><use href="#i-sun"/></svg></span>
+      <span style="width:1px;height:22px;background:var(--line)"></span>
+      <!-- cluster: ação primária -->
+      <span class="m-btn primary sm"><svg class="ic"><use href="#i-plus"/></svg> Nova tarefa</span>
+      <span class="m-ico bare" title="Notificações"><svg class="ic"><use href="#i-bell"/></svg></span>
+      <span class="av g">JD</span>
+    </div>
+    <div class="divider"></div>
+    <!-- tabs row -->
+    <div style="display:flex; gap:4px; padding:4px 16px;">
+      <span style="font-size:13px;font-weight:500;color:var(--green);padding:11px 12px;border-bottom:2px solid var(--green)">Dashboard</span>
+      <span style="font-size:13px;font-weight:500;color:var(--muted);padding:11px 12px">Backlog</span>
+      <span style="font-size:13px;font-weight:500;color:var(--muted);padding:11px 12px">Kanban</span>
+      <span style="font-size:13px;font-weight:500;color:var(--muted);padding:11px 12px">Foco</span>
+      <span style="font-size:13px;font-weight:500;color:var(--muted);padding:11px 12px">Triagem</span>
+      <span style="font-size:13px;font-weight:500;color:var(--muted);padding:11px 12px">Calendário</span>
+      <span style="font-size:13px;font-weight:500;color:var(--muted);padding:11px 12px">Briefing</span>
+      <span style="font-size:13px;font-weight:500;color:var(--muted);padding:11px 12px">Timesheet</span>
+      <span style="font-size:13px;font-weight:500;color:var(--muted);padding:11px 12px">Portal</span>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note">aperture com opacidade 45→100% = marca de verdade do DS</div>
+    <div class="note">3 clusters: sistema (ícones) · ação primária · identidade — separados por divisória</div>
+    <div class="note">versão sai do header pro menu do avatar / rodapé</div>
+    <div class="note">aba ativa em verde editorial + sublinhado 2px; resto neutro</div>
+  </div>
+
+  <div class="subhead"><h2>Variações do cluster de ações</h2><span class="sub-note">3 tratamentos</span></div>
+  <div class="opts cols-3">
+    <div class="opt rec">
+      <div class="opt-cap"><span class="opt-letter">A</span><span class="opt-name">Ícones + CTA texto</span><span class="opt-tag">recomendado</span></div>
+      <div class="sheet"><div class="row" style="justify-content:flex-end;gap:10px">
+        <span class="m-ico bare"><svg class="ic"><use href="#i-download"/></svg></span>
+        <span class="m-ico bare"><svg class="ic"><use href="#i-help"/></svg></span>
+        <span class="m-ico bare"><svg class="ic"><use href="#i-sun"/></svg></span>
+        <span style="width:1px;height:20px;background:var(--line)"></span>
+        <span class="m-btn primary sm"><svg class="ic"><use href="#i-plus"/></svg> Tarefa</span>
+        <span class="av g">JD</span>
+      </div></div>
+      <p class="opt-why"><b>Equilíbrio.</b> Sistema fica discreto em ícones; a única ação verde é a primária. Divisória dá ritmo. Escala bem no mobile (ícones colapsam).</p>
+    </div>
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">B</span><span class="opt-name">Tudo em ícone + FAB</span><span class="opt-tag">minimal</span></div>
+      <div class="sheet"><div class="row" style="justify-content:flex-end;gap:12px">
+        <span class="m-ico bare"><svg class="ic"><use href="#i-download"/></svg></span>
+        <span class="m-ico bare"><svg class="ic"><use href="#i-help"/></svg></span>
+        <span class="m-ico bare"><svg class="ic"><use href="#i-sun"/></svg></span>
+        <span class="m-ico bare"><svg class="ic"><use href="#i-bell"/></svg></span>
+        <span class="av g">JD</span>
+      </div><div class="box mt16" style="min-height:40px">+ tarefa vira FAB / atalho ⌘K</div></div>
+      <p class="opt-why">Header limpíssimo. Mas esconde a ação principal — exige FAB e educa o atalho. Mais arriscado pra quem não usa teclado.</p>
+    </div>
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">C</span><span class="opt-name">Busca global central</span><span class="opt-tag">command-first</span></div>
+      <div class="sheet"><div class="m-input grow" style="max-width:none"><svg class="ic"><use href="#i-search"/></svg><span class="muted fs12">Buscar ou comandar &nbsp; ⌘K</span></div><div class="row mt12" style="justify-content:flex-end;gap:10px"><span class="m-ico bare"><svg class="ic"><use href="#i-bell"/></svg></span><span class="m-btn primary sm"><svg class="ic"><use href="#i-plus"/></svg></span><span class="av g">JD</span></div></div>
+      <p class="opt-why">Coloca o command palette no centro. Poderoso pra power-users, mas rouba protagonismo do logo e da navegação.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     3 · PAGE-BAR
+     ===================================================================== -->
+<section class="section" data-s="pagebar">
+  <div class="sec-head">
+    <span class="kicker">onde estou + o que posso fazer</span>
+    <h1>Page-bar — a régua de <em>cada tela</em>.</h1>
+    <p>Toda tela abre com a mesma barra: título + contexto numérico à esquerda, ações da tela à direita. Resolve a inconsistência atual onde cada página inventa seu próprio cabeçalho.</p>
+  </div>
+  <div class="subhead"><h2>3 variações</h2></div>
+  <div class="opts cols-3">
+    <!-- A -->
+    <div class="opt rec">
+      <div class="opt-cap"><span class="opt-letter">A</span><span class="opt-name">Narrativa + ações</span><span class="opt-tag">recomendado</span></div>
+      <div class="sheet pad-lg">
+        <div class="row between">
+          <div>
+            <div style="font-size:20px;font-weight:700;letter-spacing:-.02em">Backlog</div>
+            <div class="fs12 muted mt8" style="margin-top:4px"><span class="bold" style="color:var(--ink)">128</span> tarefas abertas · <span class="bold" style="color:var(--ink)">14</span> atrasadas</div>
+          </div>
+          <div class="row gap8"><span class="m-btn sm"><svg class="ic"><use href="#i-download"/></svg> Exportar</span><span class="m-btn primary sm"><svg class="ic"><use href="#i-plus"/></svg> Tarefa</span></div>
+        </div>
+      </div>
+      <p class="opt-why"><b>Conta uma história.</b> O contexto numérico vira frase ("128 tarefas · 14 atrasadas") em vez de stat cards soltos. Ações da tela sempre no mesmo canto.</p>
+    </div>
+    <!-- B -->
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">B</span><span class="opt-name">Eyebrow + título</span><span class="opt-tag">editorial</span></div>
+      <div class="sheet pad-lg">
+        <div class="row between">
+          <div>
+            <div class="eyebrow">Operação <span class="acc">·</span> Pilar 360</div>
+            <div style="font-size:20px;font-weight:700;letter-spacing:-.02em;margin-top:4px">Backlog</div>
+          </div>
+          <div class="row gap8"><span class="m-btn sm">Exportar</span><span class="m-btn primary sm">+ Tarefa</span></div>
+        </div>
+      </div>
+      <p class="opt-why">Segue o padrão eyebrow do site Kliente 360. Elegante, mas o contexto numérico tem que ir pra outro lugar (KPIs abaixo) — mais vertical.</p>
+    </div>
+    <!-- C -->
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">C</span><span class="opt-name">Breadcrumb + métrica</span><span class="opt-tag">denso</span></div>
+      <div class="sheet pad-lg">
+        <div class="eyebrow" style="margin-bottom:6px">tasks 360 <span style="opacity:.4">/</span> backlog</div>
+        <div class="row between">
+          <div style="font-size:20px;font-weight:700;letter-spacing:-.02em">Backlog</div>
+          <div class="row gap12"><span class="m-chip mono">128 abertas</span><span class="m-chip mono" style="color:var(--sig-red);border-color:#E7C9C4">14 atrasadas</span><span class="m-btn primary sm">+</span></div>
+        </div>
+      </div>
+      <p class="opt-why">Breadcrumb ajuda em telas aninhadas (portal &gt; cliente). Métricas viram chips. Bom pra navegação profunda, um pouco mais "ferramenta" que "produto".</p>
+    </div>
+  </div>
+  <div class="callout mt24">Regra: título à esquerda, ações à direita, SEMPRE. Contexto numérico nunca vira botão.</div>
+</section>
+
+<!-- =====================================================================
+     4 · FILTROS
+     ===================================================================== -->
+<section class="section" data-s="filtros">
+  <div class="sec-head">
+    <span class="kicker">o maior incômodo de hoje</span>
+    <h1>Barra de filtros — <em>um componente só</em>.</h1>
+    <p>Hoje cada tela monta filtros de um jeito (selects soltos, larguras fixas inline, menu ⋯). Unificamos numa barra com gramática fixa: <b>busca · filtros · agrupar/ordenar · limpar</b>. Filtro ativo fica verde; contador mostra quantos estão aplicados.</p>
+  </div>
+  <div class="subhead"><h2>3 variações</h2></div>
+  <div class="opts">
+    <!-- A -->
+    <div class="opt rec">
+      <div class="opt-cap"><span class="opt-letter">A</span><span class="opt-name">Barra inline com chips de filtro ativo</span><span class="opt-tag">recomendado</span></div>
+      <div class="sheet">
+        <div class="row wrap gap8">
+          <span class="m-input" style="width:220px"><svg class="ic"><use href="#i-search"/></svg><span class="ph w60"></span></span>
+          <span class="m-select on">Cliente: Acme <svg class="ic"><use href="#i-chev-down"/></svg></span>
+          <span class="m-select">Responsável <svg class="ic"><use href="#i-chev-down"/></svg></span>
+          <span class="m-select on">Pri: P0 <svg class="ic"><use href="#i-chev-down"/></svg></span>
+          <span class="m-select">Status <svg class="ic"><use href="#i-chev-down"/></svg></span>
+          <div class="grow"></div>
+          <span class="m-btn ghost sm"><svg class="ic"><use href="#i-sliders"/></svg> Agrupar · Ordenar</span>
+          <span class="m-btn ghost sm" style="color:var(--sig-red)"><svg class="ic"><use href="#i-x"/></svg> Limpar (2)</span>
+        </div>
+      </div>
+      <p class="opt-why"><b>Direto e escaneável.</b> Filtros sempre visíveis; o que está ativo fica verde e mostra o valor. Agrupar/ordenar/limpar agrupados à direita. Some o menu ⋯ confuso. No mobile vira "Filtros (2) ▾" expansível.</p>
+    </div>
+    <!-- B -->
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">B</span><span class="opt-name">Busca + drawer "Filtros"</span><span class="opt-tag">limpo</span></div>
+      <div class="sheet">
+        <div class="row gap8">
+          <span class="m-input grow"><svg class="ic"><use href="#i-search"/></svg><span class="ph w40"></span></span>
+          <span class="m-btn sm"><svg class="ic"><use href="#i-filter"/></svg> Filtros <span class="m-chip green" style="padding:0 7px;margin-left:2px">2</span></span>
+          <span class="m-btn ghost sm"><svg class="ic"><use href="#i-sort"/></svg></span>
+        </div>
+        <div class="row wrap gap6 mt12">
+          <span class="m-chip green">Acme <svg class="ic" style="width:11px"><use href="#i-x"/></svg></span>
+          <span class="m-chip green">P0 <svg class="ic" style="width:11px"><use href="#i-x"/></svg></span>
+        </div>
+      </div>
+      <p class="opt-why">Barra minimalista; filtros vivem num painel. Chips abaixo mostram o que está ativo e removem em 1 clique. Ótimo pra telas com 8+ filtros, mas esconde opções (mais cliques).</p>
+    </div>
+    <!-- C -->
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">C</span><span class="opt-name">Segmentos rápidos + filtros</span><span class="opt-tag">tarefa-first</span></div>
+      <div class="sheet">
+        <div class="row between wrap gap8">
+          <div class="row gap6" style="border:1px solid var(--line);border-radius:var(--r-pill);padding:3px">
+            <span class="m-btn sm primary" style="padding:5px 12px">Minhas</span>
+            <span class="m-btn ghost sm" style="padding:5px 12px">Atrasadas</span>
+            <span class="m-btn ghost sm" style="padding:5px 12px">Todas</span>
+          </div>
+          <div class="row gap8">
+            <span class="m-input" style="width:160px"><svg class="ic"><use href="#i-search"/></svg><span class="ph w50"></span></span>
+            <span class="m-btn sm"><svg class="ic"><use href="#i-filter"/></svg> Mais</span>
+          </div>
+        </div>
+      </div>
+      <p class="opt-why">Segmented control resolve 80% dos casos comuns (minhas / atrasadas / todas) em 1 toque; filtros finos ficam em "Mais". Excelente pra Foco e Triagem; pode ser raso pro Backlog completo.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     5 · TABELA
+     ===================================================================== -->
+<section class="section" data-s="tabela">
+  <div class="sec-head">
+    <span class="kicker">o coração do produto</span>
+    <h1>Tabela + ordenação — <em>mesma anatomia</em>.</h1>
+    <p>Backlog, Foco, Timesheet e Cadastros usam a mesma tabela: header em mono uppercase, sort clicável com indicador, seleção em massa, agrupamento colapsável e linha de 44px clicável. Muda só o conjunto de colunas.</p>
+  </div>
+  <div class="subhead"><h2>3 variações da linha & header</h2></div>
+  <div class="opts">
+    <!-- A -->
+    <div class="opt rec">
+      <div class="opt-cap"><span class="opt-letter">A</span><span class="opt-name">Densa com sort e chips de estado</span><span class="opt-tag">recomendado</span></div>
+      <div class="sheet flush">
+        <table class="m-tbl">
+          <colgroup><col style="width:36px"><col><col style="width:150px"><col style="width:120px"><col style="width:70px"><col style="width:90px"></colgroup>
+          <thead><tr>
+            <th><svg class="ic" style="width:13px;opacity:.4"><use href="#i-check"/></svg></th>
+            <th class="up"><span class="sort">Tarefa <svg class="ic"><use href="#i-arrow-up"/></svg></span></th>
+            <th><span class="sort">Cliente · Projeto <svg class="ic"><use href="#i-sort"/></svg></span></th>
+            <th><span class="sort">Responsável <svg class="ic"><use href="#i-sort"/></svg></span></th>
+            <th><span class="sort">Pri <svg class="ic"><use href="#i-sort"/></svg></span></th>
+            <th><span class="sort">Prazo <svg class="ic"><use href="#i-sort"/></svg></span></th>
+          </tr></thead>
+          <tbody>
+            <tr class="sel"><td><svg class="ic" style="width:13px;color:var(--green)"><use href="#i-check"/></svg></td><td class="row-title"><span class="ph t w80"></span></td><td><span class="ph w70"></span></td><td><span class="row gap6"><span class="av">MA</span><span class="ph w50"></span></span></td><td><span class="pri p0"><span class="d"></span>P0</span></td><td><span class="fs12" style="color:var(--sig-red);font-family:var(--mono)">ontem</span></td></tr>
+            <tr><td></td><td class="row-title"><span class="ph t w90"></span></td><td><span class="ph w60"></span></td><td><span class="row gap6"><span class="av g">JD</span><span class="ph w40"></span></span></td><td><span class="pri p1"><span class="d"></span>P1</span></td><td><span class="fs12 muted" style="font-family:var(--mono)">12 jun</span></td></tr>
+            <tr><td></td><td class="row-title"><span class="ph t w70"></span></td><td><span class="ph w70"></span></td><td><span class="row gap6"><span class="av">RC</span><span class="ph w50"></span></span></td><td><span class="pri p2"><span class="d"></span>P2</span></td><td><span class="fs12 muted" style="font-family:var(--mono)">20 jun</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="opt-why"><b>Tudo num scan.</b> Sort com seta no header ativo (verde), chip de prioridade com cor semafórica, prazo atrasado em vermelho mono, seleção pinta a linha de verde-tint. 44px de altura = denso mas clicável.</p>
+    </div>
+    <!-- B + C lado a lado -->
+  </div>
+  <div class="opts cols-2 mt24">
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">B</span><span class="opt-name">Agrupada colapsável</span><span class="opt-tag">para "agrupar por"</span></div>
+      <div class="sheet flush">
+        <table class="m-tbl">
+          <thead><tr><th>Tarefa</th><th style="width:90px">Pri</th><th style="width:70px">h</th></tr></thead>
+          <tbody>
+            <tr class="grp"><td colspan="3"><span class="row gap6"><svg class="ic" style="width:12px"><use href="#i-chev-down"/></svg> Acme Corp · 12 tarefas · 38h</span></td></tr>
+            <tr><td class="row-title"><span class="ph t w80"></span></td><td><span class="pri p0"><span class="d"></span>P0</span></td><td class="muted fs12" style="font-family:var(--mono)">8</td></tr>
+            <tr><td class="row-title"><span class="ph t w70"></span></td><td><span class="pri p2"><span class="d"></span>P2</span></td><td class="muted fs12" style="font-family:var(--mono)">3</td></tr>
+            <tr class="grp"><td colspan="3"><span class="row gap6"><svg class="ic" style="width:12px"><use href="#i-chev-up"/></svg> Globex · 7 tarefas · 21h</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="opt-why">Header de grupo com chevron, contagem e soma de horas em mono. Colapsa por grupo. Mesma linha do padrão A — só ganha a faixa de grupo.</p>
+    </div>
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">C</span><span class="opt-name">Cards (mobile / leitura)</span><span class="opt-tag">responsivo</span></div>
+      <div class="sheet">
+        <div class="ph-stack" style="gap:10px">
+          <div style="border:1px solid var(--line);border-radius:var(--r-md);padding:12px">
+            <div class="row between"><span class="ph t w60"></span><span class="pri p0"><span class="d"></span>P0</span></div>
+            <div class="row gap8 mt12"><span class="av">MA</span><span class="ph w40"></span><span class="grow"></span><span class="fs12" style="color:var(--sig-red);font-family:var(--mono)">atrasada</span></div>
+          </div>
+          <div style="border:1px solid var(--line);border-radius:var(--r-md);padding:12px">
+            <div class="row between"><span class="ph t w70"></span><span class="pri p2"><span class="d"></span>P2</span></div>
+            <div class="row gap8 mt12"><span class="av g">JD</span><span class="ph w50"></span><span class="grow"></span><span class="fs12 muted" style="font-family:var(--mono)">20 jun</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="opt-why">A mesma informação vira card no mobile (a tabela não cabe). Já existe hoje — só padronizamos a anatomia: título + pri no topo, responsável + prazo embaixo.</p>
+    </div>
+  </div>
+  <div class="callout mt24">As três convivem na mesma tela: A é o padrão · B entra quando "Agrupar por" está ativo no filtro · C é o layout mobile (&lt; 768px). Mesma linha, mesmos chips — muda só a embalagem.</div>
+</section>
+
+<!-- =====================================================================
+     6 · CARDS & KPIs
+     ===================================================================== -->
+<section class="section" data-s="cards">
+  <div class="sec-head">
+    <span class="kicker">dashboard e portal, unidos</span>
+    <h1>Cards & KPIs — <em>uma anatomia só</em>.</h1>
+    <p>Hoje o KPI do dashboard e o do portal são componentes diferentes. Unificamos: label em mono uppercase, valor tabular grande, delta opcional. Variações controlam só acento e densidade.</p>
+  </div>
+  <div class="subhead"><h2>3 variações de KPI</h2></div>
+  <div class="opts cols-3">
+    <div class="opt rec">
+      <div class="opt-cap"><span class="opt-letter">A</span><span class="opt-name">Limpo neutro</span><span class="opt-tag">recomendado</span></div>
+      <div class="sheet"><div class="row gap12">
+        <div class="kpi grow"><span class="lab">Em andamento</span><span class="val">42</span><span class="delta up">▲ 6 essa semana</span></div>
+        <div class="kpi grow danger"><span class="lab">Atrasadas</span><span class="val">14</span><span class="delta">precisa ação</span></div>
+      </div></div>
+      <p class="opt-why"><b>Calmo por padrão.</b> Card neutro; cor só entra quando há risco (atrasadas em vermelho). Valor grande tabular, delta em mono. Funciona igual em dashboard e portal.</p>
+    </div>
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">B</span><span class="opt-name">Borda-topo de acento</span><span class="opt-tag">categorizado</span></div>
+      <div class="sheet"><div class="row gap12">
+        <div class="kpi grow accent"><span class="lab">Concluídas</span><span class="val">128</span><span class="delta up">▲ 12%</span></div>
+        <div class="kpi grow" style="border-top:3px solid var(--sig-amber)"><span class="lab">Bloqueadas</span><span class="val">7</span><span class="delta">2 clientes</span></div>
+      </div></div>
+      <p class="opt-why">Faixa de 3px no topo categoriza por cor (padrão <code style="font-family:var(--mono);font-size:11px">accent-top</code> do DS). Bom pra agrupar KPIs por tema, mas usa mais cor — reservar pra dashboards densos.</p>
+    </div>
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">C</span><span class="opt-name">Strip compacta</span><span class="opt-tag">economia</span></div>
+      <div class="sheet"><div style="display:grid;grid-template-columns:repeat(2,1fr)">
+        <div style="padding:12px 16px;border-right:1px solid var(--line)"><div class="lab" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Total</div><div style="font-size:24px;font-weight:700;font-feature-settings:tnum">191</div></div>
+        <div style="padding:12px 16px"><div class="lab" style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)">Throughput</div><div style="font-size:24px;font-weight:700;font-feature-settings:tnum">9.2<span style="font-size:12px;color:var(--muted)">/sem</span></div></div>
+      </div></div>
+      <p class="opt-why">Stat-strip do DS: vários KPIs numa faixa dividida por linhas, sem cards individuais. Máxima densidade — ideal quando há 5–6 métricas e pouco espaço vertical.</p>
+    </div>
+  </div>
+
+  <div class="subhead"><h2>Card de conteúdo padrão</h2><span class="sub-note">listas, projetos, alertas</span></div>
+  <div class="opts cols-3">
+    <div class="opt"><div class="opt-cap"><span class="opt-name">Card base</span></div><div class="sheet"><div style="border:1px solid var(--line);border-radius:var(--r-md);padding:16px"><div class="ph t w60"></div><div class="ph-stack mt12"><span class="ph w90"></span><span class="ph w80"></span></div></div></div><p class="opt-why">16px raio, 1px linha, hover sobe 2px + sombra média. Sem mudança de fundo.</p></div>
+    <div class="opt"><div class="opt-cap"><span class="opt-name">Card linkado</span></div><div class="sheet"><div style="border:1px solid var(--line);border-radius:var(--r-md);padding:16px"><div class="row between"><span class="ph t w50"></span><svg class="ic" style="width:15px;color:var(--green)"><use href="#i-arrow-up"/></svg></div><div class="ph-stack mt12"><span class="ph w80"></span></div><span class="eyebrow mt12" style="display:block;color:var(--green)">Ver pilar →</span></div></div><p class="opt-why">Card clicável com seta verde que anda +4px no hover — o micro-movimento assinatura do DS.</p></div>
+    <div class="opt"><div class="opt-cap"><span class="opt-name">Alerta / sinal</span></div><div class="sheet"><div style="border:1px solid #E7C9C4;border-radius:var(--r-md);padding:14px;display:flex;gap:12px;align-items:flex-start"><span class="m-ico" style="border-color:#E7C9C4;color:var(--sig-red)"><svg class="ic"><use href="#i-alert"/></svg></span><div class="grow"><div class="ph t w60"></div><div class="ph w90 mt8"></div></div></div></div><p class="opt-why">Semáforo: borda + ícone na cor do sinal (vermelho/âmbar/verde). Mesmo molde do portal-alert atual, padronizado.</p></div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     7 · FORMS & MODAIS
+     ===================================================================== -->
+<section class="section" data-s="forms">
+  <div class="sec-head">
+    <span class="kicker">cadastro sem fricção</span>
+    <h1>Forms & Modais — <em>mesmo esqueleto</em>.</h1>
+    <p>Task, cliente, projeto e pessoa compartilham a mesma estrutura: header escuro com breadcrumb + título editável + autosave, corpo em colunas, footer com ações. Labels em mono uppercase, inputs com raio 10px, foco verde.</p>
+  </div>
+  <div class="subhead"><h2>3 variações de layout do modal</h2></div>
+  <div class="opts">
+    <div class="opt rec">
+      <div class="opt-cap"><span class="opt-letter">A</span><span class="opt-name">Duas colunas: form + atividade</span><span class="opt-tag">recomendado · task</span></div>
+      <div class="sheet flush">
+        <div style="background:#0F172A;color:#fff;padding:12px 18px;display:flex;align-items:center;gap:10px">
+          <span class="eyebrow" style="color:rgba(255,255,255,.5)">Acme <span style="opacity:.4">/</span> CRM</span>
+          <span style="font-weight:600;font-size:15px;flex:1">Configurar fluxo de aprovação</span>
+          <span class="pri p0" style="background:rgba(255,255,255,.1);color:#fff"><span class="d" style="background:#fff"></span>P0</span>
+          <span style="font-family:var(--mono);font-size:11px;color:#9ec9b0">● salvo</span>
+          <svg class="ic" style="width:16px;color:rgba(255,255,255,.7)"><use href="#i-x"/></svg>
+        </div>
+        <div style="display:grid;grid-template-columns:1.35fr 1fr">
+          <div style="padding:18px">
+            <div class="eyebrow">Descrição</div><div class="ph-stack mt8"><span class="ph w90"></span><span class="ph w80"></span></div>
+            <div class="eyebrow mt16">Checklist</div><div class="row gap8 mt8"><svg class="ic" style="width:14px;color:var(--green)"><use href="#i-check"/></svg><span class="ph w70"></span></div><div class="row gap8 mt8"><span style="width:14px;height:14px;border:1.5px solid var(--line-strong);border-radius:4px"></span><span class="ph w60"></span></div>
+            <div class="row gap12 mt16"><div class="grow"><div class="eyebrow">Responsável</div><div class="m-select mt8" style="width:100%;justify-content:space-between">MA · Marina <svg class="ic"><use href="#i-chev-down"/></svg></div></div><div class="grow"><div class="eyebrow">Prazo</div><div class="m-input mt8"><svg class="ic"><use href="#i-calendar"/></svg><span class="ph w50"></span></div></div></div>
+          </div>
+          <div style="background:#FAFAF8;border-left:1px solid var(--line);padding:16px">
+            <div class="row gap16" style="border-bottom:1px solid var(--line-strong);padding-bottom:8px"><span class="fs13 bold" style="border-bottom:2px solid var(--green);padding-bottom:8px;margin-bottom:-9px">Comentários <span class="m-chip green" style="padding:0 6px">3</span></span><span class="fs13 muted">Anexos</span><span class="fs13 muted">Log</span></div>
+            <div class="ph-stack mt16" style="gap:12px"><div class="row gap8"><span class="av g">JD</span><div class="grow ph-stack"><span class="ph w40"></span><span class="ph w90"></span></div></div><div class="row gap8"><span class="av">MA</span><div class="grow ph-stack"><span class="ph w50"></span><span class="ph w80"></span></div></div></div>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--line);padding:12px 18px;display:flex;align-items:center;gap:10px"><span class="fs12 muted" style="font-family:var(--mono)">⌘↵ salvar</span><div class="grow"></div><span class="m-btn ghost sm" style="color:var(--sig-red)">Excluir</span><span class="m-btn sm">Fechar</span><span class="m-btn primary sm">Salvar</span></div>
+      </div>
+      <p class="opt-why"><b>Mantém o melhor do modal de task atual</b> e regulariza: header escuro #0F172A, autosave em verde, abas no painel direito. Cliente/projeto/pessoa usam o mesmo header + footer, só com 1 coluna.</p>
+    </div>
+  </div>
+  <div class="opts cols-2 mt24">
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">B</span><span class="opt-name">Coluna única (cadastros)</span><span class="opt-tag">cliente · projeto · pessoa</span></div>
+      <div class="sheet flush">
+        <div style="background:#0A3A1F;color:#fff;padding:12px 18px;display:flex;align-items:center;gap:10px"><svg class="ic" style="width:16px"><use href="#i-building"/></svg><span style="font-weight:600;font-size:15px;flex:1">Novo cliente</span><svg class="ic" style="width:16px;color:rgba(255,255,255,.7)"><use href="#i-x"/></svg></div>
+        <div style="padding:18px"><div class="eyebrow">Nome</div><div class="m-input mt8"><span class="ph w70"></span></div><div class="row gap12 mt16"><div class="grow"><div class="eyebrow">Domínios</div><div class="m-input mt8"><span class="ph w60"></span></div></div><div class="grow"><div class="eyebrow">Tipo</div><div class="m-select mt8" style="width:100%;justify-content:space-between">Externo <svg class="ic"><use href="#i-chev-down"/></svg></div></div></div></div>
+        <div style="border-top:1px solid var(--line);padding:12px 18px;display:flex;gap:10px;justify-content:flex-end"><span class="m-btn sm">Cancelar</span><span class="m-btn primary sm">Criar cliente</span></div>
+      </div>
+      <p class="opt-why">Modal estreito (520px), header verde-escuro do contexto, mesmo footer. Validação inline; foco verde nos campos.</p>
+    </div>
+    <div class="opt">
+      <div class="opt-cap"><span class="opt-letter">C</span><span class="opt-name">Campo & estados</span><span class="opt-tag">tokens de input</span></div>
+      <div class="sheet">
+        <div class="eyebrow">Padrão</div><div class="m-input mt8"><span class="ph w50"></span></div>
+        <div class="eyebrow mt16" style="color:var(--green)">Foco</div><div class="m-input mt8" style="border-color:var(--green);box-shadow:0 0 0 3px var(--green-soft)"><span class="ph w60"></span></div>
+        <div class="eyebrow mt16" style="color:var(--sig-red)">Erro</div><div class="m-input mt8" style="border-color:var(--sig-red)"><span class="ph w40"></span></div><div class="fs12 mt8" style="color:var(--sig-red)">Campo obrigatório</div>
+      </div>
+      <p class="opt-why">Três estados padronizados: repouso (linha neutra), foco (verde + halo), erro (vermelho + mensagem). Vale pra todo input do app.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =====================================================================
+     8 · BOTÕES & ÍCONES
+     ===================================================================== -->
+<section class="section" data-s="botoes">
+  <div class="sec-head">
+    <span class="kicker">vocabulário de ação</span>
+    <h1>Botões & ícones — <em>hierarquia clara</em>.</h1>
+    <p>Todos os botões são pills (regra do DS). Quatro níveis de ênfase + ações de ícone. Um set único de ícones Lucide (traço 2px), aposentando os emoji e glifos misturados de hoje.</p>
+  </div>
+  <div class="subhead"><h2>Hierarquia de botões</h2></div>
+  <div class="sheet pad-lg">
+    <div class="row wrap gap16" style="align-items:center">
+      <span class="m-btn primary"><svg class="ic"><use href="#i-plus"/></svg> Primário</span>
+      <span class="m-btn">Secundário</span>
+      <span class="m-btn ghost">Ghost</span>
+      <span class="m-btn ghost" style="color:var(--sig-red)"><svg class="ic"><use href="#i-x"/></svg> Perigo</span>
+      <span class="m-btn sm">Pequeno</span>
+      <span class="m-ico"><svg class="ic"><use href="#i-more"/></svg></span>
+      <span class="m-ico bare"><svg class="ic"><use href="#i-download"/></svg></span>
+    </div>
+    <div class="notes">
+      <div class="note">primário = verde #007A3D, 1 por contexto · hover sobe −1px</div>
+      <div class="note ink">secundário = linha · ghost = sem borda · perigo = vermelho só no texto/ícone</div>
+      <div class="note ink">foco-visível = halo verde 2px (acessibilidade), nunca encolhe no clique</div>
+    </div>
+  </div>
+
+  <div class="subhead"><h2>Set de ícones (Lucide · 2px · round)</h2><span class="sub-note">substitui 🤖🔒▾✕⋯</span></div>
+  <div class="sheet pad-lg">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:18px;text-align:center">
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-grid"/></svg></span><div class="fs12 muted">dashboard</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-list"/></svg></span><div class="fs12 muted">backlog</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-columns"/></svg></span><div class="fs12 muted">kanban</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-target"/></svg></span><div class="fs12 muted">foco</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-inbox"/></svg></span><div class="fs12 muted">triagem</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-calendar"/></svg></span><div class="fs12 muted">calendário</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-file"/></svg></span><div class="fs12 muted">briefing</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-timer"/></svg></span><div class="fs12 muted">timesheet</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-building"/></svg></span><div class="fs12 muted">cliente</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-folder"/></svg></span><div class="fs12 muted">projeto</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-users"/></svg></span><div class="fs12 muted">pessoas</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-search"/></svg></span><div class="fs12 muted">buscar</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-filter"/></svg></span><div class="fs12 muted">filtrar</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-sort"/></svg></span><div class="fs12 muted">ordenar</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-bell"/></svg></span><div class="fs12 muted">notif</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-alert"/></svg></span><div class="fs12 muted">alerta</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-trend"/></svg></span><div class="fs12 muted">métrica</div></div>
+      <div><span class="m-ico" style="margin-bottom:6px"><svg class="ic"><use href="#i-refresh"/></svg></span><div class="fs12 muted">sync</div></div>
+    </div>
+  </div>
+  <div class="callout mt24">Emoji some do produto. Estado "criado por IA" e "privada" viram chips/ícones do set, não 🤖🔒.</div>
+</section>
+
+<!-- =====================================================================
+     9 · TELAS MONTADAS
+     ===================================================================== -->
+<section class="section" data-s="telas">
+  <div class="sec-head">
+    <span class="kicker">os padrões, juntos</span>
+    <h1>Telas montadas — <em>o padrão em ação</em>.</h1>
+    <p>Cada arquétipo do app remontado com os padrões recomendados. Mesma page-bar, mesma barra de filtros, mesma tabela, mesmos KPIs — variando só o conteúdo. É assim que a consistência aparece.</p>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="subhead"><h2>Dashboard</h2><span class="sub-note">KPIs + gráficos</span></div>
+  <div class="frame">
+    <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">tasks-360 / dashboard</span></div>
+    <div style="padding:18px 20px">
+      <div class="row between"><div><div style="font-size:20px;font-weight:700;letter-spacing:-.02em">Visão geral</div><div class="fs12 muted" style="margin-top:4px"><span class="bold" style="color:var(--ink)">191</span> ativas · throughput <span class="bold" style="color:var(--ink)">9.2</span>/sem</div></div><div class="row gap8"><span class="m-select">Cliente <svg class="ic"><use href="#i-chev-down"/></svg></span><span class="m-select">Responsável <svg class="ic"><use href="#i-chev-down"/></svg></span></div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px">
+        <div class="kpi"><span class="lab">Em andamento</span><span class="val">42</span><span class="delta up">▲ 6</span></div>
+        <div class="kpi"><span class="lab">Backlog</span><span class="val">128</span><span class="delta">&nbsp;</span></div>
+        <div class="kpi danger"><span class="lab">Atrasadas</span><span class="val">14</span><span class="delta">ação</span></div>
+        <div class="kpi"><span class="lab">Concluídas/sem</span><span class="val">9</span><span class="delta up">▲ 12%</span></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-top:16px">
+        <div style="border:1px solid var(--line);border-radius:var(--r-md);padding:16px"><div class="row between"><span class="bold fs13">Throughput · 12 semanas</span><svg class="ic" style="width:15px;color:var(--muted)"><use href="#i-trend"/></svg></div><div style="display:grid;grid-template-columns:repeat(12,1fr);gap:6px;align-items:end;height:120px;margin-top:14px">
+          <div style="background:var(--ph);height:40%"></div><div style="background:var(--ph);height:55%"></div><div style="background:var(--ph);height:35%"></div><div style="background:var(--ph);height:70%"></div><div style="background:var(--ph);height:50%"></div><div style="background:var(--ph);height:60%"></div><div style="background:var(--ph);height:45%"></div><div style="background:var(--ph);height:80%"></div><div style="background:var(--ph);height:65%"></div><div style="background:var(--ph);height:75%"></div><div style="background:var(--ph);height:60%"></div><div style="background:var(--green);height:90%"></div>
+        </div></div>
+        <div style="border:1px solid var(--line);border-radius:var(--r-md);padding:16px"><span class="bold fs13">Carga por pessoa</span><div class="ph-stack mt16" style="gap:12px"><div class="row gap8"><span class="av g">JD</span><span class="grow" style="height:8px;background:var(--ph);border-radius:4px;position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:70%;background:var(--green);border-radius:4px"></span></span></div><div class="row gap8"><span class="av">MA</span><span class="grow" style="height:8px;background:var(--ph);border-radius:4px;position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:45%;background:var(--green);border-radius:4px"></span></span></div><div class="row gap8"><span class="av">RC</span><span class="grow" style="height:8px;background:var(--ph);border-radius:4px;position:relative"><span style="position:absolute;left:0;top:0;bottom:0;width:90%;background:var(--sig-amber);border-radius:4px"></span></span></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BACKLOG -->
+  <div class="subhead"><h2>Backlog</h2><span class="sub-note">page-bar A + filtros A + tabela A</span></div>
+  <div class="frame">
+    <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">tasks-360 / backlog</span></div>
+    <div style="padding:18px 20px">
+      <div class="row between"><div><div style="font-size:20px;font-weight:700;letter-spacing:-.02em">Backlog</div><div class="fs12 muted" style="margin-top:4px"><span class="bold" style="color:var(--ink)">128</span> abertas · <span class="bold" style="color:var(--ink)">14</span> atrasadas · <span class="bold" style="color:var(--ink)">312h</span></div></div><div class="row gap8"><span class="m-btn sm"><svg class="ic"><use href="#i-download"/></svg> Exportar</span><span class="m-btn primary sm"><svg class="ic"><use href="#i-plus"/></svg> Tarefa</span></div></div>
+      <div class="row wrap gap8 mt16">
+        <span class="m-input" style="width:200px"><svg class="ic"><use href="#i-search"/></svg><span class="ph w60"></span></span>
+        <span class="m-select on">Acme <svg class="ic"><use href="#i-chev-down"/></svg></span>
+        <span class="m-select">Responsável <svg class="ic"><use href="#i-chev-down"/></svg></span>
+        <span class="m-select on">P0 <svg class="ic"><use href="#i-chev-down"/></svg></span>
+        <span class="m-select">Status <svg class="ic"><use href="#i-chev-down"/></svg></span>
+        <div class="grow"></div>
+        <span class="m-btn ghost sm"><svg class="ic"><use href="#i-sliders"/></svg> Agrupar · Ordenar</span>
+        <span class="m-btn ghost sm" style="color:var(--sig-red)"><svg class="ic"><use href="#i-x"/></svg> (2)</span>
+      </div>
+      <div style="border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;margin-top:16px">
+        <table class="m-tbl">
+          <colgroup><col style="width:36px"><col><col style="width:150px"><col style="width:120px"><col style="width:60px"><col style="width:90px"><col style="width:90px"></colgroup>
+          <thead><tr><th><svg class="ic" style="width:13px;opacity:.4"><use href="#i-check"/></svg></th><th class="up"><span class="sort">Tarefa <svg class="ic"><use href="#i-arrow-up"/></svg></span></th><th>Cliente · Projeto</th><th>Responsável</th><th>Pri</th><th>Prazo</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr class="sel"><td><svg class="ic" style="width:13px;color:var(--green)"><use href="#i-check"/></svg></td><td class="row-title"><span class="ph t w80"></span></td><td><span class="ph w70"></span></td><td><span class="row gap6"><span class="av">MA</span><span class="ph w50"></span></span></td><td><span class="pri p0"><span class="d"></span>P0</span></td><td><span class="fs12" style="color:var(--sig-red);font-family:var(--mono)">ontem</span></td><td><span class="m-chip" style="padding:2px 8px"><span class="dot" style="background:var(--green)"></span>andamento</span></td></tr>
+            <tr><td></td><td class="row-title"><span class="ph t w90"></span></td><td><span class="ph w60"></span></td><td><span class="row gap6"><span class="av g">JD</span><span class="ph w40"></span></span></td><td><span class="pri p1"><span class="d"></span>P1</span></td><td><span class="fs12 muted" style="font-family:var(--mono)">12 jun</span></td><td><span class="m-chip" style="padding:2px 8px"><span class="dot"></span>backlog</span></td></tr>
+            <tr><td></td><td class="row-title"><span class="ph t w70"></span></td><td><span class="ph w70"></span></td><td><span class="row gap6"><span class="av">RC</span><span class="ph w50"></span></span></td><td><span class="pri p2"><span class="d"></span>P2</span></td><td><span class="fs12 muted" style="font-family:var(--mono)">20 jun</span></td><td><span class="m-chip" style="padding:2px 8px"><span class="dot" style="background:var(--sig-red)"></span>bloqueado</span></td></tr>
+            <tr><td></td><td class="row-title"><span class="ph t w60"></span></td><td><span class="ph w50"></span></td><td><span class="row gap6"><span class="av">LP</span><span class="ph w40"></span></span></td><td><span class="pri p3"><span class="d"></span>P3</span></td><td><span class="fs12 muted" style="font-family:var(--mono)">—</span></td><td><span class="m-chip" style="padding:2px 8px"><span class="dot"></span>backlog</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- KANBAN + FOCO/TRIAGEM -->
+  <div class="subhead"><h2>Kanban</h2><span class="sub-note">mesma page-bar + cards padronizados</span></div>
+  <div class="frame">
+    <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">tasks-360 / kanban</span></div>
+    <div style="padding:18px 20px">
+      <div class="row between"><div style="font-size:20px;font-weight:700;letter-spacing:-.02em">Kanban</div><div class="row gap8"><span class="row" style="border:1px solid var(--line);border-radius:var(--r-pill);padding:3px"><span class="m-btn sm primary" style="padding:5px 11px">Macro</span><span class="m-btn ghost sm" style="padding:5px 11px">Operação</span></span><span class="m-btn primary sm"><svg class="ic"><use href="#i-plus"/></svg></span></div></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px">
+        <div><div class="row between" style="padding:0 4px 8px"><span class="eyebrow">Backlog</span><span class="fs12 muted" style="font-family:var(--mono)">128</span></div><div style="background:rgba(31,41,55,.03);border-radius:var(--r-md);padding:10px;min-height:200px;border-top:3px solid var(--line-strong)"><div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;margin-bottom:8px"><div class="ph t w80"></div><div class="row between mt12"><span class="pri p1"><span class="d"></span>P1</span><span class="av">MA</span></div></div><div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px"><div class="ph t w60"></div><div class="row between mt12"><span class="pri p3"><span class="d"></span>P3</span><span class="av">JD</span></div></div></div></div>
+        <div><div class="row between" style="padding:0 4px 8px"><span class="eyebrow" style="color:var(--green)">Em andamento</span><span class="fs12 muted" style="font-family:var(--mono)">42</span></div><div style="background:rgba(31,41,55,.03);border-radius:var(--r-md);padding:10px;min-height:200px;border-top:3px solid var(--green)"><div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;margin-bottom:8px"><div class="ph t w90"></div><div class="row between mt12"><span class="pri p0"><span class="d"></span>P0</span><span class="av g">JD</span></div></div></div></div>
+        <div><div class="row between" style="padding:0 4px 8px"><span class="eyebrow" style="color:var(--sig-red)">Bloqueado</span><span class="fs12 muted" style="font-family:var(--mono)">7</span></div><div style="background:rgba(31,41,55,.03);border-radius:var(--r-md);padding:10px;min-height:200px;border-top:3px solid var(--sig-red)"><div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px"><div class="ph t w70"></div><div class="row between mt12"><span class="pri p1"><span class="d"></span>P1</span><span class="av">RC</span></div></div></div></div>
+        <div><div class="row between" style="padding:0 4px 8px"><span class="eyebrow">Concluído</span><span class="fs12 muted" style="font-family:var(--mono)">128</span></div><div style="background:rgba(31,41,55,.03);border-radius:var(--r-md);padding:10px;min-height:200px;border-top:3px solid var(--brand-soft, #cdebd6)"><div style="background:#fff;border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;opacity:.6"><div class="ph t w60"></div><div class="row between mt12"><span class="pri p2"><span class="d"></span>P2</span><span class="av">LP</span></div></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CADASTROS + PORTAL -->
+  <div class="subhead"><h2>Cadastros &amp; Portal do cliente</h2><span class="sub-note">tabela + tabs · header escuro de contexto</span></div>
+  <div class="opts cols-2">
+    <div class="opt">
+      <div class="flow-tag">Cadastros — tabs + tabela padrão</div>
+      <div class="frame">
+        <div style="padding:16px 18px">
+          <div class="row between"><div style="font-size:18px;font-weight:700;letter-spacing:-.02em">Cadastros</div><span class="m-btn primary sm"><svg class="ic"><use href="#i-plus"/></svg> Cliente</span></div>
+          <div class="row gap16 mt16" style="border-bottom:1px solid var(--line-strong)"><span class="fs13 bold" style="border-bottom:2px solid var(--green);padding-bottom:9px;margin-bottom:-1px;display:inline-flex;gap:6px;align-items:center"><svg class="ic" style="width:14px;color:var(--green)"><use href="#i-building"/></svg> Clientes</span><span class="fs13 muted" style="padding-bottom:9px;display:inline-flex;gap:6px;align-items:center"><svg class="ic" style="width:14px"><use href="#i-folder"/></svg> Projetos</span><span class="fs13 muted" style="padding-bottom:9px;display:inline-flex;gap:6px;align-items:center"><svg class="ic" style="width:14px"><use href="#i-users"/></svg> Pessoas</span></div>
+          <table class="m-tbl mt16"><thead><tr><th>Cliente</th><th style="width:80px">Projetos</th><th style="width:70px">Tarefas</th><th style="width:40px"></th></tr></thead><tbody>
+            <tr><td class="row-title"><span class="row gap8"><span class="av g">A</span><span class="ph t w50"></span></span></td><td class="muted fs12" style="font-family:var(--mono)">4</td><td class="muted fs12" style="font-family:var(--mono)">38</td><td><svg class="ic" style="width:14px;color:var(--muted)"><use href="#i-more"/></svg></td></tr>
+            <tr><td class="row-title"><span class="row gap8"><span class="av">G</span><span class="ph t w40"></span></span></td><td class="muted fs12" style="font-family:var(--mono)">2</td><td class="muted fs12" style="font-family:var(--mono)">21</td><td><svg class="ic" style="width:14px;color:var(--muted)"><use href="#i-more"/></svg></td></tr>
+            <tr><td class="row-title"><span class="row gap8"><span class="av">I</span><span class="ph t w60"></span></span></td><td class="muted fs12" style="font-family:var(--mono)">1</td><td class="muted fs12" style="font-family:var(--mono)">9</td><td><svg class="ic" style="width:14px;color:var(--muted)"><use href="#i-more"/></svg></td></tr>
+          </tbody></table>
+        </div>
+      </div>
+    </div>
+    <div class="opt">
+      <div class="flow-tag">Portal — header escuro + KPIs padrão</div>
+      <div class="frame">
+        <div style="background:#0A3A1F;color:#fff;padding:18px 20px"><div class="eyebrow" style="color:rgba(255,255,255,.55)">Portal do cliente</div><div style="font-size:22px;font-weight:600;margin-top:6px">Acme Corp</div><div class="fs12" style="color:rgba(255,255,255,.7);margin-top:4px">12 tarefas ativas · 2 aguardando você</div></div>
+        <div style="padding:16px 18px">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"><div class="kpi"><span class="lab">Ativas</span><span class="val">12</span></div><div class="kpi"><span class="lab">Entregues</span><span class="val">34</span></div><div class="kpi danger"><span class="lab">C/ você</span><span class="val">2</span></div></div>
+          <div style="border:1px solid #E7C9C4;border-radius:var(--r-md);padding:12px;display:flex;gap:10px;align-items:flex-start;margin-top:14px"><span class="m-ico" style="border-color:#E7C9C4;color:var(--sig-amber)"><svg class="ic"><use href="#i-alert"/></svg></span><div class="grow"><div class="ph t w50"></div><div class="ph w80 mt8"></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SMALLER -->
+  <div class="subhead"><h2>Telas menores</h2><span class="sub-note">Foco · Triagem · Calendário · Timesheet</span></div>
+  <div class="opts cols-2">
+    <div class="opt">
+      <div class="flow-tag">Foco / Triagem — segmentos + lista</div>
+      <div class="frame"><div style="padding:16px 18px">
+        <div class="row between"><div style="font-size:18px;font-weight:700;letter-spacing:-.02em">Foco de hoje</div><span class="m-chip mono">8 tarefas · 6h</span></div>
+        <div class="row gap6 mt12" style="border:1px solid var(--line);border-radius:var(--r-pill);padding:3px;width:fit-content"><span class="m-btn sm primary" style="padding:5px 12px">Minhas</span><span class="m-btn ghost sm" style="padding:5px 12px">Atrasadas</span><span class="m-btn ghost sm" style="padding:5px 12px">Hoje</span></div>
+        <div class="ph-stack mt16" style="gap:8px"><div class="row gap8" style="border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px"><span style="width:16px;height:16px;border:1.5px solid var(--line-strong);border-radius:4px"></span><span class="ph t w60"></span><span class="grow"></span><span class="pri p0"><span class="d"></span>P0</span></div><div class="row gap8" style="border:1px solid var(--line);border-radius:var(--r-md);padding:10px 12px"><span style="width:16px;height:16px;border:1.5px solid var(--line-strong);border-radius:4px"></span><span class="ph t w70"></span><span class="grow"></span><span class="pri p1"><span class="d"></span>P1</span></div></div>
+      </div></div>
+    </div>
+    <div class="opt">
+      <div class="flow-tag">Calendário — grade padrão</div>
+      <div class="frame"><div style="padding:16px 18px">
+        <div class="row between"><div style="font-size:18px;font-weight:700;letter-spacing:-.02em">Junho 2026</div><div class="row gap6"><span class="m-ico bare"><svg class="ic"><use href="#i-chev-up"/></svg></span><span class="m-ico bare"><svg class="ic"><use href="#i-chev-down"/></svg></span></div></div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:14px">
+          <div class="eyebrow" style="text-align:center;font-size:9px">SEG</div><div class="eyebrow" style="text-align:center;font-size:9px">TER</div><div class="eyebrow" style="text-align:center;font-size:9px">QUA</div><div class="eyebrow" style="text-align:center;font-size:9px">QUI</div><div class="eyebrow" style="text-align:center;font-size:9px">SEX</div>
+          <div style="border:1px solid var(--line);border-radius:4px;min-height:54px;padding:4px"><span class="fs12 muted" style="font-family:var(--mono)">9</span></div>
+          <div style="border:1px solid var(--green);box-shadow:inset 0 0 0 1px var(--green);border-radius:4px;min-height:54px;padding:4px"><span class="fs12" style="font-family:var(--mono);color:var(--green)">10</span><div style="background:var(--green-soft);border:1px solid var(--green);border-radius:2px;height:8px;margin-top:3px"></div></div>
+          <div style="border:1px solid var(--line);border-radius:4px;min-height:54px;padding:4px"><span class="fs12 muted" style="font-family:var(--mono)">11</span></div>
+          <div style="border:1px solid var(--line);border-radius:4px;min-height:54px;padding:4px"><span class="fs12 muted" style="font-family:var(--mono)">12</span><div style="background:#F6E7E5;border:1px solid #E7C9C4;border-radius:2px;height:8px;margin-top:3px"></div></div>
+          <div style="border:1px solid var(--line);border-radius:4px;min-height:54px;padding:4px"><span class="fs12 muted" style="font-family:var(--mono)">13</span></div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="callout mt24">Toda tela = page-bar + (filtros) + conteúdo no mesmo grid de 1320px. Mesmos tokens, mesmos componentes, mesma cor. É isso que dá elegância e padrão.</div>
+</section>
+
+</div>
+
+<script>
+  const tabs = document.getElementById('tabs');
+  const sections = document.querySelectorAll('.section');
+  function go(t){
+    document.querySelectorAll('.doc-tab').forEach(b=>b.classList.toggle('active', b.dataset.t===t));
+    sections.forEach(s=>s.classList.toggle('active', s.dataset.s===t));
+    if(location.hash.slice(1)!==t) history.replaceState(null,'','#'+t);
+    window.scrollTo({top:0,behavior:'instant'});
+  }
+  tabs.addEventListener('click', e=>{ const b=e.target.closest('.doc-tab'); if(b) go(b.dataset.t); });
+  const init = location.hash.slice(1);
+  if(init && document.querySelector('.section[data-s="'+init+'"]')) go(init);
+</script>
+</body>
+</html>
