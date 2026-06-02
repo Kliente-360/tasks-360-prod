@@ -529,17 +529,22 @@ export interface VelocidadeMetrics {
   leadTimeDias: number | null;
   /** Avg days andamento→concluído (andamentoEm→statusEm), last 30d. null se sem dados. */
   cycleDias: number | null;
+  /** Mesmo cálculo aplicado ao período 60d-30d atrás (pra delta de evolução) */
+  cycleDiasPrev: number | null;
   /** % tasks com prazo concluídas no prazo, last 30d. null se nenhuma com prazo. */
   pctNoPrazo: number | null;
   /** Denominador do pctNoPrazo (tasks com prazo concluídas em 30d). */
   pctNoPrazoBases: number;
   /** Numerador (entregues no prazo). */
   pctNoPrazoOk: number;
+  /** % no prazo do período 60d-30d atrás (pra delta de evolução) */
+  pctNoPrazoPrev: number | null;
 }
 
 export function computeVelocidade(tasks: Task[]): VelocidadeMetrics {
   const now = Date.now();
   const d30ago = now - 30 * 24 * 3600 * 1000;
+  const d60ago = now - 60 * 24 * 3600 * 1000;
 
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
@@ -594,6 +599,24 @@ export function computeVelocidade(tasks: Task[]): VelocidadeMetrics {
   const pctNoPrazo =
     comPrazo.length > 0 ? Math.round((emPrazo.length / comPrazo.length) * 100) : null;
 
+  // ===== Período anterior (60d → 30d atrás) — pra delta de evolução =====
+  const concludedPrev30d = concluded.filter((t) => t.statusEm >= d60ago && t.statusEm < d30ago);
+  const withCyclePrev = concludedPrev30d.filter((t) => t.andamentoEm > 0 && t.andamentoEm < t.statusEm);
+  const cycleDiasPrev =
+    withCyclePrev.length > 0
+      ? Math.round(
+          (10 * withCyclePrev.reduce((s, t) => s + (t.statusEm - t.andamentoEm) / 86400000, 0)) /
+            withCyclePrev.length,
+        ) / 10
+      : null;
+  const comPrazoPrev = concludedPrev30d.filter((t) => t.prazo);
+  const emPrazoPrev = comPrazoPrev.filter((t) => {
+    const prazoMs = new Date(t.prazo).getTime() + 86400000;
+    return t.statusEm <= prazoMs;
+  });
+  const pctNoPrazoPrev =
+    comPrazoPrev.length > 0 ? Math.round((emPrazoPrev.length / comPrazoPrev.length) * 100) : null;
+
   // ===== Projeção W-0 =====
   // Tasks ainda ABERTAS com prazo nesta semana — vão competir pra conclusão
   // até sexta. Aplicamos a taxa histórica de % no prazo pra estimar quantas
@@ -626,9 +649,11 @@ export function computeVelocidade(tasks: Task[]): VelocidadeMetrics {
     throughputW2,
     leadTimeDias,
     cycleDias,
+    cycleDiasPrev,
     pctNoPrazo,
     pctNoPrazoBases: comPrazo.length,
     pctNoPrazoOk: emPrazo.length,
+    pctNoPrazoPrev,
   };
 }
 
