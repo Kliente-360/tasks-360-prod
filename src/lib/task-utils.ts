@@ -13,11 +13,6 @@ export function effEsforco(t: Pick<Task, 'esforco'>): number {
   return e > 0 ? e : 4;
 }
 
-/** Ocupação restante = horas ainda por trabalhar (piso 0). */
-export function effOcupacao(t: Pick<Task, 'esforco' | 'tempoRealHoras'>): number {
-  return Math.max(0, effEsforco(t) - (Number(t.tempoRealHoras) || 0));
-}
-
 /** Tamanho de task baseado no effEsforco. */
 export function effTamanho(t: Pick<Task, 'esforco'>): string {
   const h = effEsforco(t);
@@ -70,11 +65,6 @@ export function agingLevel(t: Pick<Task, 'status' | 'statusEm'>): AgingLevel {
   if (d >= limits[1]) return 'stale';
   if (d >= limits[0]) return 'warn';
   return 'fresh';
-}
-
-/** Tempo na etapa atual em label curto ('hoje', 'há 1d', 'há Nd'). */
-export function tempoNaEtapa(t: Pick<Task, 'statusEm'>): string {
-  return fmtTempoEtapa(t.statusEm);
 }
 
 /** Linguagem natural pra "tempo numa etapa/status": hoje · 1 dia · N dias. */
@@ -268,11 +258,6 @@ export function bucketTasksByWeek(tasks: Task[], today?: string): WeekBuckets {
 /** Soma effEsforco num array de tasks. */
 export function sumEffEsforco(tasks: Task[]): number {
   return tasks.reduce((acc, t) => acc + effEsforco(t), 0);
-}
-
-/** Soma effOcupacao num array de tasks. */
-export function sumEffOcupacao(tasks: Task[]): number {
-  return tasks.reduce((acc, t) => acc + effOcupacao(t), 0);
 }
 
 export type CargaNivel = 'sobrecarga' | 'pressao' | 'ok' | 'folga' | 'sem-cap';

@@ -12,7 +12,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { TaskStatus } from './types';
 import {
   effEsforco,
-  effOcupacao,
   effTamanho,
   atrasada,
   diasAtraso,
@@ -26,7 +25,7 @@ import {
   todayIso,
 } from './task-utils';
 
-// ─── effEsforco / effOcupacao / effTamanho ──────────────────────────────
+// ─── effEsforco / effTamanho ──────────────────────────────
 
 describe('effEsforco', () => {
   it('retorna o valor declarado quando > 0', () => {
@@ -36,18 +35,6 @@ describe('effEsforco', () => {
   it('usa fallback de 4h quando esforco é 0 / null / undefined', () => {
     expect(effEsforco({ esforco: 0 })).toBe(4);
     expect(effEsforco({ esforco: null as unknown as number })).toBe(4);
-  });
-});
-
-describe('effOcupacao', () => {
-  it('subtrai tempoRealHoras do esforço efetivo', () => {
-    expect(effOcupacao({ esforco: 8, tempoRealHoras: 3 })).toBe(5);
-  });
-  it('piso 0 quando tempoReal excede o esforço', () => {
-    expect(effOcupacao({ esforco: 4, tempoRealHoras: 10 })).toBe(0);
-  });
-  it('null tempoRealHoras = 0 trabalhado', () => {
-    expect(effOcupacao({ esforco: 8, tempoRealHoras: null })).toBe(8);
   });
 });
 
