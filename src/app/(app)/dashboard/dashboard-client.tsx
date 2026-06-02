@@ -3,8 +3,11 @@
 import { useMemo, useState } from 'react';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
+import { PageHeader } from '@/components/page-header';
+import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { cn } from '@/lib/utils';
 import { atrasada, agingDays, effEsforco } from '@/lib/task-utils';
+import type { Filters as StdFilters } from '@/lib/filters';
 import {
   computeThroughput12w,
   computeEntregasSemanas,
@@ -219,20 +222,57 @@ export function DashboardClient() {
   return (
     <div className="flex flex-col gap-4 md:gap-6">
 
-      {/* ── Page bar ── */}
-      <div className="page-bar hidden md:flex">
-        <div className="page-bar-info">
-          <span className="page-bar-narrative">
-            Dashboard
-            <span className="text-muted font-normal text-sm ml-2">
-              {refreshing ? '· atualizando…' : '· cockpit operacional'}
-            </span>
-          </span>
-        </div>
-        <div className="page-bar-controls" />
+      {/* ── PageHeader + FilterBar (desktop) ── */}
+      <div className="hidden md:block">
+        <PageHeader
+          title="Dashboard"
+          context={
+            <>
+              {refreshing ? 'atualizando…' : 'cockpit operacional'}
+              {hasFilter && (
+                <> · <b>{[filterCliente, filterPessoa, filterProjeto].filter(Boolean).length}</b> filtro(s) ativo(s)</>
+              )}
+            </>
+          }
+          right={
+            <FilterBar
+              f={{
+                q: '',
+                cliente: filterCliente,
+                projeto: filterProjeto,
+                resp: filterPessoa,
+                prazo: '',
+              } satisfies StdFilters}
+              set={(key, value) => {
+                if (key === 'cliente') { setFilterCliente(value); setFilterProjeto(''); }
+                else if (key === 'projeto') setFilterProjeto(value);
+                else if (key === 'resp') setFilterPessoa(value);
+                // Dashboard não tem busca/prazo no FilterBar (dados são agregados; busca não faz sentido aqui)
+              }}
+              onClear={clearFilters}
+              clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
+              projetoOptions={projetosAtivos.map((p) => ({ v: p.id, label: p.nome }))}
+              pessoaOptions={pessoasAtivas.map((p) => ({ v: p.id, label: p.nome }))}
+              show={['cliente', 'projeto', 'resp']}
+              moreItems={[
+                { key: 'group', label: 'Agrupar', enabled: false, kind: 'action', icon: 'list-filter' },
+                { key: 'arquivadas', label: 'Mostrar arquivadas', enabled: false, kind: 'toggle', hint: 'Dashboard ignora' },
+                { key: 'div', label: '---' },
+                {
+                  key: 'export',
+                  label: 'Exportar CSV',
+                  kind: 'action',
+                  icon: 'download',
+                  enabled: false,
+                  hint: 'use ↓ no header',
+                },
+              ] satisfies MoreMenuItem[]}
+            />
+          }
+        />
       </div>
 
-      {/* ── Filtros ── */}
+      {/* ── Filtros (mobile legacy — refactor em PR futuro) ── */}
       <div>
         <div className="flex items-center gap-2 md:hidden">
           <button
@@ -271,21 +311,7 @@ export function DashboardClient() {
             </select>
           </div>
         )}
-        <div className="hidden md:flex flex-wrap gap-2">
-          <select value={filterCliente} onChange={(e) => { setFilterCliente(e.target.value); setFilterProjeto(''); }} className={selCls}>
-            <option value="">Todos clientes</option>
-            {clientesAtivos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-          </select>
-          <select value={filterPessoa} onChange={(e) => setFilterPessoa(e.target.value)} className={selCls}>
-            <option value="">Todas pessoas</option>
-            {pessoasAtivas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-          </select>
-          <select value={filterProjeto} onChange={(e) => setFilterProjeto(e.target.value)} className={selCls}>
-            <option value="">Todos projetos</option>
-            {projetosAtivos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-          </select>
-          {hasFilter && <button onClick={clearFilters} className="text-xs text-muted hover:text-ink underline px-1">Limpar filtros</button>}
-        </div>
+        {/* Desktop filtros agora vivem dentro do FilterBar no PageHeader acima */}
       </div>
 
       {/* ── 1. KPIs ── */}

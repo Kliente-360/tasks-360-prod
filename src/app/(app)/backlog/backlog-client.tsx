@@ -18,9 +18,12 @@ import { createClient } from '@/lib/supabase/client';
 import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
 import { BulkBar, BulkBarClearButton, BulkBarSep } from '@/components/bulk-bar';
+import { PageHeader } from '@/components/page-header';
+import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { atrasada, agingDays, agingLevel, fmtDate, fmtDateShort, fmtTempoEtapa, lblComplex, lblStatus } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS, SUBS_FLAT, SUBS_FLAT_ORDER } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
+import type { Filters as StdFilters } from '@/lib/filters';
 import type { Task } from '@/lib/types';
 
 // Sort manual (DnD) foi removido do Backlog do Alpine — não portamos.
@@ -515,202 +518,98 @@ export function BacklogClient() {
     // filho visível do mobile. Com flex+gap, elementos display:none
     // são totalmente ignorados.
     <div className="flex flex-col gap-4">
-      {/* ============ Desktop page bar ============ */}
-      <div className="page-bar hidden md:flex">
-        <div className="page-bar-info">
-          <span className="page-bar-narrative whitespace-nowrap">
-            Backlog
-            <span className="text-muted font-normal">
-              {' · '}
-              <strong className="text-ink">{backlogTotalAbertas}</strong> tarefas
-            </span>
-          </span>
-        </div>
-        <div className="page-bar-controls">
-          {/* widths via style inline porque .inp tem width: 100% no globals.css
-              (sem @layer) e ganha de utilities tailwind. */}
-          <input
-            type="text"
-            className={`inp ${qDraft ? 'is-active' : ''}`}
-            style={{ width: 200 }}
-            placeholder="Buscar…"
-            value={qDraft}
-            onChange={(e) => setQDraft(e.target.value)}
-          />
-          <select
-            className={`inp ${f.cliente ? 'is-active' : ''}`}
-            style={{ width: 140 }}
-            value={f.cliente}
-            onChange={(e) => setF({ ...f, cliente: e.target.value, projeto: e.target.value ? f.projeto : '' })}
-          >
-            <option value="">Cliente</option>
-            <option value={EMPTY}>— sem cliente</option>
-            {clientesAtivos.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome}
-              </option>
-            ))}
-          </select>
-          <select
-            className={`inp ${f.projeto ? 'is-active' : ''}`}
-            style={{ width: 140 }}
-            value={f.projeto}
-            disabled={!f.cliente}
-            onChange={(e) => setF({ ...f, projeto: e.target.value })}
-          >
-            <option value="">Projeto</option>
-            <option value={EMPTY}>— sem projeto</option>
-            {projetosFiltrados.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-          <select
-            className={`inp ${f.pessoa ? 'is-active' : ''}`}
-            style={{ width: 140 }}
-            value={f.pessoa}
-            onChange={(e) => setF({ ...f, pessoa: e.target.value })}
-          >
-            <option value="">Responsável</option>
-            <option value={EMPTY}>— sem responsável</option>
-            {pessoasNaoCliente.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-          <select
-            className={`inp ${f.pri ? 'is-active' : ''}`}
-            style={{ width: 80 }}
-            value={f.pri}
-            onChange={(e) => setF({ ...f, pri: e.target.value })}
-          >
-            <option value="">Pri</option>
-            <option value={EMPTY}>— vazio</option>
-            <option value="P0">P0</option>
-            <option value="P1">P1</option>
-            <option value="P2">P2</option>
-            <option value="P3">P3</option>
-          </select>
-          <select
-            className={`inp ${f.complexidade ? 'is-active' : ''}`}
-            style={{ width: 100 }}
-            value={f.complexidade}
-            onChange={(e) => setF({ ...f, complexidade: e.target.value })}
-          >
-            <option value="">Cmplx</option>
-            <option value={EMPTY}>— vazio</option>
-            <option value="alta">Alta</option>
-            <option value="media">Média</option>
-            <option value="baixa">Baixa</option>
-          </select>
-          <select
-            className={`inp ${f.status && f.status !== 'abertas' ? 'is-active' : ''}`}
-            style={{ width: 140 }}
-            value={f.status}
-            onChange={(e) => setF({ ...f, status: e.target.value })}
-          >
-            <option value="abertas">Abertas</option>
-            <option value="">Todas</option>
-            <option value="backlog">Backlog</option>
-            <option value="andamento">Em andamento</option>
-            <option value="bloqueado">Bloqueado</option>
-            <option value="concluido">Concluído</option>
-          </select>
-          {allTags.length > 0 && (
-            <select
-              className={`inp ${f.tag ? 'is-active' : ''}`}
-              style={{ width: 120 }}
-              value={f.tag}
-              onChange={(e) => setF({ ...f, tag: e.target.value })}
-            >
-              <option value="">Tag</option>
-              <option value={EMPTY}>— sem tags</option>
-              {allTags.map((t) => (
-                <option key={t} value={t}>
-                  #{t}
-                </option>
-              ))}
-            </select>
-          )}
-          {(activeFiltersCount > 0 || f.q || f.tag) && (
-            <button
-              className="btn btn-ghost text-xs"
-              onClick={clearFilters}
-              title="Limpar todos os filtros aplicados"
-            >
-              ✕<span className="badge-count ml-1">{activeFiltersCount + (f.q ? 1 : 0) + (f.tag ? 1 : 0)}</span>
-            </button>
-          )}
-          <div className="relative">
-            <button
-              className="more-menu-btn"
-              onClick={() => setMoreOpen((v) => !v)}
-              aria-expanded={moreOpen}
-              aria-label="Mais opções"
-              title="Agrupar · arquivadas"
-            >
-              ⋯
-            </button>
-            {moreOpen && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setMoreOpen(false)} />
-                <div className="more-menu-panel z-40">
-                  <div className="more-row">
-                    <select
-                      className="inp text-xs py-1 flex-1"
-                      value={groupBy}
-                      onChange={(e) => {
-                        setGroupBy(e.target.value);
-                        setCollapsedGroups([]);
-                      }}
-                    >
-                      <option value="">Agrupar</option>
-                      <option value="pessoa">Agrupar por: Responsável</option>
-                      <option value="cliente">Agrupar por: Cliente</option>
-                      <option value="projeto">Agrupar por: Projeto</option>
-                      <option value="status">Agrupar por: Status (macro)</option>
-                      <option value="subetapa">Agrupar por: Etapa</option>
-                      <option value="prioridade">Agrupar por: Prioridade</option>
-                      <option value="complexidade">Agrupar por: Complexidade</option>
-                    </select>
-                  </div>
-                  <div className="more-row">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={showArchived}
-                        onChange={(e) => setShowArchived(e.target.checked)}
-                      />
-                      <span>Mostrar tarefas arquivadas</span>
-                    </label>
-                  </div>
-                  <div className="more-row">
-                    <label title="Filtra só tasks criadas por automação IA (Cowork etc).">
-                      <input
-                        type="checkbox"
-                        checked={f.origem === 'ia'}
-                        onChange={(e) => setF({ ...f, origem: e.target.checked ? 'ia' : '' })}
-                      />
-                      <span>Somente criadas por 🤖 IA</span>
-                    </label>
-                  </div>
-                  <div className="more-row">
-                    <label title="Filtra só tasks criadas por humanos (oculta IA).">
-                      <input
-                        type="checkbox"
-                        checked={f.origem === 'humano'}
-                        onChange={(e) => setF({ ...f, origem: e.target.checked ? 'humano' : '' })}
-                      />
-                      <span>Somente criadas por humanos</span>
-                    </label>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+      {/* ============ Desktop · PageHeader + FilterBar (DS) ============ */}
+      <div className="hidden md:block">
+        <PageHeader
+          title="Backlog"
+          context={
+            <>
+              <b>{backlogTotalAbertas}</b> tarefas
+              {activeFiltersCount > 0 && (
+                <> · <b>{filtered.length}</b> após filtros</>
+              )}
+            </>
+          }
+          right={
+            <FilterBar
+              f={{
+                q: qDraft,
+                cliente: f.cliente,
+                projeto: f.projeto,
+                resp: f.pessoa,
+                prazo: '',
+              } satisfies StdFilters}
+              set={(key, value) => {
+                if (key === 'q') setQDraft(value);
+                else if (key === 'cliente') setF({ ...f, cliente: value, projeto: value ? f.projeto : '' });
+                else if (key === 'projeto') setF({ ...f, projeto: value });
+                else if (key === 'resp') setF({ ...f, pessoa: value });
+                // 'prazo' não tem mapping atual no Filters local; ignora silenciosamente
+              }}
+              onClear={() => {
+                setQDraft('');
+                clearFilters();
+              }}
+              clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
+              projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
+              pessoaOptions={pessoasNaoCliente.map((p) => ({ v: p.id, label: p.nome }))}
+              moreItems={[
+                {
+                  key: 'group-pessoa',
+                  label: groupBy === 'pessoa' ? 'Agrupando: Responsável ✓' : 'Agrupar: Responsável',
+                  kind: 'action',
+                  icon: 'users',
+                  onClick: () => {
+                    setGroupBy(groupBy === 'pessoa' ? '' : 'pessoa');
+                    setCollapsedGroups([]);
+                  },
+                },
+                {
+                  key: 'group-cliente',
+                  label: groupBy === 'cliente' ? 'Agrupando: Cliente ✓' : 'Agrupar: Cliente',
+                  kind: 'action',
+                  icon: 'building',
+                  onClick: () => {
+                    setGroupBy(groupBy === 'cliente' ? '' : 'cliente');
+                    setCollapsedGroups([]);
+                  },
+                },
+                {
+                  key: 'group-status',
+                  label: groupBy === 'status' ? 'Agrupando: Status ✓' : 'Agrupar: Status',
+                  kind: 'action',
+                  icon: 'list-filter',
+                  onClick: () => {
+                    setGroupBy(groupBy === 'status' ? '' : 'status');
+                    setCollapsedGroups([]);
+                  },
+                },
+                { key: 'div1', label: '---' },
+                {
+                  key: 'arquivadas',
+                  label: 'Mostrar arquivadas',
+                  kind: 'toggle',
+                  active: showArchived,
+                  onClick: () => setShowArchived((v) => !v),
+                },
+                {
+                  key: 'ia',
+                  label: 'Somente criadas por IA',
+                  kind: 'toggle',
+                  active: f.origem === 'ia',
+                  onClick: () => setF({ ...f, origem: f.origem === 'ia' ? '' : 'ia' }),
+                },
+                {
+                  key: 'humano',
+                  label: 'Somente criadas por humanos',
+                  kind: 'toggle',
+                  active: f.origem === 'humano',
+                  onClick: () => setF({ ...f, origem: f.origem === 'humano' ? '' : 'humano' }),
+                },
+              ] satisfies MoreMenuItem[]}
+            />
+          }
+        />
       </div>
 
       {/* ============ Mobile filters ============ */}

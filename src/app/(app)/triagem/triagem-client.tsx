@@ -19,6 +19,8 @@ import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib
 import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
 import { BulkBar, BulkBarClearButton, BulkBarSep } from '@/components/bulk-bar';
+import { PageHeader } from '@/components/page-header';
+import { PillsFilter } from '@/components/pills-filter';
 import { createClient } from '@/lib/supabase/client';
 import { agingDays, atrasada, fmtDateShort, triageFailures } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS } from '@/lib/task-constants';
@@ -199,47 +201,48 @@ export function TriagemClient() {
 
   return (
     <div className="max-w-[1100px] mx-auto space-y-4 md:space-y-5">
-      {/* Desktop page bar */}
+      {/* Desktop · PageHeader + chips filtros (mantém comportamento existente, visual novo) */}
       {triagemTasks.length > 0 && (
-        <div className="page-bar hidden md:flex">
-          <div className="page-bar-info">
-            <span className="page-bar-narrative">
-              <strong>{filtered.length}</strong>
-              {anyFilter && (
-                <span className="text-muted font-normal"> / {triagemTasks.length}</span>
-              )}{' '}
-              tarefa{filtered.length !== 1 ? 's' : ''} pra triar
-            </span>
-          </div>
-          <div className="page-bar-controls">
-            <FilterChip
-              active={filter.semResp}
-              onClick={() => setFilter({ ...filter, semResp: !filter.semResp })}
-              count={counts.semResp}
-              label="sem resp."
-            />
-            <FilterChip
-              active={filter.semPrazo}
-              onClick={() => setFilter({ ...filter, semPrazo: !filter.semPrazo })}
-              count={counts.semPrazo}
-              label="sem prazo"
-            />
-            <FilterChip
-              active={filter.semEsforco}
-              onClick={() => setFilter({ ...filter, semEsforco: !filter.semEsforco })}
-              count={counts.semEsforco}
-              label="sem esforço"
-            />
-            <FilterChip
-              active={filter.origem === 'ia'}
-              onClick={() =>
-                setFilter({ ...filter, origem: filter.origem === 'ia' ? '' : 'ia' })
-              }
-              count={counts.ia}
-              label="🤖 criadas por IA"
-              title="Filtra só tasks criadas por automação IA (Cowork etc)."
-            />
-          </div>
+        <div className="hidden md:block">
+          <PageHeader
+            title="Triagem"
+            context={
+              <>
+                <b>{filtered.length}</b>
+                {anyFilter && <> / {triagemTasks.length}</>}
+                {' '}tarefa{filtered.length !== 1 ? 's' : ''} pra triar
+              </>
+            }
+            right={
+              <div className="flex items-center gap-2 flex-wrap">
+                <FilterChip
+                  active={filter.semResp}
+                  onClick={() => setFilter({ ...filter, semResp: !filter.semResp })}
+                  count={counts.semResp}
+                  label="sem resp."
+                />
+                <FilterChip
+                  active={filter.semPrazo}
+                  onClick={() => setFilter({ ...filter, semPrazo: !filter.semPrazo })}
+                  count={counts.semPrazo}
+                  label="sem prazo"
+                />
+                <FilterChip
+                  active={filter.semEsforco}
+                  onClick={() => setFilter({ ...filter, semEsforco: !filter.semEsforco })}
+                  count={counts.semEsforco}
+                  label="sem esforço"
+                />
+                <FilterChip
+                  active={filter.origem === 'ia'}
+                  onClick={() => setFilter({ ...filter, origem: filter.origem === 'ia' ? '' : 'ia' })}
+                  count={counts.ia}
+                  label="criadas por IA"
+                  title="Filtra só tasks criadas por automação IA (Cowork etc)."
+                />
+              </div>
+            }
+          />
         </div>
       )}
 

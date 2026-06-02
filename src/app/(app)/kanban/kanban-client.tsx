@@ -27,10 +27,13 @@ import {
 } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
+import { PageHeader } from '@/components/page-header';
+import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { createClient } from '@/lib/supabase/client';
 import { agingDays, agingLevel, atrasada, fmtDateShort, fmtTempoEtapa, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
+import type { Filters as StdFilters } from '@/lib/filters';
 import type { Task } from '@/lib/types';
 
 const EMPTY = '__empty__';
@@ -65,12 +68,17 @@ export function KanbanClient() {
     pessoa: '',
     prazo: '',
   });
+  const [qDraft, setQDraft] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
+  const [onlyIA, setOnlyIA] = useState(false);
   const [kanbanView, setKanbanView] = useState<'op' | 'exec'>('op');
 
   // g+l global → limpa filtros.
   useEffect(() => {
-    const handler = () =>
+    const handler = () => {
       setFilters({ cliente: '', projeto: '', pessoa: '', prazo: '' });
+      setQDraft('');
+    };
     window.addEventListener(CLEAR_FILTERS_EVENT, handler);
     return () => window.removeEventListener(CLEAR_FILTERS_EVENT, handler);
   }, []);
@@ -105,8 +113,10 @@ export function KanbanClient() {
 
   // ===== Filtragem =====
   const visibleTasks = useMemo(() => {
+    const q = qDraft.trim().toLowerCase();
     return tasks.filter((t) => {
-      if (t.arquivadoEm) return false;
+      if (!showArchived && t.arquivadoEm) return false;
+      if (showArchived && !t.arquivadoEm && false) return false; // noop pra simetria
       if (filters.cliente === EMPTY) {
         if (t.clienteId) return false;
       } else if (filters.cliente && t.clienteId !== filters.cliente) return false;
@@ -117,9 +127,17 @@ export function KanbanClient() {
         if (t.pessoaId) return false;
       } else if (filters.pessoa && t.pessoaId !== filters.pessoa) return false;
       if (filters.prazo && !matchesPrazoFilter(t, filters.prazo)) return false;
+      if (onlyIA && !t.criadoPorIa) return false;
+      if (q) {
+        const cli = clientesById.get(t.clienteId)?.nome ?? '';
+        const proj = projetosById.get(t.projetoId)?.nome ?? '';
+        const pess = pessoasById.get(t.pessoaId)?.nome ?? '';
+        const hay = `${t.titulo} ${cli} ${proj} ${pess} ${t.descricao ?? ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
       return true;
     });
-  }, [tasks, filters]);
+  }, [tasks, filters, qDraft, showArchived, onlyIA, clientesById, projetosById, pessoasById]);
 
   // ===== Buckets por coluna =====
   const tasksBySub = useMemo(() => {
@@ -225,102 +243,80 @@ export function KanbanClient() {
 
   return (
     <div>
-      {/* Desktop page bar */}
-      <div className="page-bar hidden md:flex">
-        <div className="page-bar-info">
-          <span className="page-bar-narrative">
-            {kanbanView === 'op' ? (
-              <>
-                <strong>Operacional</strong>
-                <span className="text-muted font-normal"> · 11 colunas detalhadas</span>
-              </>
+      {/* Desktop · PageHeader + toggle Macro/Op no titleAside + FilterBar */}
+      <div className="hidden md:block">
+        <PageHeader
+          title="Kanban"
+          context={
+            kanbanView === 'op' ? (
+              <>Operacional · <b>11</b> colunas detalhadas</>
             ) : (
-              <>
-                <strong>Executiva</strong>
-                <span className="text-muted font-normal"> · 4 colunas macro</span>
-              </>
-            )}
-          </span>
-        </div>
-        <div className="page-bar-controls">
-          <select
-            className={`inp ${filters.cliente ? 'is-active' : ''}`}
-            style={{ width: 160 }}
-            value={filters.cliente}
-            onChange={(e) => {
-              const v = e.target.value;
-              setFilters({ ...filters, cliente: v, projeto: v ? filters.projeto : '' });
-            }}
-          >
-            <option value="">Cliente</option>
-            <option value={EMPTY}>— sem cliente</option>
-            {clientesAtivos.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome}
-              </option>
-            ))}
-          </select>
-          <select
-            className={`inp ${filters.projeto ? 'is-active' : ''}`}
-            style={{ width: 160 }}
-            value={filters.projeto}
-            disabled={!filters.cliente}
-            onChange={(e) => setFilters({ ...filters, projeto: e.target.value })}
-          >
-            <option value="">Projeto</option>
-            <option value={EMPTY}>— sem projeto</option>
-            {projetosFiltrados.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-          <select
-            className={`inp ${filters.pessoa ? 'is-active' : ''}`}
-            style={{ width: 140 }}
-            value={filters.pessoa}
-            onChange={(e) => setFilters({ ...filters, pessoa: e.target.value })}
-          >
-            <option value="">Responsável</option>
-            <option value={EMPTY}>— sem responsável</option>
-            {pessoasNaoCliente.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nome}
-              </option>
-            ))}
-          </select>
-          <select
-            className={`inp ${filters.prazo ? 'is-active' : ''}`}
-            style={{ width: 140 }}
-            value={filters.prazo}
-            onChange={(e) => setFilters({ ...filters, prazo: e.target.value as PrazoFilter })}
-          >
-            <option value="">Prazo</option>
-            <option value="atrasadas">Atrasadas</option>
-            <option value="semana">Esta semana</option>
-            <option value="d7">Próx. 7d</option>
-            <option value="d15">Próx. 15d</option>
-            <option value="mes">Este mês</option>
-          </select>
-          <div className="view-toggle" role="tablist" aria-label="Visão do kanban">
-            <button
-              type="button"
-              className={kanbanView === 'op' ? 'active' : ''}
-              onClick={() => setKanbanView('op')}
-              title="Operacional — colunas detalhadas"
-            >
-              Operacional
-            </button>
-            <button
-              type="button"
-              className={kanbanView === 'exec' ? 'active' : ''}
-              onClick={() => setKanbanView('exec')}
-              title="Executiva — colunas macro"
-            >
-              Executiva
-            </button>
-          </div>
-        </div>
+              <>Executiva · <b>4</b> colunas macro</>
+            )
+          }
+          titleAside={
+            <div className="view-toggle" role="tablist" aria-label="Visão do kanban">
+              <button
+                type="button"
+                className={kanbanView === 'op' ? 'active' : ''}
+                onClick={() => setKanbanView('op')}
+                title="Operacional — colunas detalhadas"
+              >
+                Operacional
+              </button>
+              <button
+                type="button"
+                className={kanbanView === 'exec' ? 'active' : ''}
+                onClick={() => setKanbanView('exec')}
+                title="Executiva — colunas macro"
+              >
+                Executiva
+              </button>
+            </div>
+          }
+          right={
+            <FilterBar
+              f={{
+                q: qDraft,
+                cliente: filters.cliente,
+                projeto: filters.projeto,
+                resp: filters.pessoa,
+                prazo: '',
+              } satisfies StdFilters}
+              set={(key, value) => {
+                if (key === 'q') setQDraft(value);
+                else if (key === 'cliente') setFilters({ ...filters, cliente: value, projeto: value ? filters.projeto : '' });
+                else if (key === 'projeto') setFilters({ ...filters, projeto: value });
+                else if (key === 'resp') setFilters({ ...filters, pessoa: value });
+              }}
+              onClear={() => {
+                setQDraft('');
+                setFilters({ cliente: '', projeto: '', pessoa: '', prazo: '' });
+              }}
+              clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
+              projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
+              pessoaOptions={pessoasNaoCliente.map((p) => ({ v: p.id, label: p.nome }))}
+              moreItems={[
+                { key: 'group', label: 'Agrupar', enabled: false, kind: 'action', icon: 'list-filter', hint: 'já agrupa por etapa' },
+                { key: 'div1', label: '---' },
+                {
+                  key: 'arquivadas',
+                  label: 'Mostrar arquivadas',
+                  kind: 'toggle',
+                  active: showArchived,
+                  onClick: () => setShowArchived((v) => !v),
+                },
+                {
+                  key: 'ia',
+                  label: 'Somente criadas por IA',
+                  kind: 'toggle',
+                  active: onlyIA,
+                  onClick: () => setOnlyIA((v) => !v),
+                },
+              ] satisfies MoreMenuItem[]}
+            />
+          }
+        />
       </div>
 
       {/* Visão OPERACIONAL */}

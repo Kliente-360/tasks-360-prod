@@ -1594,3 +1594,22 @@ body {
 @media (max-width: 640px) {
   .pills { overflow-x: auto; max-width: 100%; }
 }
+
+/* ============ F4 · Calendário · status como cor do bloquinho ============
+   Substitui o filtro de status (que saiu da FilterBar) por código visual:
+     active   = brand (andamento)
+     blocked  = âmbar (bloqueado)
+     late     = vermelho (atrasada vencida)
+     done     = ok-soft com riscado (concluído)
+     backlog  = neutro (default)
+   Mantém .late/.done legacy como aliases por retrocompat. */
+.cal-task.status-active   { background: var(--green-soft); color: var(--green); border-color: var(--green); }
+.cal-task.status-blocked  { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+.cal-task.status-late     { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+.cal-task.status-done     { background: var(--bg-alt); color: var(--fg-muted); border-color: var(--line); text-decoration: line-through; }
+.cal-task.status-backlog  { background: var(--bg-alt); color: var(--fg-soft); border-color: var(--line); }
+.cal-dot.status-active    { background: var(--green); }
+.cal-dot.status-blocked   { background: var(--warn); }
+.cal-dot.status-late      { background: var(--danger); }
+.cal-dot.status-done      { background: var(--p3); }
+.cal-dot.status-backlog   { background: var(--fg-muted); }

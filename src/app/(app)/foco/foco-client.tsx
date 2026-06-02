@@ -16,6 +16,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useData, usePessoasById, useClientesById, useProjetosById } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
+import { PageHeader } from '@/components/page-header';
+import { PillsFilter } from '@/components/pills-filter';
 import {
   agingDays,
   agingLevel,
@@ -205,58 +207,55 @@ export function FocoClient() {
 
   return (
     <div>
-      {/* Desktop page bar */}
-      <div className="page-bar hidden md:flex">
-        <div className="page-bar-info">
-          {hasFocus ? (
-            <span className="page-bar-narrative">
-              Foco de <strong>{pessoasById.get(focusPessoaId)?.nome ?? '—'}</strong>
-              {counts.atrasadas.length + counts.hoje.length + counts.bloqueadas.length > 0 && (
-                <span className="page-bar-metrics" style={{ marginLeft: 8 }}>
-                  {counts.atrasadas.length > 0 && (
-                    <>
-                      <strong>{counts.atrasadas.length}</strong>&nbsp;atrasadas
-                    </>
-                  )}
-                  {counts.atrasadas.length > 0 && counts.hoje.length > 0 && <>&nbsp;·&nbsp;</>}
-                  {counts.hoje.length > 0 && (
-                    <>
-                      <strong>{counts.hoje.length}</strong>&nbsp;para hoje
-                    </>
-                  )}
-                  {(counts.atrasadas.length > 0 || counts.hoje.length > 0) && counts.bloqueadas.length > 0 && (
-                    <>&nbsp;·&nbsp;</>
-                  )}
-                  {counts.bloqueadas.length > 0 && (
-                    <>
-                      <strong>{counts.bloqueadas.length}</strong>&nbsp;bloqueadas
-                    </>
-                  )}
-                </span>
-              )}
-            </span>
-          ) : (
-            <span className="page-bar-narrative text-muted font-normal">
-              {isAdmin ? 'Selecione uma pessoa →' : 'Foco indisponível'}
-            </span>
-          )}
-        </div>
-        {/* Selector "atuando como…" só pra admin */}
-        {isAdmin && (
-          <div className="page-bar-controls">
-            <select
-              className={`inp ${focusPessoaId ? 'is-active' : ''}`}
-              style={{ width: 200 }}
-              value={focusPessoaId}
-              onChange={(e) => setFocus(e.target.value)}
-            >
-              <option value="">atuando como…</option>
-              {pessoasNaoCliente.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome}
-                </option>
-              ))}
-            </select>
+      {/* Desktop · PageHeader + PillsFilter (Minhas/Atrasadas/Hoje) + selector "atuando como" pra admin */}
+      <div className="hidden md:block">
+        <PageHeader
+          title={
+            hasFocus
+              ? <>Foco de {pessoasById.get(focusPessoaId)?.nome ?? '—'}</>
+              : (isAdmin ? 'Foco' : 'Foco indisponível')
+          }
+          context={
+            hasFocus && (counts.atrasadas.length + counts.hoje.length + counts.bloqueadas.length > 0) ? (
+              <>
+                {counts.atrasadas.length > 0 && <><b>{counts.atrasadas.length}</b> atrasadas</>}
+                {counts.atrasadas.length > 0 && counts.hoje.length > 0 && ' · '}
+                {counts.hoje.length > 0 && <><b>{counts.hoje.length}</b> para hoje</>}
+                {(counts.atrasadas.length > 0 || counts.hoje.length > 0) && counts.bloqueadas.length > 0 && ' · '}
+                {counts.bloqueadas.length > 0 && <><b>{counts.bloqueadas.length}</b> bloqueadas</>}
+              </>
+            ) : (isAdmin && !hasFocus ? 'Selecione uma pessoa pra ver o foco' : undefined)
+          }
+          right={
+            isAdmin ? (
+              <select
+                className={`inp ${focusPessoaId ? 'is-active' : ''}`}
+                style={{ width: 220 }}
+                value={focusPessoaId}
+                onChange={(e) => setFocus(e.target.value)}
+              >
+                <option value="">atuando como…</option>
+                {pessoasNaoCliente.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
+                ))}
+              </select>
+            ) : undefined
+          }
+        />
+        {/* PillsFilter visual abaixo do header — apenas indicador, não filtra (futuro: state de view) */}
+        {hasFocus && (counts.atrasadas.length + counts.hoje.length > 0) && (
+          <div className="-mt-2 mb-4 hidden md:block">
+            <PillsFilter
+              options={[
+                { v: 'all', label: 'Minhas', count: counts.atrasadas.length + counts.hoje.length + counts.bloqueadas.length },
+                { v: 'atrasadas', label: 'Atrasadas', count: counts.atrasadas.length },
+                { v: 'hoje', label: 'Hoje', count: counts.hoje.length },
+              ]}
+              value="all"
+              onChange={() => { /* scroll-to-section futuro */ }}
+            />
           </div>
         )}
       </div>

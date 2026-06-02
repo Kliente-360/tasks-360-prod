@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/client';
 import { useData, useTasksById, usePessoasById } from '@/lib/data-store';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { useTaskModal } from '@/components/task-modal';
+import { PageHeader } from '@/components/page-header';
+import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
+import type { Filters as StdFilters } from '@/lib/filters';
 
 function fmtTime(ms: number) {
   return new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -68,39 +71,43 @@ export function TimesheetClient() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="font-brand text-2xl font-semibold">Timesheet</h1>
-          <p className="text-sm text-muted mt-0.5">Registros de tempo por tarefa</p>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap justify-end">
-          {isAdmin && (
-            <>
-              <label className="flex items-center gap-1.5 text-sm text-muted select-none cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={onlyMine}
-                  onChange={(e) => { setOnlyMine(e.target.checked); setFilterPessoaId(''); }}
-                />
-                somente o meu
-              </label>
-              {!onlyMine && (
-                <select
-                  className="inp text-sm w-auto"
-                  value={filterPessoaId}
-                  onChange={(e) => setFilterPessoaId(e.target.value)}
-                >
-                  <option value="">Todas as pessoas</option>
-                  {staffPessoas.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nome}</option>
-                  ))}
-                </select>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Timesheet"
+        context="Registros de tempo por tarefa"
+        right={
+          <FilterBar
+            f={{
+              q: '',
+              cliente: '',
+              projeto: '',
+              resp: onlyMine ? (currentPessoa?.id ?? '') : filterPessoaId,
+              prazo: '',
+            } satisfies StdFilters}
+            set={(key, value) => {
+              if (key === 'resp') {
+                if (value === (currentPessoa?.id ?? '')) {
+                  setOnlyMine(true);
+                  setFilterPessoaId('');
+                } else {
+                  setOnlyMine(false);
+                  setFilterPessoaId(value);
+                }
+              }
+            }}
+            onClear={() => {
+              setOnlyMine(false);
+              setFilterPessoaId('');
+            }}
+            show={isAdmin ? ['resp'] : []}
+            pessoaOptions={staffPessoas.map((p) => ({ v: p.id, label: p.nome }))}
+            moreItems={[
+              { key: 'group', label: 'Agrupar', enabled: false, kind: 'action', icon: 'list-filter' },
+              { key: 'arquivadas', label: 'Mostrar arquivadas', enabled: false, kind: 'toggle' },
+              { key: 'ia', label: 'Somente criadas por IA', enabled: false, kind: 'toggle' },
+            ] satisfies MoreMenuItem[]}
+          />
+        }
+      />
 
       {/* Summary card */}
       <div className="card p-4 mb-6 flex items-center gap-6">
