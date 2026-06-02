@@ -69,11 +69,14 @@ export function FocoClient() {
   );
 
   // ===== State =====
-  // Admin escolhe quem ver via dropdown (persistido em localStorage).
-  // Não-admin sempre vê a si mesmo — selector escondido, focus travado
-  // em currentPessoa.id. Cliente externo cai num banner ("Foco indisponível").
+  // Default = usuário logado (mesmo se admin). Admin pode trocar via
+  // dropdown — escolha persiste em localStorage entre sessões.
+  // Não-admin sempre vê a si mesmo — selector escondido, focus travado.
+  // Cliente externo cai num banner ("Foco indisponível").
   const [focusPessoaIdState, setFocusPessoaIdState] = useState<string>('');
-  const focusPessoaId = isAdmin ? focusPessoaIdState : currentPessoa?.id ?? '';
+  const focusPessoaId = isAdmin
+    ? (focusPessoaIdState || currentPessoa?.id || '')
+    : (currentPessoa?.id ?? '');
 
   // Boot: restaura do localStorage só pra admin.
   useEffect(() => {

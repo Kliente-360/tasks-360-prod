@@ -250,6 +250,12 @@
 }
 
 /* ============ BASE ============ */
+html {
+  /* Reserva espaço fixo pra scrollbar — sem isso, telas curtas (Timesheet,
+     Foco sem pessoa, Portal sem cliente) ficam sem scrollbar e empurram
+     todo o layout 15px pra direita quando comparado a telas longas. */
+  scrollbar-gutter: stable;
+}
 html, body {
   background: var(--bg);
   color: var(--ink);
