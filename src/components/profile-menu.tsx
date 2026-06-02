@@ -26,6 +26,8 @@ import { HelpMenuItem } from '@/components/help-modal';
 import { OnboardingMenuItem } from '@/components/onboarding-modal';
 import { ThemeMenuItem } from '@/components/theme-toggle';
 import { ExportCsvMenuItem } from '@/components/export';
+import { Icon } from '@/components/icons';
+import { APP_VERSION } from '@/components/app-nav';
 
 export function ProfileMenu() {
   const [open, setOpen] = useState(false);
@@ -67,7 +69,7 @@ export function ProfileMenu() {
         aria-label="Conta"
         aria-expanded={open}
       >
-        <span className="w-6 h-6 rounded-full bg-brand-soft text-brand font-brand font-semibold text-xs flex items-center justify-center">
+        <span className="w-6 h-6 rounded-full bg-[color:var(--green-soft)] text-[color:var(--green)] font-brand font-semibold text-xs flex items-center justify-center">
           {initial}
         </span>
       </button>
@@ -75,7 +77,7 @@ export function ProfileMenu() {
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
           <div
-            className="fixed md:absolute top-14 md:top-full right-3 md:right-0 mt-0 md:mt-1 bg-elev border border-line rounded-md shadow-xl py-2 w-[260px] max-w-[calc(100vw-24px)] md:w-[260px] z-40"
+            className="fixed md:absolute top-14 md:top-full right-3 md:right-0 mt-0 md:mt-1 bg-[color:var(--bg-elev)] border border-line rounded-lg shadow-xl py-2 w-[260px] max-w-[calc(100vw-24px)] md:w-[260px] z-40"
           >
             {/* 1. Identidade */}
             <div className="px-3 py-1 text-xs text-muted">logado como</div>
@@ -144,11 +146,18 @@ export function ProfileMenu() {
             <div className="border-t border-line my-1" />
             <button
               type="button"
-              className="block w-full text-left px-3 py-2 text-sm hover:bg-brand-tint"
+              className="flex w-full items-center gap-2 text-left px-3 py-2 text-sm text-[color:var(--danger)] hover:bg-[color:var(--danger-soft)] transition-colors"
               onClick={signOut}
             >
-              sair
+              <Icon name="logout" size={14} />
+              <span>sair</span>
             </button>
+
+            {/* 7. Versão */}
+            <div className="border-t border-line my-1" />
+            <div className="px-3 pt-1 pb-0.5 text-[10px] text-muted font-mono text-right">
+              {APP_VERSION}
+            </div>
           </div>
         </>
       )}
@@ -161,7 +170,7 @@ function MenuButton({ label, onClick }: { label: string; onClick: () => void }) 
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-brand-tint"
+      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-ink hover:bg-[color:var(--surface-3)] transition-colors"
     >
       <span>{label}</span>
     </button>
@@ -181,8 +190,8 @@ function MenuItem({
 }) {
   return (
     <div
-      className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-sm ${
-        disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-brand-tint cursor-pointer'
+      className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-ink ${
+        disabled ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[color:var(--surface-3)] cursor-pointer transition-colors'
       }`}
       title={disabled ? hint : undefined}
     >

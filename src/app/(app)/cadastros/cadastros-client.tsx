@@ -11,6 +11,7 @@
  * refletem in-memory pra UX instantânea.
  */
 
+import type { CSSProperties } from 'react';
 import { useCallback, useMemo, useRef, useState, useTransition } from 'react';
 import { useData } from '@/lib/data-store';
 import { useToast } from '@/components/toast';
@@ -319,47 +320,62 @@ export function CadastrosClient() {
 
       {/* Clientes */}
       {tab === 'clientes' && (
-        <div className="rounded-xl border border-line bg-bg-elev divide-y divide-line">
+        <div className="card divide-y divide-[color:var(--line)] overflow-hidden">
           {clientesVisiveis.map((c) => (
             <div
               key={c.id}
               className={cn(
-                'flex items-center justify-between gap-3 flex-wrap px-4 py-3',
+                'flex items-center justify-between gap-3 flex-wrap px-3 md:px-4 py-3 md:py-4 transition-colors hover:bg-[color:var(--surface-3)]',
                 c.arquivadoEm && 'opacity-60',
               )}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-md bg-brand-soft flex items-center justify-center text-sm font-bold text-brand shrink-0">
+                <div
+                  className="w-8 h-8 rounded-md flex items-center justify-center text-sm font-bold shrink-0"
+                  style={{ background: 'var(--green-soft)', color: 'var(--green)' }}
+                >
                   {c.nome.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap text-sm font-medium">
+                  <div className="flex items-center gap-1.5 flex-wrap text-sm font-medium text-[color:var(--ink)]">
                     <span>{c.nome}</span>
-                    <Chip show={c.tier === 'estrategico'} label="estratégico" className="bg-brand-soft text-brand-dark" />
-                    <Chip show={c.tier === 'potencial'} label="potencial" className="bg-yellow-50 text-yellow-700 border border-yellow-200" />
-                    <Chip show={c.tier === 'descoberta'} label="descoberta" className="bg-bg-elev text-muted border border-line" />
-                    <Chip show={!!c.arquivadoEm} label="arquivado" className="bg-bg-elev text-muted border border-line" />
-                    <Chip show={c.ehInterno} label="interno" className="bg-slate-100 text-slate-600" />
-                    {!c.ehInterno && !c.arquivadoEm && (!c.dominios || c.dominios.length === 0) && (
-                      <span className="chip border border-yellow-300 bg-yellow-50 text-amber-700">
-                        sem domínio
-                      </span>
-                    )}
+                    <Chip show={c.tier === 'estrategico'} label="estratégico" variant="green" />
+                    <Chip show={c.tier === 'potencial'} label="potencial" variant="warning" />
+                    <Chip show={c.tier === 'descoberta'} label="descoberta" variant="muted" />
+                    <Chip show={!!c.arquivadoEm} label="arquivado" variant="muted" />
+                    <Chip show={c.ehInterno} label="interno" variant="muted" />
+                    <Chip
+                      show={!c.ehInterno && !c.arquivadoEm && (!c.dominios || c.dominios.length === 0)}
+                      label="sem domínio"
+                      variant="warning"
+                    />
                   </div>
-                  <p className="text-xs text-muted">
+                  <p className="text-xs text-muted mt-0.5">
                     {tasksByCliente.get(c.id) ?? 0} tarefas · {projetosByCliente.get(c.id) ?? 0} projetos
                   </p>
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1 items-center">
                 {!c.arquivadoEm && !c.ehInterno && (
-                  <button type="button" className="btn-ghost-sm" onClick={() => runArquivarCliente(c.id)}>
-                    arquivar
+                  <button
+                    type="button"
+                    className="iconbtn"
+                    onClick={() => runArquivarCliente(c.id)}
+                    title="Arquivar cliente"
+                    aria-label="Arquivar cliente"
+                  >
+                    <Icon name="archive" size={14} />
                   </button>
                 )}
                 {c.arquivadoEm && (
-                  <button type="button" className="btn-ghost-sm" onClick={() => runDesarquivarCliente(c.id)}>
-                    desarquivar
+                  <button
+                    type="button"
+                    className="iconbtn"
+                    onClick={() => runDesarquivarCliente(c.id)}
+                    title="Desarquivar cliente"
+                    aria-label="Desarquivar cliente"
+                  >
+                    <Icon name="refresh" size={14} />
                   </button>
                 )}
                 <EditClienteButton
@@ -376,58 +392,72 @@ export function CadastrosClient() {
                 {!c.ehInterno && isAdmin && (
                   <button
                     type="button"
-                    className="btn-ghost-sm text-[color:var(--danger)]"
+                    className="iconbtn"
+                    style={{ color: 'var(--danger)' }}
                     onClick={() => runDeleteCliente(c.id, c.nome)}
                     title="Excluir cliente"
+                    aria-label="Excluir cliente"
                   >
-                    excluir
+                    <Icon name="trash" size={14} />
                   </button>
                 )}
               </div>
             </div>
           ))}
-          {clientesVisiveis.length === 0 && <EmptyState label="Nenhum cliente cadastrado." />}
+          {clientesVisiveis.length === 0 && <EmptyState label="Nenhum cliente cadastrado." icon="building" />}
         </div>
       )}
 
       {/* Projetos */}
       {tab === 'projetos' && (
-        <div className="rounded-xl border border-line bg-bg-elev divide-y divide-line">
+        <div className="card divide-y divide-[color:var(--line)] overflow-hidden">
           {projetosVisiveis.map((p) => {
             const clienteNome = clientes.find((c) => c.id === p.clienteId)?.nome ?? '—';
             return (
               <div
                 key={p.id}
                 className={cn(
-                  'flex items-center justify-between gap-3 flex-wrap px-4 py-3',
+                  'flex items-center justify-between gap-3 flex-wrap px-3 md:px-4 py-3 md:py-4 transition-colors hover:bg-[color:var(--surface-3)]',
                   p.arquivadoEm && 'opacity-60',
                 )}
               >
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap text-sm font-medium">
+                  <div className="flex items-center gap-1.5 flex-wrap text-sm font-medium text-[color:var(--ink)]">
                     <span>{p.nome}</span>
-                    <Chip show={!!p.tipo} label={p.tipo || ''} className="bg-bg-elev text-muted border border-line" />
+                    <Chip show={!!p.tipo} label={p.tipo || ''} variant="muted" />
                     {p.slaEntregaDias != null && (
-                      <Chip show label={`SLA ${p.slaEntregaDias}d`} className="bg-bg-elev text-muted border border-line" />
+                      <Chip show label={`SLA ${p.slaEntregaDias}d`} variant="muted" />
                     )}
                     {p.orcamentoHoras != null && (
-                      <Chip show label={`${p.orcamentoHoras}h`} className="bg-bg-elev text-muted border border-line" />
+                      <Chip show label={`${p.orcamentoHoras}h`} variant="muted" />
                     )}
-                    <Chip show={!!p.arquivadoEm} label="arquivado" className="bg-bg-elev text-muted border border-line" />
+                    <Chip show={!!p.arquivadoEm} label="arquivado" variant="muted" />
                   </div>
-                  <p className="text-xs text-muted">
+                  <p className="text-xs text-muted mt-0.5">
                     {clienteNome} · {tasksByProjeto.get(p.id) ?? 0} tarefas
                   </p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 items-center">
                   {!p.arquivadoEm && (
-                    <button type="button" className="btn-ghost-sm" onClick={() => runArquivarProjeto(p.id)}>
-                      arquivar
+                    <button
+                      type="button"
+                      className="iconbtn"
+                      onClick={() => runArquivarProjeto(p.id)}
+                      title="Arquivar projeto"
+                      aria-label="Arquivar projeto"
+                    >
+                      <Icon name="archive" size={14} />
                     </button>
                   )}
                   {p.arquivadoEm && (
-                    <button type="button" className="btn-ghost-sm" onClick={() => runDesarquivarProjeto(p.id)}>
-                      desarquivar
+                    <button
+                      type="button"
+                      className="iconbtn"
+                      onClick={() => runDesarquivarProjeto(p.id)}
+                      title="Desarquivar projeto"
+                      aria-label="Desarquivar projeto"
+                    >
+                      <Icon name="refresh" size={14} />
                     </button>
                   )}
                   <EditProjetoButton
@@ -445,84 +475,97 @@ export function CadastrosClient() {
                   {isAdmin && (
                     <button
                       type="button"
-                      className="btn-ghost-sm text-[color:var(--danger)]"
+                      className="iconbtn"
+                      style={{ color: 'var(--danger)' }}
                       onClick={() => runDeleteProjeto(p.id, p.nome)}
                       title="Excluir projeto"
+                      aria-label="Excluir projeto"
                     >
-                      excluir
+                      <Icon name="trash" size={14} />
                     </button>
                   )}
                 </div>
               </div>
             );
           })}
-          {projetosVisiveis.length === 0 && <EmptyState label="Nenhum projeto cadastrado." />}
+          {projetosVisiveis.length === 0 && <EmptyState label="Nenhum projeto cadastrado." icon="folder" />}
         </div>
       )}
 
       {/* Pessoas */}
       {tab === 'pessoas' && (
-        <div className="rounded-xl border border-line bg-bg-elev divide-y divide-line">
+        <div className="card divide-y divide-[color:var(--line)] overflow-hidden">
           {pessoas.map((p) => (
-            <div key={p.id} className="flex items-center justify-between gap-3 flex-wrap px-4 py-3">
+            <div
+              key={p.id}
+              className="flex items-center justify-between gap-3 flex-wrap px-3 md:px-4 py-3 md:py-4 transition-colors hover:bg-[color:var(--surface-3)]"
+            >
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-brand-soft flex items-center justify-center text-sm font-bold text-brand shrink-0">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                  style={{ background: 'var(--green-soft)', color: 'var(--green)' }}
+                >
                   {p.nome.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap text-sm font-medium">
+                  <div className="flex items-center gap-1.5 flex-wrap text-sm font-medium text-[color:var(--ink)]">
                     <span>{p.nome}</span>
-                    <Chip show={p.role === 'admin'} label="admin" className="bg-brand-soft text-brand-dark" />
-                    <Chip show={p.role === 'cliente'} label="cliente externo" className="bg-yellow-50 text-yellow-700 border border-yellow-200" />
+                    <Chip show={p.role === 'admin'} label="admin" variant="green" />
+                    <Chip show={p.role === 'cliente'} label="cliente externo" variant="warning" />
                     {p.senioridade && p.role !== 'cliente' && (
-                      <Chip show label={p.senioridade} className="bg-bg-elev text-muted border border-line" />
+                      <Chip show label={p.senioridade} variant="muted" />
                     )}
-                    <Chip show={!!p.invited_at && !!p.user_id} label="acesso ativo" className="bg-brand-soft text-brand-dark" />
-                    <Chip show={!!p.invited_at && !p.user_id} label="aguardando 1º login" className="bg-yellow-50 text-yellow-700 border border-yellow-200" />
-                    <Chip show={!p.invited_at && !!p.email} label="inativa" className="bg-bg-elev text-muted border border-line" />
+                    <Chip show={!!p.invited_at && !!p.user_id} label="acesso ativo" variant="green" />
+                    <Chip show={!!p.invited_at && !p.user_id} label="aguardando 1º login" variant="warning" />
+                    <Chip show={!p.invited_at && !!p.email} label="inativa" variant="muted" />
                   </div>
-                  <p className="text-xs text-muted font-mono truncate">{p.email ?? '—'}</p>
+                  <p className="text-xs text-muted font-mono truncate mt-0.5">{p.email ?? '—'}</p>
                 </div>
               </div>
-              <div className="flex gap-1 flex-wrap justify-end">
+              <div className="flex gap-1 flex-wrap justify-end items-center">
                 {isAdmin && p.role === 'cliente' && !p.invited_at && (
                   <button
                     type="button"
-                    className="btn-ghost-sm"
+                    className="iconbtn"
                     onClick={() => runConvidarPessoa(p.id, p.nome, p.email)}
-                    title="Enviar magic link de acesso ao Portal"
+                    title="Convidar (magic link de acesso ao Portal)"
+                    aria-label="Convidar"
                   >
-                    convidar
+                    <Icon name="mention" size={14} />
                   </button>
                 )}
                 {isAdmin && p.role === 'cliente' && !!p.invited_at && (
                   <button
                     type="button"
-                    className="btn-ghost-sm"
+                    className="iconbtn"
                     onClick={() => runConvidarPessoa(p.id, p.nome, p.email)}
                     title="Reenviar magic link"
+                    aria-label="Reenviar convite"
                   >
-                    reenviar
+                    <Icon name="refresh" size={14} />
                   </button>
                 )}
                 {isAdmin && p.role !== 'cliente' && !p.invited_at && (
                   <button
                     type="button"
-                    className="btn-ghost-sm"
+                    className="iconbtn"
+                    style={{ color: 'var(--green)' }}
                     onClick={() => runAtivarPessoa(p.id, p.nome, p.email)}
-                    title="Liberar acesso (login via Google)"
+                    title="Ativar (liberar login via Google)"
+                    aria-label="Ativar pessoa"
                   >
-                    ativar
+                    <Icon name="check-circle" size={14} />
                   </button>
                 )}
                 {isAdmin && !!p.invited_at && (
                   <button
                     type="button"
-                    className="btn-ghost-sm text-[color:var(--muted)]"
+                    className="iconbtn"
                     onClick={() => runDesativarPessoa(p.id, p.nome)}
                     title="Revogar acesso"
+                    aria-label="Inativar pessoa"
                   >
-                    inativar
+                    <Icon name="lock" size={14} />
                   </button>
                 )}
                 <EditPessoaButton
@@ -543,28 +586,100 @@ export function CadastrosClient() {
                 {isAdmin && (
                   <button
                     type="button"
-                    className="btn-ghost-sm text-[color:var(--danger)]"
+                    className="iconbtn"
+                    style={{ color: 'var(--danger)' }}
                     onClick={() => runDeletePessoa(p.id, p.nome)}
                     title="Excluir pessoa"
+                    aria-label="Excluir pessoa"
                   >
-                    excluir
+                    <Icon name="trash" size={14} />
                   </button>
                 )}
               </div>
             </div>
           ))}
-          {pessoas.length === 0 && <EmptyState label="Nenhuma pessoa cadastrada." />}
+          {pessoas.length === 0 && <EmptyState label="Nenhuma pessoa cadastrada." icon="users" />}
         </div>
       )}
     </div>
   );
 }
 
-function Chip({ show, label, className }: { show: boolean; label: string; className: string }) {
+type ChipVariant = 'default' | 'green' | 'warning' | 'danger' | 'muted';
+
+/**
+ * Chip helper — todas as variantes via DS tokens, sem cores hardcoded
+ * (compatível com dark mode).
+ */
+function Chip({
+  show,
+  label,
+  variant = 'default',
+}: {
+  show: boolean;
+  label: string;
+  variant?: ChipVariant;
+}) {
   if (!show) return null;
-  return <span className={cn('chip', className)}>{label}</span>;
+  const style = chipStyle(variant);
+  return (
+    <span className="chip" style={style}>
+      {label}
+    </span>
+  );
 }
 
-function EmptyState({ label }: { label: string }) {
-  return <p className="py-10 text-center text-sm italic text-muted">{label}</p>;
+function chipStyle(variant: ChipVariant): CSSProperties {
+  switch (variant) {
+    case 'green':
+      return {
+        background: 'var(--green-soft)',
+        color: 'var(--green)',
+        border: '1px solid color-mix(in srgb, var(--green) 25%, transparent)',
+      };
+    case 'warning':
+      return {
+        background: 'color-mix(in srgb, var(--sig-amber) 12%, var(--surface-1))',
+        color: 'var(--sig-amber-fg)',
+        border: '1px solid color-mix(in srgb, var(--sig-amber) 35%, transparent)',
+      };
+    case 'danger':
+      return {
+        background: 'var(--danger-soft)',
+        color: 'var(--danger)',
+        border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)',
+      };
+    case 'muted':
+      return {
+        background: 'var(--bg-elev)',
+        color: 'var(--muted)',
+        border: '1px solid var(--line)',
+      };
+    case 'default':
+    default:
+      return {
+        background: 'var(--surface-1)',
+        color: 'var(--ink-soft)',
+        border: '1px solid var(--line)',
+      };
+  }
+}
+
+function EmptyState({
+  label,
+  icon,
+}: {
+  label: string;
+  icon?: 'building' | 'folder' | 'users';
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+      {icon && (
+        <span className="text-[color:var(--muted)]">
+          <Icon name={icon} size={24} />
+        </span>
+      )}
+      <p className="text-sm italic text-muted">{label}</p>
+    </div>
+  );
 }

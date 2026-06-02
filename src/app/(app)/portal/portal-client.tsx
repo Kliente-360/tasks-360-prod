@@ -202,7 +202,7 @@ export function PortalClient() {
               <span
                 className={
                   metrics.mesAtual >= metrics.mesAnterior
-                    ? 'text-emerald-700'
+                    ? 'text-[color:var(--green)]'
                     : 'text-ink-soft'
                 }
               >
