@@ -26,7 +26,7 @@ import { createClient } from '@/lib/supabase/client';
 import { agingDays, atrasada, fmtDateShort, isPreTriagem, triageFailures } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
-import type { Task } from '@/lib/types';
+import type { Task, Pessoa } from '@/lib/types';
 
 const NONE = '__none__';
 
@@ -56,7 +56,7 @@ const DEFAULT_BULK: BulkPending = { pessoa: '', prazo: '', esforco: '', priorida
 type TaskWithFailures = Task & { _failures: string[]; _failCount: number };
 
 export function TriagemClient() {
-  const { tasks, pessoas, patchTasks, loading, error } = useData();
+  const { tasks, pessoas, patchTask, patchTasks, currentPessoa, loading, error } = useData();
   const { openEdit } = useTaskModal();
   const toast = useToast();
   const clientesById = useClientesById();
@@ -207,6 +207,73 @@ export function TriagemClient() {
     setBulkPending(DEFAULT_BULK);
   }, [bulkPending, selectedIds, sb, patchTasks, toast]);
 
+  // ===== Quick-edit inline pro fluxo de triagem IA =====
+  const setField = useCallback(
+    async (taskId: string, snake: string, dbValue: unknown, jsKey: keyof Task, localValue: unknown) => {
+      const { error } = await sb.from('tasks').update({ [snake]: dbValue }).eq('id', taskId);
+      if (error) {
+        toast.error('Erro ao atualizar: ' + error.message);
+        return;
+      }
+      patchTask(taskId, { [jsKey]: localValue } as Partial<Task>);
+    },
+    [sb, patchTask, toast],
+  );
+
+  // ===== Aceitar IA: marca triada_em + triada_por, task entra no backlog =====
+  const aceitarIA = useCallback(
+    async (taskId: string) => {
+      const nowIso = new Date().toISOString();
+      const triadaPor = currentPessoa?.id ?? null;
+      const { error } = await sb
+        .from('tasks')
+        .update({ triada_em: nowIso, triada_por: triadaPor })
+        .eq('id', taskId);
+      if (error) {
+        toast.error('Erro ao aceitar: ' + error.message);
+        return;
+      }
+      patchTask(taskId, { triadaEm: nowIso, triadaPor });
+      toast.success('Task aceita. Entra no backlog agora.');
+    },
+    [sb, patchTask, currentPessoa, toast],
+  );
+
+  // ===== Rejeitar IA: triada_em + arquivado_em + motivo (audit) =====
+  const rejeitarIA = useCallback(
+    async (taskId: string, titulo: string) => {
+      const motivo = window.prompt(
+        `Rejeitar task "${titulo}"?\n\nMotivo (opcional · ex: duplicada, fora de escopo, spam):`,
+        '',
+      );
+      if (motivo === null) return; // cancelou
+      const nowIso = new Date().toISOString();
+      const triadaPor = currentPessoa?.id ?? null;
+      const motivoFinal = motivo.trim() || 'rejeitada na triagem';
+      const { error } = await sb
+        .from('tasks')
+        .update({
+          triada_em: nowIso,
+          triada_por: triadaPor,
+          arquivado_em: nowIso,
+          motivo_arquivamento: motivoFinal,
+        })
+        .eq('id', taskId);
+      if (error) {
+        toast.error('Erro ao rejeitar: ' + error.message);
+        return;
+      }
+      patchTask(taskId, {
+        triadaEm: nowIso,
+        triadaPor,
+        arquivadoEm: nowIso,
+        motivoArquivamento: motivoFinal,
+      });
+      toast.success(`Rejeitada${motivoFinal ? `: ${motivoFinal}` : ''}.`);
+    },
+    [sb, patchTask, currentPessoa, toast],
+  );
+
   // Mobile cai aqui só por uma fração antes do router.replace executar.
   if (isMobile) return null;
   if (loading) return <div className="text-muted text-sm">Carregando…</div>;
@@ -306,10 +373,15 @@ export function TriagemClient() {
       {/* Cards */}
       {filtered.map((t) => {
         const sel = selectedIds.includes(t.id);
+        const preTriagem = isPreTriagem(t);
+        const idade = t.criadoEm > 0 ? agingDays({ statusEm: t.criadoEm }) : 0;
+        // Cor de aging: ≥7d vermelho, ≥3d âmbar, senão muted
+        const ageColor = idade >= 7 ? 'var(--danger)' : idade >= 3 ? 'var(--warn)' : undefined;
         return (
           <div
             key={t.id}
-            className={`card p-3 md:p-5 cursor-pointer hover:border-line-strong transition-colors ${sel ? 'bg-brand-tint' : ''}`}
+            className={`card p-3 md:p-5 cursor-pointer hover:border-line-strong transition-colors ${sel ? 'bg-brand-tint' : ''} ${preTriagem ? 'border-l-[3px]' : ''}`}
+            style={preTriagem ? { borderLeftColor: 'var(--green)' } : undefined}
             onClick={() => openEdit(t.id)}
           >
             <div className="flex items-center justify-between gap-3">
@@ -338,13 +410,16 @@ export function TriagemClient() {
                     <span className="font-medium text-ink break-words">{t.titulo}</span>
                   </div>
                   {/* Linha 2 (subetapa · criada há Xd) — fonte mono pra dar
-                      o ritmo de metadata "etapa + idade". */}
+                      o ritmo de metadata "etapa + idade". Aging colorido
+                      pra IA pre-triagem (≥3d âmbar / ≥7d vermelho). */}
                   <div className="text-xs text-muted font-mono break-words">
                     {SUB_LABELS[t.subetapa] ?? t.subetapa}
                     {t.criadoEm > 0 && (
                       <>
                         {' · criada há '}
-                        {agingDays({ statusEm: t.criadoEm })}d
+                        <span style={ageColor ? { color: ageColor, fontWeight: 600 } : undefined}>
+                          {idade}d
+                        </span>
                       </>
                     )}
                   </div>
@@ -392,6 +467,17 @@ export function TriagemClient() {
                 </span>
               ))}
             </div>
+
+            {/* Quick-edit + Aceitar/Rejeitar · só pra IA pre-triagem */}
+            {preTriagem && (
+              <IaTriageActions
+                task={t}
+                pessoasNaoCliente={pessoasNaoCliente}
+                onUpdateField={setField}
+                onAccept={() => aceitarIA(t.id)}
+                onReject={() => rejeitarIA(t.id, t.titulo)}
+              />
+            )}
           </div>
         );
       })}
@@ -481,5 +567,110 @@ function FilterChip({
     >
       <strong>{count}</strong>&nbsp;{label}
     </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+//  IaTriageActions · quick-edit + Aceitar/Rejeitar (A.4)
+// ─────────────────────────────────────────────────────────
+// Aparece SÓ na row quando a task é isPreTriagem (IA criada, sem
+// triada_em). 3 inputs inline (Responsável · Prazo · Esforço) +
+// botões Aceitar/Rejeitar. Aceitar fica disabled até os 3 campos
+// estarem preenchidos. Tooltip lista o que falta.
+
+function IaTriageActions({
+  task,
+  pessoasNaoCliente,
+  onUpdateField,
+  onAccept,
+  onReject,
+}: {
+  task: Task;
+  pessoasNaoCliente: Pessoa[];
+  onUpdateField: (
+    taskId: string,
+    snake: string,
+    dbValue: unknown,
+    jsKey: keyof Task,
+    localValue: unknown,
+  ) => Promise<void> | void;
+  onAccept: () => void;
+  onReject: () => void;
+}) {
+  const faltam: string[] = [];
+  if (!task.pessoaId) faltam.push('responsável');
+  if (!task.prazo) faltam.push('prazo');
+  if (!task.esforco || task.esforco <= 0) faltam.push('esforço');
+  const canAccept = faltam.length === 0;
+
+  return (
+    <div
+      className="mt-3 pt-3 border-t border-line flex flex-col md:flex-row md:items-center gap-2 md:gap-3"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+        {/* Responsável */}
+        <select
+          value={task.pessoaId || ''}
+          onChange={(e) => onUpdateField(task.id, 'pessoa_id', e.target.value || null, 'pessoaId', e.target.value || '')}
+          className="inp text-xs py-1.5 px-2"
+          style={{ width: 'auto', minWidth: 140 }}
+          title="Responsável"
+        >
+          <option value="">— responsável —</option>
+          {pessoasNaoCliente.map((p) => (
+            <option key={p.id} value={p.id}>{p.nome}</option>
+          ))}
+        </select>
+
+        {/* Prazo */}
+        <input
+          type="date"
+          value={task.prazo || ''}
+          onChange={(e) => onUpdateField(task.id, 'prazo', e.target.value || null, 'prazo', e.target.value || '')}
+          className="inp text-xs py-1.5 px-2"
+          style={{ width: 'auto' }}
+          title="Prazo"
+        />
+
+        {/* Esforço */}
+        <input
+          type="number"
+          min={0}
+          step={0.5}
+          value={task.esforco || ''}
+          onChange={(e) => {
+            const num = Number(e.target.value) || 0;
+            onUpdateField(task.id, 'esforco', num, 'esforco', num);
+          }}
+          placeholder="esforço (h)"
+          className="inp text-xs py-1.5 px-2"
+          style={{ width: 110 }}
+          title="Esforço em horas"
+        />
+      </div>
+
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={onReject}
+          className="btn btn-ghost text-xs"
+          style={{ color: 'var(--danger)' }}
+          title="Rejeitar (arquiva com motivo)"
+        >
+          Rejeitar
+        </button>
+        <button
+          type="button"
+          onClick={canAccept ? onAccept : undefined}
+          disabled={!canAccept}
+          className="btn btn-primary text-xs"
+          title={canAccept ? 'Aceitar · entra no backlog' : `Faltam: ${faltam.join(', ')}`}
+          style={!canAccept ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+        >
+          Aceitar
+        </button>
+      </div>
+    </div>
   );
 }
