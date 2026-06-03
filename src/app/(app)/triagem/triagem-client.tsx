@@ -15,18 +15,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
+import { useData } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { PillsFilter } from '@/components/pills-filter';
-import { PriChip, PrazoLabel, TagIA } from '@/components/task-card/primitives';
+import { PriChip, TagIA } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
-import { agingDays, atrasada, fmtDateShort, isPreTriagem, triageFailures, TRIAGE_RANK_GATE } from '@/lib/task-utils';
+import { agingDays, isPreTriagem, triageFailures, TRIAGE_RANK_GATE } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS, STAGE_RANK } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import type { Task, Pessoa, Cliente, Projeto } from '@/lib/types';
 import { useClickAway } from '@/lib/use-click-away';
+import { Icon } from '@/components/icons';
 
 type TriagemFilter = {
   semCliente: boolean;
@@ -52,9 +53,6 @@ export function TriagemClient() {
   const { tasks, pessoas, clientes, projetos, patchTask, currentPessoa, loading, error } = useData();
   const { openEdit } = useTaskModal();
   const toast = useToast();
-  const clientesById = useClientesById();
-  const projetosById = useProjetosById();
-  const pessoasById = usePessoasById();
 
   const sbRef = useRef<ReturnType<typeof createClient> | null>(null);
   if (!sbRef.current) sbRef.current = createClient();
@@ -107,12 +105,14 @@ export function TriagemClient() {
       const allFailures = aguardandoIA ? ['aguardando aceitação IA', ...failures] : failures;
       out.push({ ...t, _failures: allFailures, _failCount: allFailures.length });
     }
-    // IA pre-triagem sobe (failure count maior + flag) seguido por com-falhas
+    // IA pre-triagem primeiro (gate prioritário); demais ordenadas por
+    // criação DESCENDENTE (mais recentes no topo). A ordem é estável
+    // durante edição porque o draft não toca o store até clicar Salvar.
     out.sort((a, b) => {
       const aiA = isPreTriagem(a) ? 1 : 0;
       const aiB = isPreTriagem(b) ? 1 : 0;
-      if (aiA !== aiB) return aiB - aiA; // IA pre-triagem primeiro
-      return b._failCount - a._failCount || (a.criadoEm || 0) - (b.criadoEm || 0);
+      if (aiA !== aiB) return aiB - aiA;
+      return (b.criadoEm || 0) - (a.criadoEm || 0);
     });
     return out;
   }, [tasks]);
@@ -158,36 +158,51 @@ export function TriagemClient() {
     [triagemTasks, filter, applyFilter],
   );
 
-  // ===== Quick-edit inline pro fluxo de triagem =====
-  const setField = useCallback(
-    async (taskId: string, snake: string, dbValue: unknown, jsKey: keyof Task, localValue: unknown) => {
-      const { error } = await sb.from('tasks').update({ [snake]: dbValue }).eq('id', taskId);
-      if (error) {
-        toast.error('Erro ao atualizar: ' + error.message);
-        return;
-      }
-      patchTask(taskId, { [jsKey]: localValue } as Partial<Task>);
-    },
-    [sb, patchTask, toast],
-  );
-
-  // ===== Aceitar IA: marca triada_em + triada_por, task entra no backlog =====
-  const aceitarIA = useCallback(
-    async (taskId: string) => {
+  // ===== Persistência centralizada · grava o draft inline + opcional
+  //       triada_em/triada_por (IA) e retorna a row pra desaparecer
+  //       só depois do save bem-sucedido. =====
+  const persistTriageDraft = useCallback(
+    async (taskId: string, draft: TriageDraft, opts: { markTriada: boolean }) => {
+      const dbPatch: Record<string, unknown> = {
+        cliente_id: draft.clienteId || null,
+        projeto_id: draft.projetoId || null,
+        pessoa_id: draft.pessoaId || null,
+        prazo: draft.prazo || null,
+        esforco: draft.esforco || null,
+      };
+      const localPatch: Partial<Task> = {
+        clienteId: draft.clienteId,
+        projetoId: draft.projetoId,
+        pessoaId: draft.pessoaId,
+        prazo: draft.prazo,
+        esforco: draft.esforco,
+      };
       const nowIso = new Date().toISOString();
       const triadaPor = currentPessoa?.id ?? null;
-      const { error } = await sb
-        .from('tasks')
-        .update({ triada_em: nowIso, triada_por: triadaPor })
-        .eq('id', taskId);
-      if (error) {
-        toast.error('Erro ao aceitar: ' + error.message);
-        return;
+      if (opts.markTriada) {
+        dbPatch.triada_em = nowIso;
+        dbPatch.triada_por = triadaPor;
+        localPatch.triadaEm = nowIso;
+        localPatch.triadaPor = triadaPor;
       }
-      patchTask(taskId, { triadaEm: nowIso, triadaPor });
-      toast.success('Task aceita. Entra no backlog agora.');
+      const { error } = await sb.from('tasks').update(dbPatch).eq('id', taskId);
+      if (error) {
+        toast.error('Erro ao salvar: ' + error.message);
+        return false;
+      }
+      patchTask(taskId, localPatch);
+      return true;
     },
     [sb, patchTask, currentPessoa, toast],
+  );
+
+  // ===== Aceitar IA (salva draft + marca triada_em) =====
+  const aceitarIA = useCallback(
+    async (taskId: string, draft: TriageDraft) => {
+      const ok = await persistTriageDraft(taskId, draft, { markTriada: true });
+      if (ok) toast.success('Task aceita. Entra no backlog agora.');
+    },
+    [persistTriageDraft, toast],
   );
 
   // ===== Rejeitar IA: triada_em + arquivado_em + motivo (audit) =====
@@ -221,15 +236,15 @@ export function TriagemClient() {
     [sb, patchTask, currentPessoa, toast],
   );
 
-  // ===== Salvar triagem manual: feedback explícito quando os 5
-  // campos foram preenchidos inline. Os campos já gravaram via
-  // setField; aqui só confirmamos visualmente (a row some sozinha
-  // porque triageFailures volta vazio). =====
+  // ===== Salvar triagem manual: persiste os 5 campos do draft de uma
+  //       vez (não autosave). A row some sozinha porque triageFailures
+  //       volta vazio. =====
   const salvarManual = useCallback(
-    (_taskId: string) => {
-      toast.success('Triagem concluída · task vai pro backlog.');
+    async (taskId: string, draft: TriageDraft) => {
+      const ok = await persistTriageDraft(taskId, draft, { markTriada: false });
+      if (ok) toast.success('Triagem concluída · task vai pro backlog.');
     },
-    [toast],
+    [persistTriageDraft, toast],
   );
 
   // Mobile cai aqui só por uma fração antes do router.replace executar.
@@ -394,33 +409,9 @@ export function TriagemClient() {
                       </>
                     )}
                   </div>
-                  {/* Linha 3 (desktop): cliente · projeto · responsável · prazo.
-                      Mobile fica resumido (só cliente · responsável) pra não
-                      empilhar 3 linhas de texto. */}
-                  <div className="hidden md:flex items-center gap-1.5 text-xs text-ink-soft mt-1 flex-wrap">
-                    <span className={t.clienteId ? '' : 'italic text-muted'}>
-                      {t.clienteId ? clientesById.get(t.clienteId)?.nome ?? '—' : 'sem cliente'}
-                    </span>
-                    <span className="text-muted">·</span>
-                    <span className={t.projetoId ? '' : 'italic text-muted'}>
-                      {t.projetoId ? projetosById.get(t.projetoId)?.nome ?? '—' : 'sem projeto'}
-                    </span>
-                    <span className="text-muted">·</span>
-                    <span className={t.pessoaId ? '' : 'italic text-muted'}>
-                      {t.pessoaId ? pessoasById.get(t.pessoaId)?.nome ?? '—' : 'sem responsável'}
-                    </span>
-                    <span className="text-muted">·</span>
-                    {t.prazo ? <PrazoLabel task={t} /> : <span className="italic text-muted font-mono">sem prazo</span>}
-                  </div>
-                  <div className="md:hidden flex items-center gap-1.5 text-xs text-ink-soft mt-1 flex-wrap">
-                    <span className={t.clienteId ? 'truncate' : 'italic text-muted'}>
-                      {t.clienteId ? clientesById.get(t.clienteId)?.nome ?? '—' : 'sem cliente'}
-                    </span>
-                    <span className="text-muted">·</span>
-                    <span className={t.pessoaId ? 'truncate' : 'italic text-muted'}>
-                      {t.pessoaId ? pessoasById.get(t.pessoaId)?.nome ?? '—' : 'sem resp.'}
-                    </span>
-                  </div>
+                  {/* Linha 3 removida · cliente/projeto/resp/prazo já
+                      aparecem como chips de failure à direita e/ou
+                      preenchidos no quick-edit abaixo. */}
                 </div>
               </div>
               <div className="hidden md:flex flex-wrap gap-1 shrink-0 justify-end max-w-[55%]">
@@ -439,15 +430,17 @@ export function TriagemClient() {
               ))}
             </div>
 
-            {/* Quick-edit + ação · IA: Aceitar/Rejeitar · Manual: só Salvar */}
+            {/* Quick-edit + ação · IA: Aceitar/Rejeitar · Manual: só Salvar.
+                Edição é PENDENTE (não autosave) — persiste só ao clicar. */}
             <IaTriageActions
               task={t}
               mode={preTriagem ? 'ia' : 'manual'}
               pessoasNaoCliente={pessoasNaoCliente}
               clientes={clientes}
               projetos={projetos}
-              onUpdateField={setField}
-              onAccept={() => (preTriagem ? aceitarIA(t.id) : salvarManual(t.id))}
+              onAccept={(draft) =>
+                preTriagem ? aceitarIA(t.id, draft) : salvarManual(t.id, draft)
+              }
               onReject={(motivo) => rejeitarIA(t.id, motivo)}
             />
           </div>
@@ -501,13 +494,22 @@ const REJECT_REASONS = [
   'Não acionável',
 ] as const;
 
+/** Edição pendente · NÃO persiste a cada keystroke; só ao clicar Salvar/Aceitar.
+ *  Mantém a fila de triagem estável enquanto o usuário tria uma a uma. */
+type TriageDraft = {
+  clienteId: string;
+  projetoId: string;
+  pessoaId: string;
+  prazo: string;
+  esforco: number;
+};
+
 function IaTriageActions({
   task,
   mode,
   pessoasNaoCliente,
   clientes,
   projetos,
-  onUpdateField,
   onAccept,
   onReject,
 }: {
@@ -517,49 +519,69 @@ function IaTriageActions({
   pessoasNaoCliente: Pessoa[];
   clientes: Cliente[];
   projetos: Projeto[];
-  onUpdateField: (
-    taskId: string,
-    snake: string,
-    dbValue: unknown,
-    jsKey: keyof Task,
-    localValue: unknown,
-  ) => Promise<void> | void;
-  onAccept: () => void;
+  onAccept: (draft: TriageDraft) => void;
   onReject: (motivo: string) => void;
 }) {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [customMotivo, setCustomMotivo] = useState('');
+
+  // Draft local — reseta se o task mudar externamente (realtime).
+  const [draft, setDraft] = useState<TriageDraft>({
+    clienteId: task.clienteId || '',
+    projetoId: task.projetoId || '',
+    pessoaId: task.pessoaId || '',
+    prazo: task.prazo || '',
+    esforco: Number(task.esforco) || 0,
+  });
+  useEffect(() => {
+    setDraft({
+      clienteId: task.clienteId || '',
+      projetoId: task.projetoId || '',
+      pessoaId: task.pessoaId || '',
+      prazo: task.prazo || '',
+      esforco: Number(task.esforco) || 0,
+    });
+  }, [task.id, task.clienteId, task.projetoId, task.pessoaId, task.prazo, task.esforco]);
 
   // Clientes ativos · ordenados alfabético
   const clientesOpts = useMemo(
     () => clientes.filter((c) => !c.arquivadoEm).sort((a, b) => a.nome.localeCompare(b.nome)),
     [clientes],
   );
-  // Projetos do cliente selecionado · ativos · alfabético
+  // Projetos do cliente do DRAFT (não do task) · ativos · alfabético
   const projetosOpts = useMemo(() => {
-    if (!task.clienteId) return [] as Projeto[];
+    if (!draft.clienteId) return [] as Projeto[];
     return projetos
-      .filter((p) => p.clienteId === task.clienteId && !p.arquivadoEm)
+      .filter((p) => p.clienteId === draft.clienteId && !p.arquivadoEm)
       .sort((a, b) => a.nome.localeCompare(b.nome));
-  }, [projetos, task.clienteId]);
+  }, [projetos, draft.clienteId]);
 
-  // Mesmo gate de triageFailures: cliente/projeto/resp sempre;
-  // prazo/esforço só a partir de escopo_definido (rank >= 3).
+  // Mesmo gate de triageFailures, calculado sobre o DRAFT.
   const rank = STAGE_RANK[task.subetapa] ?? 0;
   const exigePrazoEsforco = rank >= TRIAGE_RANK_GATE;
   const faltam: string[] = [];
-  if (!task.clienteId) faltam.push('cliente');
-  if (!task.projetoId) faltam.push('projeto');
-  if (!task.pessoaId) faltam.push('responsável');
-  if (exigePrazoEsforco && !task.prazo) faltam.push('prazo');
-  if (exigePrazoEsforco && (!task.esforco || task.esforco <= 0)) faltam.push('esforço');
+  if (!draft.clienteId) faltam.push('cliente');
+  if (!draft.projetoId) faltam.push('projeto');
+  if (!draft.pessoaId) faltam.push('responsável');
+  if (exigePrazoEsforco && !draft.prazo) faltam.push('prazo');
+  if (exigePrazoEsforco && (!draft.esforco || draft.esforco <= 0)) faltam.push('esforço');
   const canAccept = faltam.length === 0;
+
+  const isDirty =
+    draft.clienteId !== (task.clienteId || '') ||
+    draft.projetoId !== (task.projetoId || '') ||
+    draft.pessoaId !== (task.pessoaId || '') ||
+    draft.prazo !== (task.prazo || '') ||
+    draft.esforco !== (Number(task.esforco) || 0);
 
   const submitReject = (motivo: string) => {
     setRejectOpen(false);
     setCustomMotivo('');
     onReject(motivo);
   };
+
+  // Larguras fixas (todos os 5 campos no mesmo tamanho).
+  const FIELD_W = 'w-[170px]';
 
   return (
     <div
@@ -568,80 +590,83 @@ function IaTriageActions({
     >
       <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
         {/* Cliente */}
-        <select
-          value={task.clienteId || ''}
-          onChange={(e) => {
-            const next = e.target.value || null;
-            onUpdateField(task.id, 'cliente_id', next, 'clienteId', e.target.value || '');
-            // Trocou cliente · projeto antigo provavelmente não pertence; limpa
-            if (task.projetoId) {
-              onUpdateField(task.id, 'projeto_id', null, 'projetoId', '');
-            }
-          }}
-          className="inp text-xs py-1.5 px-2"
-          style={{ width: 'auto', minWidth: 130 }}
-          title="Cliente"
-        >
-          <option value="">— cliente —</option>
-          {clientesOpts.map((c) => (
-            <option key={c.id} value={c.id}>{c.nome}</option>
-          ))}
-        </select>
+        <TriageInlineField icon="building" title="Cliente" width={FIELD_W}>
+          <select
+            value={draft.clienteId}
+            onChange={(e) => {
+              const next = e.target.value;
+              setDraft((d) => ({
+                ...d,
+                clienteId: next,
+                // troca de cliente invalida o projeto
+                projetoId: next !== d.clienteId ? '' : d.projetoId,
+              }));
+            }}
+            className="triage-inline-select"
+          >
+            <option value="">Cliente</option>
+            {clientesOpts.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+        </TriageInlineField>
 
         {/* Projeto · depende de cliente */}
-        <select
-          value={task.projetoId || ''}
-          onChange={(e) => onUpdateField(task.id, 'projeto_id', e.target.value || null, 'projetoId', e.target.value || '')}
-          className="inp text-xs py-1.5 px-2"
-          style={{ width: 'auto', minWidth: 130 }}
-          disabled={!task.clienteId}
-          title={task.clienteId ? 'Projeto' : 'Selecione um cliente primeiro'}
+        <TriageInlineField
+          icon="folder"
+          title={draft.clienteId ? 'Projeto' : 'Selecione um cliente primeiro'}
+          width={FIELD_W}
+          disabled={!draft.clienteId}
         >
-          <option value="">— projeto —</option>
-          {projetosOpts.map((p) => (
-            <option key={p.id} value={p.id}>{p.nome}</option>
-          ))}
-        </select>
+          <select
+            value={draft.projetoId}
+            onChange={(e) => setDraft((d) => ({ ...d, projetoId: e.target.value }))}
+            disabled={!draft.clienteId}
+            className="triage-inline-select"
+          >
+            <option value="">Projeto</option>
+            {projetosOpts.map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
+        </TriageInlineField>
 
         {/* Responsável */}
-        <select
-          value={task.pessoaId || ''}
-          onChange={(e) => onUpdateField(task.id, 'pessoa_id', e.target.value || null, 'pessoaId', e.target.value || '')}
-          className="inp text-xs py-1.5 px-2"
-          style={{ width: 'auto', minWidth: 130 }}
-          title="Responsável"
-        >
-          <option value="">— responsável —</option>
-          {pessoasNaoCliente.map((p) => (
-            <option key={p.id} value={p.id}>{p.nome}</option>
-          ))}
-        </select>
+        <TriageInlineField icon="users" title="Responsável" width={FIELD_W}>
+          <select
+            value={draft.pessoaId}
+            onChange={(e) => setDraft((d) => ({ ...d, pessoaId: e.target.value }))}
+            className="triage-inline-select"
+          >
+            <option value="">Responsável</option>
+            {pessoasNaoCliente.map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
+        </TriageInlineField>
 
         {/* Prazo */}
-        <input
-          type="date"
-          value={task.prazo || ''}
-          onChange={(e) => onUpdateField(task.id, 'prazo', e.target.value || null, 'prazo', e.target.value || '')}
-          className="inp text-xs py-1.5 px-2"
-          style={{ width: 'auto' }}
-          title="Prazo"
-        />
+        <TriageInlineField icon="calendar" title="Prazo" width={FIELD_W}>
+          <input
+            type="date"
+            value={draft.prazo}
+            onChange={(e) => setDraft((d) => ({ ...d, prazo: e.target.value }))}
+            className="triage-inline-select"
+          />
+        </TriageInlineField>
 
-        {/* Esforço */}
-        <input
-          type="number"
-          min={0}
-          step={0.5}
-          value={task.esforco || ''}
-          onChange={(e) => {
-            const num = Number(e.target.value) || 0;
-            onUpdateField(task.id, 'esforco', num, 'esforco', num);
-          }}
-          placeholder="esforço (h)"
-          className="inp text-xs py-1.5 px-2"
-          style={{ width: 110 }}
-          title="Esforço em horas"
-        />
+        {/* Esforço (horas) */}
+        <TriageInlineField icon="timer" title="Esforço em horas" width={FIELD_W}>
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            value={draft.esforco || ''}
+            onChange={(e) => setDraft((d) => ({ ...d, esforco: Number(e.target.value) || 0 }))}
+            placeholder="Esforço (h)"
+            className="triage-inline-select"
+          />
+        </TriageInlineField>
       </div>
 
       <div className="flex items-center gap-2 shrink-0 relative">
@@ -668,12 +693,14 @@ function IaTriageActions({
         )}
         <button
           type="button"
-          onClick={canAccept ? onAccept : undefined}
+          onClick={canAccept ? () => onAccept(draft) : undefined}
           disabled={!canAccept}
           className="btn btn-primary text-xs"
           title={
             canAccept
-              ? mode === 'ia' ? 'Aceitar · entra no backlog' : 'Salvar · triagem concluída'
+              ? mode === 'ia'
+                ? `Aceitar${isDirty ? ' (salva mudanças)' : ''} · entra no backlog`
+                : `Salvar${isDirty ? ' mudanças' : ''} · triagem concluída`
               : `Faltam: ${faltam.join(', ')}`
           }
           style={!canAccept ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
@@ -682,6 +709,36 @@ function IaTriageActions({
         </button>
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+//  TriageInlineField · wrapper visual pros 5 inputs da triagem
+// ─────────────────────────────────────────────────────────
+// Caixinha [icon · select/input] com largura FIXA — não cresce com
+// valor selecionado. Visual inspirado nos pills da FilterBar.
+
+function TriageInlineField({
+  icon,
+  title,
+  width,
+  disabled,
+  children,
+}: {
+  icon: Parameters<typeof Icon>[0]['name'];
+  title: string;
+  width: string;
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className={`triage-inline-field ${width} ${disabled ? 'opacity-60' : ''}`}
+      title={title}
+    >
+      <Icon name={icon} size={13} className="ic" />
+      {children}
+    </span>
   );
 }
 

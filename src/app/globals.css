@@ -909,6 +909,30 @@ input[type="checkbox"] { accent-color: var(--brand); }
   transition: background-color 80ms ease, border-color 80ms ease;
 }
 .triage-badge:hover { background: var(--triage-soft); border-color: var(--triage); }
+
+/* Inline-edit field (5 inputs do card de triagem · largura fixa) */
+.triage-inline-field {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 30px; padding: 0 8px;
+  border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink); font-size: 12px;
+  transition: border-color 80ms ease;
+}
+.triage-inline-field:hover { border-color: var(--line-strong); }
+.triage-inline-field:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 3px var(--cyan-soft); }
+.triage-inline-field .ic { color: var(--muted); flex-shrink: 0; }
+.triage-inline-select {
+  flex: 1 1 auto; min-width: 0;
+  background: transparent; border: 0; outline: 0;
+  font-size: 12px; color: var(--ink);
+  font-family: inherit;
+  padding: 0;
+  text-overflow: ellipsis;
+}
+.triage-inline-select:disabled { color: var(--muted); cursor: not-allowed; }
+/* native select arrow ocupa ~16px; date input traz ícone próprio */
+select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .triage-filter-chip {
   display: inline-flex; align-items: center;
   font-size: 10.5px; font-weight: 500;
