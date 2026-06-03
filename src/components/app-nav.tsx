@@ -16,8 +16,10 @@ import { Icon, type IconName } from '@/components/icons';
 import { isPreTriagem, triageFailures } from '@/lib/task-utils';
 import { STATUS } from '@/lib/task-constants';
 import { useMemo } from 'react';
+import { useFocoDone } from '@/lib/use-foco-done';
+import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.074';
+export const APP_VERSION = 'v1.03.075';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -57,8 +59,9 @@ const MOBILE_TAB_ORDER = ['/briefing', '/foco', '/backlog', '/dashboard', '/port
  */
 export function AppNav() {
   const pathname = usePathname();
-  const { refreshAll, refreshing, viewerRole, tasks } = useData();
+  const { refreshAll, refreshing, viewerRole, tasks, currentPessoa } = useData();
   const { openNew } = useTaskModal();
+  const { isResolved } = useFocoDone();
 
   // Counter da Triagem · mesma lógica de triagemTasks (failures OU IA pre-triagem).
   // Bolinha vermelha aparece ao lado do label da aba.
@@ -70,6 +73,15 @@ export function AppNav() {
         return isPreTriagem(t) || triageFailures(t).length > 0;
       }).length,
     [tasks],
+  );
+
+  // Counter do Foco · soma das 5 contextos imediatamente computáveis
+  // (atrasadas + hoje + bloqueadas + sem_esforco + sem_horas) descontado
+  // os marcados como Resolvido hoje. "Sem comment" precisa query async →
+  // não entra na bolinha (continua aparecendo na seção própria).
+  const focoCount = useMemo(
+    () => computeFocoCount({ tasks, pessoaId: currentPessoa?.id ?? null, isResolved }),
+    [tasks, currentPessoa?.id, isResolved],
   );
 
   // Abas mobile filtradas por role, na ordem do handoff
@@ -141,7 +153,16 @@ export function AppNav() {
             .map((item) => {
             const active = pathname.startsWith(item.href);
             const ic = TAB_ICON[item.href] ?? 'list';
-            const showBadge = item.href === '/triagem' && triagemCount > 0;
+            const badgeCount =
+              item.href === '/triagem' && triagemCount > 0
+                ? triagemCount
+                : item.href === '/foco' && focoCount > 0
+                  ? focoCount
+                  : 0;
+            const badgeTitle =
+              item.href === '/triagem'
+                ? `${badgeCount} aguardando triagem`
+                : `${badgeCount} pendentes no seu foco hoje`;
             return (
               <Link
                 key={item.href}
@@ -150,13 +171,13 @@ export function AppNav() {
               >
                 <Icon name={ic} size={15} />
                 {item.label}
-                {showBadge && (
+                {badgeCount > 0 && (
                   <span
                     className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 rounded-full text-[9px] font-bold text-white px-1"
                     style={{ background: 'var(--danger)' }}
-                    title={`${triagemCount} aguardando triagem`}
+                    title={badgeTitle}
                   >
-                    {triagemCount > 99 ? '99+' : triagemCount}
+                    {badgeCount > 99 ? '99+' : badgeCount}
                   </span>
                 )}
               </Link>
@@ -173,15 +194,24 @@ export function AppNav() {
         {mobileTabs.map((item) => {
           const active = pathname.startsWith(item.href);
           const ic = TAB_ICON[item.href] ?? 'list';
+          const badgeCount = item.href === '/foco' && focoCount > 0 ? focoCount : 0;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={cn('m-tab', active && 'on')}
+              className={cn('m-tab relative', active && 'on')}
               aria-current={active ? 'page' : undefined}
             >
               <Icon name={ic} size={20} className="ic" />
               <span>{item.label}</span>
+              {badgeCount > 0 && (
+                <span
+                  className="absolute top-1 right-3 inline-flex items-center justify-center min-w-[14px] h-[14px] rounded-full text-[8px] font-bold text-white px-1"
+                  style={{ background: 'var(--danger)' }}
+                >
+                  {badgeCount > 99 ? '99+' : badgeCount}
+                </span>
+              )}
             </Link>
           );
         })}

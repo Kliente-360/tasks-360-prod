@@ -1,176 +1,210 @@
 'use client';
 
 /**
- * Meu Foco — Onda 0 · Bloco 2.6
+ * Meu Foco — A.18 (redesign 2026-06-05)
  *
- * Painel pessoal: o que pede atenção da pessoa selecionada hoje.
- * 4 grupos: atrasadas, hoje, bloqueadas, urgentes (P0/P1 não-listadas
- * nos grupos acima — pra não duplicar). Narrativa heurística no topo
- * sugere a primeira ação.
+ * 6 seções colapsáveis derivadas de critérios independentes (tasks
+ * podem aparecer em mais de uma — só Atrasadas vs Pra hoje são
+ * naturalmente exclusivas). Card "Seu dia" no topo com narrativa e
+ * counts. Pill P0/P1 filtra dentro de cada seção. Checkbox local
+ * marca como "Resolvido HOJE" (não persiste em DB; zera virando o dia).
  *
- * Auth state real (currentPessoa) ainda não está no data-store, então
- * o dropdown "atuando como…" mostra todas as pessoas (admin) e o
- * default é vazio. Persistido em localStorage como o Alpine.
+ * Inline-edit por seção segue o padrão da Triagem: campos editáveis
+ * só persistem ao clicar Salvar, fila estável durante edição.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useData, usePessoasById, useClientesById, useProjetosById } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
+import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { Icon } from '@/components/icons';
 import { TaskCard } from '@/components/task-card/task-card';
 import { cn } from '@/lib/utils';
 import {
-  agingDays,
-  agingLevel,
   atrasada,
   diasAtraso,
+  etapaTempoColor,
+  etapaTempoDays,
   fmtAtrasoLabel,
   fmtDateShort,
   isPreTriagem,
-  lblStatus,
-  needsTriage,
-  triageFailures,
+  TRIAGE_RANK_GATE,
 } from '@/lib/task-utils';
-import { STATUS, SUB_LABELS } from '@/lib/task-constants';
+import { STATUS, STAGE_RANK, SUB_LABELS } from '@/lib/task-constants';
 import {
   getBusinessDayCutoff,
   useLastCommentByTask,
-  fmtLastComment,
 } from '@/lib/use-last-comment';
+import { useFocoDone, type FocoContexto } from '@/lib/use-foco-done';
+import { createClient } from '@/lib/supabase/client';
 import type { Task } from '@/lib/types';
-
-const STORAGE_KEY = 'kliente360-focus-pessoa';
 
 const PRIO_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
 
-type FocusGroups = {
-  atrasadas: Task[];
-  hoje: Task[];
-  bloqueadas: Task[];
-  urgentes: Task[];
+// Cutoff para "sem comment" — milissegundos de 24h atrás (ou último
+// dia útil pra evitar pressão em segunda).
+const SEM_COMMENT_HOURS = 24;
+
+type ContextoMeta = {
+  key: FocoContexto;
+  title: string;
+  emptyMsg: string;
+  defaultOpen: boolean;
 };
 
-type FocoNarrativa = {
-  headline: string;
-  action: string;
-  criticaId: string | null;
-};
+const CONTEXTOS: ContextoMeta[] = [
+  { key: 'atrasadas', title: 'Atrasadas', emptyMsg: 'Nada atrasado.', defaultOpen: true },
+  { key: 'hoje', title: 'Pra hoje', emptyMsg: 'Nada com prazo hoje.', defaultOpen: true },
+  { key: 'bloqueadas', title: 'Bloqueadas', emptyMsg: 'Sem represas.', defaultOpen: true },
+  { key: 'sem_comment', title: 'Sem comentário (24h)', emptyMsg: 'Todas comentadas recentemente.', defaultOpen: false },
+  { key: 'sem_esforco', title: 'Sem esforço', emptyMsg: 'Todas com esforço definido.', defaultOpen: false },
+  { key: 'sem_horas', title: 'Sem horas realizadas', emptyMsg: 'Todas as andamento têm horas.', defaultOpen: false },
+];
 
 export function FocoClient() {
   const { tasks, loading, error, currentPessoa, viewerRole } = useData();
-  const isAdmin = viewerRole === 'admin';
   const isCliente = viewerRole === 'cliente';
   const { openEdit } = useTaskModal();
   const pessoasById = usePessoasById();
   const clientesById = useClientesById();
   const projetosById = useProjetosById();
-
-  // ===== State =====
-  // Foco SEMPRE no usuário logado — admin ou interno, todos veem só
-  // a própria visão. Cliente externo cai no banner "Foco indisponível".
-  // (Selector de troca de visão removido — v1.03.021.)
   const focusPessoaId = currentPessoa?.id ?? '';
 
-  // Cleanup do localStorage legacy (uso anterior do selector). Roda 1x.
-  useEffect(() => {
-    try { localStorage.removeItem(STORAGE_KEY); } catch { /* ok */ }
+  const [pillPrio, setPillPrio] = useState(false);
+  const [openSet, setOpenSet] = useState<Set<FocoContexto>>(
+    () => new Set(CONTEXTOS.filter((c) => c.defaultOpen).map((c) => c.key)),
+  );
+  const toggleSection = useCallback((k: FocoContexto) => {
+    setOpenSet((cur) => {
+      const next = new Set(cur);
+      if (next.has(k)) next.delete(k);
+      else next.add(k);
+      return next;
+    });
   }, []);
 
-  // ===== focusGroups =====
-  const focusGroups = useMemo<FocusGroups>(() => {
-    const empty: FocusGroups = { atrasadas: [], hoje: [], bloqueadas: [], urgentes: [] };
-    if (!focusPessoaId) return empty;
-    const mine = tasks.filter(
-      (t) => t.pessoaId === focusPessoaId && !t.arquivadoEm && t.status !== STATUS.CONCLUIDO && !isPreTriagem(t),
-    );
-    const today = new Date().toISOString().slice(0, 10);
-    const sortPri = (a: Task, b: Task) => (PRIO_RANK[a.prioridade] ?? 9) - (PRIO_RANK[b.prioridade] ?? 9);
+  const { isResolved, toggle: toggleResolved } = useFocoDone();
 
-    const atrasadas = mine
-      .filter((t) => atrasada(t))
-      .sort((a, b) => diasAtraso(b) - diasAtraso(a) || sortPri(a, b));
-    const hoje = mine.filter((t) => t.prazo === today && !atrasada(t)).sort(sortPri);
-    const bloqueadas = mine
-      .filter((t) => t.status === 'bloqueado')
-      .sort((a, b) => (b.statusEm || 0) - (a.statusEm || 0));
-    const seen = new Set([...atrasadas, ...hoje, ...bloqueadas].map((t) => t.id));
-    const urgentes = mine
-      .filter((t) => (t.prioridade === 'P0' || t.prioridade === 'P1') && !seen.has(t.id))
-      .sort(
-        (a, b) => sortPri(a, b) || (a.prazo || '9999-12-31').localeCompare(b.prazo || '9999-12-31'),
-      );
-    return { atrasadas, hoje, bloqueadas, urgentes };
-  }, [tasks, focusPessoaId]);
-
-  // ===== Narrativa heurística =====
-  const focoNarrativa = useMemo<FocoNarrativa | null>(() => {
-    if (!focusPessoaId) return null;
-    const g = focusGroups;
-    const total = g.atrasadas.length + g.hoje.length + g.bloqueadas.length + g.urgentes.length;
-    if (total === 0) {
-      const myTasks = tasks.filter(
+  // ===== minhas tasks ativas =====
+  const mine = useMemo(
+    () =>
+      tasks.filter(
         (t) =>
           t.pessoaId === focusPessoaId &&
           !t.arquivadoEm &&
           t.status !== STATUS.CONCLUIDO &&
-          t.prazo,
-      );
-      if (myTasks.length === 0) {
-        return {
-          headline: 'Sem nada agendado.',
-          action: 'Aproveite pra atualizar status ou puxar uma task do backlog.',
-          criticaId: null,
-        };
-      }
-      const proxima = myTasks.slice().sort((a, b) => a.prazo.localeCompare(b.prazo))[0];
-      const dias = Math.max(
-        0,
-        Math.round((new Date(proxima.prazo + 'T00:00:00').getTime() - Date.now()) / 86400000),
-      );
-      return {
-        headline: 'Sem nada urgente hoje.',
-        action: `Próxima entrega: "${proxima.titulo}" em ${dias}d.`,
-        criticaId: proxima.id,
-      };
+          !isPreTriagem(t),
+      ),
+    [tasks, focusPessoaId],
+  );
+
+  // ===== ids p/ query de comments do próprio dono =====
+  const andamentoIds = useMemo(
+    () => mine.filter((t) => t.status === 'andamento').map((t) => t.id),
+    [mine],
+  );
+  const { lastCommentMap } = useLastCommentByTask(andamentoIds, focusPessoaId || null);
+
+  // ===== 6 listas independentes (sem dedup entre si) =====
+  const groups = useMemo<Record<FocoContexto, Task[]>>(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const cutoff = Date.now() - SEM_COMMENT_HOURS * 3600 * 1000;
+    const sortPri = (a: Task, b: Task) =>
+      (PRIO_RANK[a.prioridade] ?? 9) - (PRIO_RANK[b.prioridade] ?? 9);
+
+    const atrasadas = mine
+      .filter((t) => atrasada(t))
+      .sort((a, b) => diasAtraso(b) - diasAtraso(a) || sortPri(a, b));
+
+    const hoje = mine
+      .filter((t) => t.prazo === today && !atrasada(t))
+      .sort(sortPri);
+
+    const bloqueadas = mine
+      .filter((t) => t.status === 'bloqueado')
+      .sort((a, b) => (b.statusEm || 0) - (a.statusEm || 0));
+
+    const sem_comment = mine
+      .filter((t) => {
+        if (t.status !== 'andamento') return false;
+        const last = lastCommentMap.get(t.id);
+        return !last || last.getTime() < cutoff;
+      })
+      .sort((a, b) => {
+        const la = lastCommentMap.get(a.id)?.getTime() ?? 0;
+        const lb = lastCommentMap.get(b.id)?.getTime() ?? 0;
+        return la - lb; // mais antigos primeiro
+      });
+
+    const sem_esforco = mine
+      .filter(
+        (t) =>
+          (!Number(t.esforco) || t.esforco <= 0) &&
+          (STAGE_RANK[t.subetapa] ?? 0) >= TRIAGE_RANK_GATE,
+      )
+      .sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
+
+    const sem_horas = mine
+      .filter(
+        (t) =>
+          t.status === 'andamento' &&
+          (!Number(t.tempoRealHoras) || Number(t.tempoRealHoras) <= 0),
+      )
+      .sort((a, b) => (b.statusEm || 0) - (a.statusEm || 0));
+
+    return { atrasadas, hoje, bloqueadas, sem_comment, sem_esforco, sem_horas };
+  }, [mine, lastCommentMap]);
+
+  // Pill P0/P1 filtra dentro de cada seção (AND).
+  const filterPrio = useCallback(
+    (arr: Task[]) =>
+      pillPrio ? arr.filter((t) => t.prioridade === 'P0' || t.prioridade === 'P1') : arr,
+    [pillPrio],
+  );
+
+  // Counts (após pill, antes de resolver) e total pendente p/ narrativa.
+  const counts = useMemo(() => {
+    const c: Record<FocoContexto, number> = {
+      atrasadas: 0,
+      hoje: 0,
+      bloqueadas: 0,
+      sem_comment: 0,
+      sem_esforco: 0,
+      sem_horas: 0,
+    };
+    for (const ctx of CONTEXTOS) {
+      c[ctx.key] = filterPrio(groups[ctx.key]).length;
     }
-    // Sugestão de primeira ação: atrasadas (P0 → P1 → resto) > hoje (P0/P1) > urgentes > bloqueadas
-    const sugestao =
-      g.atrasadas.find((t) => t.prioridade === 'P0') ||
-      g.atrasadas.find((t) => t.prioridade === 'P1') ||
-      g.atrasadas[0] ||
-      g.hoje.find((t) => t.prioridade === 'P0' || t.prioridade === 'P1') ||
-      g.hoje[0] ||
-      g.urgentes[0] ||
-      g.bloqueadas[0];
+    return c;
+  }, [groups, filterPrio]);
 
-    const parts: string[] = [];
-    if (g.hoje.length) parts.push(`<strong>${g.hoje.length}</strong> ${g.hoje.length === 1 ? 'entrega pra hoje' : 'entregas pra hoje'}`);
-    if (g.atrasadas.length) parts.push(`<strong>${g.atrasadas.length}</strong> ${g.atrasadas.length === 1 ? 'atrasada' : 'atrasadas'}`);
-    if (g.bloqueadas.length) parts.push(`<strong>${g.bloqueadas.length}</strong> ${g.bloqueadas.length === 1 ? 'bloqueada' : 'bloqueadas'}`);
-    if (g.urgentes.length) parts.push(`<strong>${g.urgentes.length}</strong> ${g.urgentes.length === 1 ? 'P0/P1 ativa' : 'P0/P1 ativas'}`);
-    const headline =
-      parts.length === 1 ? parts[0] : parts.slice(0, -1).join(', ') + ' e ' + parts.slice(-1)[0];
-
-    let action = '';
-    if (sugestao) {
-      let prefixo = '';
-      if (g.atrasadas.includes(sugestao)) {
-        const tag = sugestao.prioridade === 'P0' || sugestao.prioridade === 'P1' ? ', ' + sugestao.prioridade : '';
-        prefixo = `Comece por (mais atrasada${tag}):`;
-      } else if (g.hoje.includes(sugestao)) {
-        prefixo = `Foco do dia${sugestao.prioridade ? ` (${sugestao.prioridade})` : ''}:`;
-      } else if (g.bloqueadas.includes(sugestao)) {
-        prefixo = `Destrave:`;
-      } else {
-        prefixo = `Próxima ação${sugestao.prioridade ? ` (${sugestao.prioridade})` : ''}:`;
+  // Counts pendentes (descontando resolvidos) — usados na narrativa
+  // e nos chips de count da pill colapsável.
+  const pending = useMemo(() => {
+    const c: Record<FocoContexto, number> = {
+      atrasadas: 0,
+      hoje: 0,
+      bloqueadas: 0,
+      sem_comment: 0,
+      sem_esforco: 0,
+      sem_horas: 0,
+    };
+    for (const ctx of CONTEXTOS) {
+      let n = 0;
+      for (const t of filterPrio(groups[ctx.key])) {
+        if (!isResolved(t.id, ctx.key)) n++;
       }
-      action = `${prefixo} "${sugestao.titulo}"`;
+      c[ctx.key] = n;
     }
-    return { headline, action, criticaId: sugestao ? sugestao.id : null };
-  }, [focusPessoaId, focusGroups, tasks]);
+    return c;
+  }, [groups, filterPrio, isResolved]);
 
-  // ===== Hoje (label data da narrativa) =====
+  const totalPending =
+    pending.atrasadas + pending.hoje + pending.bloqueadas +
+    pending.sem_comment + pending.sem_esforco + pending.sem_horas;
+
+  // Narrativa "seu dia"
   const todayLabel = useMemo(
     () =>
       new Date().toLocaleDateString('pt-BR', {
@@ -180,41 +214,53 @@ export function FocoClient() {
       }),
     [],
   );
+  const headline = useMemo(() => {
+    if (totalPending === 0) return 'Tudo no controle.';
+    const parts: string[] = [];
+    if (pending.atrasadas) parts.push(`<strong>${pending.atrasadas}</strong> atrasada${pending.atrasadas > 1 ? 's' : ''}`);
+    if (pending.hoje) parts.push(`<strong>${pending.hoje}</strong> pra hoje`);
+    if (pending.bloqueadas) parts.push(`<strong>${pending.bloqueadas}</strong> bloqueada${pending.bloqueadas > 1 ? 's' : ''}`);
+    if (pending.sem_comment) parts.push(`<strong>${pending.sem_comment}</strong> sem comentário`);
+    if (pending.sem_esforco) parts.push(`<strong>${pending.sem_esforco}</strong> sem esforço`);
+    if (pending.sem_horas) parts.push(`<strong>${pending.sem_horas}</strong> sem horas`);
+    return parts.length === 1
+      ? parts[0]
+      : parts.slice(0, -1).join(', ') + ' e ' + parts.slice(-1)[0];
+  }, [pending, totalPending]);
 
   if (loading) return <div className="text-muted text-sm">Carregando…</div>;
   if (error) return <div className="text-[color:var(--danger)] text-sm">Erro: {error}</div>;
-
   const hasFocus = !!focusPessoaId;
-  const counts = focusGroups;
 
   return (
     <div>
-      {/* Desktop · PageHeader fixo no usuário logado (admin não troca de visão) */}
+      {/* Desktop · header */}
       <div className="hidden md:block">
         <PageHeader
           title={
-            hasFocus
-              ? <>Foco de {pessoasById.get(focusPessoaId)?.nome ?? '—'}</>
-              : 'Foco indisponível'
+            hasFocus ? (
+              <>Foco de {pessoasById.get(focusPessoaId)?.nome ?? '—'}</>
+            ) : (
+              'Foco indisponível'
+            )
           }
         />
       </div>
 
-      {/* Setup banner sem pessoa */}
       {!hasFocus && (
         <div className="card p-6 md:p-10 text-center">
           <div className="font-brand text-lg md:text-xl font-semibold mb-2">
-            {isAdmin ? 'Quem você quer ver?' : isCliente ? 'Foco indisponível' : 'Sem pessoa vinculada'}
+            {isCliente ? 'Foco indisponível' : 'Sem pessoa vinculada'}
           </div>
-          <div className="text-ink-soft text-sm mb-4">
-            {isAdmin
-              ? 'Selecione a pessoa acima pra ver as tarefas que pedem atenção.'
+          <div className="text-ink-soft text-sm">
+            {isCliente
+              ? 'Esta área é interna do time.'
               : 'Sua sessão não está ligada a uma pessoa cadastrada. Peça pro admin verificar.'}
           </div>
         </div>
       )}
 
-      {/* ============ Painel de foco · MOBILE (handoff §3 · MFoco) ============ */}
+      {/* Mobile · panel reduzido (mantém pill mine/atrasadas/hoje) */}
       {hasFocus && (
         <FocoMobilePanel
           focusPessoaId={focusPessoaId}
@@ -226,82 +272,68 @@ export function FocoClient() {
         />
       )}
 
-      {/* Painel de foco · DESKTOP */}
+      {/* Desktop · 6 seções colapsáveis */}
       {hasFocus && (
-        <div className="hidden md:block space-y-4 md:space-y-5">
-          {/* Narrativa · min-h padroniza o Y da 2ª linha entre tabs (116px, centralizado) */}
-          {focoNarrativa && (
-            <div className="card p-4 md:p-5 min-h-[116px] flex flex-col justify-center" style={{ borderLeft: '3px solid var(--brand)' }}>
-              <div className="text-[10px] uppercase tracking-wider text-muted font-mono mb-1">
-                Seu dia · {todayLabel}
-              </div>
-              <div
-                className="text-base md:text-lg leading-snug"
-                dangerouslySetInnerHTML={{ __html: focoNarrativa.headline }}
-              />
-              {focoNarrativa.criticaId ? (
-                <button
-                  className="mt-2 text-sm text-left text-brand-dark hover:underline cursor-pointer"
-                  onClick={() => {
-                    if (focoNarrativa.criticaId) openEdit(focoNarrativa.criticaId);
-                  }}
-                >
-                  {focoNarrativa.action}
-                </button>
-              ) : (
-                <div className="mt-2 text-sm text-ink-soft">{focoNarrativa.action}</div>
-              )}
+        <div className="hidden md:block space-y-4">
+          {/* Seu dia · narrativa + counts */}
+          <div
+            className="card p-4 md:p-5 min-h-[116px] flex flex-col justify-center"
+            style={{ borderLeft: '3px solid var(--brand)' }}
+          >
+            <div className="text-[10px] uppercase tracking-wider text-muted font-mono mb-1">
+              Seu dia · {todayLabel}
             </div>
-          )}
-
-          {/* KPIs · min-h padroniza o Y da 2ª linha entre tabs (132px) */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 min-h-[116px]">
-            <Kpi label="Atrasadas" value={counts.atrasadas.length} dangerIfPositive />
-            <Kpi label="Para hoje" value={counts.hoje.length} />
-            <Kpi label="Bloqueadas" value={counts.bloqueadas.length} dangerIfPositive />
-            <Kpi label="P0/P1 ativas" value={counts.urgentes.length} />
+            <div
+              className="text-base md:text-lg leading-snug"
+              dangerouslySetInnerHTML={{ __html: headline }}
+            />
+            {totalPending > 0 && (
+              <div className="mt-1 text-xs text-muted">
+                {totalPending === 1 ? '1 item pendente' : `${totalPending} itens pendentes`}
+                {' no total'}
+              </div>
+            )}
           </div>
 
-          {/* Lista priorizada — 4 grupos */}
-          {([
-            { key: 'atrasadas', title: 'Atrasadas', empty: 'Nada atrasado. Bom dia.' },
-            { key: 'hoje', title: 'Para hoje', empty: 'Nada com prazo hoje.' },
-            { key: 'bloqueadas', title: 'Bloqueadas', empty: 'Sem represas.' },
-            { key: 'urgentes', title: 'P0/P1 ativas (sem repetir)', empty: 'Sem urgentes pendentes.' },
-          ] as const).map((group) => {
-            const items = focusGroups[group.key];
+          {/* Pill P0/P1 (única no momento — atalho rápido) */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className={cn('triage-filter-chip', pillPrio && 'is-on')}
+              onClick={() => setPillPrio((v) => !v)}
+              title="Filtrar só prioridades P0/P1 em todas as seções"
+            >
+              <strong>P0/P1</strong>
+            </button>
+          </div>
+
+          {/* 6 seções */}
+          {CONTEXTOS.map((ctx) => {
+            const items = filterPrio(groups[ctx.key]);
+            const open = openSet.has(ctx.key);
+            const pendingN = pending[ctx.key];
             return (
-              <div key={group.key}>
-                <div className="flex items-center justify-between mb-2 px-1">
-                  <div className="font-brand font-semibold text-sm">{group.title}</div>
-                  <span className="text-xs text-muted">{items.length === 1 ? '1 task' : `${items.length} tasks`}</span>
-                </div>
-                {items.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {items.map((t) => (
-                      <FocoCard
-                        key={t.id}
-                        t={t}
-                        onClick={() => openEdit(t.id)}
-                        clienteName={clientesById.get(t.clienteId)?.nome ?? '—'}
-                        projetoName={projetosById.get(t.projetoId)?.nome ?? '—'}
-                        pessoaName={pessoasById.get(t.pessoaId)?.nome ?? '—'}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="card text-center py-4 px-3 text-muted text-xs italic">{group.empty}</div>
-                )}
-              </div>
+              <FocoSection
+                key={ctx.key}
+                meta={ctx}
+                items={items}
+                pending={pendingN}
+                total={counts[ctx.key]}
+                open={open}
+                onToggle={() => toggleSection(ctx.key)}
+                isResolved={(id) => isResolved(id, ctx.key)}
+                onToggleResolved={(id) => toggleResolved(id, ctx.key)}
+                lastCommentMap={lastCommentMap}
+                clientesById={clientesById}
+                projetosById={projetosById}
+                openEdit={openEdit}
+              />
             );
           })}
 
-          {/* Sem comentário hoje */}
-          <SemComentarioFoco focusPessoaId={focusPessoaId} tasks={tasks} openEdit={openEdit} />
-
           <div className="text-[10px] text-muted mt-2">
-            tarefas concluídas e não atribuídas a você não aparecem. itens podem aparecer em mais de
-            um grupo.
+            tasks podem aparecer em mais de uma seção. resolver em uma não afeta as outras.
+            riscos do dia zeram automaticamente ao virar a data.
           </div>
         </div>
       )}
@@ -309,19 +341,452 @@ export function FocoClient() {
   );
 }
 
-// ====================== Sub-componentes ======================
+// =========================================================================
+//  Seção colapsável
+// =========================================================================
+function FocoSection({
+  meta,
+  items,
+  pending,
+  total,
+  open,
+  onToggle,
+  isResolved,
+  onToggleResolved,
+  lastCommentMap,
+  clientesById,
+  projetosById,
+  openEdit,
+}: {
+  meta: ContextoMeta;
+  items: Task[];
+  pending: number;
+  total: number;
+  open: boolean;
+  onToggle: () => void;
+  isResolved: (id: string) => boolean;
+  onToggleResolved: (id: string) => void;
+  lastCommentMap: Map<string, Date>;
+  clientesById: ReturnType<typeof useClientesById>;
+  projetosById: ReturnType<typeof useProjetosById>;
+  openEdit: (id: string) => void;
+}) {
+  return (
+    <div>
+      <button
+        type="button"
+        className="flex items-center justify-between w-full mb-2 px-1 text-left"
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-2 font-brand font-semibold text-sm">
+          <Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} className="text-muted" />
+          <span>{meta.title}</span>
+          {pending > 0 && (
+            <span
+              className="inline-flex items-center justify-center min-w-[18px] h-4 rounded-full text-[9px] font-bold text-white px-1.5"
+              style={{ background: 'var(--danger)' }}
+              title={`${pending} pendente${pending > 1 ? 's' : ''}`}
+            >
+              {pending}
+            </span>
+          )}
+        </div>
+        <span className="text-xs text-muted">
+          {total === 0 ? '—' : total === 1 ? '1 task' : `${total} tasks`}
+        </span>
+      </button>
 
-// ── Mobile · MFoco (handoff §3) ─────────────────────────────────────────────
-//
-// Versão mobile-only do painel de foco. Renderiza title "Foco de hoje"
-// com narr de stats, pills Minhas/Atrasadas/Hoje (com contadores) e
-// lista de tcard.check (checkbox + título + sub cliente·projeto + Pri
-// + chip mono de horas).
-//
-// O checkbox marca a task como done localmente (visual) — não persiste
-// pra evitar conclusão acidental por tap. Pra concluir de verdade, abre
-// o modal tocando no corpo do card.
+      {open && (
+        <>
+          {items.length === 0 ? (
+            <div className="card text-center py-4 px-3 text-muted text-xs italic">
+              {meta.emptyMsg}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {items.map((t) => (
+                <FocoTaskRow
+                  key={t.id}
+                  task={t}
+                  contexto={meta.key}
+                  resolved={isResolved(t.id)}
+                  onToggleResolved={() => onToggleResolved(t.id)}
+                  lastComment={lastCommentMap.get(t.id) ?? null}
+                  clienteName={clientesById.get(t.clienteId)?.nome ?? '—'}
+                  projetoName={projetosById.get(t.projetoId)?.nome ?? '—'}
+                  openEdit={openEdit}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
+// =========================================================================
+//  Linha · card largo padrão Triagem + inline-edit conforme contexto
+// =========================================================================
+function FocoTaskRow({
+  task,
+  contexto,
+  resolved,
+  onToggleResolved,
+  lastComment,
+  clienteName,
+  projetoName,
+  openEdit,
+}: {
+  task: Task;
+  contexto: FocoContexto;
+  resolved: boolean;
+  onToggleResolved: () => void;
+  lastComment: Date | null;
+  clienteName: string;
+  projetoName: string;
+  openEdit: (id: string) => void;
+}) {
+  const toast = useToast();
+  const sb = useMemo(() => createClient(), []);
+  const { patchTask, currentPessoa } = useData();
+
+  // Edição pendente por contexto
+  type Draft = {
+    prazo: string;
+    subetapa: string;
+    esforco: number;
+    tempoRealHoras: number;
+    comment: string;
+  };
+  const [draft, setDraft] = useState<Draft>(() => ({
+    prazo: task.prazo || '',
+    subetapa: task.subetapa || '',
+    esforco: Number(task.esforco) || 0,
+    tempoRealHoras: Number(task.tempoRealHoras) || 0,
+    comment: '',
+  }));
+  // Reset se task mudar externamente (mantém draft.comment fora pra
+  // não apagar texto digitado em caso de re-render do task)
+  useEffect(() => {
+    setDraft((d) => ({
+      ...d,
+      prazo: task.prazo || '',
+      subetapa: task.subetapa || '',
+      esforco: Number(task.esforco) || 0,
+      tempoRealHoras: Number(task.tempoRealHoras) || 0,
+    }));
+  }, [task.id, task.prazo, task.subetapa, task.esforco, task.tempoRealHoras]);
+
+  // Gate Salvar — campos exigidos por contexto
+  const faltam: string[] = [];
+  switch (contexto) {
+    case 'atrasadas':
+    case 'hoje':
+      if (!draft.prazo) faltam.push('prazo');
+      if (!draft.subetapa) faltam.push('subetapa');
+      break;
+    case 'bloqueadas':
+      if (!draft.subetapa) faltam.push('subetapa');
+      if (draft.subetapa === 'bloqueado') faltam.push('subetapa ≠ bloqueado');
+      break;
+    case 'sem_comment':
+      if (!draft.comment.trim()) faltam.push('comentário');
+      break;
+    case 'sem_esforco':
+      if (!draft.esforco || draft.esforco <= 0) faltam.push('esforço');
+      break;
+    case 'sem_horas':
+      if (!draft.tempoRealHoras || draft.tempoRealHoras <= 0) faltam.push('horas');
+      break;
+  }
+  const canSave = faltam.length === 0;
+
+  const persist = useCallback(async () => {
+    const dbPatch: Record<string, unknown> = {};
+    const localPatch: Partial<Task> = {};
+    switch (contexto) {
+      case 'atrasadas':
+      case 'hoje':
+        if (draft.prazo !== (task.prazo || '')) {
+          dbPatch.prazo = draft.prazo || null;
+          localPatch.prazo = draft.prazo;
+        }
+        if (draft.subetapa !== task.subetapa) {
+          dbPatch.subetapa = draft.subetapa;
+          localPatch.subetapa = draft.subetapa;
+        }
+        break;
+      case 'bloqueadas':
+        if (draft.subetapa !== task.subetapa) {
+          dbPatch.subetapa = draft.subetapa;
+          localPatch.subetapa = draft.subetapa;
+        }
+        break;
+      case 'sem_esforco':
+        if (draft.esforco !== (Number(task.esforco) || 0)) {
+          dbPatch.esforco = draft.esforco;
+          localPatch.esforco = draft.esforco;
+        }
+        break;
+      case 'sem_horas':
+        if (draft.tempoRealHoras !== (Number(task.tempoRealHoras) || 0)) {
+          dbPatch.tempo_real_horas = draft.tempoRealHoras;
+          localPatch.tempoRealHoras = draft.tempoRealHoras;
+        }
+        break;
+      case 'sem_comment': {
+        // Insert comment AS the assigned (sempre é o currentPessoa, já
+        // que Foco mostra só "minhas"). Mantém visivel_cliente=false
+        // por default — disciplina interna.
+        const nowIso = new Date().toISOString();
+        const { error } = await sb.from('task_comments').insert({
+          task_id: task.id,
+          body: draft.comment.trim(),
+          author: currentPessoa?.nome ?? 'app',
+          author_pessoa_id: currentPessoa?.id ?? null,
+          visivel_cliente: false,
+          from_cliente: false,
+          posted_em: nowIso,
+        });
+        if (error) {
+          toast.error('Erro ao comentar: ' + error.message);
+          return;
+        }
+        toast.success('Comentário registrado.');
+        // Limpa o campo (o filtro recarrega na próxima re-query —
+        // simplificação: o foco vai recalcular a próxima vez que load,
+        // mas pra UX imediata também marcamos resolved no contexto)
+        setDraft((d) => ({ ...d, comment: '' }));
+        onToggleResolved();
+        return;
+      }
+    }
+    if (Object.keys(dbPatch).length === 0) {
+      toast.info('Nada pra salvar.');
+      return;
+    }
+    const { error } = await sb.from('tasks').update(dbPatch).eq('id', task.id);
+    if (error) {
+      toast.error('Erro: ' + error.message);
+      return;
+    }
+    patchTask(task.id, localPatch);
+    toast.success('Salvo.');
+  }, [contexto, draft, task, sb, patchTask, toast, currentPessoa, onToggleResolved]);
+
+  // Aging color pro título
+  const etapaCor = etapaTempoColor(task);
+  const etapaDias = etapaTempoDays(task);
+  const corFrase =
+    etapaCor === 'danger'
+      ? { color: 'var(--danger)', fontWeight: 600 }
+      : etapaCor === 'warn'
+      ? { color: 'var(--warn)', fontWeight: 600 }
+      : undefined;
+  const late = atrasada(task);
+
+  return (
+    <div
+      className={cn(
+        'card p-3 md:p-4 cursor-pointer hover:border-line-strong transition-colors',
+        resolved && 'opacity-50',
+      )}
+      onClick={() => openEdit(task.id)}
+    >
+      <div className="flex items-start gap-3" onClick={(e) => e.stopPropagation()}>
+        {/* Checkbox local */}
+        <label
+          className="flex items-center pt-1 cursor-pointer"
+          title={resolved ? 'Desmarcar como resolvido hoje' : 'Marcar como resolvido hoje'}
+        >
+          <input
+            type="checkbox"
+            checked={resolved}
+            onChange={onToggleResolved}
+            className="cursor-pointer"
+          />
+        </label>
+
+        <div className="flex-1 min-w-0">
+          {/* Linha 1 · prio + flags + título */}
+          <div className="flex items-baseline gap-2 flex-wrap mb-1">
+            <span className={`pri pri-${task.prioridade}`}>
+              <span className="pri-dot" />
+              {task.prioridade}
+            </span>
+            {task.privada && (
+              <span className="ia-chip ia-chip-mini" title="Task privada">
+                🔒
+              </span>
+            )}
+            {task.criadoPorIa && (
+              <span className="ia-chip ia-chip-mini" title="Criada por automação IA">
+                🤖 IA
+              </span>
+            )}
+            <span
+              className={cn(
+                'font-medium text-ink break-words',
+                resolved && 'line-through text-muted',
+              )}
+            >
+              {task.titulo}
+            </span>
+          </div>
+
+          {/* Linha 2 · meta */}
+          <div className="text-xs text-muted font-mono break-words">
+            <span>{SUB_LABELS[task.subetapa] ?? task.subetapa}</span>
+            <span> · </span>
+            <span style={corFrase}>
+              {etapaDias <= 0 ? 'hoje' : etapaDias === 1 ? '1 dia' : `${etapaDias} dias`} nesta etapa
+            </span>
+            {task.prazo && (
+              <>
+                <span> · </span>
+                <span className={late ? 'text-[color:var(--danger)] font-semibold' : ''}>
+                  prazo {fmtDateShort(task.prazo)}
+                  {late && ` · ${fmtAtrasoLabel(diasAtraso(task))}`}
+                </span>
+              </>
+            )}
+            {contexto === 'sem_comment' && (
+              <>
+                <span> · </span>
+                <span>último comment: {lastComment ? fmtRelative(lastComment) : 'nunca'}</span>
+              </>
+            )}
+          </div>
+
+          {/* Linha 3 · cliente · projeto */}
+          <div className="text-xs text-ink-soft mt-1">
+            {clienteName} · {projetoName}
+          </div>
+        </div>
+      </div>
+
+      {/* Inline-edit · padrão Triagem */}
+      <div
+        className="mt-3 pt-3 border-t border-line flex flex-col md:flex-row md:items-center gap-2 md:gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+          {(contexto === 'atrasadas' || contexto === 'hoje') && (
+            <>
+              <span className="triage-inline-field w-[170px]" title="Prazo">
+                <Icon name="calendar" size={13} className="ic" />
+                <input
+                  type="date"
+                  value={draft.prazo}
+                  onChange={(e) => setDraft((d) => ({ ...d, prazo: e.target.value }))}
+                  className="triage-inline-select"
+                />
+              </span>
+              <span className="triage-inline-field w-[200px]" title="Subetapa">
+                <Icon name="list-filter" size={13} className="ic" />
+                <select
+                  value={draft.subetapa}
+                  onChange={(e) => setDraft((d) => ({ ...d, subetapa: e.target.value }))}
+                  className="triage-inline-select"
+                >
+                  {Object.keys(SUB_LABELS).map((k) => (
+                    <option key={k} value={k}>
+                      {SUB_LABELS[k]}
+                    </option>
+                  ))}
+                </select>
+              </span>
+            </>
+          )}
+
+          {contexto === 'bloqueadas' && (
+            <span className="triage-inline-field w-[220px]" title="Mudar subetapa">
+              <Icon name="list-filter" size={13} className="ic" />
+              <select
+                value={draft.subetapa}
+                onChange={(e) => setDraft((d) => ({ ...d, subetapa: e.target.value }))}
+                className="triage-inline-select"
+              >
+                {Object.keys(SUB_LABELS).map((k) => (
+                  <option key={k} value={k}>
+                    {SUB_LABELS[k]}
+                  </option>
+                ))}
+              </select>
+            </span>
+          )}
+
+          {contexto === 'sem_comment' && (
+            <input
+              type="text"
+              value={draft.comment}
+              onChange={(e) => setDraft((d) => ({ ...d, comment: e.target.value }))}
+              placeholder="Comentário rápido…"
+              className="inp text-xs py-1.5 px-2 flex-1 min-w-[200px]"
+            />
+          )}
+
+          {contexto === 'sem_esforco' && (
+            <span className="triage-inline-field w-[170px]" title="Esforço em horas">
+              <Icon name="timer" size={13} className="ic" />
+              <input
+                type="number"
+                min={0}
+                step={0.5}
+                value={draft.esforco || ''}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, esforco: Number(e.target.value) || 0 }))
+                }
+                placeholder="Esforço (h)"
+                className="triage-inline-select"
+              />
+            </span>
+          )}
+
+          {contexto === 'sem_horas' && (
+            <span className="triage-inline-field w-[200px]" title="Horas realizadas">
+              <Icon name="timer" size={13} className="ic" />
+              <input
+                type="number"
+                min={0}
+                step={0.25}
+                value={draft.tempoRealHoras || ''}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, tempoRealHoras: Number(e.target.value) || 0 }))
+                }
+                placeholder="Horas realizadas"
+                className="triage-inline-select"
+              />
+            </span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={canSave ? persist : undefined}
+          disabled={!canSave}
+          className="btn btn-primary text-xs"
+          title={canSave ? 'Salvar' : `Falta: ${faltam.join(', ')}`}
+          style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+        >
+          Salvar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function fmtRelative(d: Date): string {
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days === 0) return 'hoje';
+  if (days === 1) return 'ontem';
+  return `${days}d atrás`;
+}
+
+// =========================================================================
+//  Mobile · panel leve · mantém 3 segmentos (mine/atrasadas/hoje)
+// =========================================================================
 function FocoMobilePanel({
   focusPessoaId,
   tasks,
@@ -339,13 +804,17 @@ function FocoMobilePanel({
 }) {
   const [seg, setSeg] = useState<'minhas' | 'atrasadas' | 'hoje'>('minhas');
   const [done, setDone] = useState<Set<string>>(() => new Set());
-
   const todayIso = new Date().toISOString().slice(0, 10);
 
   const mine = useMemo(
-    () => tasks.filter(
-      (t) => t.pessoaId === focusPessoaId && t.status !== STATUS.CONCLUIDO && !t.arquivadoEm && !isPreTriagem(t),
-    ),
+    () =>
+      tasks.filter(
+        (t) =>
+          t.pessoaId === focusPessoaId &&
+          t.status !== STATUS.CONCLUIDO &&
+          !t.arquivadoEm &&
+          !isPreTriagem(t),
+      ),
     [tasks, focusPessoaId],
   );
   const atrasadasList = useMemo(() => mine.filter((t) => atrasada(t)), [mine]);
@@ -373,7 +842,9 @@ function FocoMobilePanel({
   return (
     <div className="md:hidden">
       <div className="m-pagetitle">
-        <h1>Foco de <em>hoje</em></h1>
+        <h1>
+          Foco de <em>hoje</em>
+        </h1>
         <div className="narr">
           <b>{list.length}</b> tarefas
           <span className="sep">·</span>
@@ -398,8 +869,10 @@ function FocoMobilePanel({
       <div className="m-list">
         {list.length === 0 ? (
           <div className="card text-center py-6 px-3 text-muted text-xs italic">
-            {seg === 'atrasadas' ? 'Nada atrasado. Bom dia.'
-              : seg === 'hoje' ? 'Nada com prazo hoje.'
+            {seg === 'atrasadas'
+              ? 'Nada atrasado. Bom dia.'
+              : seg === 'hoje'
+              ? 'Nada com prazo hoje.'
               : 'Sem tarefas abertas.'}
           </div>
         ) : (
@@ -429,202 +902,48 @@ function FocoMobilePanel({
   );
 }
 
-// ── Sem comentário hoje ──────────────────────────────────────────────────────
-
-function SemComentarioFoco({
-  focusPessoaId,
-  tasks,
-  openEdit,
-}: {
-  focusPessoaId: string;
+/** Hook helper exportado pra computar count do Foco no header.
+ *  Não precisa de DB (skip sem_comment) — só usa as 5 contextos
+ *  imediatamente computáveis. Match com o que aparece como bolinha. */
+export function computeFocoCount(args: {
   tasks: Task[];
-  openEdit: (id: string) => void;
-}) {
-  const [open, setOpen] = useState(true);
-  const cutoff = useMemo(() => getBusinessDayCutoff(), []);
-
-  // Só tasks Em andamento da pessoa — fonte pra query de comentários.
-  const andamentoIds = useMemo(
-    () =>
-      tasks
-        .filter((t) => t.pessoaId === focusPessoaId && !t.arquivadoEm && t.status === 'andamento')
-        .map((t) => t.id),
-    [tasks, focusPessoaId],
+  pessoaId: string | null;
+  isResolved: (taskId: string, contexto: FocoContexto) => boolean;
+}): number {
+  if (!args.pessoaId) return 0;
+  const mine = args.tasks.filter(
+    (t) =>
+      t.pessoaId === args.pessoaId &&
+      !t.arquivadoEm &&
+      t.status !== STATUS.CONCLUIDO &&
+      !isPreTriagem(t),
   );
-
-  const { lastCommentMap, loading } = useLastCommentByTask(andamentoIds);
-
-  const semComentario = useMemo(() => {
-    if (!cutoff) return []; // fim de semana → seção oculta
-    return tasks
-      .filter((t) => {
-        if (t.pessoaId !== focusPessoaId) return false;
-        if (t.arquivadoEm || t.status !== 'andamento') return false;
-        const last = lastCommentMap.get(t.id);
-        return !last || last < cutoff;
-      })
-      .sort((a, b) => {
-        const la = lastCommentMap.get(a.id)?.getTime() ?? 0;
-        const lb = lastCommentMap.get(b.id)?.getTime() ?? 0;
-        return la - lb; // mais antigos primeiro
-      });
-  }, [tasks, focusPessoaId, lastCommentMap, cutoff]);
-
-  // Fim de semana ou nenhuma task andamento → não renderiza.
-  if (!cutoff || andamentoIds.length === 0) return null;
-
-  return (
-    <div>
-      <button
-        className="flex items-center justify-between w-full mb-2 px-1 text-left"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <div className="flex items-center gap-2 font-brand font-semibold text-sm">
-          <span className="text-muted text-xs font-mono">{open ? '▾' : '▸'}</span>
-          <span style={{ color: semComentario.length > 0 ? 'var(--p0)' : 'var(--muted)' }}>
-            Sem comentário hoje
-          </span>
-          {loading && (
-            <span className="text-[10px] text-muted font-mono font-normal">carregando…</span>
-          )}
-        </div>
-        <span className="text-xs text-muted">
-          {semComentario.length === 0
-            ? '✓ todas comentadas'
-            : `${semComentario.length} task${semComentario.length !== 1 ? 's' : ''}`}
-        </span>
-      </button>
-
-      {open && (
-        semComentario.length === 0 ? (
-          <div className="card text-center py-4 px-3 text-[color:var(--brand)] text-xs">
-            ✓ Todas as tasks em andamento foram comentadas no último dia útil.
-          </div>
-        ) : (
-          <div className="card divide-y divide-[var(--line)]">
-            {semComentario.map((t) => {
-              const last = lastCommentMap.get(t.id);
-              return (
-                <button
-                  key={t.id}
-                  className="w-full text-left px-3 py-2.5 flex items-center justify-between gap-3 hover:bg-[var(--brand-tint)] transition-colors"
-                  onClick={() => openEdit(t.id)}
-                >
-                  <div className="min-w-0">
-                    <div className="text-sm text-ink truncate">{t.titulo}</div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`pri pri-${t.prioridade}`}>
-                      <span className="pri-dot" />
-                      {t.prioridade}
-                    </span>
-                    <span className="text-[10px] font-mono text-[color:var(--p0)]">
-                      {fmtLastComment(last)}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )
-      )}
-    </div>
-  );
-}
-
-function Kpi({
-  label,
-  value,
-  dangerIfPositive,
-}: {
-  label: string;
-  value: number;
-  dangerIfPositive?: boolean;
-}) {
-  return (
-    <div className="card p-3 md:p-4 flex flex-col justify-center">
-      <div className="text-[10px] uppercase tracking-wider text-muted font-mono">{label}</div>
-      <div
-        className="font-brand text-2xl md:text-3xl font-semibold mt-1"
-        style={dangerIfPositive && value > 0 ? { color: 'var(--p0)' } : undefined}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function FocoCard({
-  t,
-  onClick,
-  clienteName,
-  projetoName,
-  pessoaName,
-}: {
-  t: Task;
-  onClick: () => void;
-  clienteName: string;
-  projetoName: string;
-  pessoaName: string;
-}) {
-  const lvl = agingLevel(t);
-  const late = atrasada(t);
-  return (
-    <div className="kcard" onClick={onClick}>
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="font-medium text-sm leading-snug min-w-0">
-          {t.privada && (
-            <span className="ia-chip ia-chip-mini mr-1" title="Task privada">
-              🔒
-            </span>
-          )}
-          {t.criadoPorIa && (
-            <span className="ia-chip ia-chip-mini mr-1" title="Criada por automação IA">
-              🤖 IA
-            </span>
-          )}
-          {t.titulo}
-        </div>
-        <span className={`pri shrink-0 pri-${t.prioridade}`}>
-          <span className="pri-dot" />
-          {t.prioridade}
-        </span>
-      </div>
-      <div className="text-xs text-muted mb-2">{clienteName + ' · ' + projetoName}</div>
-      <div className="flex items-center justify-between text-xs gap-2">
-        <span className="text-ink-soft truncate">{pessoaName || '—'}</span>
-        <span
-          className={`shrink-0 ${late ? 'text-[color:var(--p0)] font-medium' : 'text-ink-soft'}`}
-        >
-          {t.prazo ? (
-            <>
-              <span className="font-mono">{fmtDateShort(t.prazo)}</span>
-              {late && <span className="ml-1">· {fmtAtrasoLabel(diasAtraso(t))}</span>}
-            </>
-          ) : (
-            <span className="italic">sem prazo</span>
-          )}
-        </span>
-      </div>
-      <div className="flex items-center gap-1.5 mt-2">
-        <span className="status text-[10px]" data-s={t.status}>
-          <span className="status-dot" />
-          {lblStatus(t.status)}
-        </span>
-        {lblStatus(t.status) !== (SUB_LABELS[t.subetapa] ?? t.subetapa) && (
-          <span className="text-[10px] font-mono text-muted">
-            › <span className="text-ink-soft">{SUB_LABELS[t.subetapa] ?? t.subetapa}</span>
-          </span>
-        )}
-        {lvl !== 'fresh' && (
-          <span className={`aging-badge aging-${lvl}`}>{agingDays(t)}d</span>
-        )}
-        {needsTriage(t) && (
-          <span className="triage-badge" title={triageFailures(t).join(' · ')}>
-            triar
-          </span>
-        )}
-      </div>
-    </div>
-  );
+  const today = new Date().toISOString().slice(0, 10);
+  let n = 0;
+  for (const t of mine) {
+    // atrasadas
+    if (atrasada(t) && !args.isResolved(t.id, 'atrasadas')) n++;
+    // hoje
+    if (t.prazo === today && !atrasada(t) && !args.isResolved(t.id, 'hoje')) n++;
+    // bloqueadas
+    if (t.status === 'bloqueado' && !args.isResolved(t.id, 'bloqueadas')) n++;
+    // sem esforco
+    if (
+      (!Number(t.esforco) || t.esforco <= 0) &&
+      (STAGE_RANK[t.subetapa] ?? 0) >= TRIAGE_RANK_GATE &&
+      !args.isResolved(t.id, 'sem_esforco')
+    ) {
+      n++;
+    }
+    // sem horas
+    if (
+      t.status === 'andamento' &&
+      (!Number(t.tempoRealHoras) || Number(t.tempoRealHoras) <= 0) &&
+      !args.isResolved(t.id, 'sem_horas')
+    ) {
+      n++;
+    }
+    // sem_comment NÃO entra (precisa query async)
+  }
+  return n;
 }

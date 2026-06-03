@@ -42,7 +42,12 @@ export function getBusinessDayCutoff(): Date | null {
  * Dispara apenas uma query no mount (e quando taskIds mudar de forma
  * relevante). Não faz polling — dados suficientes pra rotina diária.
  */
-export function useLastCommentByTask(taskIds: string[]): {
+export function useLastCommentByTask(
+  taskIds: string[],
+  /** Se passado, filtra só comments com esse author_pessoa_id.
+   *  Usado pelo Foco pra detectar "sem comment do dono da task". */
+  authorPessoaId?: string | null,
+): {
   lastCommentMap: Map<string, Date>;
   loading: boolean;
 } {
@@ -53,22 +58,28 @@ export function useLastCommentByTask(taskIds: string[]): {
   if (!sbRef.current) sbRef.current = createClient();
   const sb = sbRef.current;
 
-  // Key estável derivada dos IDs — evita re-query a cada render.
-  const key = useMemo(() => taskIds.slice().sort().join(','), [taskIds]);
+  // Key estável derivada dos IDs + autor — evita re-query a cada render.
+  const key = useMemo(
+    () => taskIds.slice().sort().join(',') + '|' + (authorPessoaId || ''),
+    [taskIds, authorPessoaId],
+  );
 
   useEffect(() => {
-    if (!key) {
+    const ids = key.split('|')[0].split(',').filter(Boolean);
+    const author = key.split('|')[1] || null;
+    if (!ids.length) {
       setLastCommentMap(new Map());
       return;
     }
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const ids = key.split(',').filter(Boolean);
-      const { data } = await sb
+      let q = sb
         .from('task_comments')
-        .select('task_id, criado_em')
+        .select('task_id, criado_em, author_pessoa_id')
         .in('task_id', ids);
+      if (author) q = q.eq('author_pessoa_id', author);
+      const { data } = await q;
       if (cancelled) return;
       const map = new Map<string, Date>();
       for (const row of (data ?? []) as { task_id: string; criado_em: string }[]) {
