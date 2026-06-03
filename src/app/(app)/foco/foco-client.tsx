@@ -27,6 +27,7 @@ import {
   diasAtraso,
   fmtAtrasoLabel,
   fmtDateShort,
+  isPreTriagem,
   lblStatus,
   needsTriage,
   triageFailures,
@@ -81,7 +82,7 @@ export function FocoClient() {
     const empty: FocusGroups = { atrasadas: [], hoje: [], bloqueadas: [], urgentes: [] };
     if (!focusPessoaId) return empty;
     const mine = tasks.filter(
-      (t) => t.pessoaId === focusPessoaId && !t.arquivadoEm && t.status !== STATUS.CONCLUIDO,
+      (t) => t.pessoaId === focusPessoaId && !t.arquivadoEm && t.status !== STATUS.CONCLUIDO && !isPreTriagem(t),
     );
     const today = new Date().toISOString().slice(0, 10);
     const sortPri = (a: Task, b: Task) => (PRIO_RANK[a.prioridade] ?? 9) - (PRIO_RANK[b.prioridade] ?? 9);
@@ -343,7 +344,7 @@ function FocoMobilePanel({
 
   const mine = useMemo(
     () => tasks.filter(
-      (t) => t.pessoaId === focusPessoaId && t.status !== STATUS.CONCLUIDO && !t.arquivadoEm,
+      (t) => t.pessoaId === focusPessoaId && t.status !== STATUS.CONCLUIDO && !t.arquivadoEm && !isPreTriagem(t),
     ),
     [tasks, focusPessoaId],
   );

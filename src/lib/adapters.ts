@@ -52,6 +52,9 @@ export function taskFromDb(r: Row): Task {
     externalId: str(r.external_id),
     arquivadoEm: dateIso(r.arquivado_em),
     criadoPorIa: r.criado_por_ia === true,
+    triadaEm: dateIso(r.triada_em),
+    triadaPor: str(r.triada_por),
+    motivoArquivamento: str(r.motivo_arquivamento),
     privada: r.privada === true,
     webhookSyncStatus: str(r.webhook_sync_status),
     webhookSyncError: str(r.webhook_sync_error),
@@ -119,4 +122,4 @@ export function timeEntryFromDb(r: Row): TimeEntry {
 
 /** Colunas leves carregadas no boot. `descricao` é lazy (modal puxa). */
 export const TASK_LIGHT_COLS =
-  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,privada,webhook_sync_status,webhook_sync_error';
+  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,triada_em,triada_por,motivo_arquivamento,privada,webhook_sync_status,webhook_sync_error';

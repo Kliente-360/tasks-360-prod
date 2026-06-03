@@ -23,7 +23,7 @@ import { useToast } from '@/components/toast';
 import { BulkBar, BulkBarClearButton, BulkBarSep } from '@/components/bulk-bar';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
-import { atrasada, agingDays, agingLevel, fmtDate, fmtDateShort, fmtTempoEtapa, lblComplex, lblStatus } from '@/lib/task-utils';
+import { atrasada, agingDays, agingLevel, fmtDate, fmtDateShort, fmtTempoEtapa, isPreTriagem, lblComplex, lblStatus } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS, SUBS_FLAT, SUBS_FLAT_ORDER } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
@@ -200,7 +200,11 @@ export function BacklogClient() {
   // ============ Filtros + sort ============
   const filtered = useMemo(() => {
     const q = f.q.trim().toLowerCase();
-    const base = showArchived ? tasks : tasks.filter((t) => !t.arquivadoEm);
+    // IA pre-triagem fica fora do backlog SEMPRE (independente de "mostrar
+    // arquivadas") — gate A.4. Só aparecem em /triagem.
+    const base = showArchived
+      ? tasks.filter((t) => !isPreTriagem(t))
+      : tasks.filter((t) => !t.arquivadoEm && !isPreTriagem(t));
     const arr = base.filter((t) => {
       if (q) {
         const cli = clientesById.get(t.clienteId)?.nome ?? '';

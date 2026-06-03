@@ -50,6 +50,16 @@ export interface Task {
   externalId: string;
   arquivadoEm: string | null;
   criadoPorIa: boolean;
+  /** Gate de triagem pra tasks IA · null = aguardando aceitação (escondida
+   *  de Backlog/Foco/Kanban/Calendário/Dashboard, visível só em Triagem).
+   *  Após aceitar OU rejeitar, recebe timestamp. Tasks não-IA têm null mas
+   *  é ignorado (filtro é `criadoPorIa=true AND triadaEm=null`). */
+  triadaEm: string | null;
+  /** Pessoa que aceitou ou rejeitou a task na triagem (audit trail). */
+  triadaPor: string | null;
+  /** Preenchido quando task é rejeitada na triagem · "duplicada" /
+   *  "fora de escopo" / "spam" / texto livre. */
+  motivoArquivamento: string | null;
   privada: boolean;
   /** Status do dispatch pro Salesforce — 'synced' | 'error' | ''. Set por
    *  dispatch-webhook após cada update da task quando external_source=salesforce. */

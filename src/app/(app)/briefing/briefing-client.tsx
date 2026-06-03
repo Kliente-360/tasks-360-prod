@@ -6,7 +6,7 @@ import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
 import { Icon } from '@/components/icons';
 import { cn } from '@/lib/utils';
-import { atrasada } from '@/lib/task-utils';
+import { atrasada, isPreTriagem } from '@/lib/task-utils';
 import {
   computeWeeklyCapacityAnalysis,
   computeProjetosSaude,
@@ -122,7 +122,9 @@ export function BriefingClient() {
   const toggle = (key: string) =>
     setCollapsed((s) => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
-  const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm), [tasks]);
+  // Pre-triagem (IA criada, sem triada_em) fica fora do Briefing — só
+  // entra em alertas/clientes-em-atenção depois de aceita na Triagem.
+  const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm && !isPreTriagem(t)), [tasks]);
 
   const heuristicAlerts = useMemo(
     () => computeHeuristicAlerts(baseTasks, clientes, projetos, pessoas),

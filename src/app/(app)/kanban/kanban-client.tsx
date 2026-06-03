@@ -32,7 +32,7 @@ import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
 import { PriChip, TaskAvatar, PrazoLabel, TagIA } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
-import { agingDays, agingLevel, atrasada, fmtDateShort, fmtTempoEtapa, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, type PrazoFilter } from '@/lib/task-utils';
+import { agingDays, agingLevel, atrasada, fmtDateShort, fmtTempoEtapa, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
@@ -140,6 +140,8 @@ export function KanbanClient() {
   const visibleTasks = useMemo(() => {
     const q = qDraft.trim().toLowerCase();
     return tasks.filter((t) => {
+      // Gate A.4: IA pre-triagem fica fora do Kanban
+      if (isPreTriagem(t)) return false;
       if (!showArchived && t.arquivadoEm) return false;
       if (showArchived && !t.arquivadoEm && false) return false; // noop pra simetria
       if (filters.cliente === EMPTY) {

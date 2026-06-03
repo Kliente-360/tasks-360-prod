@@ -23,7 +23,7 @@ import { PageHeader } from '@/components/page-header';
 import { PillsFilter } from '@/components/pills-filter';
 import { PriChip, PrazoLabel, TagIA } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
-import { agingDays, atrasada, fmtDateShort, triageFailures } from '@/lib/task-utils';
+import { agingDays, atrasada, fmtDateShort, isPreTriagem, triageFailures } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import type { Task } from '@/lib/types';
@@ -100,17 +100,29 @@ export function TriagemClient() {
     [pessoas],
   );
 
-  // ===== triagemTasks: visíveis não-concluídas com falhas, ordenadas =====
+  // ===== triagemTasks: visíveis não-concluídas com falhas OU aguardando
+  //       aceitação IA (gate A.4), ordenadas =====
   const triagemTasks = useMemo<TaskWithFailures[]>(() => {
     const out: TaskWithFailures[] = [];
     for (const t of tasks) {
       if (t.arquivadoEm) continue;
       if (t.status === STATUS.CONCLUIDO) continue;
       const failures = triageFailures(t);
-      if (!failures.length) continue;
-      out.push({ ...t, _failures: failures, _failCount: failures.length });
+      const aguardandoIA = isPreTriagem(t);
+      // Pre-triagem IA aparece SEMPRE — mesmo sem field failures (a
+      // própria ausência de "triada_em" é o failure relevante aqui).
+      if (!failures.length && !aguardandoIA) continue;
+      // Marca "aguardando aceitação" como failure virtual pra UI ranquear
+      const allFailures = aguardandoIA ? ['aguardando aceitação IA', ...failures] : failures;
+      out.push({ ...t, _failures: allFailures, _failCount: allFailures.length });
     }
-    out.sort((a, b) => b._failCount - a._failCount || (a.criadoEm || 0) - (b.criadoEm || 0));
+    // IA pre-triagem sobe (failure count maior + flag) seguido por com-falhas
+    out.sort((a, b) => {
+      const aiA = isPreTriagem(a) ? 1 : 0;
+      const aiB = isPreTriagem(b) ? 1 : 0;
+      if (aiA !== aiB) return aiB - aiA; // IA pre-triagem primeiro
+      return b._failCount - a._failCount || (a.criadoEm || 0) - (b.criadoEm || 0);
+    });
     return out;
   }, [tasks]);
 

@@ -162,6 +162,9 @@ function blankEditing(): Task {
     externalId: '',
     arquivadoEm: null,
     criadoPorIa: false,
+    triadaEm: null,
+    triadaPor: null,
+    motivoArquivamento: null,
     privada: false,
     webhookSyncStatus: '',
     webhookSyncError: '',
@@ -197,7 +200,7 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
 }
 
 const TASK_LIGHT_COLS =
-  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,privada';
+  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,triada_em,triada_por,motivo_arquivamento,privada';
 
 // ============================================================
 // Mention picker hook — espelho de anexos.js:341 (onMentionInput)

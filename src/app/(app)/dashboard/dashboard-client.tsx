@@ -9,7 +9,7 @@ import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { cn } from '@/lib/utils';
-import { atrasada, agingDays, effEsforco } from '@/lib/task-utils';
+import { atrasada, agingDays, effEsforco, isPreTriagem } from '@/lib/task-utils';
 import type { Filters as StdFilters } from '@/lib/filters';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import {
@@ -121,7 +121,9 @@ export function DashboardClient() {
 
   const hasFilter = !!(filterCliente || filterPessoa || filterProjeto || filterPrazo || onlyIA || onlyHumano);
 
-  const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm), [tasks]);
+  // Pre-triagem (IA criada, sem triada_em) fica fora do Dashboard inteiro
+  // — só aparece em /triagem até ser aceita ou rejeitada.
+  const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm && !isPreTriagem(t)), [tasks]);
 
   const filteredTasks = useMemo(() => {
     const todayIso = new Date().toISOString().slice(0, 10);

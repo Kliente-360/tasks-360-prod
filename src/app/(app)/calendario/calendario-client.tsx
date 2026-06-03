@@ -31,6 +31,7 @@ import {
   atrasada,
   fmtDate,
   fmtDateShort,
+  isPreTriagem,
   needsTriage,
   triageFailures,
 } from '@/lib/task-utils';
@@ -238,6 +239,8 @@ export function CalendarioClient() {
     for (const t of tasks) {
       if (!t.prazo) continue;
       if (t.arquivadoEm) continue;
+      // Gate A.4: IA pre-triagem fica fora do calendário
+      if (isPreTriagem(t)) continue;
       if (!matchStatus(t)) continue;
       if (hasFilter && !matchFilters(t)) continue;
       (byPrazo[t.prazo] = byPrazo[t.prazo] || []).push(t);
