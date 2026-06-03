@@ -18,7 +18,6 @@ import { useRouter } from 'next/navigation';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
-import { BulkBar, BulkBarClearButton, BulkBarSep } from '@/components/bulk-bar';
 import { PageHeader } from '@/components/page-header';
 import { PillsFilter } from '@/components/pills-filter';
 import { PriChip, PrazoLabel, TagIA } from '@/components/task-card/primitives';
@@ -26,37 +25,31 @@ import { createClient } from '@/lib/supabase/client';
 import { agingDays, atrasada, fmtDateShort, isPreTriagem, triageFailures } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
-import type { Task, Pessoa } from '@/lib/types';
-
-const NONE = '__none__';
+import type { Task, Pessoa, Cliente, Projeto } from '@/lib/types';
+import { useClickAway } from '@/lib/use-click-away';
 
 type TriagemFilter = {
+  semCliente: boolean;
+  semProjeto: boolean;
   semResp: boolean;
   semPrazo: boolean;
   semEsforco: boolean;
   origem: '' | 'ia' | 'humano';
 };
 
-type BulkPending = {
-  pessoa: string;
-  prazo: string;
-  esforco: string;
-  prioridade: string;
-};
-
 const DEFAULT_FILTER: TriagemFilter = {
+  semCliente: false,
+  semProjeto: false,
   semResp: false,
   semPrazo: false,
   semEsforco: false,
   origem: '',
 };
 
-const DEFAULT_BULK: BulkPending = { pessoa: '', prazo: '', esforco: '', prioridade: '' };
-
 type TaskWithFailures = Task & { _failures: string[]; _failCount: number };
 
 export function TriagemClient() {
-  const { tasks, pessoas, patchTask, patchTasks, currentPessoa, loading, error } = useData();
+  const { tasks, pessoas, clientes, projetos, patchTask, currentPessoa, loading, error } = useData();
   const { openEdit } = useTaskModal();
   const toast = useToast();
   const clientesById = useClientesById();
@@ -68,8 +61,6 @@ export function TriagemClient() {
   const sb = sbRef.current;
 
   const [filter, setFilter] = useState<TriagemFilter>(DEFAULT_FILTER);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [bulkPending, setBulkPending] = useState<BulkPending>(DEFAULT_BULK);
 
   // g+l global → limpa os 4 chips de filtro.
   useEffect(() => {
@@ -131,6 +122,8 @@ export function TriagemClient() {
   const applyFilter = useCallback(
     (arr: TaskWithFailures[], f: TriagemFilter) =>
       arr.filter((t) => {
+        if (f.semCliente && !t._failures.includes('sem cliente')) return false;
+        if (f.semProjeto && !t._failures.includes('sem projeto')) return false;
         if (f.semResp && !t._failures.includes('sem responsável')) return false;
         if (f.semPrazo && !t._failures.includes('sem prazo')) return false;
         if (f.semEsforco && !t._failures.includes('sem esforço')) return false;
@@ -146,13 +139,17 @@ export function TriagemClient() {
     [triagemTasks, filter, applyFilter],
   );
 
-  const anyFilter = filter.semResp || filter.semPrazo || filter.semEsforco || !!filter.origem;
+  const anyFilter =
+    filter.semCliente || filter.semProjeto || filter.semResp ||
+    filter.semPrazo || filter.semEsforco || !!filter.origem;
 
   // Counts dinâmicos: quantas tasks sobrariam SE esse chip estivesse ativo,
   // mantendo os outros filtros. Padrão "filtros responsivos" — você vê o
   // impacto antes de clicar. Chip já ativo mostra o count atual do recorte.
   const counts = useMemo(
     () => ({
+      semCliente: applyFilter(triagemTasks, { ...filter, semCliente: true }).length,
+      semProjeto: applyFilter(triagemTasks, { ...filter, semProjeto: true }).length,
       semResp: applyFilter(triagemTasks, { ...filter, semResp: true }).length,
       semPrazo: applyFilter(triagemTasks, { ...filter, semPrazo: true }).length,
       semEsforco: applyFilter(triagemTasks, { ...filter, semEsforco: true }).length,
@@ -161,53 +158,7 @@ export function TriagemClient() {
     [triagemTasks, filter, applyFilter],
   );
 
-  // ===== Bulk =====
-  const toggleSelect = useCallback((id: string) => {
-    setSelectedIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
-  }, []);
-  const clearSelection = useCallback(() => {
-    setSelectedIds([]);
-    setBulkPending(DEFAULT_BULK);
-  }, []);
-
-  const bulkSave = useCallback(async () => {
-    const p = bulkPending;
-    const ids = [...selectedIds];
-    if (!ids.length) return;
-    const updates: Record<string, unknown> = {};
-    const localPatch: Partial<Task> = {};
-    if (p.pessoa) {
-      updates.pessoa_id = p.pessoa === NONE ? null : p.pessoa;
-      localPatch.pessoaId = p.pessoa === NONE ? '' : p.pessoa;
-    }
-    if (p.prazo) {
-      updates.prazo = p.prazo;
-      localPatch.prazo = p.prazo;
-    }
-    if (p.esforco !== '') {
-      const num = Number(p.esforco);
-      if (!(num >= 0)) {
-        toast.error('Esforço inválido.');
-        return;
-      }
-      updates.esforco = num;
-      localPatch.esforco = num;
-    }
-    if (p.prioridade) {
-      updates.prioridade = p.prioridade;
-      localPatch.prioridade = p.prioridade as Task['prioridade'];
-    }
-    if (Object.keys(updates).length === 0) return;
-    const { error } = await sb.from('tasks').update(updates).in('id', ids);
-    if (error) {
-      toast.error('Erro: ' + error.message);
-      return;
-    }
-    patchTasks(ids, localPatch);
-    setBulkPending(DEFAULT_BULK);
-  }, [bulkPending, selectedIds, sb, patchTasks, toast]);
-
-  // ===== Quick-edit inline pro fluxo de triagem IA =====
+  // ===== Quick-edit inline pro fluxo de triagem =====
   const setField = useCallback(
     async (taskId: string, snake: string, dbValue: unknown, jsKey: keyof Task, localValue: unknown) => {
       const { error } = await sb.from('tasks').update({ [snake]: dbValue }).eq('id', taskId);
@@ -240,16 +191,12 @@ export function TriagemClient() {
   );
 
   // ===== Rejeitar IA: triada_em + arquivado_em + motivo (audit) =====
+  // Motivo vem do picklist inline (IaRejectPicker) — nunca prompt nativo.
   const rejeitarIA = useCallback(
-    async (taskId: string, titulo: string) => {
-      const motivo = window.prompt(
-        `Rejeitar task "${titulo}"?\n\nMotivo (opcional · ex: duplicada, fora de escopo, spam):`,
-        '',
-      );
-      if (motivo === null) return; // cancelou
+    async (taskId: string, motivo: string) => {
+      const motivoFinal = motivo.trim() || 'rejeitada na triagem';
       const nowIso = new Date().toISOString();
       const triadaPor = currentPessoa?.id ?? null;
-      const motivoFinal = motivo.trim() || 'rejeitada na triagem';
       const { error } = await sb
         .from('tasks')
         .update({
@@ -269,9 +216,20 @@ export function TriagemClient() {
         arquivadoEm: nowIso,
         motivoArquivamento: motivoFinal,
       });
-      toast.success(`Rejeitada${motivoFinal ? `: ${motivoFinal}` : ''}.`);
+      toast.success(`Rejeitada: ${motivoFinal}.`);
     },
     [sb, patchTask, currentPessoa, toast],
+  );
+
+  // ===== Salvar triagem manual: feedback explícito quando os 5
+  // campos foram preenchidos inline. Os campos já gravaram via
+  // setField; aqui só confirmamos visualmente (a row some sozinha
+  // porque triageFailures volta vazio). =====
+  const salvarManual = useCallback(
+    (_taskId: string) => {
+      toast.success('Triagem concluída · task vai pro backlog.');
+    },
+    [toast],
   );
 
   // Mobile cai aqui só por uma fração antes do router.replace executar.
@@ -288,6 +246,18 @@ export function TriagemClient() {
             title="Triagem"
             right={
               <div className="flex items-center gap-2 flex-wrap">
+                <FilterChip
+                  active={filter.semCliente}
+                  onClick={() => setFilter({ ...filter, semCliente: !filter.semCliente })}
+                  count={counts.semCliente}
+                  label="sem cliente"
+                />
+                <FilterChip
+                  active={filter.semProjeto}
+                  onClick={() => setFilter({ ...filter, semProjeto: !filter.semProjeto })}
+                  count={counts.semProjeto}
+                  label="sem projeto"
+                />
                 <FilterChip
                   active={filter.semResp}
                   onClick={() => setFilter({ ...filter, semResp: !filter.semResp })}
@@ -322,6 +292,20 @@ export function TriagemClient() {
       {/* Mobile chips */}
       {triagemTasks.length > 0 && (
         <div className="flex items-center gap-1.5 md:hidden flex-wrap">
+          <FilterChip
+            active={filter.semCliente}
+            onClick={() => setFilter({ ...filter, semCliente: !filter.semCliente })}
+            count={counts.semCliente}
+            label="sem cliente"
+            mobile
+          />
+          <FilterChip
+            active={filter.semProjeto}
+            onClick={() => setFilter({ ...filter, semProjeto: !filter.semProjeto })}
+            count={counts.semProjeto}
+            label="sem projeto"
+            mobile
+          />
           <FilterChip
             active={filter.semResp}
             onClick={() => setFilter({ ...filter, semResp: !filter.semResp })}
@@ -372,7 +356,6 @@ export function TriagemClient() {
 
       {/* Cards */}
       {filtered.map((t) => {
-        const sel = selectedIds.includes(t.id);
         const preTriagem = isPreTriagem(t);
         const idade = t.criadoEm > 0 ? agingDays({ statusEm: t.criadoEm }) : 0;
         // Cor de aging: ≥7d vermelho, ≥3d âmbar, senão muted
@@ -380,24 +363,12 @@ export function TriagemClient() {
         return (
           <div
             key={t.id}
-            className={`card p-3 md:p-5 cursor-pointer hover:border-line-strong transition-colors ${sel ? 'bg-brand-tint' : ''} ${preTriagem ? 'border-l-[3px]' : ''}`}
+            className={`card p-3 md:p-5 cursor-pointer hover:border-line-strong transition-colors ${preTriagem ? 'border-l-[3px]' : ''}`}
             style={preTriagem ? { borderLeftColor: 'var(--green)' } : undefined}
             onClick={() => openEdit(t.id)}
           >
             <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0 flex-1 flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  className="shrink-0"
-                  checked={sel}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    toggleSelect(t.id);
-                  }}
-                />
+              <div className="min-w-0 flex-1">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2 flex-wrap mb-1">
                     {t.prioridade && <PriChip prio={t.prioridade} />}
@@ -460,7 +431,7 @@ export function TriagemClient() {
                 ))}
               </div>
             </div>
-            <div className="flex flex-wrap gap-1 mt-2 pl-7 md:hidden">
+            <div className="flex flex-wrap gap-1 mt-2 md:hidden">
               {t._failures.map((f) => (
                 <span key={f} className="triage-chip">
                   {f}
@@ -468,77 +439,21 @@ export function TriagemClient() {
               ))}
             </div>
 
-            {/* Quick-edit + Aceitar/Rejeitar · só pra IA pre-triagem */}
-            {preTriagem && (
-              <IaTriageActions
-                task={t}
-                pessoasNaoCliente={pessoasNaoCliente}
-                onUpdateField={setField}
-                onAccept={() => aceitarIA(t.id)}
-                onReject={() => rejeitarIA(t.id, t.titulo)}
-              />
-            )}
+            {/* Quick-edit + ação · IA: Aceitar/Rejeitar · Manual: só Salvar */}
+            <IaTriageActions
+              task={t}
+              mode={preTriagem ? 'ia' : 'manual'}
+              pessoasNaoCliente={pessoasNaoCliente}
+              clientes={clientes}
+              projetos={projetos}
+              onUpdateField={setField}
+              onAccept={() => (preTriagem ? aceitarIA(t.id) : salvarManual(t.id))}
+              onReject={(motivo) => rejeitarIA(t.id, motivo)}
+            />
           </div>
         );
       })}
 
-      <BulkBar selectedCount={selectedIds.length} onClear={clearSelection}>
-        <select
-          className="inp text-sm md:text-xs py-2 md:py-1.5 w-full md:w-[120px]"
-          value={bulkPending.pessoa}
-          onChange={(e) => setBulkPending({ ...bulkPending, pessoa: e.target.value })}
-          title="Responsável"
-        >
-          <option value="">responsável…</option>
-          <option value={NONE}>— nenhum —</option>
-          {pessoasNaoCliente.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nome}
-            </option>
-          ))}
-        </select>
-        <input
-          type="date"
-          className="inp text-sm md:text-xs py-2 md:py-1.5 w-full md:w-[110px]"
-          value={bulkPending.prazo}
-          onChange={(e) => setBulkPending({ ...bulkPending, prazo: e.target.value })}
-          title="Prazo"
-        />
-        <input
-          type="number"
-          min={0}
-          step={1}
-          placeholder="esforço (h)"
-          className="inp text-sm md:text-xs py-2 md:py-1.5 w-full md:w-[110px]"
-          value={bulkPending.esforco}
-          onChange={(e) => setBulkPending({ ...bulkPending, esforco: e.target.value })}
-          title="Esforço em horas"
-        />
-        <select
-          className="inp text-sm md:text-xs py-2 md:py-1.5 w-full md:w-[80px]"
-          value={bulkPending.prioridade}
-          onChange={(e) => setBulkPending({ ...bulkPending, prioridade: e.target.value })}
-          title="Prioridade"
-        >
-          <option value="">pri…</option>
-          <option value="P0">P0</option>
-          <option value="P1">P1</option>
-          <option value="P2">P2</option>
-          <option value="P3">P3</option>
-        </select>
-        <div className="flex gap-2 md:contents">
-          <button
-            type="button"
-            className="btn btn-primary text-sm md:text-xs py-2 md:py-1.5 px-3 md:px-2 flex-1 md:flex-none justify-center"
-            onClick={bulkSave}
-            disabled={!(bulkPending.pessoa || bulkPending.prazo || bulkPending.esforco !== '' || bulkPending.prioridade)}
-          >
-            salvar
-          </button>
-          <BulkBarSep />
-          <BulkBarClearButton onClick={clearSelection} />
-        </div>
-      </BulkBar>
     </div>
   );
 }
@@ -578,15 +493,30 @@ function FilterChip({
 // botões Aceitar/Rejeitar. Aceitar fica disabled até os 3 campos
 // estarem preenchidos. Tooltip lista o que falta.
 
+const REJECT_REASONS = [
+  'Duplicada',
+  'Fora de escopo',
+  'Spam',
+  'Sem contexto',
+  'Não acionável',
+] as const;
+
 function IaTriageActions({
   task,
+  mode,
   pessoasNaoCliente,
+  clientes,
+  projetos,
   onUpdateField,
   onAccept,
   onReject,
 }: {
   task: Task;
+  /** 'ia' = aceitar+rejeitar (popover); 'manual' = só salvar (mesmo gate). */
+  mode: 'ia' | 'manual';
   pessoasNaoCliente: Pessoa[];
+  clientes: Cliente[];
+  projetos: Projeto[];
   onUpdateField: (
     taskId: string,
     snake: string,
@@ -595,13 +525,37 @@ function IaTriageActions({
     localValue: unknown,
   ) => Promise<void> | void;
   onAccept: () => void;
-  onReject: () => void;
+  onReject: (motivo: string) => void;
 }) {
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [customMotivo, setCustomMotivo] = useState('');
+
+  // Clientes ativos · ordenados alfabético
+  const clientesOpts = useMemo(
+    () => clientes.filter((c) => !c.arquivadoEm).sort((a, b) => a.nome.localeCompare(b.nome)),
+    [clientes],
+  );
+  // Projetos do cliente selecionado · ativos · alfabético
+  const projetosOpts = useMemo(() => {
+    if (!task.clienteId) return [] as Projeto[];
+    return projetos
+      .filter((p) => p.clienteId === task.clienteId && !p.arquivadoEm)
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+  }, [projetos, task.clienteId]);
+
   const faltam: string[] = [];
+  if (!task.clienteId) faltam.push('cliente');
+  if (!task.projetoId) faltam.push('projeto');
   if (!task.pessoaId) faltam.push('responsável');
   if (!task.prazo) faltam.push('prazo');
   if (!task.esforco || task.esforco <= 0) faltam.push('esforço');
   const canAccept = faltam.length === 0;
+
+  const submitReject = (motivo: string) => {
+    setRejectOpen(false);
+    setCustomMotivo('');
+    onReject(motivo);
+  };
 
   return (
     <div
@@ -609,12 +563,48 @@ function IaTriageActions({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+        {/* Cliente */}
+        <select
+          value={task.clienteId || ''}
+          onChange={(e) => {
+            const next = e.target.value || null;
+            onUpdateField(task.id, 'cliente_id', next, 'clienteId', e.target.value || '');
+            // Trocou cliente · projeto antigo provavelmente não pertence; limpa
+            if (task.projetoId) {
+              onUpdateField(task.id, 'projeto_id', null, 'projetoId', '');
+            }
+          }}
+          className="inp text-xs py-1.5 px-2"
+          style={{ width: 'auto', minWidth: 130 }}
+          title="Cliente"
+        >
+          <option value="">— cliente —</option>
+          {clientesOpts.map((c) => (
+            <option key={c.id} value={c.id}>{c.nome}</option>
+          ))}
+        </select>
+
+        {/* Projeto · depende de cliente */}
+        <select
+          value={task.projetoId || ''}
+          onChange={(e) => onUpdateField(task.id, 'projeto_id', e.target.value || null, 'projetoId', e.target.value || '')}
+          className="inp text-xs py-1.5 px-2"
+          style={{ width: 'auto', minWidth: 130 }}
+          disabled={!task.clienteId}
+          title={task.clienteId ? 'Projeto' : 'Selecione um cliente primeiro'}
+        >
+          <option value="">— projeto —</option>
+          {projetosOpts.map((p) => (
+            <option key={p.id} value={p.id}>{p.nome}</option>
+          ))}
+        </select>
+
         {/* Responsável */}
         <select
           value={task.pessoaId || ''}
           onChange={(e) => onUpdateField(task.id, 'pessoa_id', e.target.value || null, 'pessoaId', e.target.value || '')}
           className="inp text-xs py-1.5 px-2"
-          style={{ width: 'auto', minWidth: 140 }}
+          style={{ width: 'auto', minWidth: 130 }}
           title="Responsável"
         >
           <option value="">— responsável —</option>
@@ -650,26 +640,114 @@ function IaTriageActions({
         />
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        <button
-          type="button"
-          onClick={onReject}
-          className="btn btn-ghost text-xs"
-          style={{ color: 'var(--danger)' }}
-          title="Rejeitar (arquiva com motivo)"
-        >
-          Rejeitar
-        </button>
+      <div className="flex items-center gap-2 shrink-0 relative">
+        {mode === 'ia' && (
+          <>
+            <button
+              type="button"
+              onClick={() => setRejectOpen((v) => !v)}
+              className="btn btn-ghost text-xs"
+              style={{ color: 'var(--danger)' }}
+              title="Rejeitar (arquiva com motivo)"
+            >
+              Rejeitar
+            </button>
+            {rejectOpen && (
+              <RejectPopover
+                value={customMotivo}
+                onChange={setCustomMotivo}
+                onPick={submitReject}
+                onClose={() => setRejectOpen(false)}
+              />
+            )}
+          </>
+        )}
         <button
           type="button"
           onClick={canAccept ? onAccept : undefined}
           disabled={!canAccept}
           className="btn btn-primary text-xs"
-          title={canAccept ? 'Aceitar · entra no backlog' : `Faltam: ${faltam.join(', ')}`}
+          title={
+            canAccept
+              ? mode === 'ia' ? 'Aceitar · entra no backlog' : 'Salvar · triagem concluída'
+              : `Faltam: ${faltam.join(', ')}`
+          }
           style={!canAccept ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
         >
-          Aceitar
+          {mode === 'ia' ? 'Aceitar' : 'Salvar'}
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+//  RejectPopover · picklist de motivos pra rejeição IA (A.4)
+// ─────────────────────────────────────────────────────────
+// Dropdown ancorado embaixo do botão Rejeitar. Motivos pré-definidos
+// + input "outro motivo" pra texto livre. Padrão visual igual ao
+// TaskPickerPopover do TimerButton (border-line + shadow-xl, z-50).
+
+function RejectPopover({
+  value,
+  onChange,
+  onPick,
+  onClose,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onPick: (motivo: string) => void;
+  onClose: () => void;
+}) {
+  const ref = useClickAway<HTMLDivElement>(onClose);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute top-full right-0 mt-2 z-50 w-[240px] bg-bg-elev border border-line rounded-lg shadow-xl overflow-hidden"
+      role="dialog"
+      aria-label="Motivo da rejeição"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-line">
+        <div className="w-2 h-2 rounded-full bg-[color:var(--danger)] shrink-0" />
+        <span className="text-sm font-medium">Rejeitar · motivo</span>
+      </div>
+      <ul className="py-1">
+        {REJECT_REASONS.map((r) => (
+          <li key={r}>
+            <button
+              type="button"
+              className="w-full text-left px-3 py-1.5 text-sm hover:bg-bg-alt transition-colors"
+              onClick={() => onPick(r)}
+            >
+              {r}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="border-t border-line p-2">
+        <input
+          ref={inputRef}
+          type="text"
+          className="inp text-xs w-full"
+          placeholder="outro motivo…"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && value.trim()) {
+              e.preventDefault();
+              onPick(value.trim());
+            }
+          }}
+        />
       </div>
     </div>
   );

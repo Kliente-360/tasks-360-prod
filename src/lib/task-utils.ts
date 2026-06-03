@@ -5,7 +5,7 @@
  */
 
 import type { Projeto, Task } from './types';
-import { STATUS, STAGE_RANK } from './task-constants';
+import { STATUS } from './task-constants';
 
 /** Esforço efetivo: usa o declarado, ou 4h como fallback se zero/null. */
 export function effEsforco(t: Pick<Task, 'esforco'>): number {
@@ -108,15 +108,19 @@ export function fmtAtrasoLabel(dias: number): string {
   return `${dias} dias atrasada`;
 }
 
-/** Lista o que falta na task pra estar "triada". Vazio = ok. */
-export function triageFailures(t: Pick<Task, 'status' | 'subetapa' | 'pessoaId' | 'clienteId' | 'prazo' | 'esforco'>): string[] {
+/** Lista o que falta na task pra estar "triada". Vazio = ok.
+ *  5 campos críticos exigidos sempre · cliente, projeto, responsável,
+ *  prazo, esforço. Não depende de rank de subetapa. */
+export function triageFailures(
+  t: Pick<Task, 'status' | 'pessoaId' | 'clienteId' | 'projetoId' | 'prazo' | 'esforco'>,
+): string[] {
   if (!t || t.status === STATUS.CONCLUIDO) return [];
-  const rank = STAGE_RANK[t.subetapa] ?? 0;
   const out: string[] = [];
-  if (!t.pessoaId) out.push('sem responsável');
   if (!t.clienteId) out.push('sem cliente');
-  if (rank >= 2 && !t.prazo) out.push('sem prazo');
-  if (rank >= 4 && !Number(t.esforco)) out.push('sem esforço');
+  if (!t.projetoId) out.push('sem projeto');
+  if (!t.pessoaId) out.push('sem responsável');
+  if (!t.prazo) out.push('sem prazo');
+  if (!Number(t.esforco)) out.push('sem esforço');
   return out;
 }
 

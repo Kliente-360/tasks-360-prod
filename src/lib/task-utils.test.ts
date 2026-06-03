@@ -128,34 +128,42 @@ describe('agingLevel', () => {
 // ─── triageFailures / needsTriage ───────────────────────────────────────
 
 describe('triageFailures', () => {
-  const base = { status: 'andamento' as TaskStatus, clienteId: 'c1', pessoaId: 'p1', prazo: '2026-06-01', esforco: 8 };
+  const base = {
+    status: 'andamento' as TaskStatus,
+    clienteId: 'c1',
+    projetoId: 'pr1',
+    pessoaId: 'p1',
+    prazo: '2026-06-01',
+    esforco: 8,
+  };
 
   it('vazio quando tudo preenchido', () => {
-    expect(triageFailures({ ...base, subetapa: 'em_desenvolvimento' })).toEqual([]);
+    expect(triageFailures(base)).toEqual([]);
   });
   it('vazio sempre pra task concluída', () => {
-    expect(triageFailures({ ...base, status: 'concluido', subetapa: 'backlog', pessoaId: '', clienteId: '' })).toEqual([]);
+    expect(triageFailures({ ...base, status: 'concluido', pessoaId: '', clienteId: '' })).toEqual([]);
   });
-  it('cobra responsável e cliente desde rank 0', () => {
-    const out = triageFailures({ ...base, subetapa: 'backlog', pessoaId: '', clienteId: '' });
-    expect(out).toEqual(['sem responsável', 'sem cliente']);
+  it('cobra os 5 campos críticos (ordem fixa)', () => {
+    const out = triageFailures({ status: 'andamento', clienteId: '', projetoId: '', pessoaId: '', prazo: '', esforco: 0 });
+    expect(out).toEqual(['sem cliente', 'sem projeto', 'sem responsável', 'sem prazo', 'sem esforço']);
   });
-  it('cobra prazo só a partir de rank 2 (priorizado)', () => {
-    expect(triageFailures({ ...base, subetapa: 'backlog', prazo: '' })).toEqual([]);
-    expect(triageFailures({ ...base, subetapa: 'priorizado', prazo: '' })).toEqual(['sem prazo']);
+  it('cobra prazo independente do estágio', () => {
+    expect(triageFailures({ ...base, prazo: '' })).toEqual(['sem prazo']);
   });
-  it('cobra esforço só a partir de rank 4 (em_desenvolvimento)', () => {
-    expect(triageFailures({ ...base, subetapa: 'escopo_definido', esforco: 0 })).toEqual([]);
-    expect(triageFailures({ ...base, subetapa: 'em_desenvolvimento', esforco: 0 })).toEqual(['sem esforço']);
+  it('cobra esforço independente do estágio', () => {
+    expect(triageFailures({ ...base, esforco: 0 })).toEqual(['sem esforço']);
+  });
+  it('cobra projeto', () => {
+    expect(triageFailures({ ...base, projetoId: '' })).toEqual(['sem projeto']);
   });
 });
 
 describe('needsTriage', () => {
   it('true se há ao menos uma falha', () => {
-    expect(needsTriage({ status: 'andamento', subetapa: 'em_desenvolvimento', pessoaId: '', clienteId: 'c', prazo: '2026-06-01', esforco: 8 })).toBe(true);
+    expect(needsTriage({ status: 'andamento', pessoaId: '', clienteId: 'c', projetoId: 'pr', prazo: '2026-06-01', esforco: 8 })).toBe(true);
   });
   it('false quando triada', () => {
-    expect(needsTriage({ status: 'andamento', subetapa: 'em_desenvolvimento', pessoaId: 'p', clienteId: 'c', prazo: '2026-06-01', esforco: 8 })).toBe(false);
+    expect(needsTriage({ status: 'andamento', pessoaId: 'p', clienteId: 'c', projetoId: 'pr', prazo: '2026-06-01', esforco: 8 })).toBe(false);
   });
 });
 
