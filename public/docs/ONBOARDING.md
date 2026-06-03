@@ -109,14 +109,15 @@ Você é a pessoa que mais usa o app no dia-a-dia depois dos analistas.
 
 ## Onde abrir todo dia
 
-- **Triagem** (aba dedicada, só admin) — sua primeira parada da manhã. Fila de tasks que ainda **não estão prontas pra serem trabalhadas** (faltam: responsável, cliente, prazo em etapa avançada, ou esforço em etapa de execução). Chips âmbar mostram exatamente o que falta. Tasks criadas por IA aparecem com chip 🤖 e filtro próprio. Resolver a fila = nada parado por falta de informação.
+- **Meu foco** — primeira parada de qualquer pessoa do time (admin ou interno). Card "Seu dia" no topo + 6 seções colapsáveis (Atrasadas · Pra hoje · Bloqueadas · Sem comentário 24h · Sem esforço · Sem horas realizadas). Cada card tem inline-edit dos campos críticos + botão **Resolver** que risca como "tratado hoje" sem persistir em DB (zera ao virar o dia). Bolinha vermelha na aba mostra total pendente. Tasks podem aparecer em mais de uma seção; resolver em uma não afeta as outras.
+- **Triagem** (só admin) — fila de tasks ainda não prontas pra trabalhar. Falta cliente/projeto/responsável (sempre obrigatórios) ou prazo/esforço (a partir de `escopo_definido`), ou são tasks 🤖 IA aguardando aceite. Inline-edit dos 5 campos no próprio card · botões **Aceitar** (IA → backlog) / **Rejeitar** com motivo / **Salvar** (manual). Edição é pendente — só persiste no clique. Bolinha vermelha na aba mostra a fila.
 
 ## Guia de uso por cerimônia
 
 ### Refinamento (1-2x/semana)
-1. Abrir **Triagem** → cards já priorizam o que falta resolver.
-2. Pra cada task: completar título claro, cliente, projeto, esforço estimado, complexidade, prioridade, escopo (técnico).
-3. Mover pra subetapa adequada (`priorizado`, `escopo_definido`, etc). Quando todos os critérios são satisfeitos, a task **sai automaticamente da Triagem**.
+1. Abrir **Triagem** → cards já mostram o que falta resolver (chips à direita).
+2. Pra cada task, preencher cliente · projeto · responsável · prazo · esforço inline. Quando completar, clicar **Salvar** (manual) ou **Aceitar** (IA pré-triagem). Pra descartar IA, **Rejeitar** com motivo.
+3. Mover pra subetapa adequada via inline status (ou pelo modal completo se precisar mexer mais).
 
 ### Daily (15 min)
 1. Abrir **Kanban**.
@@ -218,9 +219,10 @@ A regra de ouro: **se mexer, atualize**. O status desatualizado prejudica todo m
 ## Guia de uso, dia típico
 
 ### Manhã (5 min)
-1. **Meu foco** (`g f`). Ver atrasadas + de hoje.
-2. Escolher próxima → mover pra `em_desenvolvimento`. Sem isso, gerência não sabe que você começou.
-3. Se vai esperar cliente → mover pra `em_homologacao` antes de seguir pra outra.
+1. **Meu foco** (`g f`). Bolinha vermelha na aba mostra quantos itens pedem atenção.
+2. Percorrer as 6 seções (Atrasadas → Pra hoje → Bloqueadas → Sem comentário → Sem esforço → Sem horas). Em cada card, ajustar inline (prazo · esforço · horas · status · motivo · comment) e clicar **Salvar**.
+3. Pra itens que já tratou mas não precisam mudança no banco, clicar **Resolver** — risca o card só hoje, descontra da bolinha vermelha, zera ao virar o dia.
+4. Quando começar a trabalhar uma task de fato → mover pra `em_desenvolvimento`.
 
 ### Durante (toda hora que mudar de assunto)
 - Se trocou de task: comente o que já foi realizado de forma simples e mova a anterior para o status adequado caso seja necessário.

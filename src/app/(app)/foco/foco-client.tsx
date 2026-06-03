@@ -341,10 +341,6 @@ export function FocoClient() {
             );
           })}
 
-          <div className="text-[10px] text-muted mt-2">
-            tasks podem aparecer em mais de uma seção. resolver em uma não afeta as outras.
-            riscos do dia zeram automaticamente ao virar a data.
-          </div>
         </div>
       )}
     </div>

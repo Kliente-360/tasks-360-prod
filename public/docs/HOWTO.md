@@ -72,14 +72,26 @@ O mesmo card visual aparece no **Backlog mobile**, **Meu foco**, **Calendário (
 
 ### Meu foco
 
-Painel curado pra começar o dia. Quando você está logado, **mostra automaticamente o foco da pessoa logada** (admin pode escolher outra pessoa pra simular via selector). Se a sessão não está vinculada a uma pessoa cadastrada, banner explica. No topo, escolha a pessoa em **"atuando como"** (seleção fica salva por navegador). Aparecem 4 KPIs e 4 listas, em ordem de urgência:
+Painel curado pra começar o dia. Mostra automaticamente o foco da pessoa logada. Card "Seu dia" no topo com narrativa + contagem das 6 seções. Pill **P0/P1** no canto direito do header filtra (AND) dentro de todas as seções.
 
-1. **Atrasadas** — prazo vencido, ordenadas por dias de atraso desc
-2. **Para hoje** — prazo é hoje
-3. **Bloqueadas** — você é responsável e a tarefa está em `bloqueado`
-4. **P0/P1 ativas** — só itens que ainda não apareceram acima
+**6 seções colapsáveis** (todas abertas por default · cada uma com counter de pendentes):
 
-Sem login? Use o seletor manual. Quando o login voltar, isso será automático.
+1. **Atrasadas** — prazo < hoje, exclui status concluído/bloqueado e subetapa `em_homologacao` (o time não tem ação direta nessas)
+2. **Pra hoje** — prazo = hoje, não atrasada
+3. **Bloqueadas** — status = `bloqueado`
+4. **Sem comentário (24h)** — task em andamento sem comment do próprio responsável nas últimas 24h (ou nunca)
+5. **Sem esforço** — esforço vazio, a partir de `escopo_definido` (mesmo gate da Triagem)
+6. **Sem horas realizadas** — task em andamento com `tempoRealHoras` zerado
+
+> Uma mesma task pode aparecer em mais de uma seção (atrasada que também está sem comentário, por exemplo). Atrasadas e Pra hoje são naturalmente exclusivas.
+
+**Card largo padrão** (mesmo da Triagem) com **6 inputs inline em UMA linha**: prazo · esforço · horas · status (subetapa) · motivo (picklist, só ativo se subetapa = bloqueado) · comentário rápido. Não é autosave: campos viram pendentes até clicar **Salvar**. Botão só habilita quando algo mudou (gate de dirty + requeridos por seção).
+
+- **Resolver / Resolvido** — botão no canto superior direito do card marca como tratado **só hoje** (não persiste em DB). Risca o título, opaca o card, decrementa a bolinha vermelha da aba Foco. **Zera automaticamente ao virar a data.**
+- O check é por seção: marcar uma task como Resolvida em "Sem horas" não afeta sua aparição em "Bloqueadas". Cada contexto tem seu próprio risco.
+- Click na **área do título/meta** do card abre o modal completo da task.
+
+**Bolinha vermelha na aba Foco** (header desktop + mobile) — soma das 5 seções computáveis sem query async (atrasadas + hoje + bloqueadas + sem esforço + sem horas), descontados os marcados como Resolvido hoje. Sem comentário não entra na bolinha (precisa query) mas aparece na seção própria.
 
 ### Briefing executivo
 
@@ -94,19 +106,31 @@ Headline no topo muda com o estado real: "3 clientes em risco · 2 pessoas preci
 
 ### Triagem
 
-Visível para `admin` e `interno`. Fila de tarefas que ainda **não estão prontas pra serem trabalhadas** — falta responsável, cliente, prazo ou esforço, conforme a etapa.
+Visível apenas para `admin`. Fila de tarefas que ainda **não estão prontas pra serem trabalhadas** — faltam campos críticos. Triagem é **one-by-one** (sem bulk): cada card é tratado individualmente.
 
-**Critérios** (heurística pura, sem nova subetapa):
-- Sem responsável → qualquer etapa
-- Sem cliente → qualquer etapa
-- Sem prazo → em etapa ≥ `priorizado`
-- Sem esforço → em etapa ≥ `em_desenvolvimento`
+**Critérios de entrada na fila** (a task aparece se cair em qualquer um):
+- Sem **cliente** · sempre obrigatório
+- Sem **projeto** · sempre obrigatório
+- Sem **responsável** · sempre obrigatório
+- Sem **prazo** · só a partir da subetapa `escopo_definido` (rank 3)
+- Sem **esforço** · só a partir da subetapa `escopo_definido`
+- **IA pré-triagem** · task criada por automação (`criado_por_ia = true`) que ainda não foi aceita por um humano (campo `triada_em` nulo)
 
-Cards ordenados por gravidade (mais critérios falhando primeiro). Chips âmbar mostram exatamente **o que falta**. Click no card abre o modal pra preencher — ao satisfazer todos os critérios, a task **sai da fila automaticamente**.
+**6 pills de filtro** no topo (combináveis · AND): sem cliente · sem projeto · sem resp. · sem prazo · sem esforço · 🤖 criadas por IA. Cada chip mostra count dinâmico do que cairia ao ativar mantendo os outros.
 
-Os chips de filtro no topo (`sem resp.` · `sem prazo` · `sem esforço` · `🤖 criadas por IA`) são combináveis — clicar em mais de um aplica interseção (ex: `🤖 IA` + `sem prazo` = tasks criadas por IA que ainda precisam de prazo). Útil pra triar separadamente o fluxo vindo de automação.
+**Sort**: IA pré-triagem primeiro (gate prioritário · borda esquerda verde no card), depois por data de criação **descendente** (mais recentes no topo).
 
-> Badge `triar` (âmbar) aparece inline em qualquer task que precise (Foco, Backlog, Kanban, Calendário) — assim o triador identifica de qualquer view, não só da aba dedicada.
+**Card de triagem**: anatomia larga (mesmo padrão usado depois no Meu Foco) com **5 inputs inline padronizados** (largura fixa · ícones FilterBar) — cliente · projeto · responsável · prazo · esforço.
+
+- **Edição pendente** — campos NÃO salvam a cada digitada. A row não muda de posição na fila enquanto você está editando, e não some prematuramente ao preencher o último campo. Persiste apenas ao clicar o botão de ação.
+- **Aceitar** (tasks IA) · grava os 5 campos + marca `triada_em` + `triada_por`. Task entra no backlog normal.
+- **Rejeitar** (tasks IA) · abre popover com motivos predefinidos (Duplicada · Fora de escopo · Spam · Sem contexto · Não acionável · ou texto livre). Marca `triada_em` + arquiva com `motivo_arquivamento`.
+- **Salvar** (tasks manuais que caíram na fila por field-missing) · grava os 5 campos. Task sai da fila quando os critérios deixam de bater.
+- Gate dos botões: só habilita com todos os requeridos do contexto preenchidos.
+
+**Counter na aba Triagem** (header desktop) — bolinha vermelha com total da fila.
+
+> Badge `triar` (âmbar) aparece inline em qualquer task que precise (Backlog, Kanban, Calendário) — assim o triador identifica de qualquer view. Foco mostra a mesma task se ela for sua e cair em algum dos critérios do Foco.
 
 ### Backlog
 
