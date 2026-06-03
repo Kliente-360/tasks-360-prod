@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.042 · **Atualizado**: 04/06/2026 · branch `main`
+> **Versão**: v1.03.061 · **Atualizado**: 05/06/2026 · branch `main`
 
 ---
 
@@ -46,6 +46,10 @@ Bump MINOR 02→03 marcou o fechamento desse ciclo. Concluídos:
 - 🟡 **A.14 · Card de task unificado (PARCIAL · só técnico)** (v1.03.032-038, 8 PRs) · sub-primitivas `<PriChip>`/`<TaskAvatar>`/`<PrazoLabel>`/`<TagIA>` extraídas + wrapper `<TaskCard>` criado, mas UI ficou idêntica ao que já era. A unificação VISUAL ficou pendente — virou A.17 (replanjar do zero)
 - ✅ **A.11 · Briefing × Dashboard · clarear papel** (v1.03.041-042) · Velocidade da operação migrou do Briefing pro Dashboard. Briefing = leitura editorial (alertas + clientes em atenção + conquistas). Dashboard = números (Velocidade da operação + Entregas + Calendário + Carga por pessoa + Atenção). Card "Lead time" substituído por "Throughput W-0" com projeção; meta 8→25/sem; Ciclo e % no prazo agora com delta vs 30d anteriores
 - ✅ **Calendário · concluídas visíveis** (v1.03.041) · filtro default 'abertas'→'todas' + cor distintiva (verde clarinho desbotado + line-through) em vez de cinza que confundia com backlog
+- ✅ **A.4 · Triagem obrigatória pra IA** (v1.03.043-055) · campos `triada_em`/`triada_por`/`motivo_arquivamento` em tasks · `isPreTriagem(t)` filtra IA pré-triagem de todas as telas (Backlog/Foco/Kanban/Calendário/Dashboard/Briefing) · aba Triagem mostra Aceitar/Rejeitar com gate dos 5 campos + `RejectPopover` com motivos predefinidos · counter (bolinha vermelha) na aba Triagem do header com count total de pendências
+- ✅ **Triagem · reformulação completa** (v1.03.056-059) · 5 campos críticos universais (cliente·projeto·resp·prazo·esforço) com gate por subetapa (prazo/esforço só ≥ escopo_definido); 6 pills de filtro com counts dinâmicos; inline edit em TODAS as tasks (não só IA); modo manual com botão Salvar; bulk + checkboxes removidos (triagem é one-by-one); inputs com largura fixa + ícones do FilterBar; **edição pendente** (não autosave) — só persiste ao clicar Aceitar/Salvar, fila estável durante edição; sort default = criadoEm DESC
+- ✅ **Fix filtro Prazo no Kanban** (v1.03.056) · setter ignorava key 'prazo'; estendido `matchesPrazoFilter` pra suportar 'hoje' e 'sem' alinhando com FilterBar padrão
+- ✅ **RLS Kliente 360 · interno owner** (v1.03.060-061) · admin vê tudo, interno vê tasks de cliente não-interno OU onde é responsável; novo helper `app_is_admin()`; FilterBar replicou o gate de Projeto desabilitado até selecionar Cliente
 
 ---
 
@@ -62,7 +66,7 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | ~~A.1~~ | ~~**Aplicar novo design system**~~ | ✅ Entregue em v1.03 (ver ciclo redesign DS acima) |
 | ~~A.2~~ | ~~**Filtros padronizados + Calendário redesign**~~ | ✅ Entregue em v1.03 |
 | A.3 | **Push notifications** · VAPID + Edge Function `send-push` + UI de permissão (Badge API já ✅) | 2-3 semanas | Alto — comportamental forte, iOS 16.4+ PWA |
-| A.4 | **Triagem obrigatória pra tasks criadas por IA** · flag `triada_em` + filtro próprio | 3-5 dias | Médio — governance pré-IA |
+| ~~A.4~~ | ~~**Triagem obrigatória pra IA**~~ | ✅ Entregue v1.03.043-059 (ver ciclo redesign DS acima) |
 | A.5 | **Saved views / filtros nomeados** · "Minhas atrasadas", "Aguardando cliente X". Depende de A.2. | 2-3 dias | Quick win UX alto impacto |
 | A.6 | **Sticky thead Backlog** · cabeçalho fixo em scroll longo | 2-3 dias | Quick win UX |
 | A.7 | **PDF Resumo Executivo** · consolidar Briefing+Dashboard em documento navegável | 1-2 semanas | Médio — reuniões offline |
@@ -207,7 +211,7 @@ fresco).
 7. **A.16** Revisar bulk actions (BulkBar)
 8. **C.3** Skill mismatch (heurística pura)
 
-Items NÃO no NEXT (revisitar depois): A.3 Push · A.4 Triagem IA mandatory · A.5 Saved views · A.6 Sticky thead · A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.1-C.2/C.4-C.9.
+Items NÃO no NEXT (revisitar depois): A.3 Push · A.5 Saved views · A.6 Sticky thead · A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.1-C.2/C.4-C.9.
 
 ---
 
