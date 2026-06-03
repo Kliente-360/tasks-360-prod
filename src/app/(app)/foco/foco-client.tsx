@@ -53,13 +53,14 @@ type ContextoMeta = {
   defaultOpen: boolean;
 };
 
+// Todas defaultOpen=true · usuário colapsa se quiser.
 const CONTEXTOS: ContextoMeta[] = [
   { key: 'atrasadas', title: 'Atrasadas', emptyMsg: 'Nada atrasado.', defaultOpen: true },
   { key: 'hoje', title: 'Pra hoje', emptyMsg: 'Nada com prazo hoje.', defaultOpen: true },
   { key: 'bloqueadas', title: 'Bloqueadas', emptyMsg: 'Sem represas.', defaultOpen: true },
-  { key: 'sem_comment', title: 'Sem comentário (24h)', emptyMsg: 'Todas comentadas recentemente.', defaultOpen: false },
-  { key: 'sem_esforco', title: 'Sem esforço', emptyMsg: 'Todas com esforço definido.', defaultOpen: false },
-  { key: 'sem_horas', title: 'Sem horas realizadas', emptyMsg: 'Todas as andamento têm horas.', defaultOpen: false },
+  { key: 'sem_comment', title: 'Sem comentário (24h)', emptyMsg: 'Todas comentadas recentemente.', defaultOpen: true },
+  { key: 'sem_esforco', title: 'Sem esforço', emptyMsg: 'Todas com esforço definido.', defaultOpen: true },
+  { key: 'sem_horas', title: 'Sem horas realizadas', emptyMsg: 'Todas as andamento têm horas.', defaultOpen: true },
 ];
 
 export function FocoClient() {
@@ -234,7 +235,7 @@ export function FocoClient() {
 
   return (
     <div>
-      {/* Desktop · header */}
+      {/* Desktop · header com pill P0/P1 no slot direito (padrão Triagem) */}
       <div className="hidden md:block">
         <PageHeader
           title={
@@ -243,6 +244,18 @@ export function FocoClient() {
             ) : (
               'Foco indisponível'
             )
+          }
+          right={
+            hasFocus ? (
+              <button
+                type="button"
+                className={cn('triage-filter-chip', pillPrio && 'is-on')}
+                onClick={() => setPillPrio((v) => !v)}
+                title="Filtrar só prioridades P0/P1 em todas as seções"
+              >
+                <strong>P0/P1</strong>
+              </button>
+            ) : null
           }
         />
       </div>
@@ -295,19 +308,7 @@ export function FocoClient() {
             )}
           </div>
 
-          {/* Pill P0/P1 (única no momento — atalho rápido) */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className={cn('triage-filter-chip', pillPrio && 'is-on')}
-              onClick={() => setPillPrio((v) => !v)}
-              title="Filtrar só prioridades P0/P1 em todas as seções"
-            >
-              <strong>P0/P1</strong>
-            </button>
-          </div>
-
-          {/* 6 seções */}
+          {/* 6 seções (pill P0/P1 já no header) */}
           {CONTEXTOS.map((ctx) => {
             const items = filterPrio(groups[ctx.key]);
             const open = openSet.has(ctx.key);
@@ -426,8 +427,29 @@ function FocoSection({
 }
 
 // =========================================================================
-//  Linha · card largo padrão Triagem + inline-edit conforme contexto
+//  Linha · card largo · 5 inputs padronizados + motivo (cond.) + comment
 // =========================================================================
+//
+// Anatomia (igual Triagem):
+//   ┌ Top area (clickable → openEdit) ──────────────────────
+//   │ prio · 🔒 · 🤖 · título  ·  status-pill
+//   │ subetapa · idade · prazo · cliente · projeto
+//   ├ Action bar (stopPropagation) ─────────────────────────
+//   │ Row A · [📅 prazo] [📋 subetapa] [⏱ esforço] [⏱ horas] [🚫 motivo*]
+//   │ Row B · [💬 comment (flex-1)]              [Resolver] [Salvar]
+//   └────────────────────────────────────────────────────────
+// (*motivo disabled enquanto subetapa ≠ bloqueado)
+//
+// Gate Salvar:
+//   • dirty (algum field do draft ≠ task OU motivo/comment com texto)
+//   • requeridos por contexto:
+//     - atrasadas/hoje: prazo + subetapa filled (default já preenchidos)
+//     - bloqueadas: subetapa ≠ 'bloqueado'
+//     - sem_comment: comment.trim() não vazio
+//     - sem_esforco: esforco > 0
+//     - sem_horas: tempoRealHoras > 0
+//   • regra universal: subetapa === 'bloqueado' exige motivo
+
 function FocoTaskRow({
   task,
   contexto,
@@ -451,44 +473,47 @@ function FocoTaskRow({
   const sb = useMemo(() => createClient(), []);
   const { patchTask, currentPessoa } = useData();
 
-  // Edição pendente por contexto
   type Draft = {
     prazo: string;
     subetapa: string;
     esforco: number;
     tempoRealHoras: number;
+    motivo: string;
     comment: string;
   };
-  const [draft, setDraft] = useState<Draft>(() => ({
-    prazo: task.prazo || '',
-    subetapa: task.subetapa || '',
-    esforco: Number(task.esforco) || 0,
-    tempoRealHoras: Number(task.tempoRealHoras) || 0,
-    comment: '',
-  }));
-  // Reset se task mudar externamente (mantém draft.comment fora pra
-  // não apagar texto digitado em caso de re-render do task)
-  useEffect(() => {
-    setDraft((d) => ({
-      ...d,
+  const initial = useMemo<Draft>(
+    () => ({
       prazo: task.prazo || '',
       subetapa: task.subetapa || '',
       esforco: Number(task.esforco) || 0,
       tempoRealHoras: Number(task.tempoRealHoras) || 0,
-    }));
-  }, [task.id, task.prazo, task.subetapa, task.esforco, task.tempoRealHoras]);
+      motivo: '',
+      comment: '',
+    }),
+    [task.prazo, task.subetapa, task.esforco, task.tempoRealHoras],
+  );
+  const [draft, setDraft] = useState<Draft>(initial);
+  useEffect(() => {
+    setDraft((d) => ({ ...d, ...initial, motivo: d.motivo, comment: d.comment }));
+  }, [initial]);
 
-  // Gate Salvar — campos exigidos por contexto
+  const motivoRequired = draft.subetapa === 'bloqueado';
+
+  // Dirty: algo realmente mudou (field ≠ task OU motivo/comment com texto)
+  const isDirty =
+    draft.prazo !== (task.prazo || '') ||
+    draft.subetapa !== task.subetapa ||
+    draft.esforco !== (Number(task.esforco) || 0) ||
+    draft.tempoRealHoras !== (Number(task.tempoRealHoras) || 0) ||
+    draft.comment.trim() !== '' ||
+    (motivoRequired && draft.motivo.trim() !== '');
+
+  // Requireds por contexto (em cima de dirty)
   const faltam: string[] = [];
+  if (motivoRequired && !draft.motivo.trim()) faltam.push('motivo');
   switch (contexto) {
-    case 'atrasadas':
-    case 'hoje':
-      if (!draft.prazo) faltam.push('prazo');
-      if (!draft.subetapa) faltam.push('subetapa');
-      break;
     case 'bloqueadas':
-      if (!draft.subetapa) faltam.push('subetapa');
-      if (draft.subetapa === 'bloqueado') faltam.push('subetapa ≠ bloqueado');
+      if (draft.subetapa === 'bloqueado') faltam.push('mudar subetapa');
       break;
     case 'sem_comment':
       if (!draft.comment.trim()) faltam.push('comentário');
@@ -499,83 +524,82 @@ function FocoTaskRow({
     case 'sem_horas':
       if (!draft.tempoRealHoras || draft.tempoRealHoras <= 0) faltam.push('horas');
       break;
+    case 'atrasadas':
+    case 'hoje':
+      if (!draft.prazo) faltam.push('prazo');
+      if (!draft.subetapa) faltam.push('subetapa');
+      break;
   }
-  const canSave = faltam.length === 0;
+  const canSave = isDirty && faltam.length === 0;
 
   const persist = useCallback(async () => {
     const dbPatch: Record<string, unknown> = {};
     const localPatch: Partial<Task> = {};
-    switch (contexto) {
-      case 'atrasadas':
-      case 'hoje':
-        if (draft.prazo !== (task.prazo || '')) {
-          dbPatch.prazo = draft.prazo || null;
-          localPatch.prazo = draft.prazo;
-        }
-        if (draft.subetapa !== task.subetapa) {
-          dbPatch.subetapa = draft.subetapa;
-          localPatch.subetapa = draft.subetapa;
-        }
-        break;
-      case 'bloqueadas':
-        if (draft.subetapa !== task.subetapa) {
-          dbPatch.subetapa = draft.subetapa;
-          localPatch.subetapa = draft.subetapa;
-        }
-        break;
-      case 'sem_esforco':
-        if (draft.esforco !== (Number(task.esforco) || 0)) {
-          dbPatch.esforco = draft.esforco;
-          localPatch.esforco = draft.esforco;
-        }
-        break;
-      case 'sem_horas':
-        if (draft.tempoRealHoras !== (Number(task.tempoRealHoras) || 0)) {
-          dbPatch.tempo_real_horas = draft.tempoRealHoras;
-          localPatch.tempoRealHoras = draft.tempoRealHoras;
-        }
-        break;
-      case 'sem_comment': {
-        // Insert comment AS the assigned (sempre é o currentPessoa, já
-        // que Foco mostra só "minhas"). Mantém visivel_cliente=false
-        // por default — disciplina interna.
-        const nowIso = new Date().toISOString();
-        const { error } = await sb.from('task_comments').insert({
-          task_id: task.id,
-          body: draft.comment.trim(),
-          author: currentPessoa?.nome ?? 'app',
-          author_pessoa_id: currentPessoa?.id ?? null,
-          visivel_cliente: false,
-          from_cliente: false,
-          posted_em: nowIso,
-        });
-        if (error) {
-          toast.error('Erro ao comentar: ' + error.message);
-          return;
-        }
-        toast.success('Comentário registrado.');
-        // Limpa o campo (o filtro recarrega na próxima re-query —
-        // simplificação: o foco vai recalcular a próxima vez que load,
-        // mas pra UX imediata também marcamos resolved no contexto)
-        setDraft((d) => ({ ...d, comment: '' }));
-        onToggleResolved();
+    if (draft.prazo !== (task.prazo || '')) {
+      dbPatch.prazo = draft.prazo || null;
+      localPatch.prazo = draft.prazo;
+    }
+    if (draft.subetapa !== task.subetapa) {
+      dbPatch.subetapa = draft.subetapa;
+      localPatch.subetapa = draft.subetapa;
+    }
+    if (draft.esforco !== (Number(task.esforco) || 0)) {
+      dbPatch.esforco = draft.esforco;
+      localPatch.esforco = draft.esforco;
+    }
+    if (draft.tempoRealHoras !== (Number(task.tempoRealHoras) || 0)) {
+      dbPatch.tempo_real_horas = draft.tempoRealHoras;
+      localPatch.tempoRealHoras = draft.tempoRealHoras;
+    }
+    if (Object.keys(dbPatch).length > 0) {
+      const { error } = await sb.from('tasks').update(dbPatch).eq('id', task.id);
+      if (error) {
+        toast.error('Erro: ' + error.message);
         return;
       }
+      patchTask(task.id, localPatch);
     }
-    if (Object.keys(dbPatch).length === 0) {
-      toast.info('Nada pra salvar.');
-      return;
-    }
-    const { error } = await sb.from('tasks').update(dbPatch).eq('id', task.id);
-    if (error) {
-      toast.error('Erro: ' + error.message);
-      return;
-    }
-    patchTask(task.id, localPatch);
-    toast.success('Salvo.');
-  }, [contexto, draft, task, sb, patchTask, toast, currentPessoa, onToggleResolved]);
 
-  // Aging color pro título
+    // Posta motivo (se virou bloqueado) e/ou comment livre. Ambos
+    // entram como task_comments do dono da task (currentPessoa).
+    const nowIso = new Date().toISOString();
+    const commentsToInsert: Record<string, unknown>[] = [];
+    if (motivoRequired && draft.motivo.trim()) {
+      commentsToInsert.push({
+        task_id: task.id,
+        body: `Bloqueio: ${draft.motivo.trim()}`,
+        author: currentPessoa?.nome ?? 'app',
+        author_pessoa_id: currentPessoa?.id ?? null,
+        visivel_cliente: false,
+        from_cliente: false,
+        posted_em: nowIso,
+      });
+    }
+    if (draft.comment.trim()) {
+      commentsToInsert.push({
+        task_id: task.id,
+        body: draft.comment.trim(),
+        author: currentPessoa?.nome ?? 'app',
+        author_pessoa_id: currentPessoa?.id ?? null,
+        visivel_cliente: false,
+        from_cliente: false,
+        posted_em: nowIso,
+      });
+    }
+    if (commentsToInsert.length) {
+      const { error } = await sb.from('task_comments').insert(commentsToInsert);
+      if (error) {
+        toast.error('Salvo, mas comentário falhou: ' + error.message);
+      }
+    }
+
+    toast.success('Salvo.');
+    setDraft((d) => ({ ...d, motivo: '', comment: '' }));
+    // Auto-resolve no contexto atual — usuário não precisa clicar Resolver
+    if (!resolved) onToggleResolved();
+  }, [draft, task, sb, patchTask, toast, currentPessoa, motivoRequired, resolved, onToggleResolved]);
+
+  // Meta visual
   const etapaCor = etapaTempoColor(task);
   const etapaDias = etapaTempoDays(task);
   const corFrase =
@@ -586,192 +610,183 @@ function FocoTaskRow({
       : undefined;
   const late = atrasada(task);
 
+  // Width padrão do input inline (mesmo da Triagem)
+  const W = 'w-[170px]';
+
   return (
     <div
       className={cn(
-        'card p-3 md:p-4 cursor-pointer hover:border-line-strong transition-colors',
+        'card p-3 md:p-4 transition-colors',
         resolved && 'opacity-50',
       )}
-      onClick={() => openEdit(task.id)}
     >
-      <div className="flex items-start gap-3" onClick={(e) => e.stopPropagation()}>
-        {/* Checkbox local */}
-        <label
-          className="flex items-center pt-1 cursor-pointer"
-          title={resolved ? 'Desmarcar como resolvido hoje' : 'Marcar como resolvido hoje'}
-        >
-          <input
-            type="checkbox"
-            checked={resolved}
-            onChange={onToggleResolved}
-            className="cursor-pointer"
-          />
-        </label>
-
-        <div className="flex-1 min-w-0">
-          {/* Linha 1 · prio + flags + título */}
-          <div className="flex items-baseline gap-2 flex-wrap mb-1">
-            <span className={`pri pri-${task.prioridade}`}>
-              <span className="pri-dot" />
-              {task.prioridade}
-            </span>
-            {task.privada && (
-              <span className="ia-chip ia-chip-mini" title="Task privada">
-                🔒
-              </span>
-            )}
-            {task.criadoPorIa && (
-              <span className="ia-chip ia-chip-mini" title="Criada por automação IA">
-                🤖 IA
-              </span>
-            )}
-            <span
-              className={cn(
-                'font-medium text-ink break-words',
-                resolved && 'line-through text-muted',
-              )}
-            >
-              {task.titulo}
-            </span>
-          </div>
-
-          {/* Linha 2 · meta */}
-          <div className="text-xs text-muted font-mono break-words">
-            <span>{SUB_LABELS[task.subetapa] ?? task.subetapa}</span>
-            <span> · </span>
-            <span style={corFrase}>
-              {etapaDias <= 0 ? 'hoje' : etapaDias === 1 ? '1 dia' : `${etapaDias} dias`} nesta etapa
-            </span>
-            {task.prazo && (
-              <>
-                <span> · </span>
-                <span className={late ? 'text-[color:var(--danger)] font-semibold' : ''}>
-                  prazo {fmtDateShort(task.prazo)}
-                  {late && ` · ${fmtAtrasoLabel(diasAtraso(task))}`}
-                </span>
-              </>
-            )}
-            {contexto === 'sem_comment' && (
-              <>
-                <span> · </span>
-                <span>último comment: {lastComment ? fmtRelative(lastComment) : 'nunca'}</span>
-              </>
-            )}
-          </div>
-
-          {/* Linha 3 · cliente · projeto */}
-          <div className="text-xs text-ink-soft mt-1">
-            {clienteName} · {projetoName}
-          </div>
-        </div>
-      </div>
-
-      {/* Inline-edit · padrão Triagem */}
+      {/* Top area · clicável (abre modal) — separada da action bar */}
       <div
-        className="mt-3 pt-3 border-t border-line flex flex-col md:flex-row md:items-center gap-2 md:gap-3"
-        onClick={(e) => e.stopPropagation()}
+        className="cursor-pointer hover:bg-bg-alt -m-3 md:-m-4 p-3 md:p-4 rounded-t-md"
+        onClick={() => openEdit(task.id)}
       >
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-          {(contexto === 'atrasadas' || contexto === 'hoje') && (
+        {/* Linha 1 · prio + flags + título */}
+        <div className="flex items-baseline gap-2 flex-wrap mb-1">
+          <span className={`pri pri-${task.prioridade}`}>
+            <span className="pri-dot" />
+            {task.prioridade}
+          </span>
+          {task.privada && (
+            <span className="ia-chip ia-chip-mini" title="Task privada">🔒</span>
+          )}
+          {task.criadoPorIa && (
+            <span className="ia-chip ia-chip-mini" title="Criada por automação IA">🤖 IA</span>
+          )}
+          <span
+            className={cn(
+              'font-medium text-ink break-words',
+              resolved && 'line-through text-muted',
+            )}
+          >
+            {task.titulo}
+          </span>
+        </div>
+
+        {/* Linha 2 · meta */}
+        <div className="text-xs text-muted font-mono break-words">
+          <span>{SUB_LABELS[task.subetapa] ?? task.subetapa}</span>
+          <span> · </span>
+          <span style={corFrase}>
+            {etapaDias <= 0 ? 'hoje' : etapaDias === 1 ? '1 dia' : `${etapaDias} dias`} nesta etapa
+          </span>
+          {task.prazo && (
             <>
-              <span className="triage-inline-field w-[170px]" title="Prazo">
-                <Icon name="calendar" size={13} className="ic" />
-                <input
-                  type="date"
-                  value={draft.prazo}
-                  onChange={(e) => setDraft((d) => ({ ...d, prazo: e.target.value }))}
-                  className="triage-inline-select"
-                />
-              </span>
-              <span className="triage-inline-field w-[200px]" title="Subetapa">
-                <Icon name="list-filter" size={13} className="ic" />
-                <select
-                  value={draft.subetapa}
-                  onChange={(e) => setDraft((d) => ({ ...d, subetapa: e.target.value }))}
-                  className="triage-inline-select"
-                >
-                  {Object.keys(SUB_LABELS).map((k) => (
-                    <option key={k} value={k}>
-                      {SUB_LABELS[k]}
-                    </option>
-                  ))}
-                </select>
+              <span> · </span>
+              <span className={late ? 'text-[color:var(--danger)] font-semibold' : ''}>
+                prazo {fmtDateShort(task.prazo)}
+                {late && ` · ${fmtAtrasoLabel(diasAtraso(task))}`}
               </span>
             </>
           )}
-
-          {contexto === 'bloqueadas' && (
-            <span className="triage-inline-field w-[220px]" title="Mudar subetapa">
-              <Icon name="list-filter" size={13} className="ic" />
-              <select
-                value={draft.subetapa}
-                onChange={(e) => setDraft((d) => ({ ...d, subetapa: e.target.value }))}
-                className="triage-inline-select"
-              >
-                {Object.keys(SUB_LABELS).map((k) => (
-                  <option key={k} value={k}>
-                    {SUB_LABELS[k]}
-                  </option>
-                ))}
-              </select>
-            </span>
-          )}
-
           {contexto === 'sem_comment' && (
+            <>
+              <span> · </span>
+              <span>último comment: {lastComment ? fmtRelative(lastComment) : 'nunca'}</span>
+            </>
+          )}
+        </div>
+
+        {/* Linha 3 · cliente · projeto */}
+        <div className="text-xs text-ink-soft mt-1">
+          {clienteName} · {projetoName}
+        </div>
+      </div>
+
+      {/* Action bar · inline-edit padronizado · não dispara modal */}
+      <div className="mt-3 pt-3 border-t border-line space-y-2">
+        {/* Row A · 5 fields fixos (todos w-[170px]) */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`triage-inline-field ${W}`} title="Prazo">
+            <Icon name="calendar" size={13} className="ic" />
+            <input
+              type="date"
+              value={draft.prazo}
+              onChange={(e) => setDraft((d) => ({ ...d, prazo: e.target.value }))}
+              className="triage-inline-select"
+            />
+          </span>
+          <span className={`triage-inline-field ${W}`} title="Subetapa">
+            <Icon name="list-filter" size={13} className="ic" />
+            <select
+              value={draft.subetapa}
+              onChange={(e) => setDraft((d) => ({ ...d, subetapa: e.target.value }))}
+              className="triage-inline-select"
+            >
+              {Object.keys(SUB_LABELS).map((k) => (
+                <option key={k} value={k}>
+                  {SUB_LABELS[k]}
+                </option>
+              ))}
+            </select>
+          </span>
+          <span className={`triage-inline-field ${W}`} title="Esforço em horas">
+            <Icon name="timer" size={13} className="ic" />
+            <input
+              type="number"
+              min={0}
+              step={0.5}
+              value={draft.esforco || ''}
+              onChange={(e) => setDraft((d) => ({ ...d, esforco: Number(e.target.value) || 0 }))}
+              placeholder="Esforço (h)"
+              className="triage-inline-select"
+            />
+          </span>
+          <span className={`triage-inline-field ${W}`} title="Horas realizadas">
+            <Icon name="history" size={13} className="ic" />
+            <input
+              type="number"
+              min={0}
+              step={0.25}
+              value={draft.tempoRealHoras || ''}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, tempoRealHoras: Number(e.target.value) || 0 }))
+              }
+              placeholder="Horas reais"
+              className="triage-inline-select"
+            />
+          </span>
+          <span
+            className={cn(`triage-inline-field ${W}`, !motivoRequired && 'opacity-50')}
+            title={motivoRequired ? 'Motivo do bloqueio (obrigatório)' : 'Disponível se subetapa = Bloqueado'}
+          >
+            <Icon name="lock" size={13} className="ic" />
+            <input
+              type="text"
+              value={draft.motivo}
+              onChange={(e) => setDraft((d) => ({ ...d, motivo: e.target.value }))}
+              placeholder="Motivo (se bloqueado)"
+              disabled={!motivoRequired}
+              className="triage-inline-select"
+            />
+          </span>
+        </div>
+
+        {/* Row B · comment + Resolver + Salvar */}
+        <div className="flex flex-wrap md:flex-nowrap items-center gap-2">
+          <span className="triage-inline-field flex-1 min-w-[200px]" title="Comentário rápido">
+            <Icon name="comment" size={13} className="ic" />
             <input
               type="text"
               value={draft.comment}
               onChange={(e) => setDraft((d) => ({ ...d, comment: e.target.value }))}
-              placeholder="Comentário rápido…"
-              className="inp text-xs py-1.5 px-2 flex-1 min-w-[200px]"
+              placeholder="Comentário rápido (opcional)…"
+              className="triage-inline-select"
             />
-          )}
-
-          {contexto === 'sem_esforco' && (
-            <span className="triage-inline-field w-[170px]" title="Esforço em horas">
-              <Icon name="timer" size={13} className="ic" />
-              <input
-                type="number"
-                min={0}
-                step={0.5}
-                value={draft.esforco || ''}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, esforco: Number(e.target.value) || 0 }))
-                }
-                placeholder="Esforço (h)"
-                className="triage-inline-select"
-              />
-            </span>
-          )}
-
-          {contexto === 'sem_horas' && (
-            <span className="triage-inline-field w-[200px]" title="Horas realizadas">
-              <Icon name="timer" size={13} className="ic" />
-              <input
-                type="number"
-                min={0}
-                step={0.25}
-                value={draft.tempoRealHoras || ''}
-                onChange={(e) =>
-                  setDraft((d) => ({ ...d, tempoRealHoras: Number(e.target.value) || 0 }))
-                }
-                placeholder="Horas realizadas"
-                className="triage-inline-select"
-              />
-            </span>
-          )}
+          </span>
+          <button
+            type="button"
+            onClick={onToggleResolved}
+            className={cn(
+              'btn text-xs shrink-0 flex items-center gap-1',
+              resolved ? 'btn-primary' : 'btn-ghost',
+            )}
+            title={resolved ? 'Desmarcar resolvido hoje' : 'Marcar como resolvido (só hoje · não persiste)'}
+          >
+            <Icon name="check" size={13} />
+            {resolved ? 'Resolvido' : 'Resolver'}
+          </button>
+          <button
+            type="button"
+            onClick={canSave ? persist : undefined}
+            disabled={!canSave}
+            className="btn btn-primary text-xs shrink-0"
+            title={
+              canSave
+                ? 'Salvar'
+                : !isDirty
+                  ? 'Sem mudanças pra salvar'
+                  : `Falta: ${faltam.join(', ')}`
+            }
+            style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+          >
+            Salvar
+          </button>
         </div>
-
-        <button
-          type="button"
-          onClick={canSave ? persist : undefined}
-          disabled={!canSave}
-          className="btn btn-primary text-xs"
-          title={canSave ? 'Salvar' : `Falta: ${faltam.join(', ')}`}
-          style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
-        >
-          Salvar
-        </button>
       </div>
     </div>
   );
