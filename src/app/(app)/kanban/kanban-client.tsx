@@ -67,10 +67,12 @@ export function KanbanClient() {
     prazo: PrazoFilter;
   }>(() => {
     const s = getSharedFilters();
-    // Kanban's PrazoFilter é diferente do shared (tem d7/d15/mes em vez de
-    // hoje/sem). Só restaura os valores compatíveis.
+    // Kanban's PrazoFilter agora cobre todos os valores do shared
+    // (atrasadas, hoje, semana, sem) + d7/d15/mes extras.
     const sharedPrazo: PrazoFilter =
-      s.prazo === 'atrasadas' || s.prazo === 'semana' ? s.prazo : '';
+      s.prazo === 'atrasadas' || s.prazo === 'semana' || s.prazo === 'hoje' || s.prazo === 'sem'
+        ? s.prazo
+        : '';
     return {
       cliente: s.cliente,
       projeto: s.projeto,
@@ -81,7 +83,8 @@ export function KanbanClient() {
   useEffect(() => {
     // Só propaga prazo se for um valor que o shared store entende.
     const prazoForShare =
-      filters.prazo === 'atrasadas' || filters.prazo === 'semana'
+      filters.prazo === 'atrasadas' || filters.prazo === 'semana' ||
+      filters.prazo === 'hoje' || filters.prazo === 'sem'
         ? filters.prazo
         : '';
     patchSharedFilters({
@@ -308,13 +311,14 @@ export function KanbanClient() {
                 cliente: filters.cliente,
                 projeto: filters.projeto,
                 resp: filters.pessoa,
-                prazo: '',
+                prazo: filters.prazo as StdFilters['prazo'],
               } satisfies StdFilters}
               set={(key, value) => {
                 if (key === 'q') setQDraft(value);
                 else if (key === 'cliente') setFilters({ ...filters, cliente: value, projeto: value ? filters.projeto : '' });
                 else if (key === 'projeto') setFilters({ ...filters, projeto: value });
                 else if (key === 'resp') setFilters({ ...filters, pessoa: value });
+                else if (key === 'prazo') setFilters({ ...filters, prazo: value as PrazoFilter });
               }}
               onClear={() => {
                 setQDraft('');

@@ -152,7 +152,7 @@ export function normalizeTag(s: string): string {
 
 // ============ Janelas de prazo (filtros) ============
 
-export type PrazoFilter = '' | 'atrasadas' | 'semana' | 'd7' | 'd15' | 'mes';
+export type PrazoFilter = '' | 'atrasadas' | 'hoje' | 'semana' | 'sem' | 'd7' | 'd15' | 'mes';
 
 /** ISO 'YYYY-MM-DD' do dia local (não UTC). */
 export function todayIso(): string {
@@ -202,8 +202,10 @@ export function matchesPrazoFilter(
 ): boolean {
   if (!mode) return true;
   if (mode === 'atrasadas') return atrasada(t);
+  if (mode === 'sem') return !t.prazo;
   if (!t.prazo) return false;
   const today = todayIso();
+  if (mode === 'hoje') return t.prazo === today;
   if (mode === 'semana') {
     const [mon, sun] = weekRangeIso(today);
     return t.prazo >= mon && t.prazo <= sun;

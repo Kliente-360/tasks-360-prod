@@ -17,7 +17,7 @@ import { isPreTriagem, triageFailures } from '@/lib/task-utils';
 import { STATUS } from '@/lib/task-constants';
 import { useMemo } from 'react';
 
-export const APP_VERSION = 'v1.03.055';
+export const APP_VERSION = 'v1.03.056';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
