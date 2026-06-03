@@ -24,6 +24,7 @@ import { useToast } from '@/components/toast';
 import { createClient } from '@/lib/supabase/client';
 import { fmtPostedEm } from '@/lib/format';
 import { Icon, type IconName } from '@/components/icons';
+import { useClickAway } from '@/lib/use-click-away';
 
 type NotifKind =
   | 'mention'
@@ -242,13 +243,18 @@ export function NotifBell() {
     [markRead, openEdit],
   );
 
+  // Click fora fecha · mesmo padrão do ProfileMenu (overlay z-30 não
+  // bastava porque header está em z-40+, clicks passavam por cima).
+  // Declarado ANTES do early return pra respeitar rules-of-hooks.
+  const wrapRef = useClickAway<HTMLDivElement>(() => setOpen(false));
+
   if (!pessoaId) {
     // Sem auth ainda — não renderiza
     return null;
   }
 
   return (
-    <div className="relative">
+    <div className="relative" ref={wrapRef}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -269,9 +275,7 @@ export function NotifBell() {
       </button>
 
       {open && (
-        <>
-          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="fixed md:absolute top-14 md:top-full right-3 md:right-0 md:mt-2 bg-elev border border-line rounded-lg shadow-xl z-40 w-[340px] max-w-[calc(100vw-24px)] max-h-[70vh] overflow-hidden flex flex-col">
+        <div className="fixed md:absolute top-14 md:top-full right-3 md:right-0 md:mt-2 bg-elev border border-line rounded-lg shadow-xl z-40 w-[340px] max-w-[calc(100vw-24px)] max-h-[70vh] overflow-hidden flex flex-col">
             <div className="px-3 py-2 border-b border-line flex items-center justify-between">
               <div className="font-brand font-semibold text-sm">Notificações</div>
               {unreadCount > 0 && (
@@ -343,8 +347,7 @@ export function NotifBell() {
                 <div className="px-4 py-8 text-center text-xs text-muted italic">Nada nesse filtro.</div>
               )}
             </div>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
