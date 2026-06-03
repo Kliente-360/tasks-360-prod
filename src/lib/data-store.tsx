@@ -542,23 +542,64 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     () => new Set(clientes.filter((c) => c.ehInterno).map((c) => c.id)),
     [clientes],
   );
+  // Para interno: ids de clientes/projetos internos onde ele tem
+  // pelo menos uma task atribuída. Usado pra liberar a visualização
+  // só do que ele precisa lookup-ar (sem expor o cliente interno
+  // inteiro em dropdowns/cadastros).
+  const myInternalClienteIds = useMemo<Set<string>>(() => {
+    if (viewerRole === 'admin') return new Set();
+    const myPessoaId = currentPessoa?.id ?? '';
+    const out = new Set<string>();
+    for (const t of tasks) {
+      if (t.pessoaId === myPessoaId && internalClienteIds.has(t.clienteId ?? '')) {
+        if (t.clienteId) out.add(t.clienteId);
+      }
+    }
+    return out;
+  }, [tasks, viewerRole, internalClienteIds, currentPessoa?.id]);
+  const myInternalProjetoIds = useMemo<Set<string>>(() => {
+    if (viewerRole === 'admin') return new Set();
+    const myPessoaId = currentPessoa?.id ?? '';
+    const out = new Set<string>();
+    for (const t of tasks) {
+      if (t.pessoaId === myPessoaId && internalClienteIds.has(t.clienteId ?? '')) {
+        if (t.projetoId) out.add(t.projetoId);
+      }
+    }
+    return out;
+  }, [tasks, viewerRole, internalClienteIds, currentPessoa?.id]);
+
   const visibleClientes = useMemo(
-    () => (viewerRole === 'admin' ? clientes : clientes.filter((c) => !c.ehInterno)),
-    [clientes, viewerRole],
+    () =>
+      viewerRole === 'admin'
+        ? clientes
+        : clientes.filter((c) => !c.ehInterno || myInternalClienteIds.has(c.id)),
+    [clientes, viewerRole, myInternalClienteIds],
   );
   const visibleProjetos = useMemo(
     () =>
       viewerRole === 'admin'
         ? projetos
-        : projetos.filter((p) => !internalClienteIds.has(p.clienteId ?? '')),
-    [projetos, viewerRole, internalClienteIds],
+        : projetos.filter(
+            (p) =>
+              !internalClienteIds.has(p.clienteId ?? '') ||
+              myInternalProjetoIds.has(p.id),
+          ),
+    [projetos, viewerRole, internalClienteIds, myInternalProjetoIds],
   );
   const visibleTasks = useMemo(
-    () =>
-      viewerRole === 'admin'
-        ? tasks
-        : tasks.filter((t) => !internalClienteIds.has(t.clienteId ?? '')),
-    [tasks, viewerRole, internalClienteIds],
+    () => {
+      if (viewerRole === 'admin') return tasks;
+      // Interno · vê tasks de cliente externo OU onde é o responsável
+      // (mesma regra do RLS — alinhamento jun/2026).
+      const myPessoaId = currentPessoa?.id ?? '';
+      return tasks.filter(
+        (t) =>
+          !internalClienteIds.has(t.clienteId ?? '') ||
+          t.pessoaId === myPessoaId,
+      );
+    },
+    [tasks, viewerRole, internalClienteIds, currentPessoa?.id],
   );
 
   const value = useMemo<DataContextValue>(
