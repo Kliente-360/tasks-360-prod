@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.061 · **Atualizado**: 05/06/2026 · branch `main`
+> **Versão**: v1.03.073 · **Atualizado**: 05/06/2026 · branch `main`
 
 ---
 
@@ -49,7 +49,12 @@ Bump MINOR 02→03 marcou o fechamento desse ciclo. Concluídos:
 - ✅ **A.4 · Triagem obrigatória pra IA** (v1.03.043-055) · campos `triada_em`/`triada_por`/`motivo_arquivamento` em tasks · `isPreTriagem(t)` filtra IA pré-triagem de todas as telas (Backlog/Foco/Kanban/Calendário/Dashboard/Briefing) · aba Triagem mostra Aceitar/Rejeitar com gate dos 5 campos + `RejectPopover` com motivos predefinidos · counter (bolinha vermelha) na aba Triagem do header com count total de pendências
 - ✅ **Triagem · reformulação completa** (v1.03.056-059) · 5 campos críticos universais (cliente·projeto·resp·prazo·esforço) com gate por subetapa (prazo/esforço só ≥ escopo_definido); 6 pills de filtro com counts dinâmicos; inline edit em TODAS as tasks (não só IA); modo manual com botão Salvar; bulk + checkboxes removidos (triagem é one-by-one); inputs com largura fixa + ícones do FilterBar; **edição pendente** (não autosave) — só persiste ao clicar Aceitar/Salvar, fila estável durante edição; sort default = criadoEm DESC
 - ✅ **Fix filtro Prazo no Kanban** (v1.03.056) · setter ignorava key 'prazo'; estendido `matchesPrazoFilter` pra suportar 'hoje' e 'sem' alinhando com FilterBar padrão
-- ✅ **RLS Kliente 360 · interno owner** (v1.03.060-061) · admin vê tudo, interno vê tasks de cliente não-interno OU onde é responsável; novo helper `app_is_admin()`; FilterBar replicou o gate de Projeto desabilitado até selecionar Cliente
+- ✅ **RLS Kliente 360 · interno owner** (v1.03.060-066) · admin vê tudo, interno vê tasks de cliente não-interno OU onde é responsável; novo helper `app_is_admin()`; FilterBar replicou o gate de Projeto desabilitado até selecionar Cliente; data-store frontend alinhado (filtro espelho antigo cortava a task antes do render)
+- ✅ **NAV role-filter + Export gate + Onboarding** (v1.03.065) · NAV desktop estava vazando Briefing/Triagem/Cadastros pra interno e cliente; Export icon escondido pra não-admin; Onboarding no menu perfil disponível pra todo staff
+- ✅ **Timer · subetapa em_definicao em diante** (v1.03.064) · seletor antes filtrava só status='andamento'; agora aceita rank ≥ 1 (em_definicao→em_implantacao), exclui backlog/bloqueado/concluido
+- ✅ **Pessoa desativada some de dropdowns** (v1.03.068) · filtro `invited_at !== null` em todos os pontos que listam staff atribuível (FilterBar, Triagem, task modal, mention resolution)
+- ✅ **Backlog/Kanban · chip Xd + frase nesta etapa unificados** (v1.03.069) · chip duplicado removido; nova frase única "X dias nesta etapa" baseada em subetapaEm (fonte unificada `etapaTempoDays`), com cor por threshold ≥7d âmbar / ≥14d vermelho, só de em_definicao em diante exceto concluído
+- ✅ **Notifications · sistema completo** (v1.03.070-073) · fix lazy promise (`.then()` faltando), implementação de `cliente_comentou` + `cliente_respondeu` do Portal, NotifBell com 4 grupos (Todas · Menção · Updates em tasks · Updates do cliente), ícones bell/mention/activity/inbox, RLS apertada (SELECT só recipient, UPDATE só recipient, INSERT authenticated, DELETE bloqueado), click-outside fecha o sino
 
 ---
 
