@@ -477,51 +477,36 @@ export function DashboardClient() {
           </div>
         </div>
 
-        {/* Carga por pessoa · horas remanescentes vs capacidade semanal */}
+        {/* Volume por pessoa · simétrico ao "Volume por cliente". Alocação
+            em horas vs capacidade fica no Briefing (Weekly Capacity). */}
         <div className="bg-elev border border-line rounded-xl">
-          <SectionHeader title="Carga por pessoa" sub="horas remanescentes (esforço − tempo realizado) · linha cheia = capacidade semanal · exclui PMs e clientes" />
+          <SectionHeader title="Volume por pessoa" sub="tasks abertas · vermelho = atrasadas · exclui PMs e clientes" />
           <div className="p-3 md:p-4 flex flex-col gap-1.5">
             {cargaPessoa.length === 0 && <p className="text-xs text-muted">Sem dados</p>}
-            {cargaPessoa.map((p) => {
-              // Escala: maior entre maxCarga e maior capacidade × 1.2 (folga visual)
-              const escala = Math.max(maxCarga, p.capacidade * 1.2, 1);
-              const pctTotal = (p.total / escala) * 100;
-              const pctCap = p.capacidade > 0 ? (p.capacidade / escala) * 100 : null;
-              const over = p.capacidade > 0 && p.total > p.capacidade;
-              const corBarra = p.nAtrasadas > 0 ? 'var(--danger)' : over ? 'var(--warn)' : 'var(--brand)';
-              return (
-                <div key={p.pessoaId} className="flex items-center gap-2">
-                  <div className="w-16 text-xs text-right text-muted truncate shrink-0">{p.nome.split(' ')[0]}</div>
-                  <div className="flex-1 h-5 relative" style={{ background: 'var(--surface-3)', borderRadius: 3 }}>
-                    {/* Barra principal · cor por status */}
+            {cargaPessoa.map((p) => (
+              <div key={p.pessoaId} className="flex items-center gap-2">
+                <div className="w-16 text-xs text-right text-muted truncate shrink-0">{p.nome.split(' ')[0]}</div>
+                <div className="flex-1 h-5 flex">
+                  {(p.total - p.nAtrasadas) > 0 && (
                     <div style={{
-                      position: 'absolute',
-                      left: 0, top: 0, bottom: 0,
-                      width: `${Math.min(100, pctTotal)}%`,
-                      background: corBarra,
-                      borderRadius: 3,
-                      transition: 'width 200ms ease',
+                      width: `${((p.total - p.nAtrasadas) / maxCarga) * 100}%`,
+                      background: 'var(--brand)',
+                      flexShrink: 0,
+                      borderRadius: p.nAtrasadas === 0 ? 3 : '3px 0 0 3px',
                     }} />
-                    {/* Linha de capacidade · marker visual */}
-                    {pctCap != null && pctCap > 0 && pctCap <= 100 && (
-                      <div style={{
-                        position: 'absolute',
-                        left: `${pctCap}%`,
-                        top: -2,
-                        bottom: -2,
-                        width: 2,
-                        background: 'var(--fg-soft)',
-                        opacity: 0.4,
-                      }} title={`Capacidade: ${p.capacidade}h/sem`} />
-                    )}
-                  </div>
-                  <span className="text-[10px] font-mono text-muted w-14 text-right shrink-0">
-                    <span className={over ? 'text-[var(--warn)] font-semibold' : 'text-ink'}>{p.total}h</span>
-                    {p.capacidade > 0 && <span className="opacity-60">/{p.capacidade}h</span>}
-                  </span>
+                  )}
+                  {p.nAtrasadas > 0 && (
+                    <div style={{
+                      width: `${(p.nAtrasadas / maxCarga) * 100}%`,
+                      background: '#ef4444',
+                      flexShrink: 0,
+                      borderRadius: (p.total - p.nAtrasadas) === 0 ? 3 : '0 3px 3px 0',
+                    }} />
+                  )}
                 </div>
-              );
-            })}
+                <span className="text-[10px] font-mono text-muted w-6 text-right shrink-0">{p.total}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -778,23 +763,20 @@ function DashboardMobilePanel({
         </div>
       </div>
 
-      {/* Carga por pessoa */}
+      {/* Volume por pessoa */}
       <div className="m-sec mt14">
-        <div className="h"><h3>Carga por pessoa</h3></div>
+        <div className="h"><h3>Volume por pessoa</h3></div>
         <div className="body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {cargaPessoa.slice(0, 8).map((c) => {
-            // Pct relativo: contra capacidade se houver (>0), senão contra
-            // o maior valor da equipe (fallback visual). Over se >85% da cap.
-            const base = c.capacidade > 0 ? c.capacidade : maxCarga;
-            const pct = Math.round((c.total / base) * 100);
-            const over = c.capacidade > 0 ? c.total > c.capacidade * 0.85 : pct > 85;
+            const pct = Math.round((c.total / maxCarga) * 100);
+            const over = pct > 85;
             return (
               <div key={c.pessoaId} className="loadrow">
                 <TaskAvatar name={c.nome} />
                 <div className="track">
                   <div className={cn('fill', over && 'over')} style={{ width: `${Math.min(pct, 100)}%` }} />
                 </div>
-                <span className="pct">{c.total}h</span>
+                <span className="pct">{c.total}</span>
               </div>
             );
           })}

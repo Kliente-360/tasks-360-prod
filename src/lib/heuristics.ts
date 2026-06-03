@@ -915,51 +915,53 @@ export function computeVolumeByCliente(tasks: Task[], clientes: Cliente[]): Volu
 //  Carga por pessoa (contagem, split tasks atrasadas)
 // ─────────────────────────────────────────────────────────
 
-export interface CargaPessoa {
+export interface VolumePessoa {
   pessoaId: string;
   nome: string;
-  /** Soma de horas restantes (effRemaining) das tasks abertas atribuídas */
+  /** Contagem de tasks abertas atribuídas */
   total: number;
   /** Quantas dessas tasks estão atrasadas (prazo < hoje) */
   nAtrasadas: number;
-  /** Capacidade declarada em pessoas.capacidade_horas_semana (0 se sem cap) */
-  capacidade: number;
 }
 
 /**
- * Carga atual por pessoa em HORAS (esforço remanescente das tasks abertas).
+ * Volume de tasks por pessoa (count). Renderiza no Dashboard simétrico
+ * ao "Volume por cliente". Alocação em HORAS por pessoa fica no Briefing
+ * via `computeWeeklyCapacityAnalysis` (que usa effRemaining e capacidade
+ * semanal).
  * - Filtros: exclui pessoas com role=cliente e is_pm=true.
- * - Soma: effRemaining(t) = max(0, esforço - tempoRealHoras já registrado).
  * - Privadas do CEO entram naturalmente quando o viewer é o CEO (RLS libera).
  */
-export function computeCargaByPessoa(tasks: Task[], pessoas: Pessoa[]): CargaPessoa[] {
+export function computeCargaByPessoa(tasks: Task[], pessoas: Pessoa[]): VolumePessoa[] {
   const todayStr = new Date().toISOString().slice(0, 10);
   const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
-  const horasMap = new Map<string, number>();
+  const totalMap = new Map<string, number>();
   const atrasMap = new Map<string, number>();
   for (const t of abertas) {
     if (!t.pessoaId) continue;
-    horasMap.set(t.pessoaId, (horasMap.get(t.pessoaId) ?? 0) + effRemaining(t));
+    totalMap.set(t.pessoaId, (totalMap.get(t.pessoaId) ?? 0) + 1);
     if (t.prazo && t.prazo < todayStr) {
       atrasMap.set(t.pessoaId, (atrasMap.get(t.pessoaId) ?? 0) + 1);
     }
   }
   const pessoasById = new Map(pessoas.map((p) => [p.id, p]));
-  const result: CargaPessoa[] = [];
-  for (const [pessoaId, total] of horasMap) {
+  const result: VolumePessoa[] = [];
+  for (const [pessoaId, total] of totalMap) {
     const p = pessoasById.get(pessoaId);
     if (!p || p.role === 'cliente' || p.is_pm) continue;
     result.push({
       pessoaId,
       nome: p.nome,
-      total: Math.round(total * 10) / 10,
+      total,
       nAtrasadas: atrasMap.get(pessoaId) ?? 0,
-      capacidade: Number(p.capacidade_horas_semana) || 0,
     });
   }
   result.sort((a, b) => b.total - a.total);
   return result;
 }
+
+/** @deprecated use VolumePessoa (mesmo shape) */
+export type CargaPessoa = VolumePessoa;
 
 // ─────────────────────────────────────────────────────────
 //  Saúde por pessoa
