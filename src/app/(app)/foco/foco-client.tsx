@@ -53,6 +53,15 @@ type ContextoMeta = {
   defaultOpen: boolean;
 };
 
+// Motivos pré-definidos pro bloqueio · picklist (não texto livre).
+const MOTIVOS_BLOQUEIO = [
+  'Aguardando cliente',
+  'Aguardando aprovação interna',
+  'Aguardando dependência externa',
+  'Aguardando informação',
+  'Bloqueio técnico',
+] as const;
+
 // Todas defaultOpen=true · usuário colapsa se quiser.
 const CONTEXTOS: ContextoMeta[] = [
   { key: 'atrasadas', title: 'Atrasadas', emptyMsg: 'Nada atrasado.', defaultOpen: true },
@@ -610,9 +619,6 @@ function FocoTaskRow({
       : undefined;
   const late = atrasada(task);
 
-  // Width padrão do input inline (mesmo da Triagem)
-  const W = 'w-[170px]';
-
   return (
     <div
       className={cn(
@@ -620,151 +626,70 @@ function FocoTaskRow({
         resolved && 'opacity-50',
       )}
     >
-      {/* Top area · clicável (abre modal) — separada da action bar */}
-      <div
-        className="cursor-pointer hover:bg-bg-alt -m-3 md:-m-4 p-3 md:p-4 rounded-t-md"
-        onClick={() => openEdit(task.id)}
-      >
-        {/* Linha 1 · prio + flags + título */}
-        <div className="flex items-baseline gap-2 flex-wrap mb-1">
-          <span className={`pri pri-${task.prioridade}`}>
-            <span className="pri-dot" />
-            {task.prioridade}
-          </span>
-          {task.privada && (
-            <span className="ia-chip ia-chip-mini" title="Task privada">🔒</span>
-          )}
-          {task.criadoPorIa && (
-            <span className="ia-chip ia-chip-mini" title="Criada por automação IA">🤖 IA</span>
-          )}
-          <span
-            className={cn(
-              'font-medium text-ink break-words',
-              resolved && 'line-through text-muted',
+      {/* Top · area clicável (esquerda) + botões Resolver/Salvar (direita) */}
+      <div className="flex items-start justify-between gap-3">
+        <div
+          className="cursor-pointer hover:opacity-90 flex-1 min-w-0"
+          onClick={() => openEdit(task.id)}
+        >
+          {/* Linha 1 · prio + flags + título */}
+          <div className="flex items-baseline gap-2 flex-wrap mb-1">
+            <span className={`pri pri-${task.prioridade}`}>
+              <span className="pri-dot" />
+              {task.prioridade}
+            </span>
+            {task.privada && (
+              <span className="ia-chip ia-chip-mini" title="Task privada">🔒</span>
             )}
-          >
-            {task.titulo}
-          </span>
-        </div>
-
-        {/* Linha 2 · meta */}
-        <div className="text-xs text-muted font-mono break-words">
-          <span>{SUB_LABELS[task.subetapa] ?? task.subetapa}</span>
-          <span> · </span>
-          <span style={corFrase}>
-            {etapaDias <= 0 ? 'hoje' : etapaDias === 1 ? '1 dia' : `${etapaDias} dias`} nesta etapa
-          </span>
-          {task.prazo && (
-            <>
-              <span> · </span>
-              <span className={late ? 'text-[color:var(--danger)] font-semibold' : ''}>
-                prazo {fmtDateShort(task.prazo)}
-                {late && ` · ${fmtAtrasoLabel(diasAtraso(task))}`}
-              </span>
-            </>
-          )}
-          {contexto === 'sem_comment' && (
-            <>
-              <span> · </span>
-              <span>último comment: {lastComment ? fmtRelative(lastComment) : 'nunca'}</span>
-            </>
-          )}
-        </div>
-
-        {/* Linha 3 · cliente · projeto */}
-        <div className="text-xs text-ink-soft mt-1">
-          {clienteName} · {projetoName}
-        </div>
-      </div>
-
-      {/* Action bar · inline-edit padronizado · não dispara modal */}
-      <div className="mt-3 pt-3 border-t border-line space-y-2">
-        {/* Row A · 5 fields fixos (todos w-[170px]) */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={`triage-inline-field ${W}`} title="Prazo">
-            <Icon name="calendar" size={13} className="ic" />
-            <input
-              type="date"
-              value={draft.prazo}
-              onChange={(e) => setDraft((d) => ({ ...d, prazo: e.target.value }))}
-              className="triage-inline-select"
-            />
-          </span>
-          <span className={`triage-inline-field ${W}`} title="Subetapa">
-            <Icon name="list-filter" size={13} className="ic" />
-            <select
-              value={draft.subetapa}
-              onChange={(e) => setDraft((d) => ({ ...d, subetapa: e.target.value }))}
-              className="triage-inline-select"
+            {task.criadoPorIa && (
+              <span className="ia-chip ia-chip-mini" title="Criada por automação IA">🤖 IA</span>
+            )}
+            <span
+              className={cn(
+                'font-medium text-ink break-words',
+                resolved && 'line-through text-muted',
+              )}
             >
-              {Object.keys(SUB_LABELS).map((k) => (
-                <option key={k} value={k}>
-                  {SUB_LABELS[k]}
-                </option>
-              ))}
-            </select>
-          </span>
-          <span className={`triage-inline-field ${W}`} title="Esforço em horas">
-            <Icon name="timer" size={13} className="ic" />
-            <input
-              type="number"
-              min={0}
-              step={0.5}
-              value={draft.esforco || ''}
-              onChange={(e) => setDraft((d) => ({ ...d, esforco: Number(e.target.value) || 0 }))}
-              placeholder="Esforço (h)"
-              className="triage-inline-select"
-            />
-          </span>
-          <span className={`triage-inline-field ${W}`} title="Horas realizadas">
-            <Icon name="history" size={13} className="ic" />
-            <input
-              type="number"
-              min={0}
-              step={0.25}
-              value={draft.tempoRealHoras || ''}
-              onChange={(e) =>
-                setDraft((d) => ({ ...d, tempoRealHoras: Number(e.target.value) || 0 }))
-              }
-              placeholder="Horas reais"
-              className="triage-inline-select"
-            />
-          </span>
-          <span
-            className={cn(`triage-inline-field ${W}`, !motivoRequired && 'opacity-50')}
-            title={motivoRequired ? 'Motivo do bloqueio (obrigatório)' : 'Disponível se subetapa = Bloqueado'}
-          >
-            <Icon name="lock" size={13} className="ic" />
-            <input
-              type="text"
-              value={draft.motivo}
-              onChange={(e) => setDraft((d) => ({ ...d, motivo: e.target.value }))}
-              placeholder="Motivo (se bloqueado)"
-              disabled={!motivoRequired}
-              className="triage-inline-select"
-            />
-          </span>
+              {task.titulo}
+            </span>
+          </div>
+
+          {/* Linha 2 · meta */}
+          <div className="text-xs text-muted font-mono break-words">
+            <span>{SUB_LABELS[task.subetapa] ?? task.subetapa}</span>
+            <span> · </span>
+            <span style={corFrase}>
+              {etapaDias <= 0 ? 'hoje' : etapaDias === 1 ? '1 dia' : `${etapaDias} dias`} nesta etapa
+            </span>
+            {task.prazo && (
+              <>
+                <span> · </span>
+                <span className={late ? 'text-[color:var(--danger)] font-semibold' : ''}>
+                  prazo {fmtDateShort(task.prazo)}
+                  {late && ` · ${fmtAtrasoLabel(diasAtraso(task))}`}
+                </span>
+              </>
+            )}
+            {contexto === 'sem_comment' && (
+              <>
+                <span> · </span>
+                <span>último comment: {lastComment ? fmtRelative(lastComment) : 'nunca'}</span>
+              </>
+            )}
+          </div>
+
+          {/* Linha 3 · cliente · projeto */}
+          <div className="text-xs text-ink-soft mt-1">
+            {clienteName} · {projetoName}
+          </div>
         </div>
 
-        {/* Row B · comment + Resolver + Salvar */}
-        <div className="flex flex-wrap md:flex-nowrap items-center gap-2">
-          <span className="triage-inline-field flex-1 min-w-[200px]" title="Comentário rápido">
-            <Icon name="comment" size={13} className="ic" />
-            <input
-              type="text"
-              value={draft.comment}
-              onChange={(e) => setDraft((d) => ({ ...d, comment: e.target.value }))}
-              placeholder="Comentário rápido (opcional)…"
-              className="triage-inline-select"
-            />
-          </span>
+        {/* Botões no topo direito · Resolver (ghost, só muda label) + Salvar */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={onToggleResolved}
-            className={cn(
-              'btn text-xs shrink-0 flex items-center gap-1',
-              resolved ? 'btn-primary' : 'btn-ghost',
-            )}
+            className="btn btn-ghost text-xs flex items-center gap-1"
             title={resolved ? 'Desmarcar resolvido hoje' : 'Marcar como resolvido (só hoje · não persiste)'}
           >
             <Icon name="check" size={13} />
@@ -774,7 +699,7 @@ function FocoTaskRow({
             type="button"
             onClick={canSave ? persist : undefined}
             disabled={!canSave}
-            className="btn btn-primary text-xs shrink-0"
+            className="btn btn-primary text-xs"
             title={
               canSave
                 ? 'Salvar'
@@ -787,6 +712,102 @@ function FocoTaskRow({
             Salvar
           </button>
         </div>
+      </div>
+
+      {/* Action bar · 6 inputs em UMA linha · comment ocupa o resto */}
+      <div className="mt-3 pt-3 border-t border-line flex items-center gap-2 flex-nowrap overflow-x-auto">
+        {/* 1. Prazo */}
+        <span className="triage-inline-field w-[150px] shrink-0" title="Prazo">
+          <Icon name="calendar" size={13} className="ic" />
+          <input
+            type="date"
+            value={draft.prazo}
+            onChange={(e) => setDraft((d) => ({ ...d, prazo: e.target.value }))}
+            className="triage-inline-select"
+          />
+        </span>
+        {/* 2. Esforço (compacto · só number) */}
+        <span className="triage-inline-field w-[95px] shrink-0" title="Esforço em horas">
+          <Icon name="timer" size={13} className="ic" />
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            value={draft.esforco || ''}
+            onChange={(e) => setDraft((d) => ({ ...d, esforco: Number(e.target.value) || 0 }))}
+            placeholder="esf"
+            className="triage-inline-select"
+          />
+        </span>
+        {/* 3. Horas realizadas (compacto · só number) */}
+        <span className="triage-inline-field w-[95px] shrink-0" title="Horas realizadas">
+          <Icon name="history" size={13} className="ic" />
+          <input
+            type="number"
+            min={0}
+            step={0.25}
+            value={draft.tempoRealHoras || ''}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, tempoRealHoras: Number(e.target.value) || 0 }))
+            }
+            placeholder="hrs"
+            className="triage-inline-select"
+          />
+        </span>
+        {/* 4. Status (subetapa) */}
+        <span className="triage-inline-field w-[150px] shrink-0" title="Subetapa">
+          <Icon name="list-filter" size={13} className="ic" />
+          <select
+            value={draft.subetapa}
+            onChange={(e) => setDraft((d) => ({ ...d, subetapa: e.target.value }))}
+            className="triage-inline-select"
+          >
+            {Object.keys(SUB_LABELS).map((k) => (
+              <option key={k} value={k}>
+                {SUB_LABELS[k]}
+              </option>
+            ))}
+          </select>
+        </span>
+        {/* 5. Motivo (picklist · habilitado só se subetapa = bloqueado) */}
+        <span
+          className={cn(
+            'triage-inline-field w-[170px] shrink-0',
+            !motivoRequired && 'opacity-50',
+          )}
+          title={
+            motivoRequired
+              ? 'Motivo do bloqueio (obrigatório)'
+              : 'Disponível se subetapa = Bloqueado'
+          }
+        >
+          <Icon name="lock" size={13} className="ic" />
+          <select
+            value={draft.motivo}
+            onChange={(e) => setDraft((d) => ({ ...d, motivo: e.target.value }))}
+            disabled={!motivoRequired}
+            className="triage-inline-select"
+          >
+            <option value="">{motivoRequired ? '— motivo —' : 'motivo'}</option>
+            {MOTIVOS_BLOQUEIO.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+        </span>
+        {/* 6. Comment (flex-1 · pega o resto da linha) */}
+        <span
+          className="triage-inline-field flex-1 min-w-[140px]"
+          title="Comentário rápido (opcional)"
+        >
+          <Icon name="comment" size={13} className="ic" />
+          <input
+            type="text"
+            value={draft.comment}
+            onChange={(e) => setDraft((d) => ({ ...d, comment: e.target.value }))}
+            placeholder="Comentário rápido (opcional)…"
+            className="triage-inline-select"
+          />
+        </span>
       </div>
     </div>
   );
