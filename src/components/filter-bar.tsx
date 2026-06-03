@@ -61,9 +61,15 @@ interface FilterSelectProps {
   value: string;
   options: ReadonlyArray<Option>;
   onChange: (v: string) => void;
+  /** Quando true, o pill fica visualmente apagado e não abre o menu.
+   *  Usado pra dependências (ex: Projeto desabilitado até escolher
+   *  Cliente). */
+  disabled?: boolean;
+  /** Tooltip exibido quando disabled. */
+  disabledTitle?: string;
 }
 
-function FilterSelect({ icon, label, value, options, onChange }: FilterSelectProps) {
+function FilterSelect({ icon, label, value, options, onChange, disabled, disabledTitle }: FilterSelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useClickAway<HTMLSpanElement>(() => setOpen(false));
   const cur = options.find((o) => o.v === value);
@@ -71,8 +77,10 @@ function FilterSelect({ icon, label, value, options, onChange }: FilterSelectPro
     <span className="fs-wrap" ref={ref}>
       <button
         type="button"
-        className={cn('fselect', value && 'on')}
-        onClick={() => setOpen((o) => !o)}
+        className={cn('fselect', value && 'on', disabled && 'is-disabled')}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled}
+        title={disabled ? disabledTitle : undefined}
       >
         {icon && <Icon name={icon} size={14} className="ic" />}
         <span>{value ? cur?.label ?? label : label}</span>
@@ -247,6 +255,8 @@ export function FilterBar({
           value={f.projeto}
           options={projetoOptions}
           onChange={(v) => set('projeto', v)}
+          disabled={!f.cliente}
+          disabledTitle="Selecione um cliente primeiro"
         />
       )}
       {show.includes('resp') && (

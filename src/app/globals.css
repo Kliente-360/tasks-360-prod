@@ -1803,8 +1803,14 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.fselect:hover { border-color: var(--fg); color: var(--fg); }
+.fselect:hover:not(.is-disabled) { border-color: var(--fg); color: var(--fg); }
 .fselect .ic { color: var(--fg-muted); }
+.fselect.is-disabled,
+.fselect:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
 .fselect.on {
   border-color: var(--green);
   background: var(--green-tint);
