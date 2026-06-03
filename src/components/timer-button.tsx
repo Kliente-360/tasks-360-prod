@@ -6,6 +6,7 @@ import { useData, useClientesById } from '@/lib/data-store';
 import { useClickAway } from '@/lib/use-click-away';
 import { Icon } from '@/components/icons';
 import { cn } from '@/lib/utils';
+import { STAGE_RANK } from '@/lib/task-constants';
 
 const MAX_NOTE = 120;
 
@@ -109,8 +110,13 @@ function TaskPickerPopover({
 
   const candidates = useMemo(() => {
     const myId = currentPessoa?.id;
+    // Permitidas: subetapa de 'em_definicao' (rank 1) em diante.
+    // Exclui backlog (0), bloqueado (-1), concluido (-1) — tasks
+    // que ainda estão amadurecendo ou já saíram do fluxo ativo.
     return tasks
-      .filter((t) => !t.arquivadoEm && t.status === 'andamento')
+      .filter(
+        (t) => !t.arquivadoEm && (STAGE_RANK[t.subetapa] ?? -1) >= 1,
+      )
       .sort((a, b) => {
         const aMine = a.pessoaId === myId ? 0 : 1;
         const bMine = b.pessoaId === myId ? 0 : 1;
@@ -142,12 +148,12 @@ function TaskPickerPopover({
           ref={inputRef}
           type="text"
           className="inp text-sm w-full mb-2"
-          placeholder="Buscar tarefa em andamento…"
+          placeholder="Buscar tarefa ativa…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
         {candidates.length === 0 ? (
-          <p className="text-sm text-muted text-center py-4">Nenhuma tarefa em andamento.</p>
+          <p className="text-sm text-muted text-center py-4">Nenhuma tarefa ativa.</p>
         ) : filtered.length === 0 ? (
           <p className="text-sm text-muted text-center py-4">Nenhum resultado.</p>
         ) : (
