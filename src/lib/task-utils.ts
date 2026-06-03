@@ -5,7 +5,7 @@
  */
 
 import type { Projeto, Task } from './types';
-import { STATUS } from './task-constants';
+import { STATUS, STAGE_RANK } from './task-constants';
 
 /** Esforço efetivo: usa o declarado, ou 4h como fallback se zero/null. */
 export function effEsforco(t: Pick<Task, 'esforco'>): number {
@@ -108,19 +108,25 @@ export function fmtAtrasoLabel(dias: number): string {
   return `${dias} dias atrasada`;
 }
 
+/** Rank a partir do qual prazo e esforço passam a ser obrigatórios.
+ *  3 = `escopo_definido` (definido em STAGE_RANK). Abaixo disso a task
+ *  ainda está sendo cogitada/priorizada, então é cedo cobrar números. */
+export const TRIAGE_RANK_GATE = 3;
+
 /** Lista o que falta na task pra estar "triada". Vazio = ok.
- *  5 campos críticos exigidos sempre · cliente, projeto, responsável,
- *  prazo, esforço. Não depende de rank de subetapa. */
+ *  Sempre obrigatórios: cliente, projeto, responsável.
+ *  A partir de `escopo_definido` (rank >= 3): também prazo e esforço. */
 export function triageFailures(
-  t: Pick<Task, 'status' | 'pessoaId' | 'clienteId' | 'projetoId' | 'prazo' | 'esforco'>,
+  t: Pick<Task, 'status' | 'subetapa' | 'pessoaId' | 'clienteId' | 'projetoId' | 'prazo' | 'esforco'>,
 ): string[] {
   if (!t || t.status === STATUS.CONCLUIDO) return [];
+  const rank = STAGE_RANK[t.subetapa] ?? 0;
   const out: string[] = [];
   if (!t.clienteId) out.push('sem cliente');
   if (!t.projetoId) out.push('sem projeto');
   if (!t.pessoaId) out.push('sem responsável');
-  if (!t.prazo) out.push('sem prazo');
-  if (!Number(t.esforco)) out.push('sem esforço');
+  if (rank >= TRIAGE_RANK_GATE && !t.prazo) out.push('sem prazo');
+  if (rank >= TRIAGE_RANK_GATE && !Number(t.esforco)) out.push('sem esforço');
   return out;
 }
 

@@ -22,8 +22,8 @@ import { PageHeader } from '@/components/page-header';
 import { PillsFilter } from '@/components/pills-filter';
 import { PriChip, PrazoLabel, TagIA } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
-import { agingDays, atrasada, fmtDateShort, isPreTriagem, triageFailures } from '@/lib/task-utils';
-import { STATUS, SUB_LABELS } from '@/lib/task-constants';
+import { agingDays, atrasada, fmtDateShort, isPreTriagem, triageFailures, TRIAGE_RANK_GATE } from '@/lib/task-utils';
+import { STATUS, SUB_LABELS, STAGE_RANK } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import type { Task, Pessoa, Cliente, Projeto } from '@/lib/types';
 import { useClickAway } from '@/lib/use-click-away';
@@ -543,12 +543,16 @@ function IaTriageActions({
       .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [projetos, task.clienteId]);
 
+  // Mesmo gate de triageFailures: cliente/projeto/resp sempre;
+  // prazo/esforço só a partir de escopo_definido (rank >= 3).
+  const rank = STAGE_RANK[task.subetapa] ?? 0;
+  const exigePrazoEsforco = rank >= TRIAGE_RANK_GATE;
   const faltam: string[] = [];
   if (!task.clienteId) faltam.push('cliente');
   if (!task.projetoId) faltam.push('projeto');
   if (!task.pessoaId) faltam.push('responsável');
-  if (!task.prazo) faltam.push('prazo');
-  if (!task.esforco || task.esforco <= 0) faltam.push('esforço');
+  if (exigePrazoEsforco && !task.prazo) faltam.push('prazo');
+  if (exigePrazoEsforco && (!task.esforco || task.esforco <= 0)) faltam.push('esforço');
   const canAccept = faltam.length === 0;
 
   const submitReject = (motivo: string) => {
