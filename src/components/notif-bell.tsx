@@ -25,7 +25,13 @@ import { createClient } from '@/lib/supabase/client';
 import { fmtPostedEm } from '@/lib/format';
 import { Icon, type IconName } from '@/components/icons';
 
-type NotifKind = 'mention' | 'assigned' | 'comment_on_my_task' | 'cliente_respondeu' | 'status_change';
+type NotifKind =
+  | 'mention'
+  | 'assigned'
+  | 'comment_on_my_task'
+  | 'cliente_comentou'
+  | 'cliente_respondeu'
+  | 'status_change';
 type Notif = {
   id: string;
   recipient_pessoa_id: string;
@@ -36,7 +42,13 @@ type Notif = {
   criado_em: string;
   read_at: string | null;
 };
-type KindFilter = 'all' | 'mention' | 'assignment' | 'status';
+
+// 4 grupos no sino:
+//   all       · tudo
+//   mention   · só @mention
+//   task      · updates internos (atribuição · status macro · comment do time na sua task)
+//   cliente   · updates do cliente (comentou na sua task · respondeu seu comment)
+type KindFilter = 'all' | 'mention' | 'task' | 'cliente';
 
 function notifKindGroup(n: Notif): KindFilter | 'other' {
   switch (n.kind) {
@@ -44,10 +56,11 @@ function notifKindGroup(n: Notif): KindFilter | 'other' {
       return 'mention';
     case 'assigned':
     case 'comment_on_my_task':
-    case 'cliente_respondeu':
-      return 'assignment';
     case 'status_change':
-      return 'status';
+      return 'task';
+    case 'cliente_comentou':
+    case 'cliente_respondeu':
+      return 'cliente';
     default:
       return 'other';
   }
@@ -62,8 +75,10 @@ function notifSummary(n: Notif): string {
       return `${who} te atribuiu a uma tarefa`;
     case 'comment_on_my_task':
       return `${who} comentou em uma tarefa sua`;
+    case 'cliente_comentou':
+      return `${who} comentou em uma tarefa sua`;
     case 'cliente_respondeu':
-      return 'Cliente respondeu em uma tarefa sua';
+      return `${who} respondeu sua mensagem`;
     case 'status_change':
       return `${who} mudou status de uma tarefa sua` + (n.payload?.to ? ` → ${n.payload.to}` : '');
     default:
@@ -76,7 +91,8 @@ const KIND_ICON: Record<string, IconName> = {
   mention: 'mention',
   assigned: 'users',
   comment_on_my_task: 'comment',
-  cliente_respondeu: 'building',
+  cliente_comentou: 'inbox',
+  cliente_respondeu: 'inbox',
   status_change: 'refresh',
 };
 
@@ -167,7 +183,7 @@ export function NotifBell() {
   const unreadCount = useMemo(() => items.filter((n) => !n.read_at).length, [items]);
 
   const counts = useMemo(() => {
-    const c = { all: 0, mention: 0, assignment: 0, status: 0 };
+    const c = { all: 0, mention: 0, task: 0, cliente: 0 };
     for (const n of items) {
       c.all++;
       const g = notifKindGroup(n);
@@ -270,7 +286,7 @@ export function NotifBell() {
             </div>
             {items.length > 0 && (
               <div className="px-2 py-1.5 border-b border-line grid grid-cols-4 gap-1">
-                {(['all', 'mention', 'assignment', 'status'] as const).map((k) => (
+                {(['all', 'mention', 'task', 'cliente'] as const).map((k) => (
                   <button
                     key={k}
                     type="button"
@@ -281,9 +297,9 @@ export function NotifBell() {
                         ? 'Tudo'
                         : k === 'mention'
                           ? 'Menções'
-                          : k === 'assignment'
-                            ? 'Atribuições e comentários'
-                            : 'Mudanças de status') + ` · ${counts[k]}`
+                          : k === 'task'
+                            ? 'Updates em tasks · atribuição, mudança de status, comentário do time'
+                            : 'Updates do cliente · cliente comentou ou respondeu') + ` · ${counts[k]}`
                     }
                   >
                     <FilterChipIcon kind={k} />
@@ -334,13 +350,17 @@ export function NotifBell() {
   );
 }
 
-/** Mapa filtro de chips → ícone Lucide. Lista pra "tudo", @ pra menções,
- *  pessoa pra atribuições, refresh pra mudanças de status. */
+/** Mapa filtro de chips → ícone Lucide.
+ *  - all: bell (toda notif)
+ *  - mention: @ (citação direta)
+ *  - task: activity (atividade na task — atribuição, status, comment time)
+ *  - cliente: inbox (caixa de entrada do cliente — comentou, respondeu)
+ */
 const CHIP_ICON: Record<KindFilter, IconName> = {
-  all: 'list',
+  all: 'bell',
   mention: 'mention',
-  assignment: 'users',
-  status: 'refresh',
+  task: 'activity',
+  cliente: 'inbox',
 };
 
 function FilterChipIcon({ kind }: { kind: KindFilter }) {

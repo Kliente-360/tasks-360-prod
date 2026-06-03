@@ -112,11 +112,37 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
     return () => window.removeEventListener('keydown', onKey);
   }, [task, onClose]);
 
+  // Notif fire-and-forget pro responsável da task. Disparado pelos
+  // 2 fluxos abaixo (Comentar = cliente_comentou; Já respondi =
+  // cliente_respondeu). Sem await — não bloqueia o sucesso do post.
+  const fireClienteNotif = useCallback(
+    (kind: 'cliente_comentou' | 'cliente_respondeu', commentId: string, preview: string) => {
+      if (!task?.pessoaId) return;
+      sb.from('notifications')
+        .insert({
+          recipient_pessoa_id: task.pessoaId,
+          kind,
+          payload: {
+            author: clienteNome || 'cliente',
+            task_id: task.id,
+            comment_id: commentId,
+            preview: preview.slice(0, 80),
+          },
+          source_task_id: task.id,
+          source_comment_id: commentId,
+        })
+        .then(({ error }) => {
+          if (error) console.warn('[notif cliente] insert failed', error);
+        });
+    },
+    [task, sb, clienteNome],
+  );
+
   const submitComment = useCallback(async () => {
     const body = newComment.trim();
     if (!body || !task || sending) return;
     setSending(true);
-    const { error } = await sb
+    const { data, error } = await sb
       .from('task_comments')
       .insert({
         task_id: task.id,
@@ -133,21 +159,23 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
       toast.error('Erro ao comentar: ' + error.message);
       return;
     }
+    if (data?.id) fireClienteNotif('cliente_comentou', data.id, body);
     setNewComment('');
     await loadComments(task.id);
     toast.success('Comentário enviado.');
-  }, [newComment, task, sending, sb, clienteNome, toast, loadComments]);
+  }, [newComment, task, sending, sb, clienteNome, toast, loadComments, fireClienteNotif]);
 
   const submitJaRespondi = useCallback(async () => {
     const body = replyText.trim();
     if (!body || !task || sending) return;
     setSending(true);
-    const { error } = await sb
+    const fullBody = '✓ Já respondi: ' + body;
+    const { data, error } = await sb
       .from('task_comments')
       .insert({
         task_id: task.id,
         author: clienteNome || 'cliente',
-        body: '✓ Já respondi: ' + body,
+        body: fullBody,
         author_pessoa_id: null,
         visivel_cliente: true,
         from_cliente: true,
@@ -159,10 +187,11 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
       toast.error('Erro: ' + error.message);
       return;
     }
+    if (data?.id) fireClienteNotif('cliente_respondeu', data.id, fullBody);
     setReplyText('');
     await loadComments(task.id);
     toast.success('Sua resposta foi enviada ao time. Eles vão verificar.');
-  }, [replyText, task, sending, sb, clienteNome, toast, loadComments]);
+  }, [replyText, task, sending, sb, clienteNome, toast, loadComments, fireClienteNotif]);
 
   if (!task) return null;
 
