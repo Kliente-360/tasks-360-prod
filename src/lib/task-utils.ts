@@ -13,6 +13,18 @@ export function effEsforco(t: Pick<Task, 'esforco'>): number {
   return e > 0 ? e : 4;
 }
 
+/**
+ * Esforço REMANESCENTE: effEsforco menos horas já registradas como
+ * realizadas (campo manual `tempoRealHoras` no modal). Usado em cálculos
+ * de capacidade e carga pra refletir o que ainda precisa de execução,
+ * não o orçamento original. Mínimo zero (task estourada não conta como
+ * "carga negativa").
+ */
+export function effRemaining(t: Pick<Task, 'esforco' | 'tempoRealHoras'>): number {
+  const restante = effEsforco(t) - (Number(t.tempoRealHoras) || 0);
+  return restante > 0 ? restante : 0;
+}
+
 /** Tamanho de task baseado no effEsforco. */
 export function effTamanho(t: Pick<Task, 'esforco'>): string {
   const h = effEsforco(t);

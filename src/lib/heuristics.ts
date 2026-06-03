@@ -12,6 +12,7 @@ import {
   agingDays,
   cargaNivelFromPctCap,
   effEsforco,
+  effRemaining,
   effTamanho,
   atrasada,
   needsTriage,
@@ -112,9 +113,12 @@ export function computeWeeklyCapacityAnalysis(
   const ativas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
 
   // ---- Pessoa × semana ----
+  // Filtros: exclui clientes (não executam internamente) e PMs (não dividem
+  // tasks com o time de dev). Soma usa effRemaining (esforço restante após
+  // descontar horas já registradas em tempoRealHoras).
   const pessoaHours = new Map<string, [number, number, number, number]>();
   for (const p of pessoas) {
-    if (p.role === 'cliente') continue;
+    if (p.role === 'cliente' || p.is_pm) continue;
     pessoaHours.set(p.id, [0, 0, 0, 0]);
   }
   for (const t of ativas) {
@@ -122,12 +126,12 @@ export function computeWeeklyCapacityAnalysis(
     const arr = pessoaHours.get(t.pessoaId);
     if (!arr) continue;
     const idx = taskWeekIndex(t, todayRef);
-    if (idx === -1) arr[0] += effEsforco(t);
-    else if (idx !== null) arr[idx] += effEsforco(t);
+    if (idx === -1) arr[0] += effRemaining(t);
+    else if (idx !== null) arr[idx] += effRemaining(t);
   }
   const pessoasResult: PessoaCapacidade[] = [];
   for (const p of pessoas) {
-    if (p.role === 'cliente') continue;
+    if (p.role === 'cliente' || p.is_pm) continue;
     const cap = Number(p.capacidade_horas_semana) || 0;
     const hours = pessoaHours.get(p.id) ?? ([0, 0, 0, 0] as [number, number, number, number]);
     const weeks = hours.map((h) => makeWeekData(h, cap)) as [WeekData, WeekData, WeekData, WeekData];
@@ -669,17 +673,30 @@ export interface ProjetoSaude {
   clienteId: string;
   nomeCliente: string;
   sinal: SinalProjeto;
+  /** Texto opcional explicando o motivo da cor (ex: "3 atrasadas · 2 bloq.") */
   motivo: string;
+  /** Tasks abertas no projeto */
   nAbertas: number;
+  /** Subconjunto: prazo < hoje */
   nAtrasadas: number;
+  /** Subconjunto: subetapa='bloqueado' (qualquer motivo) */
+  nBloqueadas: number;
 }
 
+/**
+ * Saúde por projeto · anatomia alinhada com PessoaSaude (jun/2026):
+ *   3 métricas (abertas · atrasadas · bloqueadas) + sinal:
+ *   - vermelho: nAtrasadas > 0
+ *   - amarelo:  nBloqueadas > 0
+ *   - verde:    nenhum dos dois
+ */
 export function computeProjetosSaude(
   tasks: Task[],
   projetos: Projeto[],
   clientes: Cliente[],
 ): ProjetoSaude[] {
   const clientesById = new Map(clientes.map((c) => [c.id, c]));
+  const todayStr = new Date().toISOString().slice(0, 10);
   const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
 
   const result: ProjetoSaude[] = [];
@@ -689,37 +706,18 @@ export function computeProjetosSaude(
     if (!projTasks.length) continue;
 
     const nAbertas = projTasks.length;
-    const atrasadas = projTasks.filter((t) => {
-      if (!t.prazo) return false;
-      return t.prazo < new Date().toISOString().slice(0, 10);
-    });
-    const nAtrasadas = atrasadas.length;
+    const nAtrasadas = projTasks.filter((t) => t.prazo && t.prazo < todayStr).length;
+    const nBloqueadas = projTasks.filter((t) => t.subetapa === 'bloqueado').length;
 
-    const bloqCliente = projTasks.filter(
-      (t) => t.subetapa === 'bloqueado' && t.bloqueadoPor === 'cliente' && agingDays(t) >= 5,
-    );
+    const sinal: SinalProjeto =
+      nAtrasadas > 0 ? 'vermelho' :
+      nBloqueadas > 0 ? 'amarelo' : 'verde';
 
-    let sinal: SinalProjeto = 'verde';
-    let motivo = 'Saudável';
-
-    if (nAtrasadas > 0 || bloqCliente.length) {
-      sinal = 'vermelho';
-      if (nAtrasadas > 0 && bloqCliente.length) {
-        motivo = `${nAtrasadas} atrasada(s) · ${bloqCliente.length} bloq. cliente`;
-      } else if (nAtrasadas > 0) {
-        motivo = `${nAtrasadas} tarefa(s) atrasada(s)`;
-      } else {
-        motivo = `${bloqCliente.length} aguardando cliente +5d`;
-      }
-    } else {
-      const bloqInterno = projTasks.filter(
-        (t) => t.status === 'bloqueado' || (t.subetapa === 'bloqueado' && t.bloqueadoPor !== 'cliente'),
-      );
-      if (bloqInterno.length) {
-        sinal = 'amarelo';
-        motivo = `${bloqInterno.length} bloqueio(s) interno(s)`;
-      }
-    }
+    const motivo =
+      nAtrasadas > 0 && nBloqueadas > 0 ? `${nAtrasadas} atras. · ${nBloqueadas} bloq.`
+      : nAtrasadas > 0 ? `${nAtrasadas} atrasada(s)`
+      : nBloqueadas > 0 ? `${nBloqueadas} bloqueada(s)`
+      : 'Saudável';
 
     result.push({
       projetoId: proj.id,
@@ -730,10 +728,10 @@ export function computeProjetosSaude(
       motivo,
       nAbertas,
       nAtrasadas,
+      nBloqueadas,
     });
   }
 
-  // vermelho primeiro, depois amarelo, verde
   const order: Record<SinalProjeto, number> = { vermelho: 0, amarelo: 1, verde: 2 };
   result.sort((a, b) => order[a.sinal] - order[b.sinal]);
   return result;
@@ -920,28 +918,44 @@ export function computeVolumeByCliente(tasks: Task[], clientes: Cliente[]): Volu
 export interface CargaPessoa {
   pessoaId: string;
   nome: string;
+  /** Soma de horas restantes (effRemaining) das tasks abertas atribuídas */
   total: number;
+  /** Quantas dessas tasks estão atrasadas (prazo < hoje) */
   nAtrasadas: number;
+  /** Capacidade declarada em pessoas.capacidade_horas_semana (0 se sem cap) */
+  capacidade: number;
 }
 
+/**
+ * Carga atual por pessoa em HORAS (esforço remanescente das tasks abertas).
+ * - Filtros: exclui pessoas com role=cliente e is_pm=true.
+ * - Soma: effRemaining(t) = max(0, esforço - tempoRealHoras já registrado).
+ * - Privadas do CEO entram naturalmente quando o viewer é o CEO (RLS libera).
+ */
 export function computeCargaByPessoa(tasks: Task[], pessoas: Pessoa[]): CargaPessoa[] {
   const todayStr = new Date().toISOString().slice(0, 10);
   const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
-  const totalMap = new Map<string, number>();
+  const horasMap = new Map<string, number>();
   const atrasMap = new Map<string, number>();
   for (const t of abertas) {
     if (!t.pessoaId) continue;
-    totalMap.set(t.pessoaId, (totalMap.get(t.pessoaId) ?? 0) + 1);
+    horasMap.set(t.pessoaId, (horasMap.get(t.pessoaId) ?? 0) + effRemaining(t));
     if (t.prazo && t.prazo < todayStr) {
       atrasMap.set(t.pessoaId, (atrasMap.get(t.pessoaId) ?? 0) + 1);
     }
   }
   const pessoasById = new Map(pessoas.map((p) => [p.id, p]));
   const result: CargaPessoa[] = [];
-  for (const [pessoaId, total] of totalMap) {
+  for (const [pessoaId, total] of horasMap) {
     const p = pessoasById.get(pessoaId);
-    if (!p || p.role === 'cliente') continue;
-    result.push({ pessoaId, nome: p.nome, total, nAtrasadas: atrasMap.get(pessoaId) ?? 0 });
+    if (!p || p.role === 'cliente' || p.is_pm) continue;
+    result.push({
+      pessoaId,
+      nome: p.nome,
+      total: Math.round(total * 10) / 10,
+      nAtrasadas: atrasMap.get(pessoaId) ?? 0,
+      capacidade: Number(p.capacidade_horas_semana) || 0,
+    });
   }
   result.sort((a, b) => b.total - a.total);
   return result;
@@ -955,17 +969,25 @@ export interface PessoaSaude {
   pessoaId: string;
   nome: string;
   sinal: 'verde' | 'amarelo' | 'vermelho';
-  nTasks: number;
+  /** Tasks abertas atribuídas (count) */
+  nAbertas: number;
+  /** Subconjunto: tasks com prazo < hoje */
   nAtrasadas: number;
+  /** Subconjunto: tasks com subetapa='bloqueado' (qualquer motivo: aguard. cliente OU interno) */
   nBloqueadas: number;
-  nAguardCliente: number;
-  nParadas: number;
+  /** Soma horas remanescentes (effRemaining) das abertas */
   totalHoras: number;
 }
 
+/**
+ * Saúde por pessoa simplificada (jun/2026):
+ * - 3 métricas: abertas · atrasadas · bloqueadas (sem aguard./parada como
+ *   buckets separados — confundiam mais do que ajudavam).
+ * - Sinal: vermelho se atrasadas>0 · amarelo se bloqueadas>0 · verde caso contrário.
+ * - Filtros: exclui clientes e PMs (is_pm=true).
+ */
 export function computeSaudePorPessoa(tasks: Task[], pessoas: Pessoa[], today?: string): PessoaSaude[] {
   const todayStr = today ?? new Date().toISOString().slice(0, 10);
-  const h24ago = Date.now() - 24 * 3600 * 1000;
   const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
 
   const byPessoa = new Map<string, Task[]>();
@@ -981,20 +1003,18 @@ export function computeSaudePorPessoa(tasks: Task[], pessoas: Pessoa[], today?: 
 
   for (const [pessoaId, ptasks] of byPessoa) {
     const p = pessoasById.get(pessoaId);
-    if (!p || p.role === 'cliente') continue;
+    if (!p || p.role === 'cliente' || p.is_pm) continue;
     const nAtrasadas = ptasks.filter((t) => t.prazo && t.prazo < todayStr).length;
-    const nAguardCliente = ptasks.filter((t) => t.subetapa === 'bloqueado' && t.bloqueadoPor === 'cliente').length;
-    const nBloqueadas = ptasks.filter((t) => t.subetapa === 'bloqueado' && t.bloqueadoPor !== 'cliente').length;
-    const nParadas = ptasks.filter((t) => t.status === 'andamento' && t.subetapaEm > 0 && t.subetapaEm < h24ago).length;
-    const totalHoras = ptasks.reduce((s, t) => s + effEsforco(t), 0);
+    const nBloqueadas = ptasks.filter((t) => t.subetapa === 'bloqueado').length;
+    const totalHoras = Math.round(ptasks.reduce((s, t) => s + effRemaining(t), 0) * 10) / 10;
 
-    let sinal: 'verde' | 'amarelo' | 'vermelho' = 'verde';
-    if (nAtrasadas > 0 || nParadas >= 3) sinal = 'vermelho';
-    else if (nAguardCliente > 0 || nBloqueadas > 0 || nParadas > 0) sinal = 'amarelo';
+    const sinal: 'verde' | 'amarelo' | 'vermelho' =
+      nAtrasadas > 0 ? 'vermelho' :
+      nBloqueadas > 0 ? 'amarelo' : 'verde';
 
     result.push({
       pessoaId, nome: p.nome, sinal,
-      nTasks: ptasks.length, nAtrasadas, nBloqueadas, nAguardCliente, nParadas, totalHoras,
+      nAbertas: ptasks.length, nAtrasadas, nBloqueadas, totalHoras,
     });
   }
 

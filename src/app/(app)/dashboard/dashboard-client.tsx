@@ -63,6 +63,35 @@ function SectionHeader({ title, sub }: { title: string; sub?: string }) {
   );
 }
 
+/**
+ * Bloco padronizado de 3 métricas à direita do row de Saúde
+ * (por pessoa e por projeto). Anatomia: abertas · atrasadas · bloqueadas.
+ * Cor por métrica: muted default, vermelho se atrasadas>0, âmbar se bloq>0.
+ */
+function SaudeMetrics({
+  nAbertas,
+  nAtrasadas,
+  nBloqueadas,
+}: {
+  nAbertas: number;
+  nAtrasadas: number;
+  nBloqueadas: number;
+}) {
+  return (
+    <div className="text-right shrink-0 text-[10px] font-mono tabular-nums leading-tight space-y-0.5">
+      <div className="text-muted">
+        <span className="text-ink font-semibold">{nAbertas}</span> abertas
+      </div>
+      <div className={nAtrasadas > 0 ? 'text-[var(--danger)] font-semibold' : 'text-muted'}>
+        <span className={nAtrasadas > 0 ? '' : 'opacity-60'}>{nAtrasadas}</span> atrasadas
+      </div>
+      <div className={nBloqueadas > 0 ? 'text-[var(--warn)] font-semibold' : 'text-muted'}>
+        <span className={nBloqueadas > 0 ? '' : 'opacity-60'}>{nBloqueadas}</span> bloqueadas
+      </div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────
 //  Dashboard
 // ─────────────────────────────────────────────────────────
@@ -448,35 +477,51 @@ export function DashboardClient() {
           </div>
         </div>
 
-        {/* Carga por pessoa */}
+        {/* Carga por pessoa · horas remanescentes vs capacidade semanal */}
         <div className="bg-elev border border-line rounded-xl">
-          <SectionHeader title="Carga por pessoa" sub="tasks abertas · vermelho = tasks atrasadas" />
+          <SectionHeader title="Carga por pessoa" sub="horas remanescentes (esforço − tempo realizado) · linha cheia = capacidade semanal · exclui PMs e clientes" />
           <div className="p-3 md:p-4 flex flex-col gap-1.5">
             {cargaPessoa.length === 0 && <p className="text-xs text-muted">Sem dados</p>}
-            {cargaPessoa.map((p) => (
-              <div key={p.pessoaId} className="flex items-center gap-2">
-                <div className="w-16 text-xs text-right text-muted truncate shrink-0">{p.nome.split(' ')[0]}</div>
-                <div className="flex-1 h-5 flex">
-                  {(p.total - p.nAtrasadas) > 0 && (
+            {cargaPessoa.map((p) => {
+              // Escala: maior entre maxCarga e maior capacidade × 1.2 (folga visual)
+              const escala = Math.max(maxCarga, p.capacidade * 1.2, 1);
+              const pctTotal = (p.total / escala) * 100;
+              const pctCap = p.capacidade > 0 ? (p.capacidade / escala) * 100 : null;
+              const over = p.capacidade > 0 && p.total > p.capacidade;
+              const corBarra = p.nAtrasadas > 0 ? 'var(--danger)' : over ? 'var(--warn)' : 'var(--brand)';
+              return (
+                <div key={p.pessoaId} className="flex items-center gap-2">
+                  <div className="w-16 text-xs text-right text-muted truncate shrink-0">{p.nome.split(' ')[0]}</div>
+                  <div className="flex-1 h-5 relative" style={{ background: 'var(--surface-3)', borderRadius: 3 }}>
+                    {/* Barra principal · cor por status */}
                     <div style={{
-                      width: `${((p.total - p.nAtrasadas) / maxCarga) * 100}%`,
-                      background: 'var(--brand)',
-                      flexShrink: 0,
-                      borderRadius: p.nAtrasadas === 0 ? 3 : '3px 0 0 3px',
+                      position: 'absolute',
+                      left: 0, top: 0, bottom: 0,
+                      width: `${Math.min(100, pctTotal)}%`,
+                      background: corBarra,
+                      borderRadius: 3,
+                      transition: 'width 200ms ease',
                     }} />
-                  )}
-                  {p.nAtrasadas > 0 && (
-                    <div style={{
-                      width: `${(p.nAtrasadas / maxCarga) * 100}%`,
-                      background: '#ef4444',
-                      flexShrink: 0,
-                      borderRadius: (p.total - p.nAtrasadas) === 0 ? 3 : '0 3px 3px 0',
-                    }} />
-                  )}
+                    {/* Linha de capacidade · marker visual */}
+                    {pctCap != null && pctCap > 0 && pctCap <= 100 && (
+                      <div style={{
+                        position: 'absolute',
+                        left: `${pctCap}%`,
+                        top: -2,
+                        bottom: -2,
+                        width: 2,
+                        background: 'var(--fg-soft)',
+                        opacity: 0.4,
+                      }} title={`Capacidade: ${p.capacidade}h/sem`} />
+                    )}
+                  </div>
+                  <span className="text-[10px] font-mono text-muted w-14 text-right shrink-0">
+                    <span className={over ? 'text-[var(--warn)] font-semibold' : 'text-ink'}>{p.total}h</span>
+                    {p.capacidade > 0 && <span className="opacity-60">/{p.capacidade}h</span>}
+                  </span>
                 </div>
-                <span className="text-[10px] font-mono text-muted w-6 text-right shrink-0">{p.total}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -486,24 +531,19 @@ export function DashboardClient() {
 
         {/* Saúde por projeto */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden">
-          <SectionHeader title="Saúde por projeto" sub="semáforo: vermelho = atrasadas / SLA / bloqueio >5d · âmbar = bloqueio interno" />
+          <SectionHeader title="Saúde por projeto" sub="vermelho = atrasadas · âmbar = bloqueadas · verde = sem bloqueios" />
           {saudeProjeto.length === 0
             ? <div className="px-4 py-5 text-sm text-muted">Nenhum projeto ativo</div>
             : (
               <div className="divide-y divide-line">
                 {saudeProjeto.map((ps) => (
-                  <div key={ps.projetoId} className="flex items-start gap-3 px-3 md:px-4 py-2.5">
-                    <span className={cn('shrink-0 w-2.5 h-2.5 rounded-full mt-1', sinalDot(ps.sinal))} />
+                  <div key={ps.projetoId} className="flex items-center gap-3 px-3 md:px-4 py-2.5">
+                    <span className={cn('shrink-0 w-2.5 h-2.5 rounded-full', sinalDot(ps.sinal))} />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-ink truncate">{ps.nome}</div>
-                      <div className="text-xs text-muted">{ps.nomeCliente}</div>
+                      <div className="text-xs text-muted truncate">{ps.nomeCliente}</div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-xs text-muted">{ps.nAbertas} aberta(s)</div>
-                      {ps.motivo !== 'Saudável' && (
-                        <div className="text-[10px] text-[var(--danger)]">{ps.motivo}</div>
-                      )}
-                    </div>
+                    <SaudeMetrics nAbertas={ps.nAbertas} nAtrasadas={ps.nAtrasadas} nBloqueadas={ps.nBloqueadas} />
                   </div>
                 ))}
               </div>
@@ -512,24 +552,19 @@ export function DashboardClient() {
 
         {/* Saúde por pessoa */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden">
-          <SectionHeader title="Saúde por pessoa" sub="semáforo: vermelho = atrasadas ou paradas ≥3 · âmbar = aguard. cliente / bloqueio / parada" />
+          <SectionHeader title="Saúde por pessoa" sub="vermelho = atrasadas · âmbar = bloqueadas · verde = sem bloqueios · exclui PMs e clientes" />
           {saudePessoa.length === 0
             ? <div className="px-4 py-5 text-sm text-muted">Sem dados</div>
             : (
               <div className="divide-y divide-line">
                 {saudePessoa.map((ps) => (
-                  <div key={ps.pessoaId} className="flex items-start gap-3 px-3 md:px-4 py-2.5">
-                    <span className={cn('shrink-0 w-2.5 h-2.5 rounded-full mt-1', sinalDot(ps.sinal))} />
+                  <div key={ps.pessoaId} className="flex items-center gap-3 px-3 md:px-4 py-2.5">
+                    <span className={cn('shrink-0 w-2.5 h-2.5 rounded-full', sinalDot(ps.sinal))} />
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-medium text-ink">{ps.nome}</div>
-                      <div className="text-[10px] text-muted">{ps.nTasks} tarefa(s) · {ps.totalHoras}h</div>
+                      <div className="text-[10px] text-muted">{ps.totalHoras}h remanescente</div>
                     </div>
-                    <div className="text-right shrink-0 text-[10px] space-y-0.5">
-                      {ps.nAtrasadas > 0 && <div className="text-[var(--danger)]">{ps.nAtrasadas} atras.</div>}
-                      {ps.nAguardCliente > 0 && <div className="text-[var(--warn)]">{ps.nAguardCliente} aguard.</div>}
-                      {ps.nBloqueadas > 0 && <div className="text-[var(--warn)]">{ps.nBloqueadas} bloq.</div>}
-                      {ps.nParadas > 0 && <div className="text-muted">{ps.nParadas} parada(s)</div>}
-                    </div>
+                    <SaudeMetrics nAbertas={ps.nAbertas} nAtrasadas={ps.nAtrasadas} nBloqueadas={ps.nBloqueadas} />
                   </div>
                 ))}
               </div>
@@ -748,15 +783,18 @@ function DashboardMobilePanel({
         <div className="h"><h3>Carga por pessoa</h3></div>
         <div className="body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {cargaPessoa.slice(0, 8).map((c) => {
-            const pct = Math.round((c.total / maxCarga) * 100);
-            const over = pct > 85;
+            // Pct relativo: contra capacidade se houver (>0), senão contra
+            // o maior valor da equipe (fallback visual). Over se >85% da cap.
+            const base = c.capacidade > 0 ? c.capacidade : maxCarga;
+            const pct = Math.round((c.total / base) * 100);
+            const over = c.capacidade > 0 ? c.total > c.capacidade * 0.85 : pct > 85;
             return (
               <div key={c.pessoaId} className="loadrow">
                 <TaskAvatar name={c.nome} />
                 <div className="track">
                   <div className={cn('fill', over && 'over')} style={{ width: `${Math.min(pct, 100)}%` }} />
                 </div>
-                <span className="pct">{pct}%</span>
+                <span className="pct">{c.total}h</span>
               </div>
             );
           })}

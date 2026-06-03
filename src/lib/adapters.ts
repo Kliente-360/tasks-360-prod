@@ -101,6 +101,7 @@ export function pessoaFromDb(r: Row): Pessoa {
     skills: (r.skills as string[]) ?? null,
     senioridade: (r.senioridade as string) ?? null,
     is_ceo: r.is_ceo === true,
+    is_pm: r.is_pm === true,
   };
 }
 

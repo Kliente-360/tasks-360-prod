@@ -101,6 +101,9 @@ export interface Pessoa {
   skills: string[] | null;
   senioridade: string | null;
   is_ceo?: boolean;
+  /** Gerente de projeto · não conta em cálculos de capacidade/carga/saúde
+   *  do time de desenvolvimento. Migration 2026-06-05_pessoa_is_pm.sql. */
+  is_pm?: boolean;
 }
 
 export interface TimeEntry {
