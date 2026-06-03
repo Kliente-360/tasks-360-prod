@@ -222,7 +222,7 @@ function useMentionPicker(
   value: string,
   setValue: (v: string) => void,
   textareaRef: React.RefObject<HTMLTextAreaElement | null>,
-  pessoas: Array<{ id: string; nome: string; role: string }>,
+  pessoas: Array<{ id: string; nome: string; role: string; invited_at: string | null }>,
   excludePessoaId: string | null,
 ): MentionPickerState {
   const [open, setOpen] = useState(false);
@@ -233,7 +233,7 @@ function useMentionPicker(
   const list = useMemo(() => {
     const q = query.toLowerCase();
     return pessoas
-      .filter((p) => p.role !== 'cliente' && p.id !== excludePessoaId)
+      .filter((p) => p.role !== 'cliente' && p.invited_at !== null && p.id !== excludePessoaId)
       .filter((p) => !q || (p.nome || '').toLowerCase().includes(q))
       .slice(0, 8)
       .map((p) => ({ id: p.id, nome: p.nome }));
@@ -574,7 +574,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     return (projetosByCliente.get(editing.clienteId) ?? []).filter((p) => !p.arquivadoEm);
   }, [editing.clienteId, projetosByCliente]);
   const pessoasNaoCliente = useMemo(
-    () => pessoas.filter((p) => p.role !== 'cliente'),
+    () => pessoas.filter((p) => p.role !== 'cliente' && p.invited_at !== null),
     [pessoas],
   );
   const internalFirstNames = useMemo(() => {
@@ -1053,7 +1053,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       while ((m = re.exec(body)) !== null) found.add(m[1]);
       if (found.size) {
         const mentioned = pessoas
-          .filter((p) => p.role !== 'cliente')
+          .filter((p) => p.role !== 'cliente' && p.invited_at !== null)
           .filter((p) => found.has((p.nome || '').split(/\s+/)[0]))
           .map((p) => p.id);
         for (const rid of mentioned) {

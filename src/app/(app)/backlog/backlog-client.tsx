@@ -189,7 +189,7 @@ export function BacklogClient() {
     [clientes],
   );
   const pessoasNaoCliente = useMemo(
-    () => pessoas.filter((p) => p.role !== 'cliente'),
+    () => pessoas.filter((p) => p.role !== 'cliente' && p.invited_at !== null),
     [pessoas],
   );
   const projetosFiltrados = useMemo(() => {

@@ -137,7 +137,7 @@ export function TimesheetClient() {
 
   const staffPessoas = useMemo(
     () => [...pessoasById.values()]
-      .filter((p) => p.role === 'admin' || p.role === 'interno')
+      .filter((p) => (p.role === 'admin' || p.role === 'interno') && p.invited_at !== null)
       .sort((a, b) => a.nome.localeCompare(b.nome)),
     [pessoasById],
   );

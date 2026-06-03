@@ -53,7 +53,7 @@ export function KanbanClient() {
 
   const { clientes, pessoas, projetos } = useData();
   const clientesAtivos = useMemo(() => clientes.filter((c) => !c.arquivadoEm), [clientes]);
-  const pessoasNaoCliente = useMemo(() => pessoas.filter((p) => p.role !== 'cliente'), [pessoas]);
+  const pessoasNaoCliente = useMemo(() => pessoas.filter((p) => p.role !== 'cliente' && p.invited_at !== null), [pessoas]);
 
   const sbRef = useRef<ReturnType<typeof createClient> | null>(null);
   if (!sbRef.current) sbRef.current = createClient();

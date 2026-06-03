@@ -225,7 +225,10 @@ export function DashboardClient() {
     [clientes],
   );
   const pessoasAtivas = useMemo(
-    () => pessoas.filter((p) => p.role !== 'cliente').sort((a, b) => a.nome.localeCompare(b.nome)),
+    () =>
+      pessoas
+        .filter((p) => p.role !== 'cliente' && p.invited_at !== null)
+        .sort((a, b) => a.nome.localeCompare(b.nome)),
     [pessoas],
   );
   const projetosAtivos = useMemo(
