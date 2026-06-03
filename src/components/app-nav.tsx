@@ -13,8 +13,10 @@ import { ExportIconButton } from '@/components/export';
 import { NotifBell } from '@/components/notif-bell';
 import { TimerButton } from '@/components/timer-button';
 import { Icon, type IconName } from '@/components/icons';
+import { isPreTriagem } from '@/lib/task-utils';
+import { useMemo } from 'react';
 
-export const APP_VERSION = 'v1.03.053';
+export const APP_VERSION = 'v1.03.054';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -54,8 +56,14 @@ const MOBILE_TAB_ORDER = ['/briefing', '/foco', '/backlog', '/dashboard', '/port
  */
 export function AppNav() {
   const pathname = usePathname();
-  const { refreshAll, refreshing, viewerRole } = useData();
+  const { refreshAll, refreshing, viewerRole, tasks } = useData();
   const { openNew } = useTaskModal();
+
+  // Counter de IA pre-triagem · aparece como bolinha vermelha na aba Triagem
+  const preTriagemCount = useMemo(
+    () => tasks.filter((t) => isPreTriagem(t) && !t.arquivadoEm).length,
+    [tasks],
+  );
 
   // Abas mobile filtradas por role, na ordem do handoff
   const mobileTabs = MOBILE_TAB_ORDER
@@ -122,6 +130,7 @@ export function AppNav() {
           {NAV.filter((item) => !item.inProfileMenu).map((item) => {
             const active = pathname.startsWith(item.href);
             const ic = TAB_ICON[item.href] ?? 'list';
+            const showBadge = item.href === '/triagem' && preTriagemCount > 0;
             return (
               <Link
                 key={item.href}
@@ -130,6 +139,15 @@ export function AppNav() {
               >
                 <Icon name={ic} size={15} />
                 {item.label}
+                {showBadge && (
+                  <span
+                    className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 rounded-full text-[9px] font-bold text-white px-1"
+                    style={{ background: 'var(--danger)' }}
+                    title={`${preTriagemCount} aguardando triagem`}
+                  >
+                    {preTriagemCount > 99 ? '99+' : preTriagemCount}
+                  </span>
+                )}
               </Link>
             );
           })}
