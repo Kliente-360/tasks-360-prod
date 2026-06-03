@@ -101,6 +101,42 @@ export function fmtTempoEtapa(ts?: number | null): string {
   return `${d} dias`;
 }
 
+// ─── Tempo na sub-etapa (fonte única pra frase + cor) ───────────────────
+//
+// A "etapa" visualizada em Kanban/Backlog é a SUBETAPA (em_desenvolvimento,
+// escopo_definido etc), não o status macro (andamento/bloqueado/etc).
+// Por isso o tempo "nesta etapa" deve ser sempre baseado em subetapaEm.
+// Se a task antiga não tem subetapaEm (legado), cai pra statusEm.
+
+/** Timestamp da entrada na subetapa atual (fallback statusEm). */
+export function etapaTempoTs(t: Pick<Task, 'subetapaEm' | 'statusEm'>): number | null {
+  return t.subetapaEm || t.statusEm || null;
+}
+
+/** Dias na subetapa atual, consistente entre Kanban e Backlog. */
+export function etapaTempoDays(t: Pick<Task, 'subetapaEm' | 'statusEm'>): number {
+  const ts = etapaTempoTs(t);
+  if (!ts) return 0;
+  return Math.floor((Date.now() - ts) / 86400000);
+}
+
+/** Cor de alerta da frase "X dias nesta etapa". Aplica só de
+ *  `em_definicao` em diante e exceto `concluido`. Thresholds globais:
+ *  ≥14d danger (vermelho), ≥7d warn (âmbar). */
+export type EtapaColor = null | 'warn' | 'danger';
+export function etapaTempoColor(
+  t: Pick<Task, 'subetapa' | 'subetapaEm' | 'statusEm' | 'status'>,
+): EtapaColor {
+  if (t.status === STATUS.CONCLUIDO) return null;
+  // STAGE_RANK · concluido/bloqueado = -1, backlog = 0, em_definicao = 1+
+  // Importado lazy pra evitar ciclo em runtime — vide topo do arquivo.
+  if ((STAGE_RANK[t.subetapa] ?? 0) < 1) return null;
+  const d = etapaTempoDays(t);
+  if (d >= 14) return 'danger';
+  if (d >= 7) return 'warn';
+  return null;
+}
+
 /** Label de atraso em linguagem natural: 'Xd atrasada' (sem o '+'). */
 export function fmtAtrasoLabel(dias: number): string {
   if (dias <= 0) return '';

@@ -32,7 +32,7 @@ import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
 import { PriChip, TaskAvatar, PrazoLabel, TagIA } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
-import { agingDays, agingLevel, atrasada, fmtDateShort, fmtTempoEtapa, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, type PrazoFilter } from '@/lib/task-utils';
+import { atrasada, etapaTempoColor, etapaTempoDays, fmtDateShort, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
@@ -268,7 +268,24 @@ export function KanbanClient() {
   );
 
   // ===== Render helpers =====
-  const tempoNaSubetapa = (t: Task): string => fmtTempoEtapa(t.subetapaEm || t.statusEm);
+  // Frase única "X dias nesta etapa" + cor por threshold. Fonte de
+  // verdade vive em task-utils.ts (etapaTempoDays + etapaTempoColor).
+  const tempoNaEtapa = (t: Task): React.ReactNode => {
+    const d = etapaTempoDays(t);
+    const txt = d <= 0 ? 'hoje' : d === 1 ? '1 dia' : `${d} dias`;
+    const color = etapaTempoColor(t);
+    const style =
+      color === 'danger'
+        ? { color: 'var(--danger)', fontWeight: 600 }
+        : color === 'warn'
+        ? { color: 'var(--warn)', fontWeight: 600 }
+        : undefined;
+    return (
+      <span style={style}>
+        {txt} nesta etapa
+      </span>
+    );
+  };
 
   // Mobile cai aqui só por uma fração antes do router.replace executar —
   // não renderiza nada pra evitar flash do layout op com 11 colunas.
@@ -388,7 +405,7 @@ export function KanbanClient() {
                     pessoaName={pessoasById.get(t.pessoaId)?.nome ?? '—'}
                     extraFooter={
                       <div className="text-[10px] text-muted">
-                        {tempoNaSubetapa(t)} nesta etapa
+                        {tempoNaEtapa(t)}
                       </div>
                     }
                     draggable
@@ -431,7 +448,7 @@ export function KanbanClient() {
                     showSubetapa
                     extraFooter={
                       <div className="text-[10px] text-muted">
-                        {tempoNaSubetapa(t)} nesta etapa
+                        {tempoNaEtapa(t)}
                       </div>
                     }
                   />
@@ -477,7 +494,6 @@ function KCard({
   extraFooter?: React.ReactNode;
   draggable?: boolean;
 }) {
-  const lvl = agingLevel(t);
   return (
     <div
       className={`kcard ${dragging ? 'dragging' : ''}`}
@@ -518,14 +534,6 @@ function KCard({
       </div>
       <div className="flex items-center gap-1.5 mt-2">
         {extraFooter}
-        {lvl !== 'fresh' && (
-          <span
-            className={`aging-badge aging-${lvl}`}
-            title={`parada há ${agingDays(t)} dias`}
-          >
-            {agingDays(t)}d
-          </span>
-        )}
         {needsTriage(t) && (
           <span className="triage-badge" title={triageFailures(t).join(' · ')}>
             triar

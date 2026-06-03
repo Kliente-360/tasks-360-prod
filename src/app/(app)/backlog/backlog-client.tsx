@@ -23,7 +23,7 @@ import { useToast } from '@/components/toast';
 import { BulkBar, BulkBarClearButton, BulkBarSep } from '@/components/bulk-bar';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
-import { atrasada, agingDays, agingLevel, fmtDate, fmtDateShort, fmtTempoEtapa, isPreTriagem, lblComplex, lblStatus } from '@/lib/task-utils';
+import { atrasada, fmtDate, fmtDateShort, fmtTempoEtapa, isPreTriagem, lblComplex, lblStatus } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS, SUBS_FLAT, SUBS_FLAT_ORDER } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
@@ -937,7 +937,6 @@ export function BacklogClient() {
               )}
               {(g.isAll || !collapsedGroups.includes(g.key)) && g.tasks.map((t) => {
                 const sel = selectedIds.includes(t.id);
-                const lvl = agingLevel(t);
                 return (
                   <tr
                     key={t.id}
@@ -1011,19 +1010,11 @@ export function BacklogClient() {
                         <span
                           className="status"
                           data-s={t.status}
-                          title={`${lblStatus(t.status)} · ${fmtTempoEtapa(t.statusEm)}`}
+                          title={`${lblStatus(t.status)} · ${fmtTempoEtapa(t.subetapaEm || t.statusEm)} nesta etapa`}
                         >
                           <span className="status-dot" />
                           {SUB_LABELS[t.subetapa] ?? t.subetapa}
                         </span>
-                        {lvl !== 'fresh' && (
-                          <span
-                            className={`aging-badge aging-${lvl}`}
-                            title={`parada há ${agingDays(t)} dias neste status`}
-                          >
-                            {agingDays(t)}d
-                          </span>
-                        )}
                       </div>
                     </td>
                     <td></td>
@@ -1080,7 +1071,6 @@ export function BacklogClient() {
             {(g.isAll || !collapsedGroups.includes(g.key)) && (
               <div className="space-y-2">
                 {g.tasks.map((t) => {
-                  const lvl = agingLevel(t);
                   return (
                     <div key={t.id} className="kcard" onClick={() => openEdit(t)}>
                       <div className="flex items-start justify-between gap-2 mb-2">
@@ -1123,9 +1113,6 @@ export function BacklogClient() {
                           <span className="text-[10px] text-muted">
                             › <span className="text-ink-soft">{SUB_LABELS[t.subetapa] ?? t.subetapa}</span>
                           </span>
-                        )}
-                        {lvl !== 'fresh' && (
-                          <span className={`aging-badge aging-${lvl}`}>{agingDays(t)}d</span>
                         )}
                       </div>
                     </div>
