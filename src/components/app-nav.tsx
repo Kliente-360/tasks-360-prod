@@ -17,7 +17,7 @@ import { isPreTriagem, triageFailures } from '@/lib/task-utils';
 import { STATUS } from '@/lib/task-constants';
 import { useMemo } from 'react';
 
-export const APP_VERSION = 'v1.03.064';
+export const APP_VERSION = 'v1.03.065';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -109,7 +109,7 @@ export function AppNav() {
 
             {/* Cluster 2: utilitários globais · desktop only no mobile */}
             <div className="hidden md:contents">
-              <ExportIconButton />
+              {viewerRole === 'admin' && <ExportIconButton />}
               <HelpIconButton />
               <ThemeIconButton />
             </div>
@@ -132,9 +132,13 @@ export function AppNav() {
           </div>
         </div>
 
-        {/* Desktop tabs — só visível ≥md */}
+        {/* Desktop tabs — só visível ≥md · filtra por role do viewer (sem
+            isso Briefing/Triagem/Cadastros vazam pra interno e cliente). */}
         <nav className="hidden md:flex hdr-v2-tabs">
-          {NAV.filter((item) => !item.inProfileMenu).map((item) => {
+          {NAV
+            .filter((item) => !item.inProfileMenu)
+            .filter((item) => !viewerRole || item.roles.includes(viewerRole))
+            .map((item) => {
             const active = pathname.startsWith(item.href);
             const ic = TAB_ICON[item.href] ?? 'list';
             const showBadge = item.href === '/triagem' && triagemCount > 0;

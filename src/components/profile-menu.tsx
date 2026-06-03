@@ -133,16 +133,17 @@ export function ProfileMenu() {
               <ThemeMenuItem onClick={() => setOpen(false)} />
             </div>
 
-            {/* 5. Mini-seção: Manual (mobile) + Onboarding (admin sempre).
-                No desktop só Onboarding aparece — Manual tem ícone "?"
-                no header. Borda comum agrupa os dois no mobile. */}
-            {(isAdmin || !isCliente) && (
+            {/* 5. Mini-seção: Manual (mobile) + Onboarding.
+                Onboarding aparece pra qualquer usuário staff (admin
+                ou interno) — não-cliente. No desktop só Onboarding;
+                Manual tem ícone "?" no header. */}
+            {!isCliente && (
               <>
                 <div className="border-t border-line my-1" />
                 <div className="md:hidden">
                   <HelpMenuItem onClick={() => setOpen(false)} />
                 </div>
-                {isAdmin && <OnboardingMenuItem onClick={() => setOpen(false)} />}
+                <OnboardingMenuItem onClick={() => setOpen(false)} />
               </>
             )}
 
