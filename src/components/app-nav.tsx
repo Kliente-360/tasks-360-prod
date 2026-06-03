@@ -13,10 +13,11 @@ import { ExportIconButton } from '@/components/export';
 import { NotifBell } from '@/components/notif-bell';
 import { TimerButton } from '@/components/timer-button';
 import { Icon, type IconName } from '@/components/icons';
-import { isPreTriagem } from '@/lib/task-utils';
+import { isPreTriagem, triageFailures } from '@/lib/task-utils';
+import { STATUS } from '@/lib/task-constants';
 import { useMemo } from 'react';
 
-export const APP_VERSION = 'v1.03.054';
+export const APP_VERSION = 'v1.03.055';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -59,9 +60,15 @@ export function AppNav() {
   const { refreshAll, refreshing, viewerRole, tasks } = useData();
   const { openNew } = useTaskModal();
 
-  // Counter de IA pre-triagem · aparece como bolinha vermelha na aba Triagem
-  const preTriagemCount = useMemo(
-    () => tasks.filter((t) => isPreTriagem(t) && !t.arquivadoEm).length,
+  // Counter da Triagem · mesma lógica de triagemTasks (failures OU IA pre-triagem).
+  // Bolinha vermelha aparece ao lado do label da aba.
+  const triagemCount = useMemo(
+    () =>
+      tasks.filter((t) => {
+        if (t.arquivadoEm) return false;
+        if (t.status === STATUS.CONCLUIDO) return false;
+        return isPreTriagem(t) || triageFailures(t).length > 0;
+      }).length,
     [tasks],
   );
 
@@ -130,7 +137,7 @@ export function AppNav() {
           {NAV.filter((item) => !item.inProfileMenu).map((item) => {
             const active = pathname.startsWith(item.href);
             const ic = TAB_ICON[item.href] ?? 'list';
-            const showBadge = item.href === '/triagem' && preTriagemCount > 0;
+            const showBadge = item.href === '/triagem' && triagemCount > 0;
             return (
               <Link
                 key={item.href}
@@ -143,9 +150,9 @@ export function AppNav() {
                   <span
                     className="ml-1 inline-flex items-center justify-center min-w-[16px] h-4 rounded-full text-[9px] font-bold text-white px-1"
                     style={{ background: 'var(--danger)' }}
-                    title={`${preTriagemCount} aguardando triagem`}
+                    title={`${triagemCount} aguardando triagem`}
                   >
-                    {preTriagemCount > 99 ? '99+' : preTriagemCount}
+                    {triagemCount > 99 ? '99+' : triagemCount}
                   </span>
                 )}
               </Link>
