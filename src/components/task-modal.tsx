@@ -829,7 +829,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             });
           }
           if (notifRows.length) {
-            sb.from('notifications').insert(notifRows);
+            // .then() necessário · supabase-js v2 só executa a query
+            // quando a Promise é consumida (lazy). Sem isso, INSERT
+            // não dispara. Fire-and-forget mas com log de erro.
+            sb.from('notifications').insert(notifRows).then(({ error }) => {
+              if (error) console.warn('[notif] insert failed', error);
+            });
           }
 
           // Motivo de bloqueio: se é uma transição para 'bloqueado' nesta sessão
@@ -1082,7 +1087,11 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           source_comment_id: commentId,
         });
       }
-      if (rows.length) sb.from('notifications').insert(rows);
+      if (rows.length) {
+        sb.from('notifications').insert(rows).then(({ error }) => {
+          if (error) console.warn('[notif comment] insert failed', error);
+        });
+      }
     },
     [editing.id, editing.pessoaId, pessoas, currentPessoa, sb],
   );
