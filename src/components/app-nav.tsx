@@ -19,7 +19,7 @@ import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.080';
+export const APP_VERSION = 'v1.03.081';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -36,12 +36,13 @@ const TAB_ICON: Record<string, IconName> = {
 };
 
 /**
- * Tabs mobile · ordem fixa do handoff mobile §2.2.
- * 5 abas (Briefing · Foco · Backlog · Dashboard · Portal). Filtra
- * por role usando NAV — cliente externo só vê Portal, interno não vê
- * Briefing, admin vê tudo.
+ * Tabs mobile · 2 abas: Briefing (admin) + Meu Backlog (todos).
+ * Se só 1 aba for visível pelo role, a tab bar inteira some.
  */
-const MOBILE_TAB_ORDER = ['/briefing', '/foco', '/backlog', '/dashboard', '/portal'] as const;
+const MOBILE_TAB_ORDER = ['/briefing', '/backlog'] as const;
+const MOBILE_TAB_LABEL: Record<string, string> = {
+  '/backlog': 'Meu Backlog',
+};
 
 /**
  * AppNav · header do app (desktop + mobile).
@@ -187,35 +188,29 @@ export function AppNav() {
       </header>
 
       {/* ============ Tab bar inferior · mobile only ============
-          Posicionada fixed bottom via CSS (.m-tabbar). 5 abas na ordem
-          do handoff. Cliente externo vê só Portal — o filtro por role
-          remove as outras automaticamente. */}
-      <nav className="m-tabbar md:hidden" role="navigation" aria-label="Navegação principal">
-        {mobileTabs.map((item) => {
-          const active = pathname.startsWith(item.href);
-          const ic = TAB_ICON[item.href] ?? 'list';
-          const badgeCount = item.href === '/foco' && focoCount > 0 ? focoCount : 0;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn('m-tab relative', active && 'on')}
-              aria-current={active ? 'page' : undefined}
-            >
-              <Icon name={ic} size={20} className="ic" />
-              <span>{item.label}</span>
-              {badgeCount > 0 && (
-                <span
-                  className="absolute top-1 right-3 inline-flex items-center justify-center min-w-[14px] h-[14px] rounded-full text-[8px] font-bold text-white px-1"
-                  style={{ background: 'var(--danger)' }}
-                >
-                  {badgeCount > 99 ? '99+' : badgeCount}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </nav>
+          Só exibe quando há ≥2 abas visíveis pelo role.
+          Admin vê Briefing + Meu Backlog. Interno vê só Meu Backlog
+          → 1 aba → barra omitida. */}
+      {mobileTabs.length >= 2 && (
+        <nav className="m-tabbar md:hidden" role="navigation" aria-label="Navegação principal">
+          {mobileTabs.map((item) => {
+            const active = pathname.startsWith(item.href);
+            const ic = TAB_ICON[item.href] ?? 'list';
+            const label = MOBILE_TAB_LABEL[item.href] ?? item.label;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn('m-tab', active && 'on')}
+                aria-current={active ? 'page' : undefined}
+              >
+                <Icon name={ic} size={20} className="ic" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
     </>
   );
 }
