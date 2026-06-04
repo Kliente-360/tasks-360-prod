@@ -3,8 +3,6 @@
 import { useMemo, useState } from 'react';
 import { useData } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
-import { PageHeader } from '@/components/page-header';
-import { Icon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { atrasada, isPreTriagem } from '@/lib/task-utils';
 import {
@@ -264,26 +262,6 @@ export function BriefingClient() {
 
   return (
     <div>
-      {/* ── PageHeader (DS) — bare div: pageheader.margin-bottom: 24px controla o Y do primeiro elemento abaixo ── */}
-      <div className="hidden md:block">
-        <PageHeader
-          title="Briefing"
-          context={<>{todayLabel}</>}
-          right={
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="iconbtn bordered text-xs px-3"
-              style={{ width: 'auto', gap: 6 }}
-              title="Exportar PDF (impressão do navegador)"
-            >
-              <Icon name="download" size={14} />
-              Exportar PDF
-            </button>
-          }
-        />
-      </div>
-
       {/* ── Mobile · título compacto ── */}
       <div className="md:hidden">
         <div className="m-pagetitle">
@@ -521,7 +499,7 @@ export function BriefingClient() {
           }
         />
         {!collapsed.has('time') && (
-          wca.pessoas.length === 0 ? (
+          wca.pessoas.filter((p) => p.weeks.some((w) => w.hours > 0)).length === 0 ? (
             <div className="px-4 py-5 text-sm text-muted">Nenhum dado de capacidade</div>
           ) : (
             <div className="overflow-x-auto">
@@ -536,7 +514,7 @@ export function BriefingClient() {
                   ))}
                 </div>
                 <div className="space-y-1">
-                  {wca.pessoas.map((p) => (
+                  {wca.pessoas.filter((p) => p.weeks.some((w) => w.hours > 0)).map((p) => (
                     <div key={p.pessoaId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
                       <div className="text-xs text-ink truncate pr-1" title={p.nome}>{p.nome.split(' ')[0]}</div>
                       {p.weeks.map((wk, i) => (

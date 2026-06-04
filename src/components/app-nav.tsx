@@ -19,7 +19,7 @@ import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.082';
+export const APP_VERSION = 'v1.03.083';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -37,15 +37,6 @@ const TAB_ICON: Record<string, IconName> = {
 };
 
 /**
- * Tabs mobile · 2 abas: Briefing (admin) + Meu Backlog (todos).
- * Se só 1 aba for visível pelo role, a tab bar inteira some.
- */
-const MOBILE_TAB_ORDER = ['/resumo', '/backlog'] as const;
-const MOBILE_TAB_LABEL: Record<string, string> = {
-  '/backlog': 'Meu Backlog',
-};
-
-/**
  * AppNav · header do app (desktop + mobile).
  *
  * Desktop (≥md):
@@ -53,8 +44,8 @@ const MOBILE_TAB_LABEL: Record<string, string> = {
  *   [ tab tab tab ... ]
  *
  * Mobile (<md):
- *   [ aperture · tasks 360 ] ... [ Sino · Avatar ]   ← header reduzido
- *   <tab bar inferior fixa>                          ← 5 abas
+ *   [ aperture · tasks 360 ] ... [ toggle Resumo/Backlog (admin) · Sino · Avatar ]
+ *   — sem tab bar inferior; admin alterna via ícones no header.
  *
  * Toda alternância é via classes Tailwind (`hidden md:flex` / `md:hidden`)
  * — nada de matchMedia em render pra evitar hidratação mismatch.
@@ -85,12 +76,6 @@ export function AppNav() {
     () => computeFocoCount({ tasks, pessoaId: currentPessoa?.id ?? null, isResolved }),
     [tasks, currentPessoa?.id, isResolved],
   );
-
-  // Abas mobile filtradas por role, na ordem do handoff
-  const mobileTabs = MOBILE_TAB_ORDER
-    .map((href) => NAV.find((n) => n.href === href))
-    .filter((n): n is NonNullable<typeof n> => !!n)
-    .filter((n) => !viewerRole || n.roles.includes(viewerRole));
 
   return (
     <>
@@ -141,6 +126,35 @@ export function AppNav() {
               <Icon name="plus" size={14} />
               Tarefa
             </button>
+            {/* Mobile only · toggle Resumo ↔ Meu Backlog · admin only */}
+            {viewerRole === 'admin' && (
+              <div className="flex items-center md:hidden rounded-md border border-line overflow-hidden">
+                <Link
+                  href="/resumo"
+                  className={cn(
+                    'flex items-center justify-center w-8 h-8 transition-colors',
+                    pathname.startsWith('/resumo')
+                      ? 'bg-[var(--brand)] text-white'
+                      : 'text-muted hover:text-ink hover:bg-[var(--surface-3)]',
+                  )}
+                  aria-label="Resumo executivo"
+                >
+                  <Icon name="activity" size={16} />
+                </Link>
+                <Link
+                  href="/backlog"
+                  className={cn(
+                    'flex items-center justify-center w-8 h-8 border-l border-line transition-colors',
+                    pathname.startsWith('/backlog')
+                      ? 'bg-[var(--brand)] text-white'
+                      : 'text-muted hover:text-ink hover:bg-[var(--surface-3)]',
+                  )}
+                  aria-label="Meu Backlog"
+                >
+                  <Icon name="list" size={16} />
+                </Link>
+              </div>
+            )}
             <NotifBell />
             <ProfileMenu />
           </div>
@@ -189,30 +203,6 @@ export function AppNav() {
         </nav>
       </header>
 
-      {/* ============ Tab bar inferior · mobile only ============
-          Só exibe quando há ≥2 abas visíveis pelo role.
-          Admin vê Briefing + Meu Backlog. Interno vê só Meu Backlog
-          → 1 aba → barra omitida. */}
-      {mobileTabs.length >= 2 && (
-        <nav className="m-tabbar md:hidden" role="navigation" aria-label="Navegação principal">
-          {mobileTabs.map((item) => {
-            const active = pathname.startsWith(item.href);
-            const ic = TAB_ICON[item.href] ?? 'list';
-            const label = MOBILE_TAB_LABEL[item.href] ?? item.label;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn('m-tab', active && 'on')}
-                aria-current={active ? 'page' : undefined}
-              >
-                <Icon name={ic} size={20} className="ic" />
-                <span>{label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
     </>
   );
 }

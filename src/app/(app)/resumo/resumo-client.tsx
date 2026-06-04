@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useData } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
 import { cn } from '@/lib/utils';
@@ -14,7 +14,7 @@ import {
 import { VelocidadeOperacao } from '@/components/velocidade-operacao';
 
 // ─────────────────────────────────────────────────────────
-//  Helpers
+//  Helpers visuais
 // ─────────────────────────────────────────────────────────
 
 function heatmapColor(nivel: string) {
@@ -43,31 +43,6 @@ function calBadgeBg(dia: { count: number; isPast: boolean }) {
   return 'bg-[color:var(--warn)]';
 }
 
-function SectionToggleHeader({
-  title,
-  collapsed,
-  onToggle,
-  right,
-}: {
-  title: string;
-  collapsed: boolean;
-  onToggle: () => void;
-  right?: React.ReactNode;
-}) {
-  return (
-    <div
-      className="px-3 py-3 border-b border-line flex items-center justify-between gap-2 cursor-pointer select-none"
-      onClick={onToggle}
-    >
-      <div className="flex items-center gap-2">
-        <span className="text-muted text-[10px]">{collapsed ? '▸' : '▾'}</span>
-        <h2 className="text-sm font-semibold text-ink">{title}</h2>
-      </div>
-      {right && <div className="shrink-0">{right}</div>}
-    </div>
-  );
-}
-
 const WEEK_LABELS_SHORT = ['Agora', '+1s', '+2s', '+3s'];
 
 // ─────────────────────────────────────────────────────────
@@ -77,10 +52,6 @@ const WEEK_LABELS_SHORT = ['Agora', '+1s', '+2s', '+3s'];
 export function ResumoClient() {
   const { tasks, clientes, projetos, pessoas, loading } = useData();
   const { openEdit } = useTaskModal();
-  const [alertsExpanded, setAlertsExpanded] = useState(false);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const toggle = (key: string) =>
-    setCollapsed((s) => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
   const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm && !isPreTriagem(t)), [tasks]);
 
@@ -91,7 +62,6 @@ export function ResumoClient() {
   );
   const countAlta = heuristicAlerts.filter((a) => a.severity === 'alta').length;
   const countMedia = heuristicAlerts.filter((a) => a.severity === 'media').length;
-  const alertsVisible = alertsExpanded ? heuristicAlerts : heuristicAlerts.slice(0, 6);
 
   // ── 2 · Velocidade
   const vel = useMemo(() => computeVelocidade(baseTasks), [baseTasks]);
@@ -106,7 +76,10 @@ export function ResumoClient() {
   const calendario = useMemo(() => computeCalendario(baseTasks), [baseTasks]);
   const calWeeks = useMemo(() => {
     const w: (typeof calendario)[] = [];
-    for (let i = 0; i < calendario.length; i += 7) w.push(calendario.slice(i, i + 7));
+    for (let i = 0; i < calendario.length; i += 7) {
+      const week = calendario.slice(i, i + 7);
+      w.push([week[6], ...week.slice(0, 6)]);
+    }
     return w;
   }, [calendario]);
 
@@ -156,20 +129,12 @@ export function ResumoClient() {
             {heuristicAlerts.length === 0 && (
               <span className="text-[11px] text-[var(--brand)]">✓ tudo certo</span>
             )}
-            {heuristicAlerts.length > 6 && (
-              <button
-                onClick={() => setAlertsExpanded((v) => !v)}
-                className="text-xs text-muted hover:text-ink ml-auto"
-              >
-                {alertsExpanded ? '▴ menos' : `▾ ver todos (${heuristicAlerts.length})`}
-              </button>
-            )}
           </div>
-          {alertsVisible.length === 0 ? (
+          {heuristicAlerts.length === 0 ? (
             <div className="text-sm text-muted">✓ Nenhum alerta no momento</div>
           ) : (
             <div className="grid gap-2">
-              {alertsVisible.map((a, i) => (
+              {heuristicAlerts.map((a, i) => (
                 <div key={i} className={cn('border rounded-lg px-3 py-2 text-sm', severityColor(a.severity))}>
                   <div className="flex items-start gap-2">
                     <span className="shrink-0 text-xs font-bold mt-0.5 opacity-60">
@@ -193,54 +158,48 @@ export function ResumoClient() {
 
         {/* ── 3 · Capacidade do time ── */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden">
-          <SectionToggleHeader
-            title="Capacidade do time"
-            collapsed={collapsed.has('time')}
-            onToggle={() => toggle('time')}
-            right={
-              <div className="flex items-center gap-2 text-[10px] text-muted">
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-sm bg-[var(--p0-soft)] inline-block" />
-                  Sobrecarga
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-sm bg-[var(--p1-soft)] inline-block" />
-                  Pressão
-                </span>
-              </div>
-            }
-          />
-          {!collapsed.has('time') && (
-            wca.pessoas.length === 0 ? (
-              <div className="px-4 py-5 text-sm text-muted">Nenhum dado de capacidade</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <div className="px-3 py-3" style={{ minWidth: 300 }}>
-                  <div className="grid gap-1 mb-1.5" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
-                    <div />
-                    {WEEK_LABELS_SHORT.map((l) => (
-                      <div key={l} className="text-center text-[10px] text-muted font-medium uppercase tracking-wide">{l}</div>
-                    ))}
-                  </div>
-                  <div className="space-y-1">
-                    {wca.pessoas.map((p) => (
-                      <div key={p.pessoaId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
-                        <div className="text-xs text-ink truncate pr-1" title={p.nome}>{p.nome.split(' ')[0]}</div>
-                        {p.weeks.map((wk, i) => (
-                          <div
-                            key={i}
-                            className={cn('text-center text-[11px] py-1.5 rounded font-mono', heatmapColor(wk.nivel))}
-                            title={`${wk.hours}h`}
-                          >
-                            {wk.pctCap != null ? `${wk.pctCap}%` : '—'}
-                          </div>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+          <div className="px-3 py-3 border-b border-line flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-ink">Capacidade do time</h2>
+            <div className="flex items-center gap-2 text-[10px] text-muted">
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-sm bg-[var(--p0-soft)] inline-block" />
+                Sobrecarga
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-sm bg-[var(--p1-soft)] inline-block" />
+                Pressão
+              </span>
+            </div>
+          </div>
+          {wca.pessoas.filter((p) => p.weeks.some((w) => w.hours > 0)).length === 0 ? (
+            <div className="px-4 py-5 text-sm text-muted">Nenhum dado de capacidade</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="px-3 py-3" style={{ minWidth: 300 }}>
+                <div className="grid gap-1 mb-1.5" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
+                  <div />
+                  {WEEK_LABELS_SHORT.map((l) => (
+                    <div key={l} className="text-center text-[10px] text-muted font-medium uppercase tracking-wide">{l}</div>
+                  ))}
+                </div>
+                <div className="space-y-1">
+                  {wca.pessoas.filter((p) => p.weeks.some((w) => w.hours > 0)).map((p) => (
+                    <div key={p.pessoaId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
+                      <div className="text-xs text-ink truncate pr-1" title={p.nome}>{p.nome.split(' ')[0]}</div>
+                      {p.weeks.map((wk, i) => (
+                        <div
+                          key={i}
+                          className={cn('text-center text-[11px] py-1.5 rounded font-mono', heatmapColor(wk.nivel))}
+                          title={`${wk.hours}h`}
+                        >
+                          {wk.pctCap != null ? `${wk.pctCap}%` : '—'}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </div>
-            )
+            </div>
           )}
         </div>
 
@@ -252,7 +211,7 @@ export function ResumoClient() {
           </div>
           <div className="p-2">
             <div className="grid grid-cols-7 gap-1 mb-1">
-              {['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'].map((d) => (
+              {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'].map((d) => (
                 <div key={d} className="text-center text-[9px] font-medium uppercase tracking-wide text-muted">{d}</div>
               ))}
             </div>

@@ -152,7 +152,10 @@ export function DashboardClient() {
   const maxEntregasH = Math.max(...entregasSemanas.map((s) => s.hours), 1);
   const calendario = useMemo(() => computeCalendario(filteredTasks), [filteredTasks]);
   const calWeeks: typeof calendario[] = [];
-  for (let i = 0; i < calendario.length; i += 7) calWeeks.push(calendario.slice(i, i + 7));
+  for (let i = 0; i < calendario.length; i += 7) {
+    const week = calendario.slice(i, i + 7);
+    calWeeks.push([week[6], ...week.slice(0, 6)]);
+  }
 
   // ── Volume + Carga
   const volumeCliente = useMemo(() => computeVolumeByCliente(filteredTasks, clientes), [filteredTasks, clientes]);
@@ -396,7 +399,7 @@ export function DashboardClient() {
           <div className="p-2 md:p-3">
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-1 mb-1">
-              {['SEG','TER','QUA','QUI','SEX','SÁB','DOM'].map((d) => (
+              {['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'].map((d) => (
                 <div key={d} className="text-center text-[9px] font-medium uppercase tracking-wide text-muted">{d}</div>
               ))}
             </div>
