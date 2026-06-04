@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.073 · **Atualizado**: 05/06/2026 · branch `main`
+> **Versão**: v1.03.079 · **Atualizado**: 04/06/2026 · branch `main`
 
 ---
 
@@ -55,6 +55,7 @@ Bump MINOR 02→03 marcou o fechamento desse ciclo. Concluídos:
 - ✅ **Pessoa desativada some de dropdowns** (v1.03.068) · filtro `invited_at !== null` em todos os pontos que listam staff atribuível (FilterBar, Triagem, task modal, mention resolution)
 - ✅ **Backlog/Kanban · chip Xd + frase nesta etapa unificados** (v1.03.069) · chip duplicado removido; nova frase única "X dias nesta etapa" baseada em subetapaEm (fonte unificada `etapaTempoDays`), com cor por threshold ≥7d âmbar / ≥14d vermelho, só de em_definicao em diante exceto concluído
 - ✅ **Notifications · sistema completo** (v1.03.070-073) · fix lazy promise (`.then()` faltando), implementação de `cliente_comentou` + `cliente_respondeu` do Portal, NotifBell com 4 grupos (Todas · Menção · Updates em tasks · Updates do cliente), ícones bell/mention/activity/inbox, RLS apertada (SELECT só recipient, UPDATE só recipient, INSERT authenticated, DELETE bloqueado), click-outside fecha o sino
+- ✅ **A.18 · Meu Foco redesign** (v1.03.075-077) · 6 contextos de atenção + checkbox "feito hoje" por task com persistência `localStorage` key `kliente360-foco-done-<YYYY-MM-DD>` (purge automático ao virar o dia) · linha única + motivo picklist + botões no topo; desktop ganhou mesma anatomia do mobile (inline-edit fluido); HOWTO + ONBOARDING atualizados (v1.03.078)
 
 ---
 
@@ -83,7 +84,7 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | ~~A.13~~ | ~~**Triagem · redesign UX-first**~~ | ✅ Entregue v1.03.043-059. Inline edit dos 5 campos + Aceitar/Rejeitar + RejectPopover + counter no header. "Cliente respondeu" continua coberto pelo NotifBell (separado por design). |
 | A.14 (parcial) | **Card de task unificado** · 🟡 **só camada técnica entregue, sem mudança visual perceptível.** v1.03.032-038 dedupou JSX repetido em primitivas (`PriChip`/`TaskAvatar`/`PrazoLabel`/`TagIA`) e criou wrapper `<TaskCard>` com variantes `sm/md/lg/checkable/selected`. Mas as telas mantiveram seus markups específicos (Foco desktop = FocoCard próprio, Backlog desktop = `<table>`, Kanban = .kcard, Triagem = card-com-chips, Calendário = .kcard). Resultado: código mais limpo, **UI essencialmente idêntica ao que era antes**. | (já feito, parcial) | Médio (técnico, invisível ao usuário) |
 | A.17 | **Card de task unificado · VISUAL** · **escopo redo**: A.14 entregou só dedup técnico. Falta a unificação visual real: cards iguais entre Foco desktop/mobile, Backlog mobile, Kanban, Triagem, Calendário detail. **Plano precisa ser refeito** — começar com auditoria visual real (prints lado-a-lado), decidir variante única por contexto, executar com mudança VISÍVEL em cada PR (não dedup invisível como A.14). Não tocar sem plano novo aprovado. | 1-2 semanas | Alto — entrega o que A.14 prometeu mas não cumpriu |
-| A.18 | **Meu foco · redesign UX-first** · refazer a tela Foco com foco em ação diária. Checkbox visual por task (marca como "feito hoje") **não persiste no DB** — só state local com timestamp do dia; ao virar a data (próximo boot ou primeiro paint após meia-noite), todo o `done` é limpo. Hoje o mobile já tem isso via `useState Set` mas reseta em qualquer remount (não respeita "dia"); desktop não tem checkbox. Unificar: desktop ganha mesma anatomia do mobile (TaskCard md checkable do A.17), persistência via `localStorage` com key `kliente360-foco-done-<YYYY-MM-DD>` (purge automático ao detectar key de dia anterior). Inspiração: GitHub commits "done today" / Todoist "concluído hoje". | 1-2 semanas | Alto — Foco é o entry point diário do operador |
+| ~~A.18~~ | ~~**Meu foco · redesign UX-first**~~ | ✅ Entregue v1.03.075-077 (ver Marcos concluídos acima) |
 | A.15 | **Mobile · fechamento (Step 4 + validação real)** · 🟡 parcial: shell + 4 telas + Portal polish entregues (PRs #21-#27). Falta: (1) **Task modal full-screen mobile** (Step 4 — PR isolado, suspeito do crash v1.03.009; estratégia: dual-render desktop+mobile com CSS `display:none/block`, NÃO usar `matchMedia` em render path); (2) validar viewport/scroll em iPhone SE/Plus/iPad portrait reais; (3) tap targets ≥44px conforme HIG; (4) gestos (swipe-to-delete em listas? tap longo?); (5) Briefing "Clientes em atenção" mobile · checar se safe-cast roda em prod; (6) Portal mobile · avaliar se vale port fiel ao handoff (hoje só esconde storytelling). | 1-2 semanas | Alto — fecha o ciclo mobile com qualidade |
 | A.16 | **Revisar bulk actions** · auditar BulkBar (seleção múltipla no Backlog) — UX da seleção, ações disponíveis (atribuir cliente/projeto/pessoa/prazo/prioridade/esforço, arquivar, excluir), feedback visual (sticky bar com contador), comportamento mobile (não aparece hoje). Decidir: manter no Backlog desktop, levar pro Kanban também, adicionar atalhos teclado (ESC limpa seleção, Cmd+A seleciona tudo filtrado), confirmações pra ações destrutivas. | 3-5 dias | Médio — produtividade em operações repetitivas |
 
@@ -202,9 +203,9 @@ jun/2026: design primeiro, closing loops segundo, quick wins por
 último — coloca o trabalho pesado na frente enquanto contexto está
 fresco).
 
-**Onda 1 · Design coeso** (~10-18 dias · A.17 base pra A.18)
-1. **A.17** Card de task · VISUAL (replan + execução)
-2. **A.18** Meu foco · redesign UX-first (consome A.17 · TaskCard md checkable + persistência local por dia)
+**Onda 1 · Design coeso** (~1-2 semanas)
+1. **A.17** Card de task · VISUAL (replan + execução — único item desta onda)
+   - ~~A.18 entregue~~ (v1.03.075-077 · checkbox local + 6 contextos · não depende mais de A.17)
    - ~~A.13 movido pra concluídos~~ (Triagem já entregue na reform jun/2026)
 
 **Onda 2 · Closing loops** (~10-20 dias)
