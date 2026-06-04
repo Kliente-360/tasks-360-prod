@@ -19,10 +19,11 @@ import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.081';
+export const APP_VERSION = 'v1.03.082';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
+  '/resumo': 'activity',
   '/foco': 'target',
   '/briefing': 'file',
   '/triagem': 'inbox',
@@ -39,7 +40,7 @@ const TAB_ICON: Record<string, IconName> = {
  * Tabs mobile · 2 abas: Briefing (admin) + Meu Backlog (todos).
  * Se só 1 aba for visível pelo role, a tab bar inteira some.
  */
-const MOBILE_TAB_ORDER = ['/briefing', '/backlog'] as const;
+const MOBILE_TAB_ORDER = ['/resumo', '/backlog'] as const;
 const MOBILE_TAB_LABEL: Record<string, string> = {
   '/backlog': 'Meu Backlog',
 };
@@ -150,6 +151,7 @@ export function AppNav() {
         <nav className="hidden md:flex hdr-v2-tabs">
           {NAV
             .filter((item) => !item.inProfileMenu)
+            .filter((item) => !item.mobileOnly)
             .filter((item) => !viewerRole || item.roles.includes(viewerRole))
             .map((item) => {
             const active = pathname.startsWith(item.href);

@@ -11,12 +11,15 @@ export type NavItem = {
   hideMobile?: boolean;
   /** Sai da tab bar (em todos os breakpoints) e vive no menu do perfil. Espelha inProfileMenu Alpine. */
   inProfileMenu?: boolean;
+  /** Existe apenas na tab bar mobile — não aparece nas abas do desktop. */
+  mobileOnly?: boolean;
 };
 
 // Ordem v1.03 (jun/2026): briefing primeiro (cabeçalho da operação),
 // triagem antes do foco (filtro do dia), foco/backlog/kanban/calendário
 // formam o miolo operacional, dashboard/timesheet/portal fecham.
 export const NAV: ReadonlyArray<NavItem> = [
+  { href: '/resumo',     label: 'Resumo',        roles: ['admin'],                     onda: 1, mobileOnly: true },
   { href: '/briefing',   label: 'Briefing',      roles: ['admin'],                     onda: 1 },
   // Triagem escondida no mobile: bulk actions e leitura paralela dos chips
   // de falhas funcionam melhor no desktop; quem precisar triar no celular
