@@ -13,13 +13,11 @@
  * só persistem ao clicar Salvar, fila estável durante edição.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useData, usePessoasById, useClientesById, useProjetosById } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
-import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { Icon } from '@/components/icons';
-import { TaskCard } from '@/components/task-card/task-card';
 import { cn } from '@/lib/utils';
 import {
   atrasada,
@@ -37,7 +35,6 @@ import {
   useLastCommentByTask,
 } from '@/lib/use-last-comment';
 import { useFocoDone, type FocoContexto } from '@/lib/use-foco-done';
-import { createClient } from '@/lib/supabase/client';
 import type { Task } from '@/lib/types';
 
 const PRIO_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
@@ -52,15 +49,6 @@ type ContextoMeta = {
   emptyMsg: string;
   defaultOpen: boolean;
 };
-
-// Motivos pré-definidos pro bloqueio · picklist (não texto livre).
-const MOTIVOS_BLOQUEIO = [
-  'Aguardando cliente',
-  'Aguardando aprovação interna',
-  'Aguardando dependência externa',
-  'Aguardando informação',
-  'Bloqueio técnico',
-] as const;
 
 // Todas defaultOpen=true · usuário colapsa se quiser.
 const CONTEXTOS: ContextoMeta[] = [
@@ -282,21 +270,33 @@ export function FocoClient() {
         </div>
       )}
 
-      {/* Mobile · panel reduzido (mantém pill mine/atrasadas/hoje) */}
+      {/* Mobile · título compacto */}
       {hasFocus && (
-        <FocoMobilePanel
-          focusPessoaId={focusPessoaId}
-          tasks={tasks}
-          openEdit={openEdit}
-          clientesById={clientesById}
-          projetosById={projetosById}
-          pessoasById={pessoasById}
-        />
+        <div className="md:hidden">
+          <div className="m-pagetitle">
+            <h1>Foco de <em>hoje</em></h1>
+            <div className="narr">
+              <b>{totalPending}</b> pendente{totalPending !== 1 ? 's' : ''}
+              {pillPrio && <span className="sep">·</span>}
+              {pillPrio && <b>filtro P0/P1</b>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mb-3 px-0.5">
+            <button
+              type="button"
+              className={cn('triage-filter-chip', pillPrio && 'is-on')}
+              onClick={() => setPillPrio((v) => !v)}
+              title="Filtrar só prioridades P0/P1 em todas as seções"
+            >
+              <strong>P0/P1</strong>
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* Desktop · 6 seções colapsáveis */}
+      {/* 6 seções colapsáveis · desktop + mobile */}
       {hasFocus && (
-        <div className="hidden md:block space-y-4">
+        <div className="space-y-4">
           {/* Seu dia · narrativa + counts */}
           <div
             className="card p-4 md:p-5 min-h-[116px] flex flex-col justify-center"
@@ -432,28 +432,8 @@ function FocoSection({
 }
 
 // =========================================================================
-//  Linha · card largo · 5 inputs padronizados + motivo (cond.) + comment
+//  Linha · card · info + botão Resolver (sem inline edit)
 // =========================================================================
-//
-// Anatomia (igual Triagem):
-//   ┌ Top area (clickable → openEdit) ──────────────────────
-//   │ prio · 🔒 · 🤖 · título  ·  status-pill
-//   │ subetapa · idade · prazo · cliente · projeto
-//   ├ Action bar (stopPropagation) ─────────────────────────
-//   │ Row A · [📅 prazo] [📋 subetapa] [⏱ esforço] [⏱ horas] [🚫 motivo*]
-//   │ Row B · [💬 comment (flex-1)]              [Resolver] [Salvar]
-//   └────────────────────────────────────────────────────────
-// (*motivo disabled enquanto subetapa ≠ bloqueado)
-//
-// Gate Salvar:
-//   • dirty (algum field do draft ≠ task OU motivo/comment com texto)
-//   • requeridos por contexto:
-//     - atrasadas/hoje: prazo + subetapa filled (default já preenchidos)
-//     - bloqueadas: subetapa ≠ 'bloqueado'
-//     - sem_comment: comment.trim() não vazio
-//     - sem_esforco: esforco > 0
-//     - sem_horas: tempoRealHoras > 0
-//   • regra universal: subetapa === 'bloqueado' exige motivo
 
 function FocoTaskRow({
   task,
@@ -474,137 +454,6 @@ function FocoTaskRow({
   projetoName: string;
   openEdit: (id: string) => void;
 }) {
-  const toast = useToast();
-  const sb = useMemo(() => createClient(), []);
-  const { patchTask, currentPessoa } = useData();
-
-  type Draft = {
-    prazo: string;
-    subetapa: string;
-    esforco: number;
-    tempoRealHoras: number;
-    motivo: string;
-    comment: string;
-  };
-  const initial = useMemo<Draft>(
-    () => ({
-      prazo: task.prazo || '',
-      subetapa: task.subetapa || '',
-      esforco: Number(task.esforco) || 0,
-      tempoRealHoras: Number(task.tempoRealHoras) || 0,
-      motivo: '',
-      comment: '',
-    }),
-    [task.prazo, task.subetapa, task.esforco, task.tempoRealHoras],
-  );
-  const [draft, setDraft] = useState<Draft>(initial);
-  useEffect(() => {
-    setDraft((d) => ({ ...d, ...initial, motivo: d.motivo, comment: d.comment }));
-  }, [initial]);
-
-  const motivoRequired = draft.subetapa === 'bloqueado';
-
-  // Dirty: algo realmente mudou (field ≠ task OU motivo/comment com texto)
-  const isDirty =
-    draft.prazo !== (task.prazo || '') ||
-    draft.subetapa !== task.subetapa ||
-    draft.esforco !== (Number(task.esforco) || 0) ||
-    draft.tempoRealHoras !== (Number(task.tempoRealHoras) || 0) ||
-    draft.comment.trim() !== '' ||
-    (motivoRequired && draft.motivo.trim() !== '');
-
-  // Requireds por contexto (em cima de dirty)
-  const faltam: string[] = [];
-  if (motivoRequired && !draft.motivo.trim()) faltam.push('motivo');
-  switch (contexto) {
-    case 'bloqueadas':
-      if (draft.subetapa === 'bloqueado') faltam.push('mudar subetapa');
-      break;
-    case 'sem_comment':
-      if (!draft.comment.trim()) faltam.push('comentário');
-      break;
-    case 'sem_esforco':
-      if (!draft.esforco || draft.esforco <= 0) faltam.push('esforço');
-      break;
-    case 'sem_horas':
-      if (!draft.tempoRealHoras || draft.tempoRealHoras <= 0) faltam.push('horas');
-      break;
-    case 'atrasadas':
-    case 'hoje':
-      if (!draft.prazo) faltam.push('prazo');
-      if (!draft.subetapa) faltam.push('subetapa');
-      break;
-  }
-  const canSave = isDirty && faltam.length === 0;
-
-  const persist = useCallback(async () => {
-    const dbPatch: Record<string, unknown> = {};
-    const localPatch: Partial<Task> = {};
-    if (draft.prazo !== (task.prazo || '')) {
-      dbPatch.prazo = draft.prazo || null;
-      localPatch.prazo = draft.prazo;
-    }
-    if (draft.subetapa !== task.subetapa) {
-      dbPatch.subetapa = draft.subetapa;
-      localPatch.subetapa = draft.subetapa;
-    }
-    if (draft.esforco !== (Number(task.esforco) || 0)) {
-      dbPatch.esforco = draft.esforco;
-      localPatch.esforco = draft.esforco;
-    }
-    if (draft.tempoRealHoras !== (Number(task.tempoRealHoras) || 0)) {
-      dbPatch.tempo_real_horas = draft.tempoRealHoras;
-      localPatch.tempoRealHoras = draft.tempoRealHoras;
-    }
-    if (Object.keys(dbPatch).length > 0) {
-      const { error } = await sb.from('tasks').update(dbPatch).eq('id', task.id);
-      if (error) {
-        toast.error('Erro: ' + error.message);
-        return;
-      }
-      patchTask(task.id, localPatch);
-    }
-
-    // Posta motivo (se virou bloqueado) e/ou comment livre. Ambos
-    // entram como task_comments do dono da task (currentPessoa).
-    const nowIso = new Date().toISOString();
-    const commentsToInsert: Record<string, unknown>[] = [];
-    if (motivoRequired && draft.motivo.trim()) {
-      commentsToInsert.push({
-        task_id: task.id,
-        body: `Bloqueio: ${draft.motivo.trim()}`,
-        author: currentPessoa?.nome ?? 'app',
-        author_pessoa_id: currentPessoa?.id ?? null,
-        visivel_cliente: false,
-        from_cliente: false,
-        posted_em: nowIso,
-      });
-    }
-    if (draft.comment.trim()) {
-      commentsToInsert.push({
-        task_id: task.id,
-        body: draft.comment.trim(),
-        author: currentPessoa?.nome ?? 'app',
-        author_pessoa_id: currentPessoa?.id ?? null,
-        visivel_cliente: false,
-        from_cliente: false,
-        posted_em: nowIso,
-      });
-    }
-    if (commentsToInsert.length) {
-      const { error } = await sb.from('task_comments').insert(commentsToInsert);
-      if (error) {
-        toast.error('Salvo, mas comentário falhou: ' + error.message);
-      }
-    }
-
-    toast.success('Salvo.');
-    setDraft((d) => ({ ...d, motivo: '', comment: '' }));
-    // Auto-resolve no contexto atual — usuário não precisa clicar Resolver
-    if (!resolved) onToggleResolved();
-  }, [draft, task, sb, patchTask, toast, currentPessoa, motivoRequired, resolved, onToggleResolved]);
-
-  // Meta visual
   const etapaCor = etapaTempoColor(task);
   const etapaDias = etapaTempoDays(task);
   const corFrase =
@@ -617,17 +466,13 @@ function FocoTaskRow({
 
   return (
     <div
-      className={cn(
-        'card p-3 md:p-4 transition-colors',
-        resolved && 'opacity-50',
-      )}
+      className={cn('card p-3 md:p-4 transition-colors', resolved && 'opacity-50')}
+      onClick={() => openEdit(task.id)}
+      style={{ cursor: 'pointer' }}
     >
-      {/* Top · area clicável (esquerda) + botões Resolver/Salvar (direita) */}
-      <div className="flex items-start justify-between gap-3">
-        <div
-          className="cursor-pointer hover:opacity-90 flex-1 min-w-0"
-          onClick={() => openEdit(task.id)}
-        >
+      <div className="flex items-start gap-3">
+        {/* Info */}
+        <div className="flex-1 min-w-0">
           {/* Linha 1 · prio + flags + título */}
           <div className="flex items-baseline gap-2 flex-wrap mb-1">
             <span className={`pri pri-${task.prioridade}`}>
@@ -680,130 +525,19 @@ function FocoTaskRow({
           </div>
         </div>
 
-        {/* Botões no topo direito · Resolver (ghost, só muda label) + Salvar */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={onToggleResolved}
-            className="btn btn-ghost text-xs flex items-center gap-1"
-            title={resolved ? 'Desmarcar resolvido hoje' : 'Marcar como resolvido (só hoje · não persiste)'}
-          >
-            <Icon name="check" size={13} />
-            {resolved ? 'Resolvido' : 'Resolver'}
-          </button>
-          <button
-            type="button"
-            onClick={canSave ? persist : undefined}
-            disabled={!canSave}
-            className="btn btn-primary text-xs"
-            title={
-              canSave
-                ? 'Salvar'
-                : !isDirty
-                  ? 'Sem mudanças pra salvar'
-                  : `Falta: ${faltam.join(', ')}`
-            }
-            style={!canSave ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
-          >
-            Salvar
-          </button>
-        </div>
-      </div>
-
-      {/* Action bar · 6 inputs em UMA linha · comment ocupa o resto */}
-      <div className="mt-3 pt-3 border-t border-line flex items-center gap-2 flex-nowrap overflow-x-auto">
-        {/* 1. Prazo */}
-        <span className="triage-inline-field w-[150px] shrink-0" title="Prazo">
-          <Icon name="calendar" size={13} className="ic" />
-          <input
-            type="date"
-            value={draft.prazo}
-            onChange={(e) => setDraft((d) => ({ ...d, prazo: e.target.value }))}
-            className="triage-inline-select"
-          />
-        </span>
-        {/* 2. Esforço (compacto · só number) */}
-        <span className="triage-inline-field w-[95px] shrink-0" title="Esforço em horas">
-          <Icon name="timer" size={13} className="ic" />
-          <input
-            type="number"
-            min={0}
-            step={0.5}
-            value={draft.esforco || ''}
-            onChange={(e) => setDraft((d) => ({ ...d, esforco: Number(e.target.value) || 0 }))}
-            placeholder="esf"
-            className="triage-inline-select"
-          />
-        </span>
-        {/* 3. Horas realizadas (compacto · só number) */}
-        <span className="triage-inline-field w-[95px] shrink-0" title="Horas realizadas">
-          <Icon name="history" size={13} className="ic" />
-          <input
-            type="number"
-            min={0}
-            step={0.25}
-            value={draft.tempoRealHoras || ''}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, tempoRealHoras: Number(e.target.value) || 0 }))
-            }
-            placeholder="hrs"
-            className="triage-inline-select"
-          />
-        </span>
-        {/* 4. Status (subetapa) */}
-        <span className="triage-inline-field w-[150px] shrink-0" title="Subetapa">
-          <Icon name="list-filter" size={13} className="ic" />
-          <select
-            value={draft.subetapa}
-            onChange={(e) => setDraft((d) => ({ ...d, subetapa: e.target.value }))}
-            className="triage-inline-select"
-          >
-            {Object.keys(SUB_LABELS).map((k) => (
-              <option key={k} value={k}>
-                {SUB_LABELS[k]}
-              </option>
-            ))}
-          </select>
-        </span>
-        {/* 5. Motivo (picklist · habilitado só se subetapa = bloqueado) */}
-        <span
+        {/* Botão Resolver · stopPropagation pra não abrir o modal */}
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleResolved(); }}
           className={cn(
-            'triage-inline-field w-[170px] shrink-0',
-            !motivoRequired && 'opacity-50',
+            'btn text-xs flex items-center gap-1 shrink-0',
+            resolved ? 'btn-primary' : 'btn-ghost',
           )}
-          title={
-            motivoRequired
-              ? 'Motivo do bloqueio (obrigatório)'
-              : 'Disponível se subetapa = Bloqueado'
-          }
+          title={resolved ? 'Desmarcar resolvido hoje' : 'Marcar como resolvido (só hoje · não persiste)'}
         >
-          <Icon name="lock" size={13} className="ic" />
-          <select
-            value={draft.motivo}
-            onChange={(e) => setDraft((d) => ({ ...d, motivo: e.target.value }))}
-            disabled={!motivoRequired}
-            className="triage-inline-select"
-          >
-            <option value="">{motivoRequired ? '— motivo —' : 'motivo'}</option>
-            {MOTIVOS_BLOQUEIO.map((m) => (
-              <option key={m} value={m}>{m}</option>
-            ))}
-          </select>
-        </span>
-        {/* 6. Comment (flex-1 · pega o resto da linha) */}
-        <span
-          className="triage-inline-field flex-1 min-w-[140px]"
-          title="Comentário rápido (opcional)"
-        >
-          <Icon name="comment" size={13} className="ic" />
-          <input
-            type="text"
-            value={draft.comment}
-            onChange={(e) => setDraft((d) => ({ ...d, comment: e.target.value }))}
-            placeholder="Comentário rápido (opcional)…"
-            className="triage-inline-select"
-          />
-        </span>
+          <Icon name="check" size={13} />
+          {resolved ? 'Resolvido' : 'Resolver'}
+        </button>
       </div>
     </div>
   );
@@ -816,123 +550,6 @@ function fmtRelative(d: Date): string {
   return `${days}d atrás`;
 }
 
-// =========================================================================
-//  Mobile · panel leve · mantém 3 segmentos (mine/atrasadas/hoje)
-// =========================================================================
-function FocoMobilePanel({
-  focusPessoaId,
-  tasks,
-  openEdit,
-  clientesById,
-  projetosById,
-  pessoasById,
-}: {
-  focusPessoaId: string;
-  tasks: Task[];
-  openEdit: (id: string) => void;
-  clientesById: ReturnType<typeof useClientesById>;
-  projetosById: ReturnType<typeof useProjetosById>;
-  pessoasById: ReturnType<typeof usePessoasById>;
-}) {
-  const [seg, setSeg] = useState<'minhas' | 'atrasadas' | 'hoje'>('minhas');
-  const [done, setDone] = useState<Set<string>>(() => new Set());
-  const todayIso = new Date().toISOString().slice(0, 10);
-
-  const mine = useMemo(
-    () =>
-      tasks.filter(
-        (t) =>
-          t.pessoaId === focusPessoaId &&
-          t.status !== STATUS.CONCLUIDO &&
-          !t.arquivadoEm &&
-          !isPreTriagem(t),
-      ),
-    [tasks, focusPessoaId],
-  );
-  const atrasadasList = useMemo(() => mine.filter((t) => atrasada(t)), [mine]);
-  const hojeList = useMemo(
-    () => mine.filter((t) => t.prazo === todayIso || atrasada(t)),
-    [mine, todayIso],
-  );
-
-  const list = seg === 'atrasadas' ? atrasadasList : seg === 'hoje' ? hojeList : mine;
-  const totalHoras = list.reduce((a, t) => a + (t.esforco || 0), 0);
-  const toggle = (id: string) =>
-    setDone((d) => {
-      const next = new Set(d);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
-  const pills = [
-    { v: 'minhas' as const, label: 'Minhas', ct: mine.length },
-    { v: 'atrasadas' as const, label: 'Atrasadas', ct: atrasadasList.length },
-    { v: 'hoje' as const, label: 'Hoje', ct: hojeList.length },
-  ];
-
-  return (
-    <div className="md:hidden">
-      <div className="m-pagetitle">
-        <h1>
-          Foco de <em>hoje</em>
-        </h1>
-        <div className="narr">
-          <b>{list.length}</b> tarefas
-          <span className="sep">·</span>
-          <b>{totalHoras}h</b> previstas
-        </div>
-      </div>
-
-      <div className="m-pills">
-        {pills.map((p) => (
-          <button
-            key={p.v}
-            type="button"
-            className={cn('m-pill', seg === p.v && 'on')}
-            onClick={() => setSeg(p.v)}
-          >
-            {p.label}
-            <span className="ct">{p.ct}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="m-list">
-        {list.length === 0 ? (
-          <div className="card text-center py-6 px-3 text-muted text-xs italic">
-            {seg === 'atrasadas'
-              ? 'Nada atrasado. Bom dia.'
-              : seg === 'hoje'
-              ? 'Nada com prazo hoje.'
-              : 'Sem tarefas abertas.'}
-          </div>
-        ) : (
-          list.map((t) => {
-            const cli = clientesById.get(t.clienteId)?.nome ?? '—';
-            const proj = projetosById.get(t.projetoId)?.nome;
-            const respNome = pessoasById.get(t.pessoaId)?.nome ?? '';
-            return (
-              <TaskCard
-                key={t.id}
-                task={t}
-                cliente={cli}
-                projeto={proj}
-                respNome={respNome}
-                size="md"
-                checkable
-                checked={done.has(t.id)}
-                onToggleCheck={() => toggle(t.id)}
-                onClick={() => openEdit(t.id)}
-                showEsforco
-              />
-            );
-          })
-        )}
-      </div>
-    </div>
-  );
-}
 
 /** Hook helper exportado pra computar count do Foco no header.
  *  Não precisa de DB (skip sem_comment) — só usa as 5 contextos

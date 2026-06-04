@@ -670,6 +670,7 @@ export function BacklogClient() {
         setF={setF}
         clientesAtivos={clientesAtivos}
         pessoasNaoCliente={pessoasNaoCliente}
+        projetosByCliente={projetosByCliente}
         onOpen={openEdit}
         clearFilters={clearFilters}
       />
@@ -1326,6 +1327,7 @@ function BacklogMobilePanel({
   setF,
   clientesAtivos,
   pessoasNaoCliente,
+  projetosByCliente,
   onOpen,
   clearFilters,
 }: {
@@ -1339,6 +1341,7 @@ function BacklogMobilePanel({
   setF: (next: Filters) => void;
   clientesAtivos: Cliente[];
   pessoasNaoCliente: Pessoa[];
+  projetosByCliente: ReturnType<typeof useProjetosByCliente>;
   onOpen: (t: Task) => void;
   clearFilters: () => void;
 }) {
@@ -1441,6 +1444,7 @@ function BacklogMobilePanel({
           setF={setF}
           clientes={clientesAtivos}
           pessoas={pessoasNaoCliente}
+          projetosByCliente={projetosByCliente}
           onClose={closeSheet}
           onClear={() => {
             clearFilters();
@@ -1452,12 +1456,13 @@ function BacklogMobilePanel({
   );
 }
 
-/** Bottom sheet com filtros do Backlog mobile (Cliente / Resp / Pri / Prazo). */
+/** Bottom sheet com filtros do Backlog mobile (Cliente / Projeto / Resp / Pri / Prazo). */
 function BacklogFilterSheet({
   f,
   setF,
   clientes,
   pessoas,
+  projetosByCliente,
   onClose,
   onClear,
 }: {
@@ -1465,6 +1470,7 @@ function BacklogFilterSheet({
   setF: (next: Filters) => void;
   clientes: Cliente[];
   pessoas: Pessoa[];
+  projetosByCliente: ReturnType<typeof useProjetosByCliente>;
   onClose: () => void;
   onClear: () => void;
 }) {
@@ -1490,8 +1496,16 @@ function BacklogFilterSheet({
   const pris = ['', 'P0', 'P1', 'P2', 'P3'];
   const prazos = ['', 'atrasadas', 'hoje', 'semana', 'sem'];
 
+  const projetosDisponiveis = useMemo(
+    () => local.cliente ? (projetosByCliente.get(local.cliente) ?? []).filter((p) => !p.arquivadoEm) : [],
+    [local.cliente, projetosByCliente],
+  );
+
   const labelCliente = local.cliente
     ? (clientes.find((c) => c.id === local.cliente)?.nome ?? '—')
+    : 'Todos';
+  const labelProjeto = local.projeto
+    ? (projetosDisponiveis.find((p) => p.id === local.projeto)?.nome ?? '—')
     : 'Todos';
   const labelPessoa = local.pessoa
     ? (pessoas.find((p) => p.id === local.pessoa)?.nome.split(' ')[0] ?? '—')
@@ -1516,6 +1530,17 @@ function BacklogFilterSheet({
             <div className="rbody"><div className="rt">Cliente</div></div>
             <span className="val">{labelCliente}</span>
           </button>
+          {local.cliente && projetosDisponiveis.length > 0 && (
+            <button
+              type="button"
+              className="m-row"
+              onClick={cycle('projeto', ['', ...projetosDisponiveis.map((p) => p.id)])}
+            >
+              <span className="ric"><Icon name="folder" size={16} /></span>
+              <div className="rbody"><div className="rt">Projeto</div></div>
+              <span className="val">{labelProjeto}</span>
+            </button>
+          )}
           <button type="button" className="m-row" onClick={cycle('pessoa', pessoaNomes)}>
             <span className="ric"><Icon name="users" size={16} /></span>
             <div className="rbody"><div className="rt">Responsável</div></div>

@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { Icon } from '@/components/icons';
-import { TaskAvatar } from '@/components/task-card/primitives';
-import { TaskCard } from '@/components/task-card/task-card';
 import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
@@ -13,7 +11,6 @@ import { atrasada, agingDays, effEsforco, isPreTriagem } from '@/lib/task-utils'
 import type { Filters as StdFilters } from '@/lib/filters';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import {
-  computeThroughput12w,
   computeEntregasSemanas,
   computeCalendario,
   computeVolumeByCliente,
@@ -21,11 +18,8 @@ import {
   computeProjetosSaude,
   computeSaudePorPessoa,
   computeVelocidade,
-  type ThroughputWeek12,
-  type CargaPessoa,
 } from '@/lib/heuristics';
 import { VelocidadeOperacao } from '@/components/velocidade-operacao';
-import type { Task } from '@/lib/types';
 
 // ─────────────────────────────────────────────────────────
 //  Helpers
@@ -117,8 +111,6 @@ export function DashboardClient() {
   }, [filterCliente, filterProjeto, filterPessoa, filterPrazo]);
   const [onlyIA, setOnlyIA] = useState(false);
   const [onlyHumano, setOnlyHumano] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-
   const hasFilter = !!(filterCliente || filterPessoa || filterProjeto || filterPrazo || onlyIA || onlyHumano);
 
   // Pre-triagem (IA criada, sem triada_em) fica fora do Dashboard inteiro
@@ -154,10 +146,6 @@ export function DashboardClient() {
 
   // ── Velocidade da operação (movida pro Dashboard em jun/2026)
   const vel = useMemo(() => computeVelocidade(baseTasks), [baseTasks]);
-
-  // ── Throughput 12w (consumido pelo DashboardMobilePanel — mobile mantém
-  //    a chart de bars; desktop usa Velocidade da operação)
-  const throughput12 = useMemo(() => computeThroughput12w(baseTasks), [baseTasks]);
 
   // ── Entregas + calendário
   const entregasSemanas = useMemo(() => computeEntregasSemanas(filteredTasks), [filteredTasks]);
@@ -292,64 +280,61 @@ export function DashboardClient() {
         />
       </div>
 
-      {/* ── Mobile · MDashboard (handoff §3 · novo painel) ── */}
-      <DashboardMobilePanel
-        filteredTasks={filteredTasks}
-        kpiAndamento={kpiAndamento.length}
-        kpiBacklog={kpiBacklog.length}
-        kpiBloqueadas={kpiBloqueadas.length}
-        kpiAtrasadas={kpiAtrasadas.length}
-        throughput12={throughput12}
-        cargaPessoa={cargaPessoa}
-        clientesById={clientesById}
-        projetosById={projetosById}
-        pessoasById={pessoasById}
-        onOpen={openEdit}
-      />
-
-      {/* ── Filtros (mobile legacy — escondido pela DashboardMobilePanel; source preservado) ── */}
-      <div className="hidden" style={{ display: 'none' }}>
-        <div className="flex items-center gap-2 md:hidden">
-          <button
-            onClick={() => setFiltersOpen((v) => !v)}
-            className={cn(
-              'flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors',
-              hasFilter
-                ? 'bg-[var(--brand-soft)] border-[var(--brand)] text-[var(--brand-dark)] font-medium'
-                : 'bg-elev border-line text-muted',
-            )}
-          >
-            <span>Filtrar</span>
-            {hasFilter && (
-              <span className="bg-[var(--brand)] text-white rounded-full px-1.5 py-0.5 font-bold leading-none" style={{ fontSize: 10 }}>
-                {[filterCliente, filterPessoa, filterProjeto].filter(Boolean).length}
-              </span>
-            )}
-            <span style={{ fontSize: 9, opacity: 0.6 }}>{filtersOpen ? '▴' : '▾'}</span>
-          </button>
-          {hasFilter && <button onClick={clearFilters} className="text-xs text-muted underline">Limpar</button>}
-          {refreshing && <span className="text-xs text-muted ml-auto">atualizando…</span>}
-        </div>
-        {filtersOpen && (
-          <div className="mt-2 p-3 bg-elev border border-line rounded-xl flex flex-col gap-2 md:hidden">
-            <select value={filterCliente} onChange={(e) => { setFilterCliente(e.target.value); setFilterProjeto(''); }} className="text-sm border border-line rounded-lg px-3 py-2.5 bg-[var(--surface-3)] text-ink w-full">
-              <option value="">Todos clientes</option>
-              {clientesAtivos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-            </select>
-            <select value={filterPessoa} onChange={(e) => setFilterPessoa(e.target.value)} className="text-sm border border-line rounded-lg px-3 py-2.5 bg-[var(--surface-3)] text-ink w-full">
-              <option value="">Todas pessoas</option>
-              {pessoasAtivas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-            </select>
-            <select value={filterProjeto} onChange={(e) => setFilterProjeto(e.target.value)} className="text-sm border border-line rounded-lg px-3 py-2.5 bg-[var(--surface-3)] text-ink w-full">
-              <option value="">Todos projetos</option>
-              {projetosAtivos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-            </select>
+      {/* ── Mobile · título + filtros compactos ── */}
+      <div className="md:hidden">
+        <div className="m-pagetitle">
+          <h1>Dashboard</h1>
+          <div className="narr">
+            <b>{kpiAndamento.length + kpiBacklog.length + kpiBloqueadas.length}</b> ativas
+            <span className="sep">·</span>
+            <b>{kpiAtrasadas.length}</b> atrasadas
           </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <select
+            value={filterCliente}
+            onChange={(e) => { setFilterCliente(e.target.value); setFilterProjeto(''); }}
+            className="inp text-sm"
+          >
+            <option value="">Todos clientes</option>
+            {clientesAtivos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+          <select
+            value={filterPessoa}
+            onChange={(e) => setFilterPessoa(e.target.value)}
+            className="inp text-sm"
+          >
+            <option value="">Todas pessoas</option>
+            {pessoasAtivas.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+          <select
+            value={filterProjeto}
+            onChange={(e) => setFilterProjeto(e.target.value)}
+            className="inp text-sm"
+          >
+            <option value="">Todos projetos</option>
+            {projetosAtivos.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+          <select
+            value={filterPrazo}
+            onChange={(e) => setFilterPrazo(e.target.value as typeof filterPrazo)}
+            className="inp text-sm"
+          >
+            <option value="">Qualquer prazo</option>
+            <option value="atrasadas">Atrasadas</option>
+            <option value="hoje">Hoje</option>
+            <option value="semana">Esta semana</option>
+            <option value="sem">Sem prazo</option>
+          </select>
+        </div>
+        {hasFilter && (
+          <button onClick={clearFilters} className="text-xs text-muted underline mb-3">
+            ✕ Limpar filtros
+          </button>
         )}
-        {/* Desktop filtros agora vivem dentro do FilterBar no PageHeader acima */}
       </div>
 
-      <div className="hidden md:block space-y-4 md:space-y-6">
+      <div className="space-y-4 md:space-y-6">
       {/* ── 1. Velocidade da operação · movida do Briefing (jun/2026) ──
            4 cards (W-0 com projeção, W-1, Ciclo, % no prazo).
            Substituiu o grid de 4 KPIs (Em andamento/Backlog/Bloqueadas/Atrasadas)
@@ -667,165 +652,6 @@ export function DashboardClient() {
 
       </div>
       </div>
-    </div>
-  );
-}
-
-// ============================================================
-// MOBILE · MDashboard (handoff §3 · DashboardMobilePanel)
-// ============================================================
-// 4 KPIs em grid 2x2 + 3 .m-sec: Throughput (12 bars · última verde),
-// Carga por pessoa (loadrow com fill verde / warn se >85%), Precisa de
-// atenção (top 3 tasks atrasadas ou P0 como tcard). Sem filtros próprios
-// — usa o estado da árvore desktop (compartilhado via shared-filters).
-
-function DashboardMobilePanel({
-  filteredTasks,
-  kpiAndamento,
-  kpiBacklog,
-  kpiBloqueadas,
-  kpiAtrasadas,
-  throughput12,
-  cargaPessoa,
-  clientesById,
-  projetosById,
-  pessoasById,
-  onOpen,
-}: {
-  filteredTasks: Task[];
-  kpiAndamento: number;
-  kpiBacklog: number;
-  kpiBloqueadas: number;
-  kpiAtrasadas: number;
-  throughput12: ThroughputWeek12[];
-  cargaPessoa: CargaPessoa[];
-  clientesById: Map<string, { nome: string }>;
-  projetosById: Map<string, { nome: string }>;
-  pessoasById: Map<string, { nome: string }>;
-  onOpen: (id: string) => void;
-}) {
-  const totalAbertas = kpiAndamento + kpiBacklog + kpiBloqueadas;
-  const throughputAtual = throughput12[throughput12.length - 1]?.total ?? 0;
-  const maxTotal = Math.max(...throughput12.map((w) => w.total), 1);
-  const maxCarga = Math.max(...cargaPessoa.map((p) => p.total), 1);
-
-  // Top 3 "precisa de atenção": atrasadas + P0 abertas (sem repetir)
-  const atencao = useMemo(() => {
-    const set = new Set<string>();
-    const out: Task[] = [];
-    for (const t of filteredTasks) {
-      if (t.status === 'concluido') continue;
-      const isAtrasada = atrasada(t);
-      const isP0 = t.prioridade === 'P0';
-      if (!isAtrasada && !isP0) continue;
-      if (set.has(t.id)) continue;
-      set.add(t.id);
-      out.push(t);
-      if (out.length >= 3) break;
-    }
-    return out;
-  }, [filteredTasks]);
-
-  return (
-    <div className="md:hidden">
-      <div className="m-pagetitle">
-        <h1>Visão geral</h1>
-        <div className="narr">
-          <b>{totalAbertas}</b> ativas
-          <span className="sep">·</span>
-          throughput <b>{throughputAtual}</b>/sem
-        </div>
-      </div>
-
-      {/* KPIs 2×2 */}
-      <div className="m-kpis">
-        <MobileKpi label="Em andamento" value={kpiAndamento} />
-        <MobileKpi label="Backlog" value={kpiBacklog} />
-        <MobileKpi label="Bloqueadas" value={kpiBloqueadas} />
-        <MobileKpi label="Atrasadas" value={kpiAtrasadas} danger={kpiAtrasadas > 0} />
-      </div>
-
-      {/* Throughput 12 semanas */}
-      <div className="m-sec mt14">
-        <div className="h">
-          <div>
-            <h3>Throughput</h3>
-            <div className="sub">concluídas / semana · 12 sem</div>
-          </div>
-        </div>
-        <div className="body">
-          <div className="bars">
-            {throughput12.map((w, i) => (
-              <div key={i} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-                <div
-                  className={cn('bar', i === throughput12.length - 1 && 'now')}
-                  style={{ height: `${(w.total / maxTotal) * 100}%` }}
-                  title={`${w.label}: ${w.total}`}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Volume por pessoa */}
-      <div className="m-sec mt14">
-        <div className="h"><h3>Volume por pessoa</h3></div>
-        <div className="body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {cargaPessoa.slice(0, 8).map((c) => {
-            const pct = Math.round((c.total / maxCarga) * 100);
-            const over = pct > 85;
-            return (
-              <div key={c.pessoaId} className="loadrow">
-                <TaskAvatar name={c.nome} />
-                <div className="track">
-                  <div className={cn('fill', over && 'over')} style={{ width: `${Math.min(pct, 100)}%` }} />
-                </div>
-                <span className="pct">{c.total}</span>
-              </div>
-            );
-          })}
-          {cargaPessoa.length === 0 && (
-            <div className="text-muted text-xs italic text-center py-2">Sem dados de carga.</div>
-          )}
-        </div>
-      </div>
-
-      {/* Precisa de atenção */}
-      <div className="m-sec mt14">
-        <div className="h">
-          <div>
-            <h3>Precisa de atenção</h3>
-            <div className="sub">priorize hoje</div>
-          </div>
-        </div>
-        <div className="m-list" style={{ padding: 12, gap: 9 }}>
-          {atencao.length === 0 ? (
-            <div className="text-muted text-xs italic text-center py-2">Nada urgente. Bom dia.</div>
-          ) : (
-            atencao.map((t) => (
-              <TaskCard
-                key={t.id}
-                task={t}
-                cliente={clientesById.get(t.clienteId)?.nome ?? '—'}
-                projeto={projetosById.get(t.projetoId)?.nome}
-                respNome={pessoasById.get(t.pessoaId)?.nome ?? '—'}
-                size="md"
-                onClick={() => onOpen(t.id)}
-              />
-            ))
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MobileKpi({ label, value, danger }: { label: string; value: number; danger?: boolean }) {
-  return (
-    <div className={cn('kpi', danger && 'danger')}>
-      <div className="lab">{label}</div>
-      <div className="val">{value}</div>
     </div>
   );
 }
