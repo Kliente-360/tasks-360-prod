@@ -140,7 +140,6 @@ Tarefas que invocam LLM (Claude Haiku/Sonnet) pra produzir saída útil ao usuá
 
 | # | Item | Modelo · Custo | Esforço | Impacto |
 |---|---|---|---|---|
-| B.1 | **`ai-suggest`** · sugere cliente/projeto/responsável ao criar task | Haiku · ~R$0,015/exec | ~1 semana | ⭐ Fecha gap competitivo #1. Bom ponto de entrada de IA. |
 | B.2 | **`ai-weekly-summary`** · resumo executivo da semana, cron sábado | Sonnet · ~R$0,10/exec semanal | 4-5 dias | ⭐⭐ Aba "Insights". Sócio lê portfólio em 5min. |
 | B.3 | **Resumir thread de task** · botão "TL;DR" no modal | Sonnet · ~R$0,05/exec sob demanda | ~1 dia | Quick win — primeira IA low-risk/high-value visível ao usuário |
 | B.4 | **Auto-triage com IA** · classifica tasks criadas por IA antes da Triagem | Haiku · ~R$0,02/exec | M (depende de A.3) | Combina com `ai-suggest`. Limpa fila da Triagem. |
@@ -167,7 +166,7 @@ Detecção de padrões e insights avançados sobre o estado da operação. Pode 
 
 ## ❌ Descontinuados (não repropor sem novo input)
 
-Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly · Sentry · PostHog · Bottom tab bar mobile (substituída por carrossel MobileTabShell)
+Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly · Sentry · PostHog · Bottom tab bar mobile (substituída por carrossel MobileTabShell) · **B.1 `ai-suggest`** (sobrepõe B.4 auto-triage — descartado)
 
 ---
 
