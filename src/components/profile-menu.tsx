@@ -25,7 +25,6 @@ import { NAV } from '@/lib/nav';
 import { useClickAway } from '@/lib/use-click-away';
 import { HelpMenuItem } from '@/components/help-modal';
 import { OnboardingMenuItem } from '@/components/onboarding-modal';
-import { ThemeMenuItem } from '@/components/theme-toggle';
 import { Icon } from '@/components/icons';
 import { APP_VERSION } from '@/components/app-nav';
 
@@ -111,13 +110,7 @@ export function ProfileMenu() {
               </>
             )}
 
-            {/* 3. Tema — mobile only (desktop tem ícone ☀/☾ no header) */}
-            <div className="md:hidden">
-              <div className="border-t border-line my-1" />
-              <ThemeMenuItem onClick={() => setOpen(false)} />
-            </div>
-
-            {/* 4. Mini-seção: Manual (mobile) + Onboarding.
+            {/* 3. Mini-seção: Manual (mobile) + Onboarding.
                 Onboarding aparece pra qualquer usuário staff (admin
                 ou interno) — não-cliente. No desktop só Onboarding;
                 Manual tem ícone "?" no header. */}
