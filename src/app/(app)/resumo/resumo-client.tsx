@@ -99,10 +99,18 @@ export function ResumoClient() {
     [baseTasks],
   );
 
+  const dateLabel = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
   if (loading) return <div className="text-muted text-sm py-8">Carregando…</div>;
 
   return (
     <div>
+      <div className="m-pagetitle">
+        <h1>Resumo executivo</h1>
+        <div className="narr">
+          {heuristicAlerts.length} {heuristicAlerts.length === 1 ? 'alerta' : 'alertas'} em {dateLabel}
+        </div>
+      </div>
       <div className="space-y-4">
 
         {/* ── 1 · Alertas ── */}
