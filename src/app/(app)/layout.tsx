@@ -13,6 +13,7 @@ import { ServiceWorkerRegister } from '@/components/sw-register';
 import { AppSplash } from '@/components/app-splash';
 import { MobileFab } from '@/components/mobile-fab';
 import { BadgeSync } from '@/components/badge-sync';
+import { SwipeNav } from '@/components/swipe-nav';
 
 export default function AppLayout({
   children,
@@ -37,7 +38,9 @@ export default function AppLayout({
                           do logo aperture e termina no mesmo X do avatar/perfil.
                           app-main-mobile-safe reserva padding-bottom em mobile pra
                           conteúdo não ficar atrás da .m-tabbar fixa. */}
-                      <main className="app-main-mobile-safe max-w-[1320px] mx-auto px-4 py-6">{children}</main>
+                      <SwipeNav>
+                        <main className="app-main-mobile-safe max-w-[1320px] mx-auto px-4 py-6">{children}</main>
+                      </SwipeNav>
                     </div>
                     <MobileFab />
                     <BadgeSync />

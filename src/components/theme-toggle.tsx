@@ -14,6 +14,7 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { Icon } from '@/components/icons';
 
 type Theme = 'light' | 'dark';
 
@@ -81,7 +82,7 @@ export function ThemeIconButton({ className }: { className?: string }) {
       title={theme === 'dark' ? 'Mudar para claro' : 'Mudar para escuro'}
       aria-label="Alternar tema"
     >
-      {theme === 'dark' ? '☀' : '☾'}
+      <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={16} />
     </button>
   );
 }
