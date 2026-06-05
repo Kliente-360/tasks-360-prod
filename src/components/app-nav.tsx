@@ -19,7 +19,7 @@ import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.093';
+export const APP_VERSION = 'v1.03.094';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -126,35 +126,6 @@ export function AppNav() {
               <Icon name="plus" size={14} />
               Tarefa
             </button>
-            {/* Mobile only · toggle Resumo ↔ Backlog · admin only · ícones sem container, underline no ativo */}
-            {viewerRole === 'admin' && (
-              <div className="flex items-center md:hidden gap-0.5">
-                <Link
-                  href="/resumo"
-                  className={cn(
-                    'flex items-center justify-center w-8 h-8 border-b-2 transition-colors',
-                    pathname.startsWith('/resumo')
-                      ? 'text-[var(--brand)] border-[var(--brand)]'
-                      : 'text-muted border-transparent hover:text-ink',
-                  )}
-                  aria-label="Resumo executivo"
-                >
-                  <Icon name="bar-chart-2" size={16} />
-                </Link>
-                <Link
-                  href="/backlog"
-                  className={cn(
-                    'flex items-center justify-center w-8 h-8 border-b-2 transition-colors',
-                    pathname.startsWith('/backlog')
-                      ? 'text-[var(--brand)] border-[var(--brand)]'
-                      : 'text-muted border-transparent hover:text-ink',
-                  )}
-                  aria-label="Meu Backlog"
-                >
-                  <Icon name="list" size={16} />
-                </Link>
-              </div>
-            )}
             <ThemeIconButton className="md:hidden" />
             <NotifBell />
             <ProfileMenu />
