@@ -1399,6 +1399,14 @@ function BacklogMobilePanel({
         </label>
         <button
           type="button"
+          className={cn('m-fbtn', nActive > 0 && 'on')}
+          onClick={() => setSheetOpen(true)}
+          aria-label="Abrir filtros"
+        >
+          <Icon name="filter" size={16} />
+        </button>
+        <button
+          type="button"
           className={cn('m-clr', nActive === 0 && 'is-empty')}
           disabled={nActive === 0}
           onClick={clearFilters}
@@ -1413,14 +1421,6 @@ function BacklogMobilePanel({
           >
             {nActive > 0 ? nActive : 0}
           </span>
-        </button>
-        <button
-          type="button"
-          className={cn('m-fbtn', nActive > 0 && 'on')}
-          onClick={() => setSheetOpen(true)}
-          aria-label="Abrir filtros"
-        >
-          <Icon name="filter" size={16} />
         </button>
       </div>
 
