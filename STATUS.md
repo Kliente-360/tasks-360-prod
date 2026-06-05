@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.103 · **Atualizado**: 05/06/2026 · branch `main`
+> **Versão**: v1.03.107 · **Atualizado**: 05/06/2026 · branch `main`
 
 ---
 
@@ -80,6 +80,7 @@ Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout es
 
 #### Próxima sessão (anotado)
 - 🔲 **Modal de task mobile** · simplificado — somente tabs **Detalhes** + **Comentários**. Estratégia: dual-render desktop+mobile com CSS `display:none/block`, NÃO usar `matchMedia` em render path (lição do crash v1.03.009).
+- 🔲 **Cadastros · completar 3 abas + modais** · abas Clientes, Projetos e Pessoas precisam terminar o fluxo completo: modal criar/editar para cada uma (A.19).
 
 ---
 
@@ -111,6 +112,7 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | ~~A.18~~ | ~~**Meu foco · redesign UX-first**~~ | ✅ Entregue v1.03.075-077 (ver Marcos concluídos acima) |
 | A.15 | **Mobile · modal de task** · 🟡 **carrossel + backlog entregues; falta o modal.** Entregues: MobileTabShell (carrossel Resumo↔Backlog), BacklogMobilePanel completo, PWA fixes. **Restante**: modal de task mobile simplificado — somente tabs Detalhes + Comentários (próxima sessão). Estratégia confirmada: dual-render com CSS `display:none/block`, sem `matchMedia`. | ~1 dia | Alto — fecha o ciclo mobile |
 | A.16 | **Revisar bulk actions** · auditar BulkBar (seleção múltipla no Backlog) — UX da seleção, ações disponíveis (atribuir cliente/projeto/pessoa/prazo/prioridade/esforço, arquivar, excluir), feedback visual (sticky bar com contador), comportamento mobile (não aparece hoje). Decidir: manter no Backlog desktop, levar pro Kanban também, adicionar atalhos teclado (ESC limpa seleção, Cmd+A seleciona tudo filtrado), confirmações pra ações destrutivas. | 3-5 dias | Médio — produtividade em operações repetitivas |
+| A.19 | **Cadastros · completar 3 abas + modais** · abas Clientes, Projetos e Pessoas — completar fluxo criar/editar com modal próprio em cada uma. A.10 entregou as tabelas com colunas plenas; os modais CRUD ficaram pendentes. | 3-5 dias | Alto — bloqueia operação autônoma sem suporte direto ao banco |
 
 ### Bucket V · Visão cliente (pre-launch hardening)
 
@@ -189,6 +191,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 **Amanhã (próxima sessão)**
 1. **A.15 · Modal de task mobile** · somente tabs Detalhes + Comentários, UI simplificada. Dual-render CSS, sem matchMedia.
+2. **A.19 · Cadastros · 3 abas + modais** · completar fluxo criar/editar de Clientes, Projetos e Pessoas.
 
 **Onda 1 · Design coeso** (~1-2 semanas)
 2. **A.17** Card de task · VISUAL (replan + execução)
@@ -207,5 +210,5 @@ Items NÃO no NEXT (revisitar depois): A.3 Push · A.5 Saved views · A.6 Sticky
 
 ## Próximo passo imediato
 
-**Modal de task mobile** (A.15 restante) — somente Detalhes + Comentários, UI simplificada.
-Estratégia: dual-render desktop+mobile com CSS `display:none/block`. Não usar `matchMedia` em render path (lição do crash v1.03.009).
+**Modal de task mobile** (A.15) + **Cadastros · 3 abas + modais** (A.19) — próxima sessão, nesta ordem.
+Modal: dual-render CSS `display:none/block`, sem `matchMedia` (lição do crash v1.03.009).
