@@ -44,7 +44,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover', // permite conteúdo atrás do notch iOS (safe-area-inset)
-  themeColor: '#009900',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#009900' },
+    { media: '(prefers-color-scheme: dark)',  color: '#111827' },
+  ],
 };
 
 /**

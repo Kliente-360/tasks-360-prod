@@ -19,7 +19,7 @@ import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.098';
+export const APP_VERSION = 'v1.03.099';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {

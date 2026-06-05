@@ -417,6 +417,7 @@ export function BacklogClient() {
     setShowArchived(false);
     setGroupBy('');
     setCollapsedGroups([]);
+    setSortKeys([]);
     clearSharedFilters();
   }, []);
 
@@ -1529,28 +1530,28 @@ function BacklogFilterSheet({
             </button>
           </div>
 
-          {/* Projeto — só aparece se cliente selecionado e tem projetos */}
-          {local.cliente && projetosDisponiveis.length > 0 && (
-            <div className="m-row">
-              <span className="ric"><Icon name="folder" size={16} /></span>
-              <div className="rbody"><div className="rt">Projeto</div></div>
-              <select
-                className="m-select"
-                value={local.projeto}
-                onChange={(e) => setLocal({ ...local, projeto: e.target.value })}
-              >
-                <option value="">Todos</option>
-                {projetosDisponiveis.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-              </select>
-              <button
-                type="button"
-                className={cn('m-sort-btn', isSortActive('projetoId') && 'on')}
-                onClick={() => sortBy('projetoId')}
-              >
-                <Icon name={sortIcon('projetoId')} size={14} />
-              </button>
-            </div>
-          )}
+          {/* Projeto — sempre visível, desabilitado sem cliente selecionado */}
+          <div className="m-row" style={{ opacity: local.cliente ? 1 : 0.45 }}>
+            <span className="ric"><Icon name="folder" size={16} /></span>
+            <div className="rbody"><div className="rt">Projeto</div></div>
+            <select
+              className="m-select"
+              value={local.projeto}
+              onChange={(e) => setLocal({ ...local, projeto: e.target.value })}
+              disabled={!local.cliente}
+            >
+              <option value="">{local.cliente ? 'Todos' : 'Selecione cliente'}</option>
+              {projetosDisponiveis.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            </select>
+            <button
+              type="button"
+              className={cn('m-sort-btn', isSortActive('projetoId') && 'on')}
+              onClick={() => sortBy('projetoId')}
+              disabled={!local.cliente}
+            >
+              <Icon name={sortIcon('projetoId')} size={14} />
+            </button>
+          </div>
 
           {/* Prioridade */}
           <div className="m-row">

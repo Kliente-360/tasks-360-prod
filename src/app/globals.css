@@ -1533,8 +1533,8 @@ body {
 @media (max-width: 767px) {
   .hdr-v2-tabs { display: none !important; }
   /* O <main> ganha esse padding-bottom pra rolar até o fim sem cobrir
-     a tab bar (~52px tab + 8px gap + safe-area). */
-  main.app-main-mobile-safe { padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+     o FAB (56px h-14 + 10px bottom + 8px gap = 74px). */
+  main.app-main-mobile-safe { padding-bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
 }
 
 .tab-v2 {
