@@ -2247,6 +2247,21 @@ body {
 .m-row .rs { font-size: 12px; color: var(--fg-muted); margin-top: 1px; }
 .m-row .chev { color: var(--fg-muted); }
 .m-row .val { font-size: 13px; color: var(--fg-muted); margin-left: auto; }
+/* Select inline em linha de filtro mobile */
+.m-select {
+  margin-left: auto; background: transparent; border: 0; outline: 0;
+  color: var(--fg-muted); font: inherit; font-size: 13px;
+  cursor: pointer; max-width: 130px; padding: 0;
+  text-align: right; text-align-last: right;
+}
+/* Botão de ordenação ao lado do filtro */
+.m-sort-btn {
+  flex: none; width: 28px; height: 28px;
+  border: 0; background: transparent; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--fg-muted); cursor: pointer; border-radius: var(--r-sm);
+}
+.m-sort-btn.on { color: var(--green); }
 
 /* Profile card no topo do ProfileSheet */
 .prof-card { display: flex; align-items: center; gap: 12px; padding: 6px 4px 16px; }

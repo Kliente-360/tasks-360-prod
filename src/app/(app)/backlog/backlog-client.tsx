@@ -110,6 +110,7 @@ export function BacklogClient() {
     patchTasks,
     removeTasks,
     viewerRole,
+    currentPessoa,
   } = useData();
   const isAdmin = viewerRole === 'admin';
   const clientesById = useClientesById();
@@ -669,10 +670,12 @@ export function BacklogClient() {
         f={f}
         setF={setF}
         clientesAtivos={clientesAtivos}
-        pessoasNaoCliente={pessoasNaoCliente}
         projetosByCliente={projetosByCliente}
         onOpen={openEdit}
         clearFilters={clearFilters}
+        currentPessoaId={currentPessoa?.id}
+        sortKeys={sortKeys}
+        sortBy={sortBy}
       />
 
       {/* ============ Mobile filters (LEGADO — escondido pela nova
@@ -1326,10 +1329,12 @@ function BacklogMobilePanel({
   f,
   setF,
   clientesAtivos,
-  pessoasNaoCliente,
   projetosByCliente,
   onOpen,
   clearFilters,
+  currentPessoaId,
+  sortKeys,
+  sortBy,
 }: {
   tasks: Task[];
   clientesById: Map<string, { nome: string }>;
@@ -1340,30 +1345,29 @@ function BacklogMobilePanel({
   f: Filters;
   setF: (next: Filters) => void;
   clientesAtivos: Cliente[];
-  pessoasNaoCliente: Pessoa[];
   projetosByCliente: ReturnType<typeof useProjetosByCliente>;
   onOpen: (t: Task) => void;
   clearFilters: () => void;
+  currentPessoaId: string | undefined;
+  sortKeys: SortKey[];
+  sortBy: (key: string) => void;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Compat: f.pessoa/f.pri/f.prazo (existem em Filters). Count ativos
-  // que serão mostrados como chip removível.
+  // RLS mobile: mostra apenas tarefas do usuário logado
+  const displayTasks = useMemo(
+    () => currentPessoaId ? tasks.filter((t) => t.pessoaId === currentPessoaId) : tasks,
+    [tasks, currentPessoaId],
+  );
+
   const activeChips: Array<{ key: keyof Filters; label: string }> = [];
-  if (f.cliente) {
-    const nome = clientesById.get(f.cliente)?.nome ?? '—';
-    activeChips.push({ key: 'cliente', label: nome });
-  }
-  if (f.pessoa) {
-    const nome = pessoasById.get(f.pessoa)?.nome ?? '—';
-    activeChips.push({ key: 'pessoa', label: nome.split(' ')[0] });
-  }
+  if (f.cliente) activeChips.push({ key: 'cliente', label: clientesById.get(f.cliente)?.nome ?? '—' });
   if (f.pri) activeChips.push({ key: 'pri', label: f.pri });
   if (f.prazo) activeChips.push({ key: 'prazo', label: f.prazo === 'atrasadas' ? 'Atrasadas' : f.prazo });
-  const nActive = activeChips.length;
+  const nActive = activeChips.length + sortKeys.length;
 
-  const atrasadasCount = tasks.filter((t) => atrasada(t)).length;
-  const totalHoras = tasks.reduce((a, t) => a + (t.esforco || 0), 0);
+  const atrasadasCount = displayTasks.filter((t) => atrasada(t)).length;
+  const totalHoras = displayTasks.reduce((a, t) => a + (t.esforco || 0), 0);
 
   const closeSheet = () => setSheetOpen(false);
 
@@ -1372,7 +1376,7 @@ function BacklogMobilePanel({
       <div className="m-pagetitle">
         <h1>Backlog</h1>
         <div className="narr">
-          <b>{tasks.length}</b> abertas
+          <b>{displayTasks.length}</b> abertas
           <span className="sep">·</span>
           <b>{atrasadasCount}</b> atrasadas
           <span className="sep">·</span>
@@ -1388,6 +1392,7 @@ function BacklogMobilePanel({
             value={qDraft}
             onChange={(e) => setQDraft(e.target.value)}
             placeholder="Buscar tudo…"
+            style={{ fontSize: 16 }}
           />
         </label>
         <button
@@ -1401,7 +1406,7 @@ function BacklogMobilePanel({
         </button>
       </div>
 
-      {nActive > 0 && (
+      {activeChips.length > 0 && (
         <div className="m-pills" style={{ marginBottom: 12 }}>
           {activeChips.map((c) => (
             <button
@@ -1418,13 +1423,13 @@ function BacklogMobilePanel({
       )}
 
       <div className="m-list">
-        {tasks.length === 0 ? (
+        {displayTasks.length === 0 ? (
           <div className="card text-center py-8 px-4">
             <div className="font-brand text-base mb-2 text-ink">Nada por aqui.</div>
             <div className="text-xs text-muted">Tente ajustar os filtros…</div>
           </div>
         ) : (
-          tasks.map((t) => (
+          displayTasks.map((t) => (
             <TaskCard
               key={t.id}
               task={t}
@@ -1443,119 +1448,157 @@ function BacklogMobilePanel({
           f={f}
           setF={setF}
           clientes={clientesAtivos}
-          pessoas={pessoasNaoCliente}
           projetosByCliente={projetosByCliente}
           onClose={closeSheet}
-          onClear={() => {
-            clearFilters();
-            closeSheet();
-          }}
+          onClear={() => { clearFilters(); closeSheet(); }}
+          sortKeys={sortKeys}
+          sortBy={sortBy}
         />
       )}
     </div>
   );
 }
 
-/** Bottom sheet com filtros do Backlog mobile (Cliente / Projeto / Resp / Pri / Prazo). */
+/** Bottom sheet com filtros do Backlog mobile — dropdowns + botões de sort inline. */
 function BacklogFilterSheet({
   f,
   setF,
   clientes,
-  pessoas,
   projetosByCliente,
   onClose,
   onClear,
+  sortKeys,
+  sortBy,
 }: {
   f: Filters;
   setF: (next: Filters) => void;
   clientes: Cliente[];
-  pessoas: Pessoa[];
   projetosByCliente: ReturnType<typeof useProjetosByCliente>;
   onClose: () => void;
   onClear: () => void;
+  sortKeys: SortKey[];
+  sortBy: (key: string) => void;
 }) {
   const [local, setLocal] = useState<Filters>(f);
 
-  // Esc fecha
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  // Cycle através das opções (toca pra trocar valor)
-  const cycle = (key: keyof Filters, opts: string[]) => () => {
-    const cur = String(local[key] ?? '');
-    const i = opts.indexOf(cur);
-    const next = opts[(i + 1) % opts.length];
-    setLocal({ ...local, [key]: next as never });
-  };
-
-  const clienteNomes = ['', ...clientes.map((c) => c.id)];
-  const pessoaNomes = ['', ...pessoas.map((p) => p.id)];
-  const pris = ['', 'P0', 'P1', 'P2', 'P3'];
-  const prazos = ['', 'atrasadas', 'hoje', 'semana', 'sem'];
-
   const projetosDisponiveis = useMemo(
     () => local.cliente ? (projetosByCliente.get(local.cliente) ?? []).filter((p) => !p.arquivadoEm) : [],
     [local.cliente, projetosByCliente],
   );
 
-  const labelCliente = local.cliente
-    ? (clientes.find((c) => c.id === local.cliente)?.nome ?? '—')
-    : 'Todos';
-  const labelProjeto = local.projeto
-    ? (projetosDisponiveis.find((p) => p.id === local.projeto)?.nome ?? '—')
-    : 'Todos';
-  const labelPessoa = local.pessoa
-    ? (pessoas.find((p) => p.id === local.pessoa)?.nome.split(' ')[0] ?? '—')
-    : 'Todos';
-  const labelPri = local.pri || 'Todas';
-  const labelPrazo = local.prazo === 'atrasadas' ? 'Atrasadas'
-    : local.prazo === 'hoje' ? 'Hoje'
-    : local.prazo === 'semana' ? 'Esta semana'
-    : local.prazo === 'sem' ? 'Sem prazo'
-    : 'Qualquer';
+  // Ícone de ordenação baseado no sortKeys atual
+  function sortIcon(key: string) {
+    const sk = sortKeys[0];
+    if (!sk || sk.key !== key) return 'sort' as const;
+    return sk.dir === 'asc' ? 'arrow-up' as const : 'arrow-down' as const;
+  }
+  function isSortActive(key: string) { return sortKeys[0]?.key === key; }
 
   return (
     <div className="sheet-bg" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Filtros do backlog">
         <div className="grab" />
-        <h2>Filtros</h2>
-        <div className="sh-sub">aplicam à lista do backlog</div>
+        <h2>Filtros e ordem</h2>
+        <div className="sh-sub">toque no valor para filtrar · ↑↓ para ordenar</div>
 
         <div className="m-group">
-          <button type="button" className="m-row" onClick={cycle('cliente', clienteNomes)}>
+          {/* Cliente */}
+          <div className="m-row">
             <span className="ric"><Icon name="building" size={16} /></span>
             <div className="rbody"><div className="rt">Cliente</div></div>
-            <span className="val">{labelCliente}</span>
-          </button>
-          {local.cliente && projetosDisponiveis.length > 0 && (
+            <select
+              className="m-select"
+              value={local.cliente}
+              onChange={(e) => setLocal({ ...local, cliente: e.target.value, projeto: '' })}
+            >
+              <option value="">Todos</option>
+              {clientes.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
             <button
               type="button"
-              className="m-row"
-              onClick={cycle('projeto', ['', ...projetosDisponiveis.map((p) => p.id)])}
+              className={cn('m-sort-btn', isSortActive('clienteId') && 'on')}
+              onClick={() => sortBy('clienteId')}
             >
+              <Icon name={sortIcon('clienteId')} size={14} />
+            </button>
+          </div>
+
+          {/* Projeto — só aparece se cliente selecionado e tem projetos */}
+          {local.cliente && projetosDisponiveis.length > 0 && (
+            <div className="m-row">
               <span className="ric"><Icon name="folder" size={16} /></span>
               <div className="rbody"><div className="rt">Projeto</div></div>
-              <span className="val">{labelProjeto}</span>
-            </button>
+              <select
+                className="m-select"
+                value={local.projeto}
+                onChange={(e) => setLocal({ ...local, projeto: e.target.value })}
+              >
+                <option value="">Todos</option>
+                {projetosDisponiveis.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+              </select>
+              <button
+                type="button"
+                className={cn('m-sort-btn', isSortActive('projetoId') && 'on')}
+                onClick={() => sortBy('projetoId')}
+              >
+                <Icon name={sortIcon('projetoId')} size={14} />
+              </button>
+            </div>
           )}
-          <button type="button" className="m-row" onClick={cycle('pessoa', pessoaNomes)}>
-            <span className="ric"><Icon name="users" size={16} /></span>
-            <div className="rbody"><div className="rt">Responsável</div></div>
-            <span className="val">{labelPessoa}</span>
-          </button>
-          <button type="button" className="m-row" onClick={cycle('pri', pris)}>
+
+          {/* Prioridade */}
+          <div className="m-row">
             <span className="ric"><Icon name="alert" size={16} /></span>
             <div className="rbody"><div className="rt">Prioridade</div></div>
-            <span className="val">{labelPri}</span>
-          </button>
-          <button type="button" className="m-row" onClick={cycle('prazo', prazos)}>
+            <select
+              className="m-select"
+              value={local.pri}
+              onChange={(e) => setLocal({ ...local, pri: e.target.value })}
+            >
+              <option value="">Todas</option>
+              <option value="P0">P0</option>
+              <option value="P1">P1</option>
+              <option value="P2">P2</option>
+              <option value="P3">P3</option>
+            </select>
+            <button
+              type="button"
+              className={cn('m-sort-btn', isSortActive('prioridade') && 'on')}
+              onClick={() => sortBy('prioridade')}
+            >
+              <Icon name={sortIcon('prioridade')} size={14} />
+            </button>
+          </div>
+
+          {/* Prazo */}
+          <div className="m-row">
             <span className="ric"><Icon name="calendar" size={16} /></span>
             <div className="rbody"><div className="rt">Prazo</div></div>
-            <span className="val">{labelPrazo}</span>
-          </button>
+            <select
+              className="m-select"
+              value={local.prazo}
+              onChange={(e) => setLocal({ ...local, prazo: e.target.value as Filters['prazo'] })}
+            >
+              <option value="">Qualquer</option>
+              <option value="atrasadas">Atrasadas</option>
+              <option value="hoje">Hoje</option>
+              <option value="semana">Esta semana</option>
+              <option value="sem">Sem prazo</option>
+            </select>
+            <button
+              type="button"
+              className={cn('m-sort-btn', isSortActive('prazo') && 'on')}
+              onClick={() => sortBy('prazo')}
+            >
+              <Icon name={sortIcon('prazo')} size={14} />
+            </button>
+          </div>
         </div>
 
         <div className="filter-actions">
