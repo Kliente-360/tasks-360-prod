@@ -50,14 +50,7 @@ export function SwipeNav({ children }: { children: React.ReactNode }) {
     }
     if (axis.current !== 'h') return;
 
-    // Rubber-band se não há aba nessa direção
-    const canGoLeft = idx < tabs.length - 1;
-    const canGoRight = idx > 0;
-    const clamped = dx < 0 && !canGoLeft ? dx * 0.15
-      : dx > 0 && !canGoRight ? dx * 0.15
-      : dx;
-
-    setOffset(clamped);
+    setOffset(dx);
   }
 
   function onTouchEnd(e: React.TouchEvent) {
@@ -69,8 +62,8 @@ export function SwipeNav({ children }: { children: React.ReactNode }) {
     reset();
 
     const next =
-      dx < -SWIPE_THRESHOLD && idx < tabs.length - 1 ? idx + 1 :
-      dx >  SWIPE_THRESHOLD && idx > 0                ? idx - 1 :
+      dx < -SWIPE_THRESHOLD ? (idx + 1) % tabs.length :
+      dx >  SWIPE_THRESHOLD ? (idx - 1 + tabs.length) % tabs.length :
       null;
 
     if (next === null) {
