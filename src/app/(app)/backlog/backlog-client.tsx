@@ -1361,15 +1361,12 @@ function BacklogMobilePanel({
     [tasks, currentPessoaId],
   );
 
-  const STATUS_CHIP_LABELS: Record<string, string> = {
-    backlog: 'Backlog', andamento: 'Em andamento', bloqueado: 'Bloqueado', concluido: 'Concluído',
-  };
-  const activeChips: Array<{ key: keyof Filters; label: string }> = [];
-  if (f.cliente) activeChips.push({ key: 'cliente', label: clientesById.get(f.cliente)?.nome ?? '—' });
-  if (f.status && f.status !== 'abertas') activeChips.push({ key: 'status', label: STATUS_CHIP_LABELS[f.status] ?? f.status });
-  if (f.pri) activeChips.push({ key: 'pri', label: f.pri });
-  if (f.prazo) activeChips.push({ key: 'prazo', label: f.prazo === 'atrasadas' ? 'Atrasadas' : f.prazo });
-  const nActive = activeChips.length + sortKeys.length;
+  const nActive = (f.cliente ? 1 : 0) +
+    (f.status && f.status !== 'abertas' ? 1 : 0) +
+    (f.pri ? 1 : 0) +
+    (f.prazo ? 1 : 0) +
+    (qDraft ? 1 : 0) +
+    sortKeys.length;
 
   const atrasadasCount = displayTasks.filter((t) => atrasada(t)).length;
   const totalHoras = displayTasks.reduce((a, t) => a + (t.esforco || 0), 0);
@@ -1402,30 +1399,30 @@ function BacklogMobilePanel({
         </label>
         <button
           type="button"
+          className={cn('m-clr', nActive === 0 && 'is-empty')}
+          disabled={nActive === 0}
+          onClick={clearFilters}
+          title={nActive > 0 ? `Limpar ${nActive} filtro${nActive > 1 ? 's' : ''} e ordenação` : 'Nenhum filtro aplicado'}
+          aria-label={nActive > 0 ? `Limpar ${nActive} filtros` : 'Sem filtros'}
+        >
+          <Icon name="x" size={15} />
+          <span
+            className="font-mono"
+            style={{ visibility: nActive > 0 ? 'visible' : 'hidden' }}
+            aria-hidden={nActive === 0}
+          >
+            {nActive > 0 ? nActive : 0}
+          </span>
+        </button>
+        <button
+          type="button"
           className={cn('m-fbtn', nActive > 0 && 'on')}
           onClick={() => setSheetOpen(true)}
           aria-label="Abrir filtros"
         >
           <Icon name="filter" size={16} />
-          {nActive > 0 && <span className="badge">{nActive}</span>}
         </button>
       </div>
-
-      {activeChips.length > 0 && (
-        <div className="m-pills" style={{ marginBottom: 12 }}>
-          {activeChips.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              className="m-pill on"
-              onClick={() => c.key === 'status' ? setF({ ...f, status: 'abertas' }) : setF({ ...f, [c.key]: '' as never })}
-            >
-              {c.label}
-              <Icon name="x" size={12} />
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className="m-list">
         {displayTasks.length === 0 ? (

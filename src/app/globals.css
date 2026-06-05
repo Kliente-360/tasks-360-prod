@@ -2172,6 +2172,25 @@ body {
   border: 0; outline: 0; background: transparent;
   font: inherit; font-size: 13.5px; width: 100%; color: var(--fg);
 }
+/* Botão limpar filtros mobile — espelho do .fselect.clear do desktop.
+   Largura fixa 52px; count usa visibility:hidden (não display:none) pra
+   não deslocar a bar quando filtros entram/saem. */
+.m-clr {
+  flex: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+  height: 38px; width: 52px;
+  border: 1px solid transparent; border-radius: var(--r-md);
+  background: transparent;
+  color: var(--danger); font-size: 11px; font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.m-clr:hover:not(:disabled) { border-color: var(--danger); background: var(--danger-soft); }
+.m-clr.is-empty, .m-clr:disabled {
+  color: var(--fg-muted); cursor: default; opacity: 0.4;
+}
+.m-clr.is-empty:hover, .m-clr:disabled:hover { border-color: transparent; background: transparent; }
+
 .m-fbtn {
   position: relative; flex: none;
   height: 38px; min-width: 38px; padding: 0 12px;
