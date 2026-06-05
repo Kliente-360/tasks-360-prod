@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
 import { useData } from '@/lib/data-store';
 import { Icon } from '@/components/icons';
 
@@ -118,27 +118,42 @@ function ResumoHelp() {
   return (
     <>
       <p className="text-sm text-ink-soft mb-5 leading-relaxed">
-        O <strong className="text-ink">Resumo executivo</strong> é a tela inicial no celular. Ela mostra uma visão consolidada do estado atual dos projetos e equipe — pense como um painel de controle rápido para o gestor.
+        O <strong className="text-ink">Resumo executivo</strong> é a tela inicial do app no celular. Exclusiva para gestores — mostra a saúde da operação em tempo real sem precisar navegar por outras telas.
       </p>
 
-      <Section icon="bar-chart-2" title="O que aparece aqui">
-        <p>Indicadores de volume e saúde das tarefas por etapa, bloqueios ativos, prazo vencido e o que está em dia — tudo em uma tela só, sem precisar navegar.</p>
-        <p>Os números são calculados em tempo real a partir dos dados do backlog; qualquer mudança feita em outra aba reflete automaticamente.</p>
-      </Section>
-
       <Section icon="hand" title="Navegar entre telas">
-        <p>Deslize o dedo para a esquerda para ir ao <strong className="text-ink">Backlog</strong>, ou para a direita para voltar ao Resumo.</p>
+        <p>Deslize o dedo para a <strong className="text-ink">esquerda</strong> para ir ao Backlog, ou para a <strong className="text-ink">direita</strong> para voltar ao Resumo.</p>
         <Tip>O gesto funciona em qualquer ponto da tela — não precisa acertar um botão.</Tip>
       </Section>
 
-      <Section icon="bell" title="Alertas em destaque">
-        <p>Tarefas <strong className="text-ink">atrasadas</strong>, <strong className="text-ink">bloqueadas</strong> ou com <strong className="text-ink">prazo hoje</strong> ganham destaque visual para chamar atenção imediata.</p>
-        <p>Toque em qualquer tarefa destacada para ver os detalhes completos.</p>
+      <Section icon="bell" title="Alertas">
+        <p>Alertas gerados automaticamente sobre situações que precisam de atenção: tarefas sem responsável, projetos parados, clientes sem movimentação recente e outros.</p>
+        <p>Cada alerta tem severidade <strong className="text-ink">crítica</strong> (vermelho) ou <strong className="text-ink">atenção</strong> (amarelo). Quando tudo está bem, aparece <em>tudo certo</em> em verde.</p>
       </Section>
 
-      <Section icon="check-circle" title="Botão Resolver">
-        <p>No cartão de alerta, o botão <strong className="text-ink">Resolver</strong> marca o item como tratado para o dia — ele some dos alertas sem alterar o status real da tarefa.</p>
-        <Tip>Os itens resolvidos voltam ao painel no dia seguinte se ainda não estiverem concluídos.</Tip>
+      <Section icon="bar-chart-2" title="Velocidade da operação">
+        <p>Quatro indicadores de throughput e previsibilidade dos últimos 30 dias:</p>
+        <ul className="list-disc list-inside space-y-1 pl-1">
+          <li><strong className="text-ink">Throughput W-1</strong> — tasks concluídas na semana anterior (meta ≥ 25)</li>
+          <li><strong className="text-ink">Throughput W-0</strong> — tasks concluídas nesta semana + projeção</li>
+          <li><strong className="text-ink">Ciclo médio</strong> — dias médios do início à conclusão</li>
+          <li><strong className="text-ink">Previsibilidade</strong> — % de tarefas entregues dentro do prazo</li>
+        </ul>
+      </Section>
+
+      <Section icon="grid" title="Capacidade do time">
+        <p>Heatmap por pessoa para as próximas 4 semanas. Células vermelhas indicam <strong className="text-ink">sobrecarga</strong>, amarelas indicam <strong className="text-ink">pressão</strong>, verdes indicam <strong className="text-ink">ok</strong>.</p>
+        <Tip>O percentual exibido é a ocupação estimada com base nas tarefas abertas e esforço cadastrado.</Tip>
+      </Section>
+
+      <Section icon="calendar" title="Calendário de entregas">
+        <p>Grade semanal (Dom a Sáb) mostrando quantas tarefas têm prazo em cada dia — semana anterior, atual e as próximas 4.</p>
+        <p>Dias com muitas entregas ou com prazo vencido aparecem em vermelho; dias com poucas entregas em amarelo.</p>
+      </Section>
+
+      <Section icon="alert" title="P0 e P1 atrasadas">
+        <p>Lista de tarefas de alta prioridade com prazo vencido e ainda abertas, ordenadas pelo maior atraso. Toque em qualquer uma para abrir os detalhes.</p>
+        <Tip>P0 = urgente, P1 = alta. P2 e P3 não entram aqui — fique de olho nas críticas.</Tip>
       </Section>
     </>
   );
@@ -148,33 +163,32 @@ function BacklogHelp() {
   return (
     <>
       <p className="text-sm text-ink-soft mb-5 leading-relaxed">
-        O <strong className="text-ink">Backlog</strong> lista todas as tarefas abertas atribuídas a você. Use-o para acompanhar, filtrar e atualizar o andamento do seu trabalho no celular.
+        O <strong className="text-ink">Backlog</strong> mostra as tarefas abertas atribuídas a você. Use para acompanhar o que está pendente, filtrar por contexto e abrir uma tarefa para ver detalhes ou adicionar comentários.
       </p>
 
-      <Section icon="search" title="Barra de pesquisa">
-        <p>Digite qualquer trecho do título ou descrição da tarefa para filtrar em tempo real. A busca age enquanto você digita — não precisa confirmar.</p>
-        <Tip>O campo é focado sem zoom no iOS — digitação é tranquila mesmo em telas pequenas.</Tip>
+      <Section icon="search" title="Busca">
+        <p>Digite qualquer parte do título da tarefa para filtrar em tempo real — a lista atualiza enquanto você digita, sem precisar confirmar.</p>
+        <Tip>Em iOS o campo não provoca zoom ao focar — a leitura continua tranquila no celular.</Tip>
       </Section>
 
       <Section icon="sliders" title="Botão Filtro">
         <p>Abre um painel deslizante com os filtros disponíveis:</p>
         <ul className="list-disc list-inside space-y-1 pl-1">
           <li><strong className="text-ink">Cliente</strong> — filtra pelo cliente do projeto</li>
-          <li><strong className="text-ink">Projeto</strong> — filtra pelo projeto (fica inativo sem cliente selecionado)</li>
-          <li><strong className="text-ink">Status</strong> — etapa atual da tarefa</li>
-          <li><strong className="text-ink">Prioridade</strong> — urgente, alta, normal, baixa</li>
-          <li><strong className="text-ink">Prazo</strong> — hoje, esta semana, atrasadas</li>
+          <li><strong className="text-ink">Projeto</strong> — disponível após selecionar um cliente</li>
+          <li><strong className="text-ink">Status</strong> — etapa atual da tarefa no fluxo</li>
+          <li><strong className="text-ink">Prioridade</strong> — P0 (urgente) até P3 (baixa)</li>
+          <li><strong className="text-ink">Prazo</strong> — hoje, esta semana ou atrasadas</li>
         </ul>
-        <p>Cada filtro também tem botões <strong className="text-ink">↑ ↓</strong> para ordenar a lista por aquela coluna.</p>
+        <p>Cada filtro tem botões <strong className="text-ink">↑ ↓</strong> para ordenar a lista por aquele campo.</p>
       </Section>
 
-      <Section icon="x" title="Botão limpar (X)">
-        <p>Aparece à direita da barra de busca. Quando desabilitado (cinza), nenhum filtro está ativo. Quando ativado (vermelho), mostra o número de filtros aplicados e limpa tudo com um toque — incluindo a ordem de classificação.</p>
+      <Section icon="x" title="Botão limpar">
+        <p>Fica à direita da busca. Cinza e desativado quando não há filtros; vermelho com o número de filtros ativos quando há algo aplicado. Um toque limpa tudo — busca, filtros e ordenação.</p>
       </Section>
 
       <Section icon="list" title="Lista de tarefas">
-        <p>Cada linha mostra o título, cliente/projeto, prioridade e prazo. Toque em uma tarefa para abrir os detalhes completos com comentários.</p>
-        <p>A lista aplica todos os filtros ativos ao mesmo tempo — busca, filtros do painel e ordenação funcionam em conjunto.</p>
+        <p>Toque em qualquer tarefa para abrir os detalhes com título, descrição, histórico e comentários. Todos os filtros e a busca atuam juntos ao mesmo tempo.</p>
       </Section>
     </>
   );
