@@ -23,7 +23,7 @@ import {
   ArrowDownUp, RefreshCw, Trash2, Edit3, Eye, EyeOff, Filter, ChevronsUpDown,
   ListFilter, MessageSquare, Paperclip, History, Pause, AtSign, Archive,
   Lock, AlertCircle, CheckCircle2, Info, ArrowRight, LogOut, Settings,
-  Activity,
+  Activity, BarChart2,
   type LucideIcon, type LucideProps,
 } from 'lucide-react';
 
@@ -36,7 +36,7 @@ type IconName =
   | 'trash' | 'edit' | 'eye' | 'eye-off' | 'filter' | 'chevrons-up-down'
   | 'list-filter' | 'comment' | 'paperclip' | 'history' | 'pause' | 'mention'
   | 'archive' | 'lock' | 'alert' | 'check-circle' | 'info' | 'arrow-right'
-  | 'logout' | 'settings' | 'activity';
+  | 'logout' | 'settings' | 'activity' | 'bar-chart-2';
 
 const MAP: Record<IconName, LucideIcon> = {
   plus: Plus,
@@ -92,6 +92,7 @@ const MAP: Record<IconName, LucideIcon> = {
   logout: LogOut,
   settings: Settings,
   activity: Activity,
+  'bar-chart-2': BarChart2,
 };
 
 interface IconProps extends Omit<LucideProps, 'size'> {

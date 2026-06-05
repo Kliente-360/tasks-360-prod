@@ -51,6 +51,10 @@ const WEEK_LABELS_SHORT = ['Agora', '+1s', '+2s', '+3s'];
 
 export function ResumoClient() {
   const { tasks, clientes, projetos, pessoas, loading } = useData();
+  const pessoasAtivasIds = useMemo(
+    () => new Set(pessoas.filter((p) => p.invited_at !== null).map((p) => p.id)),
+    [pessoas],
+  );
   const { openEdit } = useTaskModal();
 
   const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm && !isPreTriagem(t)), [tasks]);
@@ -97,19 +101,8 @@ export function ResumoClient() {
 
   if (loading) return <div className="text-muted text-sm py-8">Carregando…</div>;
 
-  const todayLabel = new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long', day: 'numeric', month: 'short',
-  }).replace('.', '').replace('-feira', '');
-
   return (
     <div>
-      <div className="m-pagetitle">
-        <h1>Resumo executivo</h1>
-        <div className="narr">
-          operação<span className="sep">·</span><b>{todayLabel}</b>
-        </div>
-      </div>
-
       <div className="space-y-4">
 
         {/* ── 1 · Alertas ── */}
@@ -171,7 +164,7 @@ export function ResumoClient() {
               </span>
             </div>
           </div>
-          {wca.pessoas.filter((p) => p.weeks.some((w) => w.hours > 0)).length === 0 ? (
+          {wca.pessoas.filter((p) => pessoasAtivasIds.has(p.pessoaId)).length === 0 ? (
             <div className="px-4 py-5 text-sm text-muted">Nenhum dado de capacidade</div>
           ) : (
             <div className="overflow-x-auto">
@@ -183,7 +176,7 @@ export function ResumoClient() {
                   ))}
                 </div>
                 <div className="space-y-1">
-                  {wca.pessoas.filter((p) => p.weeks.some((w) => w.hours > 0)).map((p) => (
+                  {wca.pessoas.filter((p) => pessoasAtivasIds.has(p.pessoaId)).map((p) => (
                     <div key={p.pessoaId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
                       <div className="text-xs text-ink truncate pr-1" title={p.nome}>{p.nome.split(' ')[0]}</div>
                       {p.weeks.map((wk, i) => (

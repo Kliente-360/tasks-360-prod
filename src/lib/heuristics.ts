@@ -372,7 +372,8 @@ export function computeHeuristicAlerts(
         .slice(0, 3)
         .map((s) => {
           const wk = s.weeks.findIndex((w) => (w.pctCap ?? 0) > 100);
-          return `${s.nome} · ${semanaLabel(wk)} ${s.weeks[wk]?.pctCap}%`;
+          const cliNome = clientesById.get(s.clienteId)?.nome ?? '—';
+          return `${cliNome} - ${s.nome} · ${semanaLabel(wk)} ${s.weeks[wk]?.pctCap}%`;
         })
         .join(' · '),
       projetoIds: sustEstourando.map((s) => s.projetoId),
@@ -388,7 +389,7 @@ export function computeHeuristicAlerts(
       titulo: `${sustOciosa.length} sustentação(ões) com capacidade ociosa por 2+ semanas`,
       detalhe: sustOciosa
         .slice(0, 3)
-        .map((s) => s.nome)
+        .map((s) => `${clientesById.get(s.clienteId)?.nome ?? '—'} - ${s.nome}`)
         .join(' · '),
       projetoIds: sustOciosa.map((s) => s.projetoId),
     });
@@ -403,7 +404,7 @@ export function computeHeuristicAlerts(
       titulo: `${projEstourando.length} projeto(s) com escopo estourado (>110%)`,
       detalhe: projEstourando
         .slice(0, 3)
-        .map((p) => `${p.nome} ${p.pctEsgotamento}%`)
+        .map((p) => `${clientesById.get(p.clienteId)?.nome ?? '—'} - ${p.nome} ${p.pctEsgotamento}%`)
         .join(' · '),
       projetoIds: projEstourando.map((p) => p.projetoId),
     });
@@ -418,7 +419,7 @@ export function computeHeuristicAlerts(
       titulo: `${projRisco.length} projeto(s) em risco de estourar escopo (90-110%)`,
       detalhe: projRisco
         .slice(0, 3)
-        .map((p) => `${p.nome} ${p.pctEsgotamento}%`)
+        .map((p) => `${clientesById.get(p.clienteId)?.nome ?? '—'} - ${p.nome} ${p.pctEsgotamento}%`)
         .join(' · '),
       projetoIds: projRisco.map((p) => p.projetoId),
     });

@@ -25,8 +25,6 @@ import { NAV } from '@/lib/nav';
 import { useClickAway } from '@/lib/use-click-away';
 import { HelpMenuItem } from '@/components/help-modal';
 import { OnboardingMenuItem } from '@/components/onboarding-modal';
-import { ThemeMenuItem } from '@/components/theme-toggle';
-import { ExportCsvMenuItem } from '@/components/export';
 import { Icon } from '@/components/icons';
 import { APP_VERSION } from '@/components/app-nav';
 
@@ -112,28 +110,7 @@ export function ProfileMenu() {
               </>
             )}
 
-            {/* 3. Exportar — mobile only (desktop tem ícone no header). PDF
-                fica pendente (depende de Dashboard/Briefing — parking). */}
-            {!isCliente && (
-              <div className="md:hidden">
-                <div className="border-t border-line my-1" />
-                <ExportCsvMenuItem onClick={() => setOpen(false)} />
-                <MenuItem
-                  disabled
-                  label="Exportar PDF"
-                  hint="depende de Dashboard"
-                  right={<span className="text-muted text-xs whitespace-nowrap">parking</span>}
-                />
-              </div>
-            )}
-
-            {/* 4. Tema — mobile only (desktop tem ícone ☀/☾ no header) */}
-            <div className="md:hidden">
-              <div className="border-t border-line my-1" />
-              <ThemeMenuItem onClick={() => setOpen(false)} />
-            </div>
-
-            {/* 5. Mini-seção: Manual (mobile) + Onboarding.
+            {/* 3. Mini-seção: Manual (mobile) + Onboarding.
                 Onboarding aparece pra qualquer usuário staff (admin
                 ou interno) — não-cliente. No desktop só Onboarding;
                 Manual tem ícone "?" no header. */}

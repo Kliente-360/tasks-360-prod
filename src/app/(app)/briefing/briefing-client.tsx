@@ -109,6 +109,10 @@ const WEEK_LABELS_LONG = ['Esta sem.', 'Próx. sem.', 'Em 2 sem.', 'Em 3 sem.'];
 
 export function BriefingClient() {
   const { tasks, clientes, projetos, pessoas, loading, refreshing } = useData();
+  const pessoasAtivasIds = useMemo(
+    () => new Set(pessoas.filter((p) => p.invited_at !== null).map((p) => p.id)),
+    [pessoas],
+  );
   const { openEdit } = useTaskModal();
 
   // Alertas: expand/collapse after 6
@@ -499,7 +503,7 @@ export function BriefingClient() {
           }
         />
         {!collapsed.has('time') && (
-          wca.pessoas.filter((p) => p.weeks.some((w) => w.hours > 0)).length === 0 ? (
+          wca.pessoas.filter((p) => pessoasAtivasIds.has(p.pessoaId)).length === 0 ? (
             <div className="px-4 py-5 text-sm text-muted">Nenhum dado de capacidade</div>
           ) : (
             <div className="overflow-x-auto">
@@ -514,7 +518,7 @@ export function BriefingClient() {
                   ))}
                 </div>
                 <div className="space-y-1">
-                  {wca.pessoas.filter((p) => p.weeks.some((w) => w.hours > 0)).map((p) => (
+                  {wca.pessoas.filter((p) => pessoasAtivasIds.has(p.pessoaId)).map((p) => (
                     <div key={p.pessoaId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
                       <div className="text-xs text-ink truncate pr-1" title={p.nome}>{p.nome.split(' ')[0]}</div>
                       {p.weeks.map((wk, i) => (

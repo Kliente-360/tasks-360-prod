@@ -19,11 +19,11 @@ import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.083';
+export const APP_VERSION = 'v1.03.084';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
-  '/resumo': 'activity',
+  '/resumo': 'bar-chart-2',
   '/foco': 'target',
   '/briefing': 'file',
   '/triagem': 'inbox',
@@ -110,7 +110,6 @@ export function AppNav() {
             <div className="hidden md:contents">
               {viewerRole === 'admin' && <ExportIconButton />}
               <HelpIconButton />
-              <ThemeIconButton />
             </div>
 
             <span className="hdr-sep hidden md:block" />
@@ -139,7 +138,7 @@ export function AppNav() {
                   )}
                   aria-label="Resumo executivo"
                 >
-                  <Icon name="activity" size={16} />
+                  <Icon name="bar-chart-2" size={16} />
                 </Link>
                 <Link
                   href="/backlog"
@@ -155,6 +154,7 @@ export function AppNav() {
                 </Link>
               </div>
             )}
+            <ThemeIconButton />
             <NotifBell />
             <ProfileMenu />
           </div>
