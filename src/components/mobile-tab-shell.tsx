@@ -120,6 +120,8 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
       ? (idxRef.current + 1) % n
       : (idxRef.current - 1 + n) % n;
 
+    // Zera scroll antes da animação: destino sempre chega no topo
+    window.scrollTo({ top: 0, behavior: 'instant' });
     setTrack(dx < 0 ? base - window.innerWidth : base + window.innerWidth, true);
 
     setTimeout(() => {
