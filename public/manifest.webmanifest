@@ -1,9 +1,9 @@
 {
-  "id": "/?source=pwa",
+  "id": "/resumo",
   "name": "tasks 360",
   "short_name": "tasks 360",
   "description": "Gestão de backlog da Kliente 360.",
-  "start_url": "/",
+  "start_url": "/resumo",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
