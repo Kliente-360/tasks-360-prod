@@ -19,7 +19,7 @@ import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.086';
+export const APP_VERSION = 'v1.03.087';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -106,11 +106,11 @@ export function AppNav() {
             </div>
             <span className="hdr-sep hidden md:block" />
 
-            {/* Cluster 2: utilitários globais · desktop only no mobile */}
+            {/* Cluster 2: utilitários globais · desktop only */}
             <div className="hidden md:contents">
               {viewerRole === 'admin' && <ExportIconButton />}
               <HelpIconButton />
-              <ThemeIconButton />
+              <ThemeIconButton className="hidden md:inline-flex" />
             </div>
 
             <span className="hdr-sep hidden md:block" />
@@ -126,16 +126,16 @@ export function AppNav() {
               <Icon name="plus" size={14} />
               Tarefa
             </button>
-            {/* Mobile only · toggle Resumo ↔ Meu Backlog · admin only */}
+            {/* Mobile only · toggle Resumo ↔ Backlog · admin only · ícones sem container, underline no ativo */}
             {viewerRole === 'admin' && (
-              <div className="flex items-center md:hidden rounded-md border border-line overflow-hidden">
+              <div className="flex items-center md:hidden gap-0.5">
                 <Link
                   href="/resumo"
                   className={cn(
-                    'flex items-center justify-center w-8 h-8 transition-colors',
+                    'flex items-center justify-center w-8 h-8 border-b-2 transition-colors',
                     pathname.startsWith('/resumo')
-                      ? 'bg-[var(--brand)] text-white'
-                      : 'text-muted hover:text-ink hover:bg-[var(--surface-3)]',
+                      ? 'text-[var(--brand)] border-[var(--brand)]'
+                      : 'text-muted border-transparent hover:text-ink',
                   )}
                   aria-label="Resumo executivo"
                 >
@@ -144,10 +144,10 @@ export function AppNav() {
                 <Link
                   href="/backlog"
                   className={cn(
-                    'flex items-center justify-center w-8 h-8 border-l border-line transition-colors',
+                    'flex items-center justify-center w-8 h-8 border-b-2 transition-colors',
                     pathname.startsWith('/backlog')
-                      ? 'bg-[var(--brand)] text-white'
-                      : 'text-muted hover:text-ink hover:bg-[var(--surface-3)]',
+                      ? 'text-[var(--brand)] border-[var(--brand)]'
+                      : 'text-muted border-transparent hover:text-ink',
                   )}
                   aria-label="Meu Backlog"
                 >
@@ -155,9 +155,7 @@ export function AppNav() {
                 </Link>
               </div>
             )}
-            <div className="md:hidden">
-              <ThemeIconButton />
-            </div>
+            <ThemeIconButton className="md:hidden" />
             <NotifBell />
             <ProfileMenu />
           </div>

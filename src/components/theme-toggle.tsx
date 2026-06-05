@@ -70,14 +70,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 // ============ Triggers ============
 
-/** Ícone ☀/☾ no header (desktop). */
-export function ThemeIconButton() {
+/** Ícone ☀/☾ no header. Visibilidade controlada pelo pai. */
+export function ThemeIconButton({ className }: { className?: string }) {
   const { theme, toggle } = useTheme();
   return (
     <button
       type="button"
       onClick={toggle}
-      className="btn btn-ghost btn-icon text-xs !hidden md:!inline-flex"
+      className={`btn btn-ghost btn-icon text-xs${className ? ` ${className}` : ''}`}
       title={theme === 'dark' ? 'Mudar para claro' : 'Mudar para escuro'}
       aria-label="Alternar tema"
     >
