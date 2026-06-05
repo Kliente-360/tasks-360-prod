@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import { useData } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
+import { PageHeader } from '@/components/page-header';
+import { Icon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { atrasada, isPreTriagem } from '@/lib/task-utils';
 import {
@@ -266,6 +268,26 @@ export function BriefingClient() {
 
   return (
     <div>
+      {/* ── PageHeader (DS) — bare div: pageheader.margin-bottom: 24px controla o Y do primeiro elemento abaixo ── */}
+      <div className="hidden md:block">
+        <PageHeader
+          title="Briefing"
+          context={<>{todayLabel}</>}
+          right={
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="iconbtn bordered text-xs px-3"
+              style={{ width: 'auto', gap: 6 }}
+              title="Exportar PDF (impressão do navegador)"
+            >
+              <Icon name="download" size={14} />
+              Exportar PDF
+            </button>
+          }
+        />
+      </div>
+
       {/* ── Mobile · título compacto ── */}
       <div className="md:hidden">
         <div className="m-pagetitle">
