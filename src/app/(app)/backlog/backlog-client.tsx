@@ -1361,8 +1361,12 @@ function BacklogMobilePanel({
     [tasks, currentPessoaId],
   );
 
+  const STATUS_CHIP_LABELS: Record<string, string> = {
+    backlog: 'Backlog', andamento: 'Em andamento', bloqueado: 'Bloqueado', concluido: 'Concluído',
+  };
   const activeChips: Array<{ key: keyof Filters; label: string }> = [];
   if (f.cliente) activeChips.push({ key: 'cliente', label: clientesById.get(f.cliente)?.nome ?? '—' });
+  if (f.status && f.status !== 'abertas') activeChips.push({ key: 'status', label: STATUS_CHIP_LABELS[f.status] ?? f.status });
   if (f.pri) activeChips.push({ key: 'pri', label: f.pri });
   if (f.prazo) activeChips.push({ key: 'prazo', label: f.prazo === 'atrasadas' ? 'Atrasadas' : f.prazo });
   const nActive = activeChips.length + sortKeys.length;
@@ -1414,7 +1418,7 @@ function BacklogMobilePanel({
               key={c.key}
               type="button"
               className="m-pill on"
-              onClick={() => setF({ ...f, [c.key]: '' as never })}
+              onClick={() => c.key === 'status' ? setF({ ...f, status: 'abertas' }) : setF({ ...f, [c.key]: '' as never })}
             >
               {c.label}
               <Icon name="x" size={12} />
@@ -1550,6 +1554,31 @@ function BacklogFilterSheet({
               disabled={!local.cliente}
             >
               <Icon name={sortIcon('projetoId')} size={14} />
+            </button>
+          </div>
+
+          {/* Status */}
+          <div className="m-row">
+            <span className="ric"><Icon name="list-filter" size={16} /></span>
+            <div className="rbody"><div className="rt">Status</div></div>
+            <select
+              className="m-select"
+              value={local.status}
+              onChange={(e) => setLocal({ ...local, status: e.target.value })}
+            >
+              <option value="abertas">Abertas</option>
+              <option value="">Todas</option>
+              <option value="backlog">Backlog</option>
+              <option value="andamento">Em andamento</option>
+              <option value="bloqueado">Bloqueado</option>
+              <option value="concluido">Concluído</option>
+            </select>
+            <button
+              type="button"
+              className={cn('m-sort-btn', isSortActive('subetapa') && 'on')}
+              onClick={() => sortBy('subetapa')}
+            >
+              <Icon name={sortIcon('subetapa')} size={14} />
             </button>
           </div>
 

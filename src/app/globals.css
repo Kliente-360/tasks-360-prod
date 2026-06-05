@@ -1464,6 +1464,10 @@ body {
 /* ============ HEADER do app (shell) ============ */
 .hdr-v2 {
   position: sticky; top: 0; z-index: 40;
+  /* env(safe-area-inset-top) cobre o status-bar do iOS em modo PWA
+     (viewportFit: cover → conteúdo vai atrás da notch). Em browser
+     normal e Android o valor é 0px, então não afeta nada. */
+  padding-top: env(safe-area-inset-top, 0px);
   background: rgba(255, 255, 255, .8);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
