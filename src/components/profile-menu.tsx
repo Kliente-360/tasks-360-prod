@@ -23,8 +23,8 @@ import { useData } from '@/lib/data-store';
 import { createClient } from '@/lib/supabase/client';
 import { NAV } from '@/lib/nav';
 import { useClickAway } from '@/lib/use-click-away';
-import { HelpMenuItem } from '@/components/help-modal';
 import { OnboardingMenuItem } from '@/components/onboarding-modal';
+import { MobileHelpMenuItem } from '@/components/mobile-help-modal';
 import { Icon } from '@/components/icons';
 import { APP_VERSION } from '@/components/app-nav';
 
@@ -118,9 +118,11 @@ export function ProfileMenu() {
               <>
                 <div className="border-t border-line my-1" />
                 <div className="md:hidden">
-                  <HelpMenuItem onClick={() => setOpen(false)} />
+                  <MobileHelpMenuItem onClick={() => setOpen(false)} />
                 </div>
-                <OnboardingMenuItem onClick={() => setOpen(false)} />
+                <div className="hidden md:block">
+                  <OnboardingMenuItem onClick={() => setOpen(false)} />
+                </div>
               </>
             )}
 

@@ -14,6 +14,7 @@ import { AppSplash } from '@/components/app-splash';
 import { MobileFab } from '@/components/mobile-fab';
 import { BadgeSync } from '@/components/badge-sync';
 import { MobileTabShell } from '@/components/mobile-tab-shell';
+import { MobileHelpProvider } from '@/components/mobile-help-modal';
 
 export default function AppLayout({
   children,
@@ -28,6 +29,7 @@ export default function AppLayout({
               <TaskModalProvider>
                 <QuickCaptureProvider>
                   <CommandPaletteProvider>
+                    <MobileHelpProvider>
                     <GlobalShortcuts />
                     <ServiceWorkerRegister />
                     <AppSplash />
@@ -39,6 +41,7 @@ export default function AppLayout({
                     </div>
                     <MobileFab />
                     <BadgeSync />
+                    </MobileHelpProvider>
                   </CommandPaletteProvider>
                 </QuickCaptureProvider>
               </TaskModalProvider>
