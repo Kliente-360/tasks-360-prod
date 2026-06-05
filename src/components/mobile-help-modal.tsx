@@ -37,7 +37,7 @@ function MobileHelpModal({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<'resumo' | 'backlog'>(isAdmin ? 'resumo' : 'backlog');
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col bg-[color:var(--bg-base)] md:hidden">
+    <div className="fixed inset-0 z-[80] flex flex-col bg-[color:var(--bg)] md:hidden">
       {/* Header */}
       <div
         className="shrink-0 flex items-center justify-between px-4 py-3 border-b border-line bg-[color:var(--bg-elev)]"
