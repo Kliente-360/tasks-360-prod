@@ -13,60 +13,66 @@ const EASE      = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 const MAIN_CLS  = 'app-main-mobile-safe max-w-[1320px] mx-auto px-4 py-6';
 
 /**
- * Shell de abas mobile para admin: renderiza /resumo e /backlog lado-a-lado
- * em memória e desliza entre eles via CSS transform — sem router.push,
- * sem ghost vazio. O conteúdo real das duas abas é visível simultaneamente
- * durante o swipe. URL sincronizada via history.replaceState.
+ * Carrossel infinito de 2 abas para admin em mobile.
  *
- * Desktop: apenas renderiza children normalmente.
- * Interno / rotas não-tab: apenas renderiza children normalmente.
+ * Track de 4 slots: [Backlog · Resumo · Backlog · Resumo]
+ * Posições canônicas (translateX):
+ *   Resumo  (idx=0) → -1×vw  (slot 1)
+ *   Backlog (idx=1) → -2×vw  (slot 2)
+ *
+ * Todo swipe anima para o slot adjacente (±1 vw do canônico).
+ * Após a animação, um snap sem transição volta para a posição canônica
+ * do novo tab — invisível pois os slots clones têm conteúdo idêntico e
+ * o scroll do body é compartilhado entre todas as instâncias.
+ *
+ * Zero React state durante o swipe: tudo via style direto no DOM.
+ * URL sincronizada via history.replaceState.
+ *
+ * Desktop / rotas não-tab: renderiza children normalmente.
  */
 export function MobileTabShell({ children }: { children: React.ReactNode }) {
-  const pathname    = usePathname();
+  const pathname       = usePathname();
   const { viewerRole } = useData();
 
-  const isAdmin   = viewerRole === 'admin';
+  const isAdmin    = viewerRole === 'admin';
   const isTabRoute = TABS.some((t) => pathname.startsWith(t));
 
   const trackRef = useRef<HTMLDivElement>(null);
-  const tabIdxRef = useRef(Math.max(0, TABS.findIndex((t) => pathname.startsWith(t))));
+  const idxRef   = useRef(Math.max(0, TABS.findIndex((t) => pathname.startsWith(t))));
 
-  // Refs de swipe — sem estado React para evitar re-renders durante touchmove
   const startX   = useRef<number | null>(null);
   const startY   = useRef<number | null>(null);
   const axis     = useRef<'h' | 'v' | null>(null);
   const dragging = useRef(false);
   const busy     = useRef(false);
 
+  // Posição canônica em px: Resumo(0)→-vw, Backlog(1)→-2vw
+  function canonical(idx: number) {
+    return -(idx + 1) * window.innerWidth;
+  }
+
+  function setTrack(px: number, animated: boolean) {
+    const el = trackRef.current;
+    if (!el) return;
+    el.style.transition = animated ? `transform ${DURATION}ms ${EASE}` : 'none';
+    el.style.transform  = `translateX(${px}px)`;
+  }
+
   // Posição inicial antes do primeiro paint
   useLayoutEffect(() => {
-    applyTrack(tabIdxRef.current, false);
+    setTrack(canonical(idxRef.current), false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sincroniza quando pathname muda por navegação externa (links, back button)
+  // Sincroniza quando pathname muda por navegação externa
   useEffect(() => {
     const newIdx = TABS.findIndex((t) => pathname.startsWith(t));
-    if (newIdx !== -1 && newIdx !== tabIdxRef.current) {
-      tabIdxRef.current = newIdx;
-      applyTrack(newIdx, true);
+    if (newIdx !== -1 && newIdx !== idxRef.current) {
+      idxRef.current = newIdx;
+      setTrack(canonical(newIdx), false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
-
-  function applyTrack(idx: number, animated: boolean) {
-    const el = trackRef.current;
-    if (!el) return;
-    const vw = window.innerWidth;
-    el.style.transition = animated ? `transform ${DURATION}ms ${EASE}` : 'none';
-    el.style.transform  = idx === 0 ? '' : `translateX(${-idx * vw}px)`;
-  }
-
-  function goTo(newIdx: number) {
-    tabIdxRef.current = newIdx;
-    applyTrack(newIdx, true);
-    window.history.replaceState(null, '', TABS[newIdx]);
-  }
 
   function onTouchStart(e: React.TouchEvent) {
     if (busy.current) return;
@@ -88,12 +94,10 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
     if (axis.current !== 'h') return;
 
     dragging.current = true;
-    const vw   = window.innerWidth;
-    const base = -tabIdxRef.current * vw;
-    const el   = trackRef.current;
+    const el = trackRef.current;
     if (el) {
       el.style.transition = 'none';
-      el.style.transform  = `translateX(${base + dx}px)`;
+      el.style.transform  = `translateX(${canonical(idxRef.current) + dx}px)`;
     }
   }
 
@@ -102,13 +106,29 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
     const dx = e.changedTouches[0].clientX - startX.current!;
     reset();
 
-    const n    = TABS.length;
-    const next =
-      dx < -THRESHOLD ? (tabIdxRef.current + 1) % n :
-      dx >  THRESHOLD ? (tabIdxRef.current - 1 + n) % n :
-      tabIdxRef.current;
+    const base = canonical(idxRef.current);
 
-    goTo(next);
+    if (Math.abs(dx) < THRESHOLD) {
+      setTrack(base, true);
+      return;
+    }
+
+    // Commit: anima para o slot adjacente, depois snap para posição canônica
+    busy.current = true;
+    const n      = TABS.length;
+    const newIdx = dx < 0
+      ? (idxRef.current + 1) % n
+      : (idxRef.current - 1 + n) % n;
+
+    setTrack(dx < 0 ? base - window.innerWidth : base + window.innerWidth, true);
+
+    setTimeout(() => {
+      idxRef.current = newIdx;
+      window.history.replaceState(null, '', TABS[newIdx]);
+      // Snap invisível: slots clones têm conteúdo idêntico
+      setTrack(canonical(newIdx), false);
+      busy.current = false;
+    }, DURATION);
   }
 
   function reset() {
@@ -125,7 +145,7 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/* Mobile: carrossel real com ambas as páginas renderizadas */}
+      {/* Mobile: 4-slot circular carousel [Backlog · Resumo · Backlog · Resumo] */}
       <div className="md:hidden overflow-x-hidden">
         <div
           ref={trackRef}
@@ -133,19 +153,28 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           style={{
-            display:    'flex',
-            width:      `${TABS.length * 100}vw`,
-            willChange: 'transform',
+            display:     'flex',
+            width:       '400vw',
+            willChange:  'transform',
             touchAction: 'pan-y',
           }}
         >
-          {TABS.map((tab, i) => (
-            <div key={tab} style={{ width: '100vw', flex: '0 0 100vw', minWidth: 0 }}>
-              <main className={MAIN_CLS}>
-                {i === 0 ? <ResumoClient /> : <BacklogClient />}
-              </main>
-            </div>
-          ))}
+          {/* Slot 0 · Backlog clone (borda esquerda para swipe circular vindo do Resumo) */}
+          <div style={{ width: '100vw', flex: '0 0 100vw', minWidth: 0 }}>
+            <main className={MAIN_CLS}><BacklogClient /></main>
+          </div>
+          {/* Slot 1 · Resumo canônico */}
+          <div style={{ width: '100vw', flex: '0 0 100vw', minWidth: 0 }}>
+            <main className={MAIN_CLS}><ResumoClient /></main>
+          </div>
+          {/* Slot 2 · Backlog canônico */}
+          <div style={{ width: '100vw', flex: '0 0 100vw', minWidth: 0 }}>
+            <main className={MAIN_CLS}><BacklogClient /></main>
+          </div>
+          {/* Slot 3 · Resumo clone (borda direita para swipe circular vindo do Backlog) */}
+          <div style={{ width: '100vw', flex: '0 0 100vw', minWidth: 0 }}>
+            <main className={MAIN_CLS}><ResumoClient /></main>
+          </div>
         </div>
       </div>
 
