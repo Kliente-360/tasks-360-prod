@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.079 · **Atualizado**: 04/06/2026 · branch `main`
+> **Versão**: v1.03.103 · **Atualizado**: 05/06/2026 · branch `main`
 
 ---
 
@@ -57,6 +57,30 @@ Bump MINOR 02→03 marcou o fechamento desse ciclo. Concluídos:
 - ✅ **Notifications · sistema completo** (v1.03.070-073) · fix lazy promise (`.then()` faltando), implementação de `cliente_comentou` + `cliente_respondeu` do Portal, NotifBell com 4 grupos (Todas · Menção · Updates em tasks · Updates do cliente), ícones bell/mention/activity/inbox, RLS apertada (SELECT só recipient, UPDATE só recipient, INSERT authenticated, DELETE bloqueado), click-outside fecha o sino
 - ✅ **A.18 · Meu Foco redesign** (v1.03.075-077) · 6 contextos de atenção + checkbox "feito hoje" por task com persistência `localStorage` key `kliente360-foco-done-<YYYY-MM-DD>` (purge automático ao virar o dia) · linha única + motivo picklist + botões no topo; desktop ganhou mesma anatomia do mobile (inline-edit fluido); HOWTO + ONBOARDING atualizados (v1.03.078)
 
+### Mobile · reestruturação completa (jun/2026 · v1.03.079 → v1.03.103)
+
+Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout específico por rota:
+
+#### Arquitetura mobile definitiva
+| Rota | Mobile | Desktop |
+|---|---|---|
+| `/resumo` | ✅ Carrossel (swipe ↔ Backlog) | — (não existe) |
+| `/backlog` | ✅ BacklogMobilePanel | ✅ Tabela + FilterBar |
+| `/foco`, `/kanban`, `/calendario`, `/triagem`, `/briefing`, `/dashboard`, `/timesheet`, `/cadastros` | — (desktop-only) | ✅ |
+| `/portal` | 🔜 futuro | ✅ |
+
+#### Entregues nesta sessão
+- ✅ **MobileTabShell** · carrossel circular Resumo ↔ Backlog para admin mobile — DOM direto (zero React state durante swipe), 2 slots abs/rel, scroll reset no commit, `history.replaceState` pra URL sync. `SwipeNav` anterior removido.
+- ✅ **Resumo executivo mobile** · `m-pagetitle` com data e count de alertas; tela termina onde terminam os componentes (altura natural, não estica com Backlog)
+- ✅ **Backlog mobile (BacklogMobilePanel)** · filtro RLS por `currentPessoa` (mostra só tarefas do usuário), search `font-size:16px` (anti-zoom iOS), bottom sheet com 5 filtros (Cliente · Projeto · Status · Prioridade · Prazo) + botão de sort ↑↓ em cada campo, sort padrão `criadoEm DESC`
+- ✅ **Filtro Projeto mobile** · sempre visível, desabilitado + opacidade 0.45 sem cliente selecionado
+- ✅ **Botão Limpar fixo** · largura 52px pré-definida (não desloca a bar), ícone X + count com `visibility:hidden` quando vazio, vermelho ao ativar — espelho exato do `.fselect.clear` desktop. Layout: `[Buscar] [Filtro] [X n]`
+- ✅ **PWA** · `start_url` → `/resumo` (abre no carrossel), `padding-top: env(safe-area-inset-top)` no `.hdr-v2` (header não cortado em iOS standalone), ícone 512px com `purpose: "any maskable"`, `theme-color` com variante dark `#111827`
+- ✅ **Dead code removido** · `SwipeNav` (211 linhas), 3 blocos legacy `display:none` no Backlog (~265 linhas), state vars órfãs (`moreOpen`/`sortPanelOpen`/`filtersOpen`/`activeFiltersCount`), CSS `.m-tabbar`/`.m-tab` (tab bar que não existe mais), `.m-pill`/`.m-pills` (chips substituídos pelo clear button)
+
+#### Próxima sessão (anotado)
+- 🔲 **Modal de task mobile** · simplificado — somente tabs **Detalhes** + **Comentários**. Estratégia: dual-render desktop+mobile com CSS `display:none/block`, NÃO usar `matchMedia` em render path (lição do crash v1.03.009).
+
 ---
 
 ## 🎯 Roadmap ativo
@@ -85,42 +109,8 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | A.14 (parcial) | **Card de task unificado** · 🟡 **só camada técnica entregue, sem mudança visual perceptível.** v1.03.032-038 dedupou JSX repetido em primitivas (`PriChip`/`TaskAvatar`/`PrazoLabel`/`TagIA`) e criou wrapper `<TaskCard>` com variantes `sm/md/lg/checkable/selected`. Mas as telas mantiveram seus markups específicos (Foco desktop = FocoCard próprio, Backlog desktop = `<table>`, Kanban = .kcard, Triagem = card-com-chips, Calendário = .kcard). Resultado: código mais limpo, **UI essencialmente idêntica ao que era antes**. | (já feito, parcial) | Médio (técnico, invisível ao usuário) |
 | A.17 | **Card de task unificado · VISUAL** · **escopo redo**: A.14 entregou só dedup técnico. Falta a unificação visual real: cards iguais entre Foco desktop/mobile, Backlog mobile, Kanban, Triagem, Calendário detail. **Plano precisa ser refeito** — começar com auditoria visual real (prints lado-a-lado), decidir variante única por contexto, executar com mudança VISÍVEL em cada PR (não dedup invisível como A.14). Não tocar sem plano novo aprovado. | 1-2 semanas | Alto — entrega o que A.14 prometeu mas não cumpriu |
 | ~~A.18~~ | ~~**Meu foco · redesign UX-first**~~ | ✅ Entregue v1.03.075-077 (ver Marcos concluídos acima) |
-| A.15 | **Mobile · fechamento (Step 4 + validação real)** · 🟡 parcial: shell + 4 telas + Portal polish entregues (PRs #21-#27). Falta: (1) **Task modal full-screen mobile** (Step 4 — PR isolado, suspeito do crash v1.03.009; estratégia: dual-render desktop+mobile com CSS `display:none/block`, NÃO usar `matchMedia` em render path); (2) validar viewport/scroll em iPhone SE/Plus/iPad portrait reais; (3) tap targets ≥44px conforme HIG; (4) gestos (swipe-to-delete em listas? tap longo?); (5) Briefing "Clientes em atenção" mobile · checar se safe-cast roda em prod; (6) Portal mobile · avaliar se vale port fiel ao handoff (hoje só esconde storytelling). | 1-2 semanas | Alto — fecha o ciclo mobile com qualidade |
+| A.15 | **Mobile · modal de task** · 🟡 **carrossel + backlog entregues; falta o modal.** Entregues: MobileTabShell (carrossel Resumo↔Backlog), BacklogMobilePanel completo, PWA fixes. **Restante**: modal de task mobile simplificado — somente tabs Detalhes + Comentários (próxima sessão). Estratégia confirmada: dual-render com CSS `display:none/block`, sem `matchMedia`. | ~1 dia | Alto — fecha o ciclo mobile |
 | A.16 | **Revisar bulk actions** · auditar BulkBar (seleção múltipla no Backlog) — UX da seleção, ações disponíveis (atribuir cliente/projeto/pessoa/prazo/prioridade/esforço, arquivar, excluir), feedback visual (sticky bar com contador), comportamento mobile (não aparece hoje). Decidir: manter no Backlog desktop, levar pro Kanban também, adicionar atalhos teclado (ESC limpa seleção, Cmd+A seleciona tudo filtrado), confirmações pra ações destrutivas. | 3-5 dias | Médio — produtividade em operações repetitivas |
-
-#### A.2 · detalhamento
-
-**Objetivo**: criar um **componente único `<FilterBar>`** reutilizável em Backlog / Kanban / Calendário / Dashboard, eliminando inconsistências e habilitando saved views (A.5) sem refactor.
-
-**Filtros padronizados** (todos as 4 abas):
-- 🔍 **Buscar** — full-text em **todos os campos** (título, descrição, comentários, tags, etc), não só no título como hoje
-- **Cliente** (select)
-- **Projeto** (select dependente de Cliente)
-- **Responsável** (select)
-- **Prazo** (range / quick-picks: hoje · esta semana · este mês · atrasadas · sem prazo)
-
-**Menu ⋯ contextual** (padrão em todas as 4 abas, opções habilitadas conforme contexto):
-- **Backlog** (referência canônica): Grupar por · Mostrar arquivadas · Somente criadas por IA / só humanos
-- **Kanban**: Mostrar arquivadas · Somente criadas por IA — Grupar fica disabled (kanban já agrupa por subetapa)
-- **Calendário**: Mostrar arquivadas — Grupar e filtro IA ficam disabled
-- **Dashboard**: Somente criadas por IA / só humanos — Grupar disabled, Mostrar arquivadas disabled (dashboard ignora arquivadas por design)
-
-**Calendário · redesign visual**:
-- Filtro de Status SAI da barra → vira **código de cor em cada bloquinho** de task dentro do dia (verde=concluído, brand=andamento, âmbar=bloqueado, cinza=backlog)
-- Botões **‹ ›** de avançar/voltar mês saem do canto direito → ficam **ao lado do title do mês** (ex: `‹ Junho 2026 ›`)
-- Resto da FilterBar aplica normal
-
-**Dashboard · exceções**:
-- Alguns elementos/cards podem ser definidos como **"não afetados por filtros"** (ex: KPIs globais, heatmap de capacidade do time inteiro, throughput agregado). Marcação via prop no card — UX mostra um ícone discreto "🔒 visão global" quando filtros estão ativos mas o card ignora.
-- Filtros padrão aplicam ao resto do Dashboard.
-
-**Implementação técnica sugerida**:
-- Novo componente `src/components/filter-bar.tsx` com props tipadas (lista de filtros habilitados, callbacks, slot de menu ⋯)
-- Estado de filtros vira hook `useFilters(scope)` que persiste em URL/localStorage por tela (habilita deep-link e saved views)
-- Cada tela passa só os filtros que faz sentido (mas todas usam o mesmo componente)
-- A.5 (Saved views) reusa esse `useFilters` direto — quase grátis depois desse refactor
-
-**Pré-req**: idealmente sai junto com A.1 (Design System) — barra de filtros é componente visível em 4 telas, vale aplicar tokens novos de uma vez só pra evitar reapplicar depois.
 
 ### Bucket V · Visão cliente (pre-launch hardening)
 
@@ -130,7 +120,7 @@ Diferente dos buckets A/B/C que são features incrementais, V é **um lote coeso
 
 | # | Item | Esforço | Impacto |
 |---|---|---|---|
-| V.1 | **Portal cliente · revisão completa de UX** · auditar storytelling (header verde + KPIs + ritmo de entregas + distribuição + lead time + lista), decidir o que fica/sai pra cliente externo (vs admin trocando contexto). Hoje storytelling some no mobile — avaliar se fica mesmo ou se vale port fiel. Revisar copy ("Portal · Kliente 360", "Entregues este mês", etc) pra ficar acolhedora ao cliente externo. | 3-5 dias | Alto — é a vitrine do produto pro cliente |
+| V.1 | **Portal cliente · revisão completa de UX** · auditar storytelling (header verde + KPIs + ritmo de entregas + distribuição + lead time + lista), decidir o que fica/sai pra cliente externo (vs admin trocando contexto). Portal mobile: avaliar port fiel (hoje só esconde storytelling). | 3-5 dias | Alto — é a vitrine do produto pro cliente |
 | V.2 | **Indicadores e gráficos do Portal · revisão analítica** · KPIs atuais (Entregues mês · Em execução · Aguardando você · Próxima entrega) e gráficos (Ritmo 6 meses · Distribuição por projeto · Lead time + total concluídas) — auditar se métricas batem com o que o cliente quer ver, se valores casam com a realidade, se faltam ângulos (ex: NPS interno do cliente · histórico de comments · SLA cumprido). Definir versão "1.0 cliente real". | 3-5 dias | Alto — informação útil é o que ancora valor percebido |
 | V.3 | **RLS audit · segurança end-to-end** · revisar todas as policies `pessoas`, `tasks`, `task_comments`, `clientes`, `projetos` pra garantir que cliente externo NUNCA vê dado fora do escopo dele. Casos a cobrir: cliente vê tasks de outro cliente · cliente vê comments internos (visivel_cliente=false) · cliente vê pessoas internas · cliente vê custos/horas internas. Documentar matriz role × tabela × CRUD. | 3-5 dias | Crítico — vazamento de dado entre clientes é gameover |
 | V.4 | **Modal de task · review pra cliente externo** · cliente externo vê o mesmo modal do time interno hoje? Auditar campos visíveis: prazo/responsável/status/tags/checklist/tempo/anexos/histórico. Decidir o que esconder (custo/esforço/comments internos/historico de mudança de subetapa interna). Versão "modo cliente" do modal. | 3-5 dias | Alto — modal é onde cliente passa tempo |
@@ -177,7 +167,7 @@ Detecção de padrões e insights avançados sobre o estado da operação. Pode 
 
 ## ❌ Descontinuados (não repropor sem novo input)
 
-Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly · Sentry · PostHog
+Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly · Sentry · PostHog · Bottom tab bar mobile (substituída por carrossel MobileTabShell)
 
 ---
 
@@ -190,6 +180,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 | Portal cliente | ✅ Entregue jun/2026 |
 | Time tracking (cronômetro) | ✅ Entregue jun/2026 |
 | Stack homogêneo e enxuto | ✅ Auditado e limpo (v1.02.226–229) |
+| Mobile admin experience | ✅ Entregue jun/2026 (v1.03.079-103) — carrossel + backlog. Modal pendente. |
 | Diferenciação por IA | ❌ Zero em prod — atacar via Bucket B |
 | Analytics avançado | ⚠️ Heurísticas Onda A-D entregues — Bucket C adiciona profundidade |
 
@@ -197,25 +188,19 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## 🎯 NEXT · ordem definida (jun/2026)
 
-Bloco de trabalho consolidado pelos próximos 8-14 semanas. 8 items
-priorizados pelo Felipe, ordenados em 3 ondas (ordem reordenada
-jun/2026: design primeiro, closing loops segundo, quick wins por
-último — coloca o trabalho pesado na frente enquanto contexto está
-fresco).
+**Amanhã (próxima sessão)**
+1. **A.15 · Modal de task mobile** · somente tabs Detalhes + Comentários, UI simplificada. Dual-render CSS, sem matchMedia.
 
 **Onda 1 · Design coeso** (~1-2 semanas)
-1. **A.17** Card de task · VISUAL (replan + execução — único item desta onda)
-   - ~~A.18 entregue~~ (v1.03.075-077 · checkbox local + 6 contextos · não depende mais de A.17)
-   - ~~A.13 movido pra concluídos~~ (Triagem já entregue na reform jun/2026)
+2. **A.17** Card de task · VISUAL (replan + execução)
 
 **Onda 2 · Closing loops** (~10-20 dias)
-4. **A.15** Mobile fechamento (Step 4 task modal + validação real)
-5. **A.12** Dashboard × Portal · padrão técnico convergente
+3. **A.12** Dashboard × Portal · padrão técnico convergente
+4. **A.16** Revisar bulk actions (BulkBar)
 
-**Onda 3 · Quick wins** (~10 dias · isolados, baixo risco — funcionam como warm-down)
-6. **A.9** Timesheet · entrada manual + permissões
-7. **A.16** Revisar bulk actions (BulkBar)
-8. **C.3** Skill mismatch (heurística pura)
+**Onda 3 · Quick wins** (~10 dias)
+5. **A.9** Timesheet · entrada manual + permissões
+6. **C.3** Skill mismatch (heurística pura)
 
 Items NÃO no NEXT (revisitar depois): A.3 Push · A.5 Saved views · A.6 Sticky thead · A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.1-C.2/C.4-C.9.
 
@@ -223,7 +208,5 @@ Items NÃO no NEXT (revisitar depois): A.3 Push · A.5 Saved views · A.6 Sticky
 
 ## Próximo passo imediato
 
-Começar **Onda 1 · A.17** (Card de task VISUAL). É o item que destrava
-A.13 e A.18, e fecha o débito do A.14 parcial. Precisa REPLAN antes
-de código — começar com auditoria visual real (prints lado-a-lado de
-cada tela) e definição clara da variante única por contexto.
+**Modal de task mobile** (A.15 restante) — somente Detalhes + Comentários, UI simplificada.
+Estratégia: dual-render desktop+mobile com CSS `display:none/block`. Não usar `matchMedia` em render path (lição do crash v1.03.009).
