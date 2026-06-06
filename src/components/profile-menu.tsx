@@ -25,8 +25,12 @@ import { NAV } from '@/lib/nav';
 import { useClickAway } from '@/lib/use-click-away';
 import { OnboardingMenuItem } from '@/components/onboarding-modal';
 import { MobileHelpMenuItem } from '@/components/mobile-help-modal';
-import { Icon } from '@/components/icons';
+import { Icon, type IconName } from '@/components/icons';
 import { APP_VERSION } from '@/components/app-nav';
+
+const PROFILE_ICON: Record<string, IconName> = {
+  '/cadastros': 'sliders',
+};
 
 export function ProfileMenu() {
   const [open, setOpen] = useState(false);
@@ -111,6 +115,7 @@ export function ProfileMenu() {
                   <MenuButton
                     key={item.href}
                     label={item.label}
+                    icon={PROFILE_ICON[item.href]}
                     onClick={() => {
                       setOpen(false);
                       router.push(item.href);
@@ -158,13 +163,14 @@ export function ProfileMenu() {
   );
 }
 
-function MenuButton({ label, onClick }: { label: string; onClick: () => void }) {
+function MenuButton({ label, icon, onClick }: { label: string; icon?: IconName; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm text-ink hover:bg-[color:var(--surface-3)] transition-colors"
+      className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-[color:var(--surface-3)] transition-colors"
     >
+      {icon && <Icon name={icon} size={14} className="text-muted shrink-0" />}
       <span>{label}</span>
     </button>
   );
