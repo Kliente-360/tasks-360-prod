@@ -97,6 +97,16 @@ export function ProfileMenu() {
             {profileItems.length > 0 && (
               <>
                 <div className="border-t border-line my-1" />
+                <div className="md:hidden">
+                  <button
+                    type="button"
+                    onClick={() => { setOpen(false); router.push('/backlog'); }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-[color:var(--surface-3)] transition-colors"
+                  >
+                    <Icon name="list" size={14} className="text-muted" />
+                    <span>Backlog</span>
+                  </button>
+                </div>
                 {profileItems.map((item) => (
                   <MenuButton
                     key={item.href}
