@@ -25,7 +25,7 @@ export type ProjetoInitial = {
 
 export type ClienteOption = { id: string; nome: string };
 
-const blank = (clienteId: string): ProjetoInitial => ({
+export const blank = (clienteId: string): ProjetoInitial => ({
   id: '',
   nome: '',
   clienteId,
@@ -35,7 +35,7 @@ const blank = (clienteId: string): ProjetoInitial => ({
   orcamentoHoras: null,
 });
 
-function ProjetoModal({
+export function ProjetoModal({
   initial,
   clientes,
   onClose,
@@ -149,7 +149,7 @@ function ProjetoModal({
               ))}
             </select>
           </div>
-          <div>
+          <div className="hidden md:block">
             <label className="lbl">Tipo</label>
             <select className="inp" value={tipo} onChange={(e) => setTipo(e.target.value)}>
               <option value="">—</option>
@@ -158,6 +158,7 @@ function ProjetoModal({
               <option value="discovery">Discovery</option>
             </select>
           </div>
+          <div className="hidden md:block">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="lbl">SLA resposta (h)</label>
@@ -195,6 +196,7 @@ function ProjetoModal({
                 placeholder="—"
               />
             </div>
+          </div>
           </div>
         </div>
 

@@ -15,7 +15,7 @@ import { createClient } from '@/lib/supabase/client';
 import { clienteFromDb } from '@/lib/adapters';
 import { normalizeDominio } from '@/lib/utils';
 
-type ClienteInitial = {
+export type ClienteInitial = {
   id: string;
   nome: string;
   tier: string | null;
@@ -27,7 +27,7 @@ type ClienteInitial = {
   corPortalTexto?: 'light' | 'dark' | null;
 };
 
-const BLANK: ClienteInitial = {
+export const BLANK: ClienteInitial = {
   id: '',
   nome: '',
   tier: '',
@@ -37,7 +37,7 @@ const BLANK: ClienteInitial = {
   corPortalTexto: null,
 };
 
-function ClienteModal({
+export function ClienteModal({
   initial,
   onClose,
 }: {
@@ -159,7 +159,7 @@ function ClienteModal({
 
           {!initial.ehInterno && (
             <>
-              <div>
+              <div className="hidden md:block">
                 <label className="lbl">Tier</label>
                 <select className="inp" value={tier} onChange={(e) => setTier(e.target.value)}>
                   <option value="">—</option>
@@ -169,7 +169,7 @@ function ClienteModal({
                 </select>
               </div>
 
-              <div>
+              <div className="hidden md:block">
                 <label className="lbl">Domínios de email</label>
                 <div className="flex gap-2">
                   <input

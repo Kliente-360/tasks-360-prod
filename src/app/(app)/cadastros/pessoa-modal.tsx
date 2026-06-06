@@ -27,7 +27,7 @@ export type PessoaInitial = {
   senioridade: string | null;
 };
 
-const BLANK: PessoaInitial = {
+export const BLANK: PessoaInitial = {
   id: '',
   nome: '',
   email: '',
@@ -40,7 +40,7 @@ const BLANK: PessoaInitial = {
   senioridade: '',
 };
 
-function PessoaModal({
+export function PessoaModal({
   initial,
   clientes,
   onClose,
@@ -206,7 +206,7 @@ function PessoaModal({
           )}
 
           {!isCliente && (
-            <>
+            <div className="hidden md:block space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="lbl">Cliente principal</label>
@@ -299,7 +299,7 @@ function PessoaModal({
                   ))}
                 </div>
               </div>
-            </>
+            </div>
           )}
         </div>
 

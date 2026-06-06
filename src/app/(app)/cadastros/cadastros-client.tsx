@@ -20,9 +20,12 @@ import { Icon } from '@/components/icons';
 import { createClient } from '@/lib/supabase/client';
 import { clienteFromDb, projetoFromDb } from '@/lib/adapters';
 import { cn } from '@/lib/utils';
-import { NewClienteButton, EditClienteButton } from './cliente-modal';
-import { NewProjetoButton, EditProjetoButton } from './projeto-modal';
-import { NewPessoaButton, EditPessoaButton } from './pessoa-modal';
+import { NewClienteButton, EditClienteButton, ClienteModal, BLANK as CLIENTE_BLANK } from './cliente-modal';
+import type { ClienteInitial } from './cliente-modal';
+import { NewProjetoButton, EditProjetoButton, ProjetoModal, blank as blankProjeto } from './projeto-modal';
+import type { ProjetoInitial } from './projeto-modal';
+import { NewPessoaButton, EditPessoaButton, PessoaModal, BLANK as PESSOA_BLANK } from './pessoa-modal';
+import type { PessoaInitial } from './pessoa-modal';
 
 type Tab = 'clientes' | 'projetos' | 'pessoas';
 
@@ -50,6 +53,9 @@ export function CadastrosClient() {
 
   const [tab, setTab] = useState<Tab>('clientes');
   const [showArquivados, setShowArquivados] = useState(false);
+  const [mobileEditCliente, setMobileEditCliente] = useState<ClienteInitial | null>(null);
+  const [mobileEditProjeto, setMobileEditProjeto] = useState<ProjetoInitial | null>(null);
+  const [mobileEditPessoa, setMobileEditPessoa] = useState<PessoaInitial | null>(null);
   const toast = useToast();
 
   // ===== Indices =====
@@ -277,6 +283,25 @@ export function CadastrosClient() {
 
   return (
     <div>
+      {/* ── Mobile header ── */}
+      <div className="md:hidden flex items-center justify-between mb-3">
+        <div>
+          <h1 className="font-brand font-semibold text-base text-ink">Cadastros</h1>
+          <div className="text-xs text-muted mt-0.5">
+            <b className="text-ink">{clientesAtivos.length}</b> clientes ·{' '}
+            <b className="text-ink">{projetosAtivos.length}</b> projetos ·{' '}
+            <b className="text-ink">{pessoas.length}</b> pessoas
+          </div>
+        </div>
+        <div>
+          {tab === 'clientes' && <NewClienteButton />}
+          {tab === 'projetos' && <NewProjetoButton clientes={clienteOptions} />}
+          {tab === 'pessoas' && <NewPessoaButton clientes={clienteOptions} />}
+        </div>
+      </div>
+
+      {/* ── Desktop header ── */}
+      <div className="hidden md:block">
       {/* PageHeader · contexto = stats agregadas · right = arquivados + botão criar contextual */}
       <PageHeader
         title="Cadastros"
@@ -313,7 +338,37 @@ export function CadastrosClient() {
           </div>
         }
       />
+      </div>{/* /desktop header */}
 
+      {/* ── Mobile tabs · full-width ── */}
+      <div className="md:hidden flex border-b border-line mb-0">
+        {(['clientes', 'projetos', 'pessoas'] as const).map((t) => {
+          const label = t === 'clientes' ? 'Clientes' : t === 'projetos' ? 'Projetos' : 'Pessoas';
+          const count = t === 'clientes' ? clientesAtivos.length : t === 'projetos' ? projetosAtivos.length : pessoas.length;
+          return (
+            <button
+              key={t}
+              type="button"
+              className={cn(
+                'flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium border-b-2 transition-colors',
+                tab === t
+                  ? 'text-[color:var(--green)] border-[color:var(--green)]'
+                  : 'text-muted border-transparent',
+              )}
+              onClick={() => setTab(t)}
+            >
+              {label}
+              <span className={cn(
+                'text-[10px] font-mono px-1.5 py-0.5 rounded-full',
+                tab === t ? 'bg-[color:var(--green-tint)] text-[color:var(--green)]' : 'bg-[color:var(--surface-3)] text-muted',
+              )}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Desktop tabs ── */}
+      <div className="hidden md:block">
       {/* Subabas · padrão DS com count badge */}
       <div className="subtabs" role="tablist" aria-label="Tipo de cadastro">
         <button
@@ -357,7 +412,10 @@ export function CadastrosClient() {
           <strong>{clientesSemDominio.length}</strong> cliente(s) sem domínio cadastrado — edite pra ativar matching automático de email.
         </p>
       )}
+      </div>{/* /desktop tabs */}
 
+      {/* ── Desktop tables ── */}
+      <div className="hidden md:block">
       <div className="mt-4 card overflow-hidden">
         {/* Wrapper de scroll horizontal — tabelas com 8 colunas podem
             estourar a max-width 1320px em laptops menores. */}
@@ -722,6 +780,163 @@ export function CadastrosClient() {
         )}
         </div>
       </div>
+      </div>{/* /desktop tables */}
+
+      {/* ── Mobile lists ── */}
+      <div className="md:hidden mt-3">
+
+        {/* Clientes */}
+        {tab === 'clientes' && (
+          <div className="rounded-xl border border-line overflow-hidden bg-[color:var(--bg-elev)]">
+            {clientes.map((c) => (
+              <div
+                key={c.id}
+                className={cn(
+                  'flex items-center gap-3 px-3 py-3 border-b border-line last:border-b-0 cursor-pointer active:bg-[color:var(--surface-3)] transition-colors',
+                  c.arquivadoEm && 'opacity-50',
+                )}
+                onClick={() => setMobileEditCliente({ id: c.id, nome: c.nome, tier: c.tier, ehInterno: c.ehInterno, dominios: c.dominios, corPortal: c.corPortal, corPortalTexto: c.corPortalTexto })}
+              >
+                <Avatar label={c.nome} shape="square" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm text-ink truncate">{c.nome}</div>
+                  {(c.arquivadoEm || c.ehInterno) && (
+                    <div className="text-[10px] text-muted">
+                      {c.ehInterno ? 'interno' : ''}{c.ehInterno && c.arquivadoEm ? ' · ' : ''}{c.arquivadoEm ? 'arquivado' : ''}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  {!c.arquivadoEm ? (
+                    <button type="button" className="iconbtn" onClick={() => !c.ehInterno && runArquivarCliente(c.id)} disabled={c.ehInterno} title={c.ehInterno ? 'Interno não pode ser arquivado' : 'Arquivar'} aria-label="Arquivar">
+                      <Icon name="archive" size={14} />
+                    </button>
+                  ) : (
+                    <button type="button" className="iconbtn" onClick={() => runDesarquivarCliente(c.id)} title="Desarquivar" aria-label="Desarquivar">
+                      <Icon name="refresh" size={14} />
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button type="button" className="iconbtn" style={{ color: c.ehInterno ? 'var(--muted)' : 'var(--danger)' }} onClick={() => !c.ehInterno && runDeleteCliente(c.id, c.nome)} disabled={c.ehInterno} title={c.ehInterno ? 'Interno não pode ser excluído' : 'Excluir'} aria-label="Excluir">
+                      <Icon name="trash" size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {clientes.length === 0 && (
+              <div className="py-8 text-center text-sm text-muted italic">Nenhum cliente.</div>
+            )}
+          </div>
+        )}
+
+        {/* Projetos */}
+        {tab === 'projetos' && (
+          <div className="rounded-xl border border-line overflow-hidden bg-[color:var(--bg-elev)]">
+            {projetos.map((p) => {
+              const clienteNome = clientesById.get(p.clienteId)?.nome ?? '—';
+              return (
+                <div
+                  key={p.id}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-3 border-b border-line last:border-b-0 cursor-pointer active:bg-[color:var(--surface-3)] transition-colors',
+                    p.arquivadoEm && 'opacity-50',
+                  )}
+                  onClick={() => setMobileEditProjeto({ id: p.id, nome: p.nome, clienteId: p.clienteId, tipo: p.tipo, slaRespostaHoras: p.slaRespostaHoras, slaEntregaDias: p.slaEntregaDias, orcamentoHoras: p.orcamentoHoras })}
+                >
+                  <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--surface-3)', color: 'var(--ink-soft)' }}>
+                    <Icon name="folder" size={14} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-ink truncate">{p.nome}</div>
+                    <div className="text-[10px] text-muted truncate">
+                      {clienteNome}{p.arquivadoEm ? ' · arquivado' : ''}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {!p.arquivadoEm ? (
+                      <button type="button" className="iconbtn" onClick={() => runArquivarProjeto(p.id)} title="Arquivar" aria-label="Arquivar">
+                        <Icon name="archive" size={14} />
+                      </button>
+                    ) : (
+                      <button type="button" className="iconbtn" onClick={() => runDesarquivarProjeto(p.id)} title="Desarquivar" aria-label="Desarquivar">
+                        <Icon name="refresh" size={14} />
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button type="button" className="iconbtn" style={{ color: 'var(--danger)' }} onClick={() => runDeleteProjeto(p.id, p.nome)} title="Excluir" aria-label="Excluir">
+                        <Icon name="trash" size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {projetos.length === 0 && (
+              <div className="py-8 text-center text-sm text-muted italic">Nenhum projeto.</div>
+            )}
+          </div>
+        )}
+
+        {/* Pessoas */}
+        {tab === 'pessoas' && (
+          <div className="rounded-xl border border-line overflow-hidden bg-[color:var(--bg-elev)]">
+            {pessoas.map((p) => {
+              const papelLabel = p.role === 'cliente' ? 'Cliente' : p.role === 'admin' ? 'Admin' : 'Interno';
+              const ativo = !!p.invited_at;
+              return (
+                <div
+                  key={p.id}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-3 border-b border-line last:border-b-0 cursor-pointer active:bg-[color:var(--surface-3)] transition-colors',
+                    !ativo && 'opacity-50',
+                  )}
+                  onClick={() => setMobileEditPessoa({ id: p.id, nome: p.nome, email: p.email, role: p.role, clienteId: p.cliente_id, clientePrincipalId: p.cliente_principal_id, clienteSecundarioId: p.cliente_secundario_id, capacidadeHorasSemana: p.capacidade_horas_semana, skills: p.skills ?? [], senioridade: p.senioridade })}
+                >
+                  <Avatar label={p.nome} shape="circle" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-sm text-ink truncate">{p.nome}</div>
+                    <div className="text-[10px] text-muted">
+                      {papelLabel}{!ativo ? ' · inativo' : ''}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {isAdmin && ativo && (
+                      <button type="button" className="iconbtn" onClick={() => runDesativarPessoa(p.id, p.nome)} title="Revogar acesso" aria-label="Inativar">
+                        <Icon name="lock" size={14} />
+                      </button>
+                    )}
+                    {isAdmin && !ativo && (
+                      <button type="button" className="iconbtn" style={{ color: 'var(--green)' }} onClick={() => p.role === 'cliente' ? runConvidarPessoa(p.id, p.nome, p.email) : runAtivarPessoa(p.id, p.nome, p.email)} title="Ativar acesso" aria-label="Ativar">
+                        <Icon name="check-circle" size={14} />
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button type="button" className="iconbtn" style={{ color: 'var(--danger)' }} onClick={() => runDeletePessoa(p.id, p.nome)} title="Excluir" aria-label="Excluir">
+                        <Icon name="trash" size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {pessoas.length === 0 && (
+              <div className="py-8 text-center text-sm text-muted italic">Nenhuma pessoa.</div>
+            )}
+          </div>
+        )}
+      </div>{/* /mobile lists */}
+
+      {/* Mobile edit modals */}
+      {mobileEditCliente && (
+        <ClienteModal initial={mobileEditCliente} onClose={() => setMobileEditCliente(null)} />
+      )}
+      {mobileEditProjeto && (
+        <ProjetoModal initial={mobileEditProjeto} clientes={clienteOptions} onClose={() => setMobileEditProjeto(null)} />
+      )}
+      {mobileEditPessoa && (
+        <PessoaModal initial={mobileEditPessoa} clientes={clienteOptions} onClose={() => setMobileEditPessoa(null)} />
+      )}
     </div>
   );
 }
