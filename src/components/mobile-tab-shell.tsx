@@ -5,23 +5,25 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { ResumoClient } from '@/app/(app)/resumo/resumo-client';
 import { BacklogClient } from '@/app/(app)/backlog/backlog-client';
+import { PortalClient } from '@/app/(app)/portal/portal-client';
 
-const TABS = ['/resumo', '/backlog'];
+const TABS = ['/resumo', '/backlog', '/portal'];
+const N    = TABS.length;
 const THRESHOLD = 60;
 const DURATION  = 220;
 const EASE      = 'cubic-bezier(0.25, 0.46, 0.45, 0.94)';
 const MAIN_CLS  = 'app-main-mobile-safe max-w-[1320px] mx-auto px-4 py-6';
 
 /**
- * Carrossel circular de 2 abas para admin em mobile.
+ * Carrossel circular de 3 abas para admin em mobile (Resumo · Backlog · Portal).
  *
- * Arquitetura: 2 slots reais (Resumo + Backlog) com posicionamento absoluto/relativo.
- * Em repouso: tab ativa = position:relative (altura natural no flow), tab oculta =
- * position:absolute off-screen + visibility:hidden → não contribui pro scroll do body.
- * Durante swipe: ambos vão pra absolute, stage recebe altura explícita; animação por
+ * Arquitetura: 3 slots reais com posicionamento absoluto/relativo.
+ * Em repouso: tab ativa = position:relative (altura natural no flow), demais =
+ * position:absolute off-screen + visibility:hidden → não contribuem pro scroll do body.
+ * Durante swipe: cur + vizinho vão pra absolute, stage recebe altura explícita; animação por
  * transform. Após commit: volta ao repouso com nova tab ativa.
  *
- * Circular: a tab oculta é reposicionada para o lado correto no início do arraste.
+ * Circular: swipe left avança (idx+1 mod 3), swipe right recua (idx-1+3 mod 3).
  * Zero React state durante o toque — tudo via style direto nos refs.
  * URL sincronizada via history.replaceState. Scroll resetado ao trocar aba.
  *
@@ -35,9 +37,9 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
   const isTabRoute = TABS.some((t) => pathname.startsWith(t));
 
   const stageRef = useRef<HTMLDivElement>(null);
-  // slot 0 = Resumo, slot 1 = Backlog
-  const slot0Ref = useRef<HTMLDivElement>(null);
-  const slot1Ref = useRef<HTMLDivElement>(null);
+  const slot0Ref = useRef<HTMLDivElement>(null); // Resumo
+  const slot1Ref = useRef<HTMLDivElement>(null); // Backlog
+  const slot2Ref = useRef<HTMLDivElement>(null); // Portal
   const idxRef   = useRef(Math.max(0, TABS.findIndex((t) => pathname.startsWith(t))));
 
   const startX    = useRef<number | null>(null);
@@ -45,26 +47,30 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
   const axis      = useRef<'h' | 'v' | null>(null);
   const dragging  = useRef(false);
   const busy      = useRef(false);
-  const swipeDir  = useRef<1 | -1>(1); // 1=swipe right, -1=swipe left
+  const swipeDir  = useRef<1 | -1>(1);
 
-  function slotRef(i: number) { return i === 0 ? slot0Ref : slot1Ref; }
+  function slotRef(i: number) {
+    return i === 0 ? slot0Ref : i === 1 ? slot1Ref : slot2Ref;
+  }
 
-  // Repouso: tab ativa em flow (relative), outra fora do flow (absolute + hidden)
+  // Repouso: tab ativa em flow (relative), demais fora do flow (absolute + hidden)
   function applyRest(idx: number) {
-    const cur = slotRef(idx).current;
-    const oth = slotRef(1 - idx).current;
-    if (!cur || !oth) return;
     const W = window.innerWidth;
-
-    cur.style.cssText = 'position:relative;';
-
-    oth.style.position   = 'absolute';
-    oth.style.top        = '0';
-    oth.style.left       = '0';
-    oth.style.width      = `${W}px`;
-    oth.style.transform  = `translateX(${W}px)`;   // off-screen right (default)
-    oth.style.visibility = 'hidden';
-    oth.style.transition = '';
+    for (let i = 0; i < N; i++) {
+      const el = slotRef(i).current;
+      if (!el) continue;
+      if (i === idx) {
+        el.style.cssText = 'position:relative;';
+      } else {
+        el.style.position   = 'absolute';
+        el.style.top        = '0';
+        el.style.left       = '0';
+        el.style.width      = `${W}px`;
+        el.style.transform  = `translateX(${W}px)`;
+        el.style.visibility = 'hidden';
+        el.style.transition = '';
+      }
+    }
   }
 
   useLayoutEffect(() => {
@@ -100,8 +106,13 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
     }
     if (axis.current !== 'h') return;
 
-    const cur = slotRef(idxRef.current).current;
-    const oth = slotRef(1 - idxRef.current).current;
+    const curIdx = idxRef.current;
+    const othIdx = dx > 0
+      ? (curIdx - 1 + N) % N   // swipe right → anterior
+      : (curIdx + 1) % N;      // swipe left  → próximo
+
+    const cur = slotRef(curIdx).current;
+    const oth = slotRef(othIdx).current;
     if (!cur || !oth) return;
     const W = window.innerWidth;
 
@@ -109,18 +120,19 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
       dragging.current = true;
       swipeDir.current  = dx > 0 ? 1 : -1;
 
-      // Salva altura do stage antes de soltar o flow
       const stage = stageRef.current;
       if (stage) stage.style.height = `${stage.offsetHeight}px`;
 
-      // Ambos vão pra absolute
       cur.style.position   = 'absolute';
       cur.style.top        = '0';
       cur.style.left       = '0';
       cur.style.width      = `${W}px`;
       cur.style.visibility = 'visible';
 
-      // Posiciona a outra aba no lado correto p/ a direção do swipe
+      oth.style.position   = 'absolute';
+      oth.style.top        = '0';
+      oth.style.left       = '0';
+      oth.style.width      = `${W}px`;
       oth.style.transform  = `translateX(${dx > 0 ? -W : W}px)`;
       oth.style.visibility = 'visible';
     }
@@ -133,13 +145,19 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
 
   function onTouchEnd(e: React.TouchEvent) {
     if (!dragging.current) { reset(); return; }
-    const dx = e.changedTouches[0].clientX - startX.current!;
+    const dx       = e.changedTouches[0].clientX - startX.current!;
+    const savedDir = swipeDir.current;
     reset();
 
-    const cur = slotRef(idxRef.current).current;
-    const oth = slotRef(1 - idxRef.current).current;
+    const curIdx = idxRef.current;
+    const othIdx = savedDir > 0
+      ? (curIdx - 1 + N) % N
+      : (curIdx + 1) % N;
+
+    const cur = slotRef(curIdx).current;
+    const oth = slotRef(othIdx).current;
     if (!cur || !oth) return;
-    const W   = window.innerWidth;
+    const W    = window.innerWidth;
     const anim = `transform ${DURATION}ms ${EASE}`;
 
     if (Math.abs(dx) < THRESHOLD) {
@@ -147,7 +165,7 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
       cur.style.transition = anim;
       cur.style.transform  = '';
       oth.style.transition = anim;
-      oth.style.transform  = `translateX(${swipeDir.current > 0 ? -W : W}px)`;
+      oth.style.transform  = `translateX(${savedDir > 0 ? -W : W}px)`;
       setTimeout(() => {
         applyRest(idxRef.current);
         const stage = stageRef.current;
@@ -156,9 +174,8 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Commit: tab atual sai, outra entra
+    // Commit: tab atual sai, vizinho entra
     busy.current = true;
-    const newIdx = 1 - idxRef.current;
     const dir    = dx > 0 ? 1 : -1;
 
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -169,9 +186,9 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
     oth.style.transform  = '';
 
     setTimeout(() => {
-      idxRef.current = newIdx;
-      window.history.replaceState(null, '', TABS[newIdx]);
-      applyRest(newIdx);
+      idxRef.current = othIdx;
+      window.history.replaceState(null, '', TABS[othIdx]);
+      applyRest(othIdx);
       const stage = stageRef.current;
       if (stage) stage.style.height = '';
       busy.current = false;
@@ -191,7 +208,7 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {/* Mobile: 2 slots, apenas o ativo está no flow (altura correta no body) */}
+      {/* Mobile: 3 slots, apenas o ativo está no flow (altura correta no body) */}
       <div
         ref={stageRef}
         className="md:hidden"
@@ -205,6 +222,9 @@ export function MobileTabShell({ children }: { children: React.ReactNode }) {
         </div>
         <div ref={slot1Ref} style={{ touchAction: 'pan-y', willChange: 'transform' }}>
           <main className={MAIN_CLS}><BacklogClient /></main>
+        </div>
+        <div ref={slot2Ref} style={{ touchAction: 'pan-y', willChange: 'transform' }}>
+          <main className={MAIN_CLS}><PortalClient /></main>
         </div>
       </div>
 
