@@ -100,10 +100,10 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 |---|---|---|---|
 | ~~A.1~~ | ~~**Aplicar novo design system**~~ | ✅ Entregue em v1.03 (ver ciclo redesign DS acima) |
 | ~~A.2~~ | ~~**Filtros padronizados + Calendário redesign**~~ | ✅ Entregue em v1.03 |
-| A.3 | **Push notifications** · VAPID + Edge Function `send-push` + UI de permissão (Badge API já ✅) | 2-3 semanas | Alto — comportamental forte, iOS 16.4+ PWA |
+| ~~A.3~~ | ~~**Push notifications**~~ | ❌ Descontinuado |
 | ~~A.4~~ | ~~**Triagem obrigatória pra IA**~~ | ✅ Entregue v1.03.043-059 (ver ciclo redesign DS acima) |
-| A.5 | **Saved views / filtros nomeados** · "Minhas atrasadas", "Aguardando cliente X". Depende de A.2. | 2-3 dias | Quick win UX alto impacto |
-| A.6 | **Sticky thead Backlog** · cabeçalho fixo em scroll longo | 2-3 dias | Quick win UX |
+| ~~A.5~~ | ~~**Saved views / filtros nomeados**~~ | ❌ Descontinuado |
+| ~~A.6~~ | ~~**Sticky thead Backlog**~~ | ❌ Descontinuado |
 | A.7 | **PDF Resumo Executivo** · consolidar Briefing+Dashboard em documento navegável | 1-2 semanas | Médio — reuniões offline |
 | A.8 | **Workspaces · 3 pilares** (Salesforce · Dados · IA) · switcher topo + `workspace_id` em tabelas core + RLS por workspace | ⚠️ M-L · precisa spec própria | Estratégico — separação completa de ambientes |
 | A.9 | **Timesheet · entrada manual + permissões** · permitir criar registros sem cronômetro (data/hora início + duração + task + nota); **excluir** só dono ou admin; **editar** desabilitado (registro é imutável após salvo — corrige criando novo + deletando o errado, mantém audit trail limpo) | 3-5 dias | Médio — desbloqueia retro-lançamento e fecha gap de controle |
@@ -181,7 +181,7 @@ Todas as funções puras abaixo estão prontas, testadas (64 testes) e disponív
 
 ## ❌ Descontinuados (não repropor sem novo input)
 
-Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly · Sentry · PostHog · Bottom tab bar mobile (substituída por carrossel MobileTabShell) · **B.1 `ai-suggest`** (sobrepõe B.4 auto-triage — descartado) · **C.9 Margem por hora vs ticket** (precisa custo/h da pessoa — dado não existe ainda)
+Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly · Sentry · PostHog · Bottom tab bar mobile (substituída por carrossel MobileTabShell) · **B.1 `ai-suggest`** (sobrepõe B.4 auto-triage — descartado) · **C.9 Margem por hora vs ticket** (precisa custo/h da pessoa — dado não existe ainda) · **A.3 Push notifications** · **A.5 Saved views** · **A.6 Sticky thead Backlog**
 
 ---
 
@@ -213,7 +213,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 5. **A.9** Timesheet · entrada manual + permissões
 6. **C.3** Skill mismatch (heurística pura)
 
-Items NÃO no NEXT (revisitar depois): A.3 Push · A.5 Saved views · A.6 Sticky thead · A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.10 (publicar heurísticas na UI).
+Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.10 (publicar heurísticas na UI).
 
 ---
 
