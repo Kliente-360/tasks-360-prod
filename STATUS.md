@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.115 · **Atualizado**: 07/06/2026 · branch `main`
+> **Versão**: v1.03.117 · **Atualizado**: 07/06/2026 · branch `main`
 
 ---
 
@@ -158,14 +158,24 @@ Tarefas que invocam LLM (Claude Haiku/Sonnet) pra produzir saída útil ao usuá
 
 Detecção de padrões via dados locais. **Output é insight/score/alerta** consumido em Dashboard ou Briefing. Nenhum item invoca LLM.
 
-| # | Item | Tipo | Esforço | Impacto |
-|---|---|---|---|---|
-| C.2 | **Capacidade prevista** · heurística "estoura em N semanas" baseada em throughput vs backlog | SQL + agregação | M (precisa `weekly_capacity_snapshots` + job semanal) | Antecipa contratação/desaceleração |
-| C.3 | **Skill mismatch** · task de escopo X atribuída a pessoa sem aquela skill | Cruzamento `tasks.escopo` × `pessoas.skills` | 3-5 dias | Qualidade de alocação |
-| C.4 | **Senioridade malalocada** · júnior em task de complexidade alta (ou inverso) | Cruzamento `pessoas.senioridade` × `tasks.complexidade` | 3-5 dias | Risco de qualidade / desperdício |
-| C.5 | **Churn risk por cliente** · sinal composto: lead time alto + tasks bloqueadas antigas + sem comment recente | Agregação multi-campo | M | Antecipa perda de cliente |
-| C.7 | **Bottleneck por sub-etapa** · tempo médio em cada subetapa, identifica gargalo do funil | `task_status_history` ou `subetapa_em` diff | 3-5 dias | Otimização de fluxo |
-| C.8 | **SLA breach rate** · % de tasks entregues fora do prazo por cliente/projeto na janela | `prazo` vs `concluido_em` | 2-3 dias | Métrica contratual |
+#### ✅ Mecanismos implementados em `src/lib/analytics.ts` (v1.03.116–117)
+
+Todas as funções puras abaixo estão prontas, testadas (64 testes) e disponíveis para consumo. Nenhuma ainda aparece na UI.
+
+| Função | Heurística | O que computa |
+|---|---|---|
+| `computeCapacidade` | C.2 · Capacidade prevista | `semanas_estouro = backlog / throughput_4w`, byPessoa. Níveis: ok ≤4w · atencao ≤8w · critico >8w |
+| `computeSkillMismatches` | C.3 · Skill mismatch | Tasks abertas onde `escopo` ∩ `pessoa.skills` = ∅ |
+| `computeSenioridadeAlerts` | C.4 · Senioridade malalocada | `risco_qualidade` (alta+junior) · `desperdicio` (baixa+senior) |
+| `computeChurnRisk` | C.5 · Churn risk | Score 0-100 por cliente externo: bloqueada >14d (+25) · sem entrega >30d (+30) · SLA breach >40% (+25) · em_definicao >21d (+20) |
+| `computeBottlenecks` | C.7 · Bottleneck por sub-etapa | Dias mediana/p75/p90 em cada subetapa corrente |
+| `computeSLABreach` | C.8 · SLA breach rate | % tasks concluídas fora do prazo, agrupado por cliente/projeto/pessoa |
+
+#### 🔜 Pendente
+
+| # | Item | Esforço | Impacto |
+|---|---|---|---|
+| C.10 | **Publicar heurísticas na UI** · decidir onde cada função aparece (Dashboard? Briefing? nova aba Analytics?), desenhar cards/widgets por heurística, ligar aos dados do DataProvider | 1-2 semanas | Alto — transforma os KPIs em valor percebido |
 
 ---
 
@@ -186,7 +196,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 | Stack homogêneo e enxuto | ✅ Auditado e limpo (v1.02.226–229) |
 | Mobile admin experience | ✅ Entregue jun/2026 (v1.03.079-115) — carrossel + backlog + modal de task completo. |
 | Diferenciação por IA | ❌ Zero em prod — atacar via Bucket B |
-| Analytics avançado | ⚠️ Heurísticas Onda A-D entregues — Bucket C adiciona profundidade |
+| Analytics avançado | ⚠️ H1–H15 + C.2/C.3/C.4/C.5/C.7/C.8 implementados em `analytics.ts` — falta publicar na UI (C.10) |
 
 ---
 
@@ -203,7 +213,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 5. **A.9** Timesheet · entrada manual + permissões
 6. **C.3** Skill mismatch (heurística pura)
 
-Items NÃO no NEXT (revisitar depois): A.3 Push · A.5 Saved views · A.6 Sticky thead · A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.1-C.2/C.4-C.9.
+Items NÃO no NEXT (revisitar depois): A.3 Push · A.5 Saved views · A.6 Sticky thead · A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.10 (publicar heurísticas na UI).
 
 ---
 
