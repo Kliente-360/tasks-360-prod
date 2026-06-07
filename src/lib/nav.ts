@@ -33,7 +33,7 @@ export const NAV: ReadonlyArray<NavItem> = [
   { href: '/calendario', label: 'Calendário',    roles: ['admin', 'interno'],          onda: 1 },
   { href: '/dashboard',  label: 'Dashboard',     roles: ['admin', 'interno'],          onda: 1 },
   { href: '/timesheet',  label: 'Timesheet',     roles: ['admin', 'interno'],          onda: 1, hideMobile: true },
-  { href: '/portal',     label: 'Portal cliente', roles: ['admin', 'interno', 'cliente'], onda: 2 },
+  { href: '/portal',     label: 'Portal cliente', roles: ['admin'],                     onda: 2 },
   // Cadastros sai da tab bar (espelha inProfileMenu do Alpine) — vive no
   // dropdown do avatar pra liberar espaço horizontal nas abas principais.
   { href: '/cadastros',  label: 'Cadastros',     roles: ['admin'],                     onda: 1, inProfileMenu: true },
