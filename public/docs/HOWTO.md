@@ -4,7 +4,7 @@
 >
 > **Dentro do app**: clique no botão **?** no topo (ou ⌘K → "Manual") pra abrir esse documento renderizado bonito, com índice navegável.
 >
-> Última atualização: jun/2026 · v1.02.229 · pós-cutover. Cronômetro start/stop + Timesheet, Portal cliente v2 ativo, Briefing colapsável + conquistas W-1, disciplina de comentário, escopo + skills, bloqueado exige justificativa, badge PWA, tasks criadas por IA (chip 🤖 + filtros), integração Salesforce + Cowork.
+> Última atualização: jun/2026 · v1.03.118. Principais adições desde o cutover: Cronômetro start/stop + Timesheet + **lançamento manual de horas**; design system completo (DS v3, Inter, verde #007A3D); mobile shell com carrossel Resumo ↔ Backlog + task modal full-screen; Meu foco redesign (6 contextos + Resolver hoje); Triagem redesign (one-by-one inline · aceitar/rejeitar IA); notificações por tipo; RLS kliente 360; Portal cliente v2; tasks criadas por IA (chip 🤖).
 
 ---
 
@@ -522,13 +522,35 @@ Botão "↳ responder" abre textarea encadeada abaixo do comentário. Pode respo
 
 Time tracking opcional por task. Substitui (ou complementa) o preenchimento manual de `tempo_real_horas`.
 
-### Iniciar/parar cronômetro
+### Iniciar cronômetro
 
-Botão **▶** no header (desktop) abre seletor de task ativa. Clica em alguma task em `em_desenvolvimento` → inicia o timer. Botão troca pra **⏸** com o tempo decorrido (atualiza a cada segundo).
+Botão ⏱ no header (desktop) abre o **seletor de tarefa**. A lista inclui tasks ativas (subetapa ≥ `em_definicao`, exceto `backlog`/`bloqueado`/`concluido`), suas tasks aparecem primeiro. Clique numa linha para selecionar (destaque + check verde); dois botões se habilitam no rodapé:
 
-- **Apenas uma sessão ativa por pessoa**. Se você inicia um timer em outra task, o anterior é fechado automaticamente (sem perda — vira registro fechado em `time_entries`).
-- **Ao parar**, opcional adicionar uma nota curta sobre o que fez na sessão.
-- O cronômetro **não pausa automaticamente** quando você troca de aba ou fecha o navegador — continua contando até você explicitamente parar.
+- **Iniciar** — começa a contar tempo agora. Botão do header muda para pill vermelha **⏹ mm:ss** que atualiza a cada segundo.
+- **Lançar horas** — registro retroativo (ver abaixo).
+
+Apenas uma sessão ativa por pessoa. Se iniciar em outra task, a anterior fecha automaticamente sem perda.
+
+### Parar cronômetro
+
+Click na pill vermelha **⏹ mm:ss** abre popover de nota (opcional, máx 120 caracteres). Confirme com **salvar** (grava nota) ou **sem nota** (encerra sem nota). O tempo entra em `time_entries`.
+
+O cronômetro **não pausa automaticamente** ao trocar de aba ou fechar o navegador — continua contando até parar manualmente.
+
+### Lançar horas (entrada manual)
+
+Para registrar trabalho retroativo sem ter usado o cronômetro:
+
+1. Click no botão ⏱ no header → selecione a task → click **Lançar horas**.
+2. Preencha os campos:
+   - **Data** — dia do trabalho (máx: hoje)
+   - **Início** — horário de início (HH:MM)
+   - **Duração** — horas + minutos (campos separados)
+   - **Nota** — opcional, máx 120 caracteres
+3. **Preview em tempo real** mostra "Término: HH:MM · Xh Ymin" abaixo dos campos de duração. Se a combinação cruzar meia-noite, o app bloqueia o envio com erro vermelho.
+4. Click **Lançar** → grava o registro com `started_at` e `ended_at` calculados.
+
+> Útil para lançar horas de ontem, de uma sessão sem internet, ou para retroalimentar o histórico de um projeto.
 
 ### Aba Timesheet
 
@@ -547,11 +569,11 @@ Total acumulado no topo. Filtros (admin): "somente o meu" / seletor de pessoa.
 
 ### Relação com `tempo_real_horas`
 
-O cronômetro **NÃO** preenche automaticamente o `tempo_real_horas` da task. Os dois campos coexistem:
+O cronômetro (e o lançamento manual) **NÃO** preenchem automaticamente o `tempo_real_horas` da task. Os dois campos coexistem:
 - `tempo_real_horas`: total declarado pelo analista ao fechar a task (uma única medida agregada).
-- `time_entries`: log granular de cada sessão de trabalho.
+- `time_entries`: log granular de cada sessão de trabalho (cronômetro + lançamentos manuais).
 
-O time entry vai virar fonte de cálculo do `tempo_real_horas` no futuro (Onda IA pra agregar automaticamente). Hoje, ainda preenche os dois.
+O time entry vai virar fonte de cálculo do `tempo_real_horas` no futuro (Onda IA pra agregar automaticamente). Hoje, preenche os dois.
 
 ---
 

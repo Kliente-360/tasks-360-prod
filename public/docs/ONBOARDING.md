@@ -2,7 +2,7 @@
 
 > Três perspectivas da mesma ferramenta. Leia a sua, dê uma passada de olho nas outras.
 >
-> **Versão atual**: v1.02.229 · jun/2026 · pós-cutover. Para o manual técnico de cada feature, ver [`HOWTO.md`](./HOWTO.md). Para o manual do cliente externo, ver [`HOWTO_CLIENTE.md`](./HOWTO_CLIENTE.md).
+> **Versão atual**: v1.03.118 · jun/2026. Para o manual técnico de cada feature, ver [`HOWTO.md`](./HOWTO.md). Para o manual do cliente externo, ver [`HOWTO_CLIENTE.md`](./HOWTO_CLIENTE.md).
 
 ---
 
@@ -70,14 +70,17 @@ O tasks 360 é a fonte de verdade do que está rolando na operação. Você não
 - Não usar pra micro-gestão ("cliquei na task do Fulano de manhã pra ver se ele já mexeu"). O Briefing/Dashboard respondem isso sem precisar abrir task.
 - Não trocar os critérios de heurística sem alinhar. São determinísticos por design.
 
-## Novidades recentes (v1.02 · jun/2026)
+## Novidades recentes (v1.03 · jun/2026)
 
-- **Cutover concluído**: Alpine desativado. Vercel é a única produção. Realtime ativado nas 4 tabelas core (tasks/clientes/projetos/pessoas) — mudanças de outros usuários aparecem em tempo real, sem precisar clicar na logo pra refetch.
-- **Portal cliente v2**: ativo, com header verde Kliente, KPIs com delta, sparkline 6 meses de entregas, lead time 90d, comentários públicos bidirecionais, botão "Já respondi" pra cliente destravar bloqueio.
-- **Cronômetro start/stop**: time tracking real por task. Habilita honestidade na medição vs estimativa.
-- **Briefing colapsável + conquistas da semana anterior**: seções recolhem; conquistas W-1 entram pra dar contexto positivo na leitura.
-- **Tasks criadas por IA**: automação externa (Cowork lendo notas de reunião) cria tasks via API. Elas chegam com chip 🤖 IA e caem na Triagem pra um humano atribuir cliente/responsável.
-- **Badge PWA com atrasadas**: ícone no celular/desktop mostra contador de tasks atrasadas. Mesmo com o app fechado.
+- **Design system completo**: Inter + JetBrains Mono, verde editorial #007A3D, header frosted-glass, dark mode global auditado, ícones Lucide uniformes em todas as telas.
+- **Mobile shell**: carrossel Resumo ↔ Backlog swipeable; task modal full-screen com abas Detalhes / Conversa / Anexos / Histórico; PWA sem corte no iOS.
+- **Meu foco redesign**: 6 contextos (Atrasadas · Pra hoje · Bloqueadas · Sem comentário · Sem esforço · Sem horas) com botão Resolver hoje (não persiste em DB, zera ao virar o dia). Bolinha vermelha na aba mostra total pendente.
+- **Triagem redesign**: one-by-one, inline-edit dos 5 campos, Aceitar/Rejeitar IA com motivos predefinidos, edição pendente (não autosave). Counter na aba.
+- **Lançamento manual de horas**: click no cronômetro → seletor de tarefa → **Lançar horas** → popover com Data / Início / Duração (h+min) / Nota, preview de término em tempo real, bloqueia entradas que cruzam meia-noite. Além do Iniciar cronômetro habitual.
+- **Notificações por tipo**: sino com 4 grupos (Todas · Menção · Updates em tasks · Updates do cliente). Click numa notif abre a task.
+- **Portal cliente v2**: header verde Kliente, KPIs com delta, sparkline 6 meses, lead time 90d, comentários bidirecionais, botão "Já respondi".
+- **Tasks criadas por IA**: chip 🤖 IA + Triagem dedicada com filtro combinável.
+- **Badge PWA**: ícone no celular mostra contador de tasks atrasadas mesmo com o app fechado.
 
 ---
 
@@ -123,7 +126,7 @@ Você é a pessoa que mais usa o app no dia-a-dia depois dos analistas.
 1. Abrir **Kanban**.
 2. Cada pessoa puxa o que está em andamento e diz: feito ontem, hoje, impedimentos.
 3. Impedimento real → analista move pra `bloqueado` com motivo + comentário inline (app força preencher).
-4. Não use o app pra reportar tempo — analista preenche `tempo_real_horas` ao fechar, ou usa o **cronômetro** start/stop pra registrar automaticamente.
+4. Não use o app pra reportar tempo — analista preenche `tempo_real_horas` ao fechar, ou usa o **cronômetro** (Iniciar/parar) ou **Lançar horas** (retroativo) pra manter o log na Timesheet.
 
 ### Planning (semanal)
 1. **Briefing → Capacidade**. Heatmap pessoa × semana. Quem está com sobrecarga em verde claro/âmbar/vermelho pra próximas 4 semanas.
@@ -173,13 +176,15 @@ Você é a pessoa que mais usa o app no dia-a-dia depois dos analistas.
 - **Não fechar task que não foi entregue** — analista preenche `tempo_real_horas` antes de marcar `concluido`. Sem isso, você não consegue medir nada.
 - **Não usar P0 pra tudo**. Se tudo é P0, nada é. P0 é raro.
 
-## Novidades recentes (v1.02 · jun/2026)
+## Novidades recentes (v1.03 · jun/2026)
 
-- **Bloqueado exige justificativa**: ao setar `bloqueado`, o app força preencher `bloqueado_por` + comentário inline. Acabou bloqueio órfão.
-- **Tasks por IA na Triagem**: chip 🤖 + filtro próprio combinável com `sem resp.` / `sem prazo` / `sem esforço`.
-- **Cronômetro + Timesheet**: analista pode iniciar timer numa task; quando para, registra `time_entries`. Aba Timesheet mostra histórico (admin vê todos com filtro de pessoa; outros só os deles).
-- **Escopo + skills**: classificação técnica da task pareada com skills da pessoa. Dropdown de responsável destaca matches.
-- **Disciplina de comentário**: tasks em andamento sem comentário recente aparecem em seção dedicada no Meu foco e no Briefing.
+- **Triagem redesign**: inline-edit dos 5 campos (cliente · projeto · responsável · prazo · esforço) com edição pendente, Aceitar/Rejeitar IA com motivos predefinidos, counter na aba, sort IA-primeiro. Acabou a triagem mecânica de planilha.
+- **Meu foco redesign**: 6 seções com botão **Resolver hoje** (risca o card só hoje sem gravar em DB). Bolinha vermelha na aba mostra total pendente. Filtro P0/P1 no topo filtra dentro de todas as seções.
+- **Lançamento manual de horas** (novo): click no cronômetro → selecionar task → **Lançar horas** → preencher Data / Início / Duração / Nota. Preview de término em tempo real. Bloqueio automático de entradas que cruzam meia-noite. Além do Iniciar cronômetro habitual.
+- **Notificações por tipo**: sino com 4 grupos separados. @mention, atribuição, comentário em task sua, cliente respondeu.
+- **Mobile**: carrossel Resumo ↔ Backlog + modal de task full-screen com 4 abas. Agora é possível triagem e gestão completa no celular.
+- **Tasks por IA na Triagem**: chip 🤖 + filtro próprio combinável.
+- **Escopo + skills**: dropdown de responsável destaca pessoas com skills compatíveis com a task.
 
 ---
 
@@ -227,10 +232,10 @@ A regra de ouro: **se mexer, atualize**. O status desatualizado prejudica todo m
 ### Durante (toda hora que mudar de assunto)
 - Se trocou de task: comente o que já foi realizado de forma simples e mova a anterior para o status adequado caso seja necessário.
 - Pergunta pendente? Comentário com @mention. Se descobriu algo novo durante o desenvolvimento (subtarefa, dependência) → criar task nova.
-- **Cronômetro**: se quiser registro automático de tempo, clica play na task ativa. Quando parar (ou trocar de task), o tempo entra na sua Timesheet.
+- **Cronômetro / Lançar horas**: botão ⏱ no header → selecione a task → **Iniciar** (cronômetro ao vivo) ou **Lançar horas** (retroativo: data + início + duração). Quando parar, o tempo entra na sua Timesheet.
 
 ### Ao fechar uma task
-1. Preencher `tempo_real_horas` — quanto efetivamente consumiu (ou deixa o cronômetro fazer).
+1. Preencher `tempo_real_horas` — quanto efetivamente consumiu (ou use o cronômetro / Lançar horas pra ter o log granular na Timesheet).
 2. Se tem entrega visível pro cliente → criar comentário **público** com link/print.
 3. Mover pra status correspondente: `em_homologacao` | `pronto_producao` | `concluido`.
 
@@ -271,16 +276,15 @@ A regra de ouro: **se mexer, atualize**. O status desatualizado prejudica todo m
 - **Não usar comentário pra discussão longa de design**. Discussão vai em call e registra um comentário resumido.
 - **Não trocar prazo sem comentário**. Histórico mostra a mudança, mas o "por quê" some se você não escrever.
 
-## Novidades recentes (v1.02 · jun/2026)
+## Novidades recentes (v1.03 · jun/2026)
 
-- **Cronômetro start/stop**: botão play no header — registra tempo automaticamente em `time_entries`. Aba **Timesheet** mostra seu histórico.
+- **Cronômetro + Lançar horas**: botão ⏱ no header. Selecione a task → **Iniciar** (cronômetro em tempo real) **ou Lançar horas** (retroativo: Data + Início + Duração + Nota, com preview de término). Aba **Timesheet** mostra todo o histórico.
+- **Meu foco redesign**: 6 contextos (Atrasadas · Pra hoje · Bloqueadas · Sem comentário · Sem esforço · Sem horas). Botão **Resolver hoje** risca o card sem gravar em DB — zera ao virar o dia. Bolinha vermelha na aba Foco mostra o total.
 - **Bloqueado exige justificativa**: ao mover pra `bloqueado`, o app força preencher `bloqueado_por` + comentário. Acabou de ficar travado sem motivo.
-- **Disciplina de comentário**: tasks em andamento sem comentário recente entram numa seção no Meu foco. Lembrete passivo sem ninguém te cobrar.
-- **Chip 🤖 IA**: algumas tasks chegam de automação externa (Cowork lendo notas de reunião) e aparecem com o chip 🤖 IA antes do título. Trate igual a qualquer task — só saiba que o título e a descrição vieram de uma IA e podem precisar de ajuste fino ao triar.
-- **Notificações por tipo**: o sino agora separa menção / atribuição / mudança de status / cliente respondeu com chips de filtro. Mais fácil achar o que é pra você.
-- **Meu foco com narrativa**: a aba abre com um resumo heurístico do dia (o que está atrasado, o que é prioridade).
-- **ESC encadeado no modal**: ESC fecha o elemento mais interno primeiro (picker @mention → linha de checklist vazia → reply → lightbox → modal).
-- **Mobile FAB**: botão flutuante `+ task` no canto inferior direito do celular pra criar tarefa rápido.
+- **Disciplina de comentário**: seção no Meu foco para tasks em andamento sem comentário nas últimas 24h. Lembrete passivo.
+- **Mobile**: carrossel Resumo ↔ Backlog com swipe; modal de task full-screen com abas Detalhes / Conversa / Anexos / Histórico. Edição de todos os campos direto do celular.
+- **Notificações por tipo**: sino com chips de filtro. Menção, atribuição, comentário em task sua, cliente respondeu.
+- **Chip 🤖 IA**: tasks de automação externa chegam com chip IA antes do título. Triagem inclui filtro `🤖 criadas por IA`.
 - **Badge PWA**: ícone do app no celular mostra contador de tasks atrasadas, mesmo com o app fechado.
 
 ---
