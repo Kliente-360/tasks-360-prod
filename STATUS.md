@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.107 · **Atualizado**: 05/06/2026 · branch `main`
+> **Versão**: v1.03.110 · **Atualizado**: 07/06/2026 · branch `main`
 
 ---
 
@@ -78,9 +78,15 @@ Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout es
 - ✅ **PWA** · `start_url` → `/resumo` (abre no carrossel), `padding-top: env(safe-area-inset-top)` no `.hdr-v2` (header não cortado em iOS standalone), ícone 512px com `purpose: "any maskable"`, `theme-color` com variante dark `#111827`
 - ✅ **Dead code removido** · `SwipeNav` (211 linhas), 3 blocos legacy `display:none` no Backlog (~265 linhas), state vars órfãs (`moreOpen`/`sortPanelOpen`/`filtersOpen`/`activeFiltersCount`), CSS `.m-tabbar`/`.m-tab` (tab bar que não existe mais), `.m-pill`/`.m-pills` (chips substituídos pelo clear button)
 
+#### Entregues (continuação · jun/2026 · v1.03.104 → v1.03.110)
+- ✅ **Modal de task mobile** (A.15) · 2 tabs (Detalhes + Comentários), CSS data-tab `[data-tab=...]` drive panel visibility — sem `matchMedia` em render (lição do crash v1.03.009). Desktop: tab 'detalhes' mapeia Conversa como ativo no painel direito.
+- ✅ **Cadastros mobile** (A.19 parcial) · listas simplificadas com row-click → edit, modais simplificados (campos não-essenciais ocultos via `hidden md:block`), itens arquivados com `opacity-50`; desktop intacto.
+- ✅ **Profile menu** · ícone sliders em Cadastros, link Backlog mobile-only acima de Cadastros, MobileHelpProvider.
+- ✅ **Mobile help modal** · `MobileHelpProvider` + 2 tabs (Resumo exec admin-only + Backlog), CSS `bg-[color:var(--bg)]`, conteúdo revisado pra bater com as telas reais.
+- ✅ **Meu Foco desktop restaurado** · inline edit (6 campos + Salvar) que havia sido removido acidentalmente no commit 5334463 foi recuperado.
+
 #### Próxima sessão (anotado)
-- 🔲 **Modal de task mobile** · simplificado — somente tabs **Detalhes** + **Comentários**. Estratégia: dual-render desktop+mobile com CSS `display:none/block`, NÃO usar `matchMedia` em render path (lição do crash v1.03.009).
-- 🔲 **Cadastros · completar 3 abas + modais** · abas Clientes, Projetos e Pessoas precisam terminar o fluxo completo: modal criar/editar para cada uma (A.19).
+- 🔲 **Cadastros · completar 3 abas + modais** · abas Clientes, Projetos e Pessoas — revisar fluxo completo criar/editar (A.19).
 
 ---
 
@@ -110,7 +116,7 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | A.14 (parcial) | **Card de task unificado** · 🟡 **só camada técnica entregue, sem mudança visual perceptível.** v1.03.032-038 dedupou JSX repetido em primitivas (`PriChip`/`TaskAvatar`/`PrazoLabel`/`TagIA`) e criou wrapper `<TaskCard>` com variantes `sm/md/lg/checkable/selected`. Mas as telas mantiveram seus markups específicos (Foco desktop = FocoCard próprio, Backlog desktop = `<table>`, Kanban = .kcard, Triagem = card-com-chips, Calendário = .kcard). Resultado: código mais limpo, **UI essencialmente idêntica ao que era antes**. | (já feito, parcial) | Médio (técnico, invisível ao usuário) |
 | A.17 | **Card de task unificado · VISUAL** · **escopo redo**: A.14 entregou só dedup técnico. Falta a unificação visual real: cards iguais entre Foco desktop/mobile, Backlog mobile, Kanban, Triagem, Calendário detail. **Plano precisa ser refeito** — começar com auditoria visual real (prints lado-a-lado), decidir variante única por contexto, executar com mudança VISÍVEL em cada PR (não dedup invisível como A.14). Não tocar sem plano novo aprovado. | 1-2 semanas | Alto — entrega o que A.14 prometeu mas não cumpriu |
 | ~~A.18~~ | ~~**Meu foco · redesign UX-first**~~ | ✅ Entregue v1.03.075-077 (ver Marcos concluídos acima) |
-| A.15 | **Mobile · modal de task** · 🟡 **carrossel + backlog entregues; falta o modal.** Entregues: MobileTabShell (carrossel Resumo↔Backlog), BacklogMobilePanel completo, PWA fixes. **Restante**: modal de task mobile simplificado — somente tabs Detalhes + Comentários (próxima sessão). Estratégia confirmada: dual-render com CSS `display:none/block`, sem `matchMedia`. | ~1 dia | Alto — fecha o ciclo mobile |
+| ~~A.15~~ | ~~**Mobile · modal de task**~~ | ✅ Entregue v1.03.110 — 2 tabs (Detalhes + Comentários), CSS data-tab, sem matchMedia. |
 | A.16 | **Revisar bulk actions** · auditar BulkBar (seleção múltipla no Backlog) — UX da seleção, ações disponíveis (atribuir cliente/projeto/pessoa/prazo/prioridade/esforço, arquivar, excluir), feedback visual (sticky bar com contador), comportamento mobile (não aparece hoje). Decidir: manter no Backlog desktop, levar pro Kanban também, adicionar atalhos teclado (ESC limpa seleção, Cmd+A seleciona tudo filtrado), confirmações pra ações destrutivas. | 3-5 dias | Médio — produtividade em operações repetitivas |
 | A.19 | **Cadastros · completar 3 abas + modais** · abas Clientes, Projetos e Pessoas — completar fluxo criar/editar com modal próprio em cada uma. A.10 entregou as tabelas com colunas plenas; os modais CRUD ficaram pendentes. | 3-5 dias | Alto — bloqueia operação autônoma sem suporte direto ao banco |
 
@@ -181,7 +187,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 | Portal cliente | ✅ Entregue jun/2026 |
 | Time tracking (cronômetro) | ✅ Entregue jun/2026 |
 | Stack homogêneo e enxuto | ✅ Auditado e limpo (v1.02.226–229) |
-| Mobile admin experience | ✅ Entregue jun/2026 (v1.03.079-103) — carrossel + backlog. Modal pendente. |
+| Mobile admin experience | ✅ Entregue jun/2026 (v1.03.079-110) — carrossel + backlog + modal de task (2 tabs). |
 | Diferenciação por IA | ❌ Zero em prod — atacar via Bucket B |
 | Analytics avançado | ⚠️ Heurísticas Onda A-D entregues — Bucket C adiciona profundidade |
 
@@ -189,9 +195,8 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## 🎯 NEXT · ordem definida (jun/2026)
 
-**Amanhã (próxima sessão)**
-1. **A.15 · Modal de task mobile** · somente tabs Detalhes + Comentários, UI simplificada. Dual-render CSS, sem matchMedia.
-2. **A.19 · Cadastros · 3 abas + modais** · completar fluxo criar/editar de Clientes, Projetos e Pessoas.
+**Próxima sessão**
+1. **A.19 · Cadastros · 3 abas + modais** · revisar e completar fluxo criar/editar de Clientes, Projetos e Pessoas (mobile já tem listas + modais parciais).
 
 **Onda 1 · Design coeso** (~1-2 semanas)
 2. **A.17** Card de task · VISUAL (replan + execução)
