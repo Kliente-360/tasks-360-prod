@@ -1646,8 +1646,110 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         <div className="tmodal-body">
           {/* LEFT */}
           <div className="tmodal-left">
+            {/* Mobile: grid 2 colunas */}
+            <div className="md:hidden space-y-3 py-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="lbl">Cliente</label>
+                  <select
+                    className="inp"
+                    value={editing.clienteId}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setEditing((cur) => ({ ...cur, clienteId: v, projetoId: v ? cur.projetoId : '' }));
+                    }}
+                  >
+                    <option value="">—</option>
+                    {clientesAtivos.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="lbl">Projeto</label>
+                  <select
+                    className="inp"
+                    value={editing.projetoId}
+                    disabled={!editing.clienteId}
+                    onChange={(e) => set('projetoId', e.target.value)}
+                  >
+                    <option value="">—</option>
+                    {projetosDoCliente.map((p) => (
+                      <option key={p.id} value={p.id}>{p.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="lbl">Status</label>
+                  <select
+                    className="inp"
+                    value={editing.subetapa}
+                    onChange={(e) => set('subetapa', e.target.value)}
+                  >
+                    <option value="backlog">Backlog</option>
+                    <option value="priorizado">Priorizado</option>
+                    <option value="em_definicao">Em definição</option>
+                    <option value="escopo_definido">Escopo definido</option>
+                    <option value="em_desenvolvimento">Em desenvolvimento</option>
+                    <option value="em_homologacao">Em homologação</option>
+                    <option value="em_revisao">Em revisão</option>
+                    <option value="pronto_producao">Pronto p/ produção</option>
+                    <option value="em_implantacao">Em implantação</option>
+                    <option value="bloqueado">Bloqueado</option>
+                    <option value="concluido">Concluído</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="lbl">Prazo</label>
+                  <input
+                    type="date"
+                    className="inp"
+                    value={editing.prazo}
+                    onChange={(e) => set('prazo', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="lbl">Previsto (h)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    className="inp"
+                    value={editing.esforco}
+                    onChange={(e) => set('esforco', Number(e.target.value) || 0)}
+                  />
+                </div>
+                <div>
+                  <label className="lbl">Realizado (h)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    className="inp"
+                    value={editing.tempoRealHoras ?? ''}
+                    onChange={(e) =>
+                      set('tempoRealHoras', e.target.value === '' ? null : Number(e.target.value))
+                    }
+                    placeholder="—"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="lbl">Descrição</label>
+                <textarea
+                  className="inp"
+                  rows={4}
+                  value={descricaoLoading ? '' : (editing.descricao ?? '')}
+                  onChange={(e) => set('descricao', e.target.value)}
+                  placeholder={descricaoLoading ? 'Carregando…' : 'Contexto, links, critérios de aceite…'}
+                  disabled={descricaoLoading}
+                  style={descricaoLoading ? { opacity: 0.6 } : undefined}
+                />
+              </div>
+            </div>
+
             {/* Atribuição */}
-            <div className="tmodal-section">
+            <div className="tmodal-section hidden md:block">
               <div className="tmodal-section-title">Atribuição</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -1737,7 +1839,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             </div>
 
             {/* Descrição */}
-            <div className="tmodal-section">
+            <div className="tmodal-section hidden md:block">
               <div className="tmodal-section-title">Descrição</div>
               <textarea
                 className="inp"
@@ -1773,7 +1875,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             </div>
 
             {/* Esforço */}
-            <div className="tmodal-section">
+            <div className="tmodal-section hidden md:block">
               <div className="tmodal-section-title">Esforço</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="hidden md:block">
@@ -1826,7 +1928,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             </div>
 
             {/* Metadata */}
-            <div className="tmodal-section">
+            <div className="tmodal-section hidden md:block">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="lbl">Etapa</label>
