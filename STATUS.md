@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.110 · **Atualizado**: 07/06/2026 · branch `main`
+> **Versão**: v1.03.115 · **Atualizado**: 07/06/2026 · branch `main`
 
 ---
 
@@ -78,15 +78,13 @@ Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout es
 - ✅ **PWA** · `start_url` → `/resumo` (abre no carrossel), `padding-top: env(safe-area-inset-top)` no `.hdr-v2` (header não cortado em iOS standalone), ícone 512px com `purpose: "any maskable"`, `theme-color` com variante dark `#111827`
 - ✅ **Dead code removido** · `SwipeNav` (211 linhas), 3 blocos legacy `display:none` no Backlog (~265 linhas), state vars órfãs (`moreOpen`/`sortPanelOpen`/`filtersOpen`/`activeFiltersCount`), CSS `.m-tabbar`/`.m-tab` (tab bar que não existe mais), `.m-pill`/`.m-pills` (chips substituídos pelo clear button)
 
-#### Entregues (continuação · jun/2026 · v1.03.104 → v1.03.110)
-- ✅ **Modal de task mobile** (A.15) · 2 tabs (Detalhes + Comentários), CSS data-tab `[data-tab=...]` drive panel visibility — sem `matchMedia` em render (lição do crash v1.03.009). Desktop: tab 'detalhes' mapeia Conversa como ativo no painel direito.
-- ✅ **Cadastros mobile** (A.19 parcial) · listas simplificadas com row-click → edit, modais simplificados (campos não-essenciais ocultos via `hidden md:block`), itens arquivados com `opacity-50`; desktop intacto.
-- ✅ **Profile menu** · ícone sliders em Cadastros, link Backlog mobile-only acima de Cadastros, MobileHelpProvider.
-- ✅ **Mobile help modal** · `MobileHelpProvider` + 2 tabs (Resumo exec admin-only + Backlog), CSS `bg-[color:var(--bg)]`, conteúdo revisado pra bater com as telas reais.
-- ✅ **Meu Foco desktop restaurado** · inline edit (6 campos + Salvar) que havia sido removido acidentalmente no commit 5334463 foi recuperado.
-
-#### Próxima sessão (anotado)
-- 🔲 **Cadastros · completar 3 abas + modais** · abas Clientes, Projetos e Pessoas — revisar fluxo completo criar/editar (A.19).
+#### Entregues nesta sessão (mobile modal — jun/2026 · v1.03.104 → v1.03.115)
+- ✅ **Modal de task mobile** · dual-render CSS `data-tab` (sem `matchMedia`), tabs **Detalhes** + **Conversa**, painel esquerdo simplificado, painel direito = conversa full
+- ✅ **Detalhes simplificados** · grid 2 colunas: Cliente/Projeto · Status/Prazo · Previsto(h)/Realizado(h) + Descrição full-width. Campos desktop (Responsável, Prioridade, Complexidade, Checklist, Visível ao cliente, Bloqueado por, Escopo, Privacidade) ficam `hidden md:block`
+- ✅ **Prazo mobile** · `type="text"` com `inputMode="numeric"`, exibe `dd/mm/aaaa` (evita o "12 de jun. de 2026" quebrando linha), converte pra ISO no `onBlur`
+- ✅ **Privada** · checkbox `isCEO` ao final do formulário mobile (espelho da seção Privacidade desktop)
+- ✅ **Header mobile limpo** · só título da task — chips (IA, prioridade, prazo, cliente, reaberta, arquivada) e `.tmodal-head-right` (autosave, copy, fechar ×) ocultados via CSS `display:none !important` no bloco `@media (max-width:767px)`
+- ✅ **Profile menu** · ícone `sliders` no item Cadastros; link Backlog mobile-only acima de Cadastros
 
 ---
 
@@ -116,7 +114,7 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | A.14 (parcial) | **Card de task unificado** · 🟡 **só camada técnica entregue, sem mudança visual perceptível.** v1.03.032-038 dedupou JSX repetido em primitivas (`PriChip`/`TaskAvatar`/`PrazoLabel`/`TagIA`) e criou wrapper `<TaskCard>` com variantes `sm/md/lg/checkable/selected`. Mas as telas mantiveram seus markups específicos (Foco desktop = FocoCard próprio, Backlog desktop = `<table>`, Kanban = .kcard, Triagem = card-com-chips, Calendário = .kcard). Resultado: código mais limpo, **UI essencialmente idêntica ao que era antes**. | (já feito, parcial) | Médio (técnico, invisível ao usuário) |
 | A.17 | **Card de task unificado · VISUAL** · **escopo redo**: A.14 entregou só dedup técnico. Falta a unificação visual real: cards iguais entre Foco desktop/mobile, Backlog mobile, Kanban, Triagem, Calendário detail. **Plano precisa ser refeito** — começar com auditoria visual real (prints lado-a-lado), decidir variante única por contexto, executar com mudança VISÍVEL em cada PR (não dedup invisível como A.14). Não tocar sem plano novo aprovado. | 1-2 semanas | Alto — entrega o que A.14 prometeu mas não cumpriu |
 | ~~A.18~~ | ~~**Meu foco · redesign UX-first**~~ | ✅ Entregue v1.03.075-077 (ver Marcos concluídos acima) |
-| ~~A.15~~ | ~~**Mobile · modal de task**~~ | ✅ Entregue v1.03.110 — 2 tabs (Detalhes + Comentários), CSS data-tab, sem matchMedia. |
+| ~~A.15~~ | ~~**Mobile · modal de task**~~ | ✅ Entregue v1.03.104-115 (ver sessão mobile modal acima). Modal full-screen mobile com 2 tabs, grid 2-col, prazo dd/mm/aaaa, Privada para CEO, header limpo. |
 | A.16 | **Revisar bulk actions** · auditar BulkBar (seleção múltipla no Backlog) — UX da seleção, ações disponíveis (atribuir cliente/projeto/pessoa/prazo/prioridade/esforço, arquivar, excluir), feedback visual (sticky bar com contador), comportamento mobile (não aparece hoje). Decidir: manter no Backlog desktop, levar pro Kanban também, adicionar atalhos teclado (ESC limpa seleção, Cmd+A seleciona tudo filtrado), confirmações pra ações destrutivas. | 3-5 dias | Médio — produtividade em operações repetitivas |
 | A.19 | **Cadastros · completar 3 abas + modais** · abas Clientes, Projetos e Pessoas — completar fluxo criar/editar com modal próprio em cada uma. A.10 entregou as tabelas com colunas plenas; os modais CRUD ficaram pendentes. | 3-5 dias | Alto — bloqueia operação autônoma sem suporte direto ao banco |
 
@@ -187,7 +185,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 | Portal cliente | ✅ Entregue jun/2026 |
 | Time tracking (cronômetro) | ✅ Entregue jun/2026 |
 | Stack homogêneo e enxuto | ✅ Auditado e limpo (v1.02.226–229) |
-| Mobile admin experience | ✅ Entregue jun/2026 (v1.03.079-110) — carrossel + backlog + modal de task (2 tabs). |
+| Mobile admin experience | ✅ Entregue jun/2026 (v1.03.079-115) — carrossel + backlog + modal de task completo. |
 | Diferenciação por IA | ❌ Zero em prod — atacar via Bucket B |
 | Analytics avançado | ⚠️ Heurísticas Onda A-D entregues — Bucket C adiciona profundidade |
 
@@ -195,8 +193,8 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## 🎯 NEXT · ordem definida (jun/2026)
 
-**Próxima sessão**
-1. **A.19 · Cadastros · 3 abas + modais** · revisar e completar fluxo criar/editar de Clientes, Projetos e Pessoas (mobile já tem listas + modais parciais).
+**Amanhã (próxima sessão)**
+1. **A.19 · Cadastros · 3 abas + modais** · completar fluxo criar/editar de Clientes, Projetos e Pessoas.
 
 **Onda 1 · Design coeso** (~1-2 semanas)
 2. **A.17** Card de task · VISUAL (replan + execução)
@@ -215,5 +213,4 @@ Items NÃO no NEXT (revisitar depois): A.3 Push · A.5 Saved views · A.6 Sticky
 
 ## Próximo passo imediato
 
-**Modal de task mobile** (A.15) + **Cadastros · 3 abas + modais** (A.19) — próxima sessão, nesta ordem.
-Modal: dual-render CSS `display:none/block`, sem `matchMedia` (lição do crash v1.03.009).
+**Cadastros · 3 abas + modais** (A.19) — completar fluxo criar/editar de Clientes, Projetos e Pessoas.
