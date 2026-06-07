@@ -150,29 +150,28 @@ Tarefas que invocam LLM (Claude Haiku/Sonnet) pra produzir saída útil ao usuá
 | B.3 | **Resumir thread de task** · botão "TL;DR" no modal | Sonnet · ~R$0,05/exec sob demanda | ~1 dia | Quick win — primeira IA low-risk/high-value visível ao usuário |
 | B.4 | **Auto-triage com IA** · classifica tasks criadas por IA antes da Triagem | Haiku · ~R$0,02/exec | M (depende de A.3) | Combina com `ai-suggest`. Limpa fila da Triagem. |
 | B.5 | **Aba Foco com IA leve** · resumo do dia + 3 tasks priorizadas | Haiku · ~R$0,02/exec por usuário/dia | M | Personalização real do Meu foco |
-| B.6 | **`ai-chat` com tool use** · chat com backlog via ⌘K (busca + filtros + agregações) | Sonnet · custo variável | L (precisa cuidado com prompt injection) | Diferenciador real, mas adiar até B.1+B.2 validados em prod |
+| B.6 | **`ai-chat` com tool use** · chat com backlog via ⌘K (busca + filtros + agregações) | Sonnet · custo variável | L (precisa cuidado com prompt injection) | Diferenciador real, mas adiar até B.2+B.3 validados em prod |
+| B.7 | **`ai-risk-scanner`** · banner "🚨 N sinais hoje" no Dashboard (cron diário) — movido de C.1 | Sonnet · ~R$0,30/dia | ~1 semana | ⭐ Premium-perception alta |
+| B.8 | **Cliente em fricção via NLP** · análise de comments públicos pra detectar tom — movido de C.6 | Sonnet · custo variável | M | Sinal precoce de churn, complementa C.5 |
 
-### Bucket C · Heurísticas para Advanced Analytics
+### Bucket C · Heurísticas Analytics (puro SQL/agregação, sem LLM)
 
-Detecção de padrões e insights avançados sobre o estado da operação. Pode usar IA ou puro SQL/agregação. **Output é insight/score/alerta** consumido em Dashboard ou Briefing.
+Detecção de padrões via dados locais. **Output é insight/score/alerta** consumido em Dashboard ou Briefing. Nenhum item invoca LLM.
 
 | # | Item | Tipo | Esforço | Impacto |
 |---|---|---|---|---|
-| C.1 | **`ai-risk-scanner`** · banner "🚨 N sinais hoje" no Dashboard (cron diário) | IA (Sonnet) · ~R$0,30/dia | ~1 semana | ⭐ Premium-perception alta. Depende de Dashboard estar no ar. |
-| C.2 | **Capacidade prevista** · heurística "estoura em N semanas" baseada em throughput vs backlog | Pura (SQL + agregação) | M (precisa `weekly_capacity_snapshots` + job semanal) | Antecipa contratação/desaceleração |
-| C.3 | **Skill mismatch** · task de escopo X atribuída a pessoa sem skill | Pura (cruzamento `tasks.escopo` × `pessoas.skills`) | 3-5 dias | Qualidade de alocação |
-| C.4 | **Senioridade malalocada** · júnior fazendo task de complexidade alta (ou inverso) | Pura | 3-5 dias | Risco de qualidade / desperdício |
-| C.5 | **Churn risk por cliente** · sinal composto (lead time + reclamações + comments negativos) | Pura + opcional IA pra sentimento | M | Antecipa perda de cliente |
-| C.6 | **Cliente em fricção via NLP** · análise de comments públicos pra detectar tom | IA (Sonnet) | M | Sinal precoce, complementa C.5 |
-| C.7 | **Bottleneck por sub-etapa** · histograma de tempo médio em cada subetapa, identifica gargalo | Pura | 3-5 dias | Otimização de fluxo |
-| C.8 | **SLA breach rate** · % de SLA violados por cliente/projeto na janela | Pura | 2-3 dias | Métrica contratual |
-| C.9 | **Margem por hora vs ticket** · custo de pessoa × tempo × tipo de projeto | Pura (precisa custo/h da pessoa) | M | Precificação data-driven |
+| C.2 | **Capacidade prevista** · heurística "estoura em N semanas" baseada em throughput vs backlog | SQL + agregação | M (precisa `weekly_capacity_snapshots` + job semanal) | Antecipa contratação/desaceleração |
+| C.3 | **Skill mismatch** · task de escopo X atribuída a pessoa sem aquela skill | Cruzamento `tasks.escopo` × `pessoas.skills` | 3-5 dias | Qualidade de alocação |
+| C.4 | **Senioridade malalocada** · júnior em task de complexidade alta (ou inverso) | Cruzamento `pessoas.senioridade` × `tasks.complexidade` | 3-5 dias | Risco de qualidade / desperdício |
+| C.5 | **Churn risk por cliente** · sinal composto: lead time alto + tasks bloqueadas antigas + sem comment recente | Agregação multi-campo | M | Antecipa perda de cliente |
+| C.7 | **Bottleneck por sub-etapa** · tempo médio em cada subetapa, identifica gargalo do funil | `task_status_history` ou `subetapa_em` diff | 3-5 dias | Otimização de fluxo |
+| C.8 | **SLA breach rate** · % de tasks entregues fora do prazo por cliente/projeto na janela | `prazo` vs `concluido_em` | 2-3 dias | Métrica contratual |
 
 ---
 
 ## ❌ Descontinuados (não repropor sem novo input)
 
-Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly · Sentry · PostHog · Bottom tab bar mobile (substituída por carrossel MobileTabShell) · **B.1 `ai-suggest`** (sobrepõe B.4 auto-triage — descartado)
+Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly · Sentry · PostHog · Bottom tab bar mobile (substituída por carrossel MobileTabShell) · **B.1 `ai-suggest`** (sobrepõe B.4 auto-triage — descartado) · **C.9 Margem por hora vs ticket** (precisa custo/h da pessoa — dado não existe ainda)
 
 ---
 
