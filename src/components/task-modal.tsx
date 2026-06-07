@@ -1702,10 +1702,22 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 <div>
                   <label className="lbl">Prazo</label>
                   <input
-                    type="date"
+                    type="text"
+                    inputMode="numeric"
+                    key={editing.id + (editing.prazo ?? '')}
                     className="inp"
-                    value={editing.prazo}
-                    onChange={(e) => set('prazo', e.target.value)}
+                    placeholder="dd/mm/aaaa"
+                    defaultValue={
+                      editing.prazo
+                        ? editing.prazo.split('-').reverse().join('/')
+                        : ''
+                    }
+                    onBlur={(e) => {
+                      const v = e.target.value.trim();
+                      if (!v) { set('prazo', ''); return; }
+                      const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                      if (m) set('prazo', `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`);
+                    }}
                   />
                 </div>
                 <div>
@@ -1746,6 +1758,24 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   style={descricaoLoading ? { opacity: 0.6 } : undefined}
                 />
               </div>
+              {isCEO && (
+                <div>
+                  <label className="lbl">Privacidade</label>
+                  <label
+                    className="inp flex items-center gap-2 cursor-pointer select-none"
+                    style={{ background: 'var(--bg-elev)' }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={editing.privada}
+                      onChange={(e) => set('privada', e.target.checked)}
+                    />
+                    <span className="text-sm">
+                      {editing.privada ? '🔒 privada' : '— pública'}
+                    </span>
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Atribuição */}
