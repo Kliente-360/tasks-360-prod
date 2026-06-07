@@ -1638,7 +1638,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             className={`tmtab ${modalTab === 'conversa' ? 'active' : ''}`}
             onClick={() => setModalTab('conversa')}
           >
-            Comentários {comments.length > 0 && <span className="count">{comments.length}</span>}
+            Conversa {comments.length > 0 && <span className="count">{comments.length}</span>}
           </div>
         </div>
 
@@ -1684,7 +1684,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     ))}
                   </select>
                 </div>
-                <div>
+                <div className="hidden md:block">
                   <label className="lbl">Responsável</label>
                   <select
                     className="inp"
@@ -1720,7 +1720,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     })()}
                   </select>
                 </div>
-                <div>
+                <div className="hidden md:block">
                   <label className="lbl">Prioridade</label>
                   <select
                     className="inp"
@@ -1751,7 +1751,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             </div>
 
             {/* Checklist */}
-            <div className="tmodal-section">
+            <div className="tmodal-section hidden md:block">
               <div
                 className="tmodal-section-title flex items-center gap-2 cursor-pointer select-none"
                 onClick={() => setChecklistOpen((v) => !v)}
@@ -1776,7 +1776,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             <div className="tmodal-section">
               <div className="tmodal-section-title">Esforço</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+                <div className="hidden md:block">
                   <label className="lbl">Complexidade</label>
                   <select
                     className="inp"
@@ -1859,7 +1859,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     macro: <span className="font-mono">{lblStatus(SUB_TO_MACRO[editing.subetapa] || 'backlog')}</span>
                   </div>
                 </div>
-                <div>
+                <div className="hidden md:block">
                   <label className="lbl">Visível ao cliente</label>
                   <label
                     className="inp flex items-center gap-2 cursor-pointer select-none"
@@ -1874,7 +1874,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   </label>
                 </div>
                 {editing.subetapa === 'bloqueado' && (
-                  <div className="sm:col-span-2 flex flex-col gap-2">
+                  <div className="sm:col-span-2 hidden md:block"><div className="flex flex-col gap-2">
                     <div>
                       <label className="lbl">
                         Bloqueado por <span className="text-danger text-xs">*</span>
@@ -1902,13 +1902,13 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                         />
                       </div>
                     )}
-                  </div>
+                  </div></div>
                 )}
               </div>
             </div>
 
             {/* Escopo / Skills */}
-            <div className="tmodal-section">
+            <div className="tmodal-section hidden md:block">
               <div className="tmodal-section-title">Escopo</div>
               <div className="flex flex-col gap-2">
                 {SKILL_GROUPS.map((g) => (
@@ -1944,7 +1944,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             {/* Privacidade — só CEO. Task privada fica visível só pra
                 pessoa atribuída (regra do banco/RLS futuro). */}
             {isCEO && (
-              <div className="tmodal-section">
+              <div className="tmodal-section hidden md:block">
                 <div className="tmodal-section-title">Privacidade</div>
                 <label
                   className="inp flex items-center gap-2 cursor-pointer select-none"
@@ -2170,7 +2170,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     />
                     <MentionDropdown picker={mentionPicker} />
                     {!newComment && (
-                      <div className="tmodal-composer-hint">
+                      <div className="tmodal-composer-hint hidden md:block">
                         <kbd>⌘</kbd>
                         <kbd>↵</kbd> envia
                       </div>
