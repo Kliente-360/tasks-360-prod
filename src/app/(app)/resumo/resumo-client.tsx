@@ -10,7 +10,7 @@ import {
   computeCalendario,
   computeHeuristicAlerts,
   computeWeeklyCapacityAnalysis,
-} from '@/lib/heuristics';
+} from '@/lib/analytics';
 import { VelocidadeOperacao } from '@/components/velocidade-operacao';
 
 // ─────────────────────────────────────────────────────────

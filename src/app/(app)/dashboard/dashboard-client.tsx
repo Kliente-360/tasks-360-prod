@@ -18,7 +18,7 @@ import {
   computeProjetosSaude,
   computeSaudePorPessoa,
   computeVelocidade,
-} from '@/lib/heuristics';
+} from '@/lib/analytics';
 import { VelocidadeOperacao } from '@/components/velocidade-operacao';
 
 // ─────────────────────────────────────────────────────────

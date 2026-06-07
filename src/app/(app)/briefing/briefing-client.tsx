@@ -12,7 +12,7 @@ import {
   computeProjetosSaude,
   computeHeuristicAlerts,
   type HeuristicAlert,
-} from '@/lib/heuristics';
+} from '@/lib/analytics';
 
 // ─────────────────────────────────────────────────────────
 //  Helpers visuais

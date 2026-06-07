@@ -18,7 +18,7 @@
  */
 
 import { cn } from '@/lib/utils';
-import type { VelocidadeMetrics } from '@/lib/heuristics';
+import type { VelocidadeMetrics } from '@/lib/analytics';
 
 interface VelocidadeOperacaoProps {
   vel: VelocidadeMetrics;
