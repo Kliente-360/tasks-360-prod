@@ -1522,33 +1522,33 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             autoFocus={!editing.id}
           />
           {editing.criadoPorIa && (
-            <span className="ia-chip" title="Criada por automação IA">
+            <span className="ia-chip hidden md:inline-flex" title="Criada por automação IA">
               🤖 IA
             </span>
           )}
           {editing.prioridade && (
-            <span className={`pri pri-${editing.prioridade}`}>
+            <span className={`pri pri-${editing.prioridade} hidden md:inline-flex`}>
               <span className="pri-dot" />
               {editing.prioridade}
             </span>
           )}
           {editing.prazo && (
-            <span className="head-chip" title={`Prazo: ${fmtDate(editing.prazo)}`}>
+            <span className="head-chip hidden md:inline-flex" title={`Prazo: ${fmtDate(editing.prazo)}`}>
               <span className="head-chip-ico">⏱</span>
               {fmtDateShort(editing.prazo)}
             </span>
           )}
           {editing.clienteId && (
-            <span className="head-chip head-chip-cliente">
+            <span className="hidden md:inline-flex head-chip head-chip-cliente">
               {clientesById.get(editing.clienteId)?.nome ?? ''}
             </span>
           )}
           {!editing.id && !editing.clienteId && (
-            <span className="head-chip head-chip-muted">Nova tarefa</span>
+            <span className="hidden md:inline-flex head-chip head-chip-muted">Nova tarefa</span>
           )}
           {editing.id && (editing.reopenCount || 0) > 0 && (
             <span
-              className="reopen-chip text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
+              className="reopen-chip hidden md:inline-flex text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
               style={{ background: 'var(--p1-soft)', color: 'var(--p1)' }}
             >
               reaberta {editing.reopenCount}x
@@ -1556,14 +1556,14 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           )}
           {editing.id && editing.arquivadoEm && (
             <span
-              className="arquivada-chip text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
+              className="arquivada-chip hidden md:inline-flex text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
               style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
               title="Tarefa arquivada"
             >
               arquivada
             </span>
           )}
-          <div className="tmodal-head-right">
+          <div className="tmodal-head-right hidden md:flex">
             {editing.id && clienteWebhookEnabled && editing.webhookSyncStatus === 'error' && (
               <span
                 className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
