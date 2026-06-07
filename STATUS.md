@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.117 · **Atualizado**: 07/06/2026 · branch `main`
+> **Versão**: v1.03.118 · **Atualizado**: 07/06/2026 · branch `main`
 
 ---
 
@@ -106,7 +106,7 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | ~~A.6~~ | ~~**Sticky thead Backlog**~~ | ❌ Descontinuado |
 | A.7 | **PDF Resumo Executivo** · consolidar Briefing+Dashboard em documento navegável | 1-2 semanas | Médio — reuniões offline |
 | A.8 | **Workspaces · 3 pilares** (Salesforce · Dados · IA) · switcher topo + `workspace_id` em tabelas core + RLS por workspace | ⚠️ M-L · precisa spec própria | Estratégico — separação completa de ambientes |
-| A.9 | **Timesheet · entrada manual + permissões** · permitir criar registros sem cronômetro (data/hora início + duração + task + nota); **excluir** só dono ou admin; **editar** desabilitado (registro é imutável após salvo — corrige criando novo + deletando o errado, mantém audit trail limpo) | 3-5 dias | Médio — desbloqueia retro-lançamento e fecha gap de controle |
+| ~~A.9~~ | ~~**Timesheet · entrada manual + permissões**~~ | ✅ Entregue v1.03.118 — seletor de tarefa com dois modos (Iniciar cronômetro · Lançar horas), ManualEntryPopover com Data/Início/Duração/Nota, preview em tempo real do término, bloqueio de entradas que cruzam meia-noite |
 | ~~A.10~~ | ~~**Cadastros · tabelas com colunas plenas**~~ | ✅ Entregue v1.03.022 + polish v1.03.023 (ver ciclo redesign DS acima) |
 | ~~A.11~~ | ~~**Briefing × Dashboard · clarear papel**~~ | ✅ Entregue v1.03.041-042. Velocidade da operação migrou do Briefing pro Dashboard; Briefing fica editorial (alertas + clientes em atenção + conquistas); Dashboard concentra números (Velocidade + Entregas + Calendário + Carga). Card W-0 substituiu Lead time; meta throughput atualizada pra 25/sem; Ciclo e % no prazo ganharam delta vs 30d anteriores. |
 | A.12 | **Dashboard × Portal cliente · padrão técnico** · auditar tecnologia/framework de cada um (parecem diferentes — Portal usa header verde escuro `--bg-portal`, Dashboard usa surface normal; estruturas de card divergem). Definir padrão único (componentes, tokens, hierarquia) e refazer ambos na versão final convergente. | 1-2 semanas | Alto — fecha o ciclo de DS nessas duas telas |
@@ -210,7 +210,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 4. **A.16** Revisar bulk actions (BulkBar)
 
 **Onda 3 · Quick wins** (~10 dias)
-5. **A.9** Timesheet · entrada manual + permissões
+5. ~~**A.9** Timesheet · entrada manual + permissões~~ ✅ v1.03.118
 6. **C.3** Skill mismatch (heurística pura)
 
 Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.10 (publicar heurísticas na UI).
