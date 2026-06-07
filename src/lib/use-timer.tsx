@@ -22,6 +22,7 @@ interface TimerState {
   stopping: boolean;
   startTimer: (taskId: string) => Promise<void>;
   stopTimer: (note?: string) => Promise<void>;
+  insertManualEntry: (taskId: string, startedAt: Date, endedAt: Date, note?: string) => Promise<void>;
 }
 
 const TimerContext = createContext<TimerState | null>(null);
@@ -112,8 +113,25 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     [activeEntry, stopping, upsertTimeEntry],
   );
 
+  const insertManualEntry = useCallback(
+    async (taskId: string, startedAt: Date, endedAt: Date, note?: string) => {
+      if (!currentPessoa?.id) return;
+      const supabase = createClient();
+      const row: Record<string, unknown> = {
+        task_id: taskId,
+        pessoa_id: currentPessoa.id,
+        started_at: startedAt.toISOString(),
+        ended_at: endedAt.toISOString(),
+      };
+      if (note) row.note = note;
+      const { data } = await supabase.from('time_entries').insert(row).select().single();
+      if (data) upsertTimeEntry(timeEntryFromDb(data));
+    },
+    [currentPessoa?.id, upsertTimeEntry],
+  );
+
   return (
-    <TimerContext.Provider value={{ activeEntry, elapsed, starting, stopping, startTimer, stopTimer }}>
+    <TimerContext.Provider value={{ activeEntry, elapsed, starting, stopping, startTimer, stopTimer, insertManualEntry }}>
       {children}
     </TimerContext.Provider>
   );
