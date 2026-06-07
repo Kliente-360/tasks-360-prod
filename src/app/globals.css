@@ -1083,8 +1083,9 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
   .tmodal-head .head-chip { display: none !important; }
   .tmodal-head .tmodal-title { font-size: var(--fs-sm); padding: 4px 6px; min-width: 0 !important; max-width: none !important; flex: 1 1 auto; }
   .tmodal-head .autosave { display: none; }
-  .tmodal-head .pri { font-size: 10px; padding: 2px 6px; flex-shrink: 0; }
-  .tmodal-head-right { flex-shrink: 0; }
+  .tmodal-head .ia-chip { display: none !important; }
+  .tmodal-head .pri { display: none !important; }
+  .tmodal-head-right { display: none !important; }
   .tmodal-mobile-tabs { display: flex; flex: 0 0 auto; border-bottom: 1px solid var(--line); background: var(--surface-1); }
   .tmodal-mobile-tabs .tmtab { flex: 1; text-align: center; padding: 11px 6px; font-size: var(--fs-sm); font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; user-select: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
   .tmodal-mobile-tabs .tmtab .count { font-family: var(--font-mono); font-feature-settings: "tnum"; font-size: 10px; color: var(--muted); background: var(--surface-2); padding: 1px 5px; border-radius: 999px; }
