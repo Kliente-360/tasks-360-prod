@@ -474,10 +474,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   bloqueioMotivoRef.current = bloqueioMotivo;
 
   // ===== Tabs =====
-  const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
-  const [modalTab, setModalTab] = useState<'detalhes' | 'conversa' | 'anexos' | 'historico' | 'tempo'>(
-    isMobile ? 'detalhes' : 'conversa',
-  );
+  // Default 'detalhes' — CSS data-tab attribute drives panel visibility on mobile
+  // (no matchMedia in render path — lesson from crash v1.03.009).
+  // On desktop, 'detalhes' maps to showing Conversa content in the right panel.
+  const [modalTab, setModalTab] = useState<'detalhes' | 'conversa' | 'anexos' | 'historico' | 'tempo'>('detalhes');
   const [tempoCount, setTempoCount] = useState<number | null>(null);
   const [checklistOpen, setChecklistOpen] = useState<boolean>(
     (source?.checklist?.length ?? 0) > 0,
@@ -1510,7 +1510,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       }}
       onPaste={onModalPaste}
     >
-      <div className="tmodal" role="dialog" aria-label="Editar tarefa">
+      <div className="tmodal" role="dialog" aria-label="Editar tarefa" data-tab={modalTab}>
         {/* Header */}
         <div className="tmodal-head">
           <input
@@ -1626,41 +1626,26 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           </div>
         </div>
 
-        {/* Tabs mobile */}
+        {/* Mobile tabs — Detalhes + Comentários only */}
         <div className="tmodal-mobile-tabs">
-          {(['detalhes', 'conversa', 'anexos', 'historico', 'tempo'] as const).map((tab) => (
-            <div
-              key={tab}
-              className={`tmtab ${modalTab === tab ? 'active' : ''}`}
-              onClick={() => setModalTab(tab)}
-            >
-              {tab === 'detalhes' && 'Detalhes'}
-              {tab === 'conversa' && (
-                <>
-                  Conversa <span className="count">{comments.length}</span>
-                </>
-              )}
-              {tab === 'anexos' && (
-                <>
-                  Anexos <span className="count">{attachments.length}</span>
-                </>
-              )}
-              {tab === 'historico' && (
-                <>
-                  Histórico <span className="count">{history.length}</span>
-                </>
-              )}
-              {tab === 'tempo' && (
-                <>Tempo {tempoCount !== null && <span className="count">{tempoCount}</span>}</>
-              )}
-            </div>
-          ))}
+          <div
+            className={`tmtab ${modalTab === 'detalhes' ? 'active' : ''}`}
+            onClick={() => setModalTab('detalhes')}
+          >
+            Detalhes
+          </div>
+          <div
+            className={`tmtab ${modalTab === 'conversa' ? 'active' : ''}`}
+            onClick={() => setModalTab('conversa')}
+          >
+            Comentários {comments.length > 0 && <span className="count">{comments.length}</span>}
+          </div>
         </div>
 
         {/* Body */}
         <div className="tmodal-body">
           {/* LEFT */}
-          <div className={`tmodal-left ${isMobile && modalTab !== 'detalhes' ? 'mob-hidden' : ''}`}>
+          <div className="tmodal-left">
             {/* Atribuição */}
             <div className="tmodal-section">
               <div className="tmodal-section-title">Atribuição</div>
@@ -1981,10 +1966,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           </div>
 
           {/* RIGHT */}
-          <div className={`tmodal-right ${isMobile && modalTab === 'detalhes' ? 'mob-hidden' : ''}`}>
+          <div className="tmodal-right">
             <div className="tmodal-tabs">
               <div
-                className={`tmodal-tab ${modalTab === 'conversa' ? 'active' : ''}`}
+                className={`tmodal-tab ${(modalTab === 'conversa' || modalTab === 'detalhes') ? 'active' : ''}`}
                 onClick={() => setModalTab('conversa')}
               >
                 Conversa <span className="count">{comments.length}</span>
@@ -2117,7 +2102,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             )}
 
             {/* CONVERSA */}
-            {modalTab === 'conversa' && (
+            {(modalTab === 'conversa' || modalTab === 'detalhes') && (
               <>
                 <div className="tmodal-thread">
                   {topLevel.map((c) => (

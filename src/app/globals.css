@@ -1094,7 +1094,8 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
   .tmodal-body { grid-template-columns: 1fr; flex: 1 1 auto; min-height: 0; }
   .tmodal-left  { padding: var(--sp-4); }
   .tmodal-right { border-left: 0; border-top: 0; }
-  .mob-hidden { display: none !important; }
+  .tmodal:not([data-tab="detalhes"]) .tmodal-left { display: none !important; }
+  .tmodal[data-tab="detalhes"] .tmodal-right { display: none !important; }
   .tmodal-fields { grid-template-columns: 1fr; }
   .tmodal .inp, .tmodal .tmodal-title, .tmodal .tmodal-composer textarea { font-size: 16px; }
   .tmodal .inp { padding: 10px 12px; }
