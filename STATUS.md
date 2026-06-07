@@ -116,7 +116,7 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | ~~A.18~~ | ~~**Meu foco · redesign UX-first**~~ | ✅ Entregue v1.03.075-077 (ver Marcos concluídos acima) |
 | ~~A.15~~ | ~~**Mobile · modal de task**~~ | ✅ Entregue v1.03.104-115 (ver sessão mobile modal acima). Modal full-screen mobile com 2 tabs, grid 2-col, prazo dd/mm/aaaa, Privada para CEO, header limpo. |
 | A.16 | **Revisar bulk actions** · auditar BulkBar (seleção múltipla no Backlog) — UX da seleção, ações disponíveis (atribuir cliente/projeto/pessoa/prazo/prioridade/esforço, arquivar, excluir), feedback visual (sticky bar com contador), comportamento mobile (não aparece hoje). Decidir: manter no Backlog desktop, levar pro Kanban também, adicionar atalhos teclado (ESC limpa seleção, Cmd+A seleciona tudo filtrado), confirmações pra ações destrutivas. | 3-5 dias | Médio — produtividade em operações repetitivas |
-| A.19 | **Cadastros · completar 3 abas + modais** · abas Clientes, Projetos e Pessoas — completar fluxo criar/editar com modal próprio em cada uma. A.10 entregou as tabelas com colunas plenas; os modais CRUD ficaram pendentes. | 3-5 dias | Alto — bloqueia operação autônoma sem suporte direto ao banco |
+| ~~A.19~~ | ~~**Cadastros · 3 abas + modais**~~ | ✅ Entregue. Desktop: modais CRUD completos desde v1.03.002. Mobile: listas row-click + modais simplificados (nome/cor/cliente/papel) em `a830a5e`. |
 
 ### Bucket V · Visão cliente (pre-launch hardening)
 
@@ -193,11 +193,8 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## 🎯 NEXT · ordem definida (jun/2026)
 
-**Amanhã (próxima sessão)**
-1. **A.19 · Cadastros · 3 abas + modais** · completar fluxo criar/editar de Clientes, Projetos e Pessoas.
-
 **Onda 1 · Design coeso** (~1-2 semanas)
-2. **A.17** Card de task · VISUAL (replan + execução)
+1. **A.17** Card de task · VISUAL (replan + execução)
 
 **Onda 2 · Closing loops** (~10-20 dias)
 3. **A.12** Dashboard × Portal · padrão técnico convergente
@@ -213,4 +210,4 @@ Items NÃO no NEXT (revisitar depois): A.3 Push · A.5 Saved views · A.6 Sticky
 
 ## Próximo passo imediato
 
-**Cadastros · 3 abas + modais** (A.19) — completar fluxo criar/editar de Clientes, Projetos e Pessoas.
+**A.17 · Card de task · VISUAL** — replan + execução. Auditoria visual real antes de tocar código.
