@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { useClickAway } from '@/lib/use-click-away';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { useToast } from '@/components/toast';
 import { lblStatus } from '@/lib/task-utils';
@@ -111,6 +112,7 @@ export function useExportCsv() {
 export function ExportIconButton() {
   const exportCsv = useExportCsv();
   const [open, setOpen] = useState(false);
+  const ref = useClickAway<HTMLDivElement>(() => setOpen(false));
 
   useEffect(() => {
     if (!open) return;
@@ -122,7 +124,7 @@ export function ExportIconButton() {
   }, [open]);
 
   return (
-    <div className="relative !hidden md:!inline-flex">
+    <div className="relative !hidden md:!inline-flex" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -138,9 +140,7 @@ export function ExportIconButton() {
         </svg>
       </button>
       {open && (
-        <>
-          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute top-full right-0 mt-2 bg-elev border border-line rounded-lg shadow-xl z-40 text-left overflow-hidden w-[260px]">
+        <div className="absolute top-full right-0 mt-2 bg-elev border border-line rounded-lg shadow-xl z-40 text-left overflow-hidden w-[260px]">
             <div className="px-3 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-muted font-semibold font-mono border-b border-line">
               Exportar como
             </div>
@@ -164,7 +164,7 @@ export function ExportIconButton() {
               <div className="text-[10px] text-muted mt-0.5">depende de Dashboard · parking</div>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
