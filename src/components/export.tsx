@@ -164,7 +164,6 @@ export function ExportIconButton() {
               <div className="text-[10px] text-muted mt-0.5">depende de Dashboard · parking</div>
             </div>
           </div>
-        </div>
       )}
     </div>
   );

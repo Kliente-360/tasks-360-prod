@@ -49,7 +49,7 @@ export function BulkSelect({
         <Icon name="chevron-down" size={14} className="ic" />
       </button>
       {open && !disabled && (
-        <div className="fmenu" style={{ minWidth: '160px' }}>
+        <div className="fmenu" style={{ minWidth: '160px', bottom: 'calc(100% + 6px)', top: 'auto' }}>
           <button
             type="button"
             className={!value ? 'sel' : ''}

@@ -571,16 +571,6 @@ function FocoTaskRow({
               <span className="pri-dot" />
               {task.prioridade}
             </span>
-            {task.privada && (
-              <span className="priv-chip" title="Task privada">
-                <Icon name="lock" size={9} />
-              </span>
-            )}
-            {task.criadoPorIa && (
-              <span className="ia-chip" title="Criada por automação IA">
-                <Icon name="bot" size={9} /> IA
-              </span>
-            )}
             <span
               className={cn(
                 'font-medium text-ink break-words',

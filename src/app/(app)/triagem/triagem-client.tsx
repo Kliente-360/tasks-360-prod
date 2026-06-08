@@ -20,7 +20,7 @@ import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { PillsFilter } from '@/components/pills-filter';
-import { PriChip, TagIA } from '@/components/task-card/primitives';
+import { TagIA } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
 import { agingDays, isPreTriagem, triageFailures, TRIAGE_RANK_GATE } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS, STAGE_RANK } from '@/lib/task-constants';
@@ -168,6 +168,7 @@ export function TriagemClient() {
         projeto_id: draft.projetoId || null,
         pessoa_id: draft.pessoaId || null,
         prazo: draft.prazo || null,
+        prioridade: draft.prioridade || null,
         esforco: draft.esforco || null,
       };
       const localPatch: Partial<Task> = {
@@ -175,6 +176,7 @@ export function TriagemClient() {
         projetoId: draft.projetoId,
         pessoaId: draft.pessoaId,
         prazo: draft.prazo,
+        prioridade: draft.prioridade,
         esforco: draft.esforco,
       };
       const nowIso = new Date().toISOString();
@@ -386,9 +388,8 @@ export function TriagemClient() {
               <div className="min-w-0 flex-1">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-2 flex-wrap mb-1">
-                    {t.prioridade && <PriChip prio={t.prioridade} />}
                     {t.privada && (
-                      <span className="ia-chip ia-chip-mini" title="Task privada">
+                      <span className="priv-chip" title="Task privada">
                         <Icon name="lock" size={9} />
                       </span>
                     )}
@@ -501,6 +502,7 @@ type TriageDraft = {
   projetoId: string;
   pessoaId: string;
   prazo: string;
+  prioridade: string;
   esforco: number;
 };
 
@@ -531,6 +533,7 @@ function IaTriageActions({
     projetoId: task.projetoId || '',
     pessoaId: task.pessoaId || '',
     prazo: task.prazo || '',
+    prioridade: task.prioridade || '',
     esforco: Number(task.esforco) || 0,
   });
   useEffect(() => {
@@ -539,9 +542,10 @@ function IaTriageActions({
       projetoId: task.projetoId || '',
       pessoaId: task.pessoaId || '',
       prazo: task.prazo || '',
+      prioridade: task.prioridade || '',
       esforco: Number(task.esforco) || 0,
     });
-  }, [task.id, task.clienteId, task.projetoId, task.pessoaId, task.prazo, task.esforco]);
+  }, [task.id, task.clienteId, task.projetoId, task.pessoaId, task.prazo, task.prioridade, task.esforco]);
 
   // Clientes ativos · ordenados alfabético
   const clientesOpts = useMemo(
@@ -572,6 +576,7 @@ function IaTriageActions({
     draft.projetoId !== (task.projetoId || '') ||
     draft.pessoaId !== (task.pessoaId || '') ||
     draft.prazo !== (task.prazo || '') ||
+    draft.prioridade !== (task.prioridade || '') ||
     draft.esforco !== (Number(task.esforco) || 0);
 
   const submitReject = (motivo: string) => {
@@ -653,6 +658,21 @@ function IaTriageActions({
             onChange={(e) => setDraft((d) => ({ ...d, prazo: e.target.value }))}
             className="triage-inline-select"
           />
+        </TriageInlineField>
+
+        {/* Prioridade */}
+        <TriageInlineField icon="flag" title="Prioridade" width="w-[120px]">
+          <select
+            value={draft.prioridade}
+            onChange={(e) => setDraft((d) => ({ ...d, prioridade: e.target.value }))}
+            className="triage-inline-select"
+          >
+            <option value="">Prioridade</option>
+            <option value="P0">P0</option>
+            <option value="P1">P1</option>
+            <option value="P2">P2</option>
+            <option value="P3">P3</option>
+          </select>
         </TriageInlineField>
 
         {/* Esforço (horas) */}

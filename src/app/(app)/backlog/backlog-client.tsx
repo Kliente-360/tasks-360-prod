@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
+import { TagIA } from '@/components/task-card/primitives';
 import { TaskCard } from '@/components/task-card/task-card';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'next/navigation';
@@ -774,6 +775,8 @@ export function BacklogClient() {
                     </td>
                     <td>
                       <div className="tbl-title" title={t.titulo}>
+                        {t.privada && <span className="priv-chip mr-1" title="Task privada"><Icon name="lock" size={9} /></span>}
+                        {t.criadoPorIa && <TagIA className="mr-1" />}
                         {t.titulo}
                       </div>
                       {t.tags.length > 0 && (
