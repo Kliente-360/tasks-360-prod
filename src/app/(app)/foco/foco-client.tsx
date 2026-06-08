@@ -623,6 +623,7 @@ function FocoTaskRow({
 
         {/* Botões no topo direito */}
         <div className="flex items-center gap-2 shrink-0">
+          <span className="triage-chip hidden md:inline-block">{PILL_LABELS[contexto]}</span>
           <button
             type="button"
             onClick={onToggleResolved}
