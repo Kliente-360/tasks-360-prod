@@ -170,7 +170,7 @@ function TaskPickerPopover({
       <div className="flex gap-2 p-3 border-t border-line mt-2">
         <button
           type="button"
-          className="btn btn-primary flex-1 text-xs gap-1"
+          className="btn btn-primary flex-1 text-xs gap-1 justify-center"
           disabled={!selectedId}
           onClick={() => selectedId && onStart(selectedId)}
         >
@@ -179,7 +179,7 @@ function TaskPickerPopover({
         </button>
         <button
           type="button"
-          className="btn flex-1 text-xs gap-1"
+          className="btn flex-1 text-xs gap-1 justify-center"
           disabled={!selectedId}
           onClick={() => selectedId && onManual(selectedId)}
         >
