@@ -46,6 +46,7 @@ import { fmtDate, fmtDateShort, lblStatus } from '@/lib/task-utils';
 import { SUB_TO_MACRO, SKILL_GROUPS, ALL_SKILLS } from '@/lib/task-constants';
 import { timeEntryFromDb } from '@/lib/adapters';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
+import { Icon } from '@/components/icons';
 import type { ChecklistItem, Task, TimeEntry } from '@/lib/types';
 
 // ============================================================
@@ -1523,7 +1524,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           />
           {editing.criadoPorIa && (
             <span className="ia-chip" title="Criada por automação IA">
-              🤖 IA
+              <Icon name="bot" size={10} /> IA
             </span>
           )}
           {editing.prioridade && (

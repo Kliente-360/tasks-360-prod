@@ -1,16 +1,11 @@
 'use client';
 
 /**
- * Meu Foco — A.18 (redesign 2026-06-05)
+ * Meu Foco — lista plana com pills de filtro (OR).
  *
- * 6 seções colapsáveis derivadas de critérios independentes (tasks
- * podem aparecer em mais de uma — só Atrasadas vs Pra hoje são
- * naturalmente exclusivas). Card "Seu dia" no topo com narrativa e
- * counts. Pill P0/P1 filtra dentro de cada seção. Checkbox local
- * marca como "Resolvido HOJE" (não persiste em DB; zera virando o dia).
- *
- * Inline-edit por seção segue o padrão da Triagem: campos editáveis
- * só persistem ao clicar Salvar, fila estável durante edição.
+ * Tasks aparecem uma vez cada, ordenadas por pill-idx → prioridade →
+ * prazo asc. Pills: atrasada, pra hoje, bloqueada, sem esforço,
+ * sem hora realizada, sem comentário, P0/P1.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -31,28 +26,14 @@ import {
   TRIAGE_RANK_GATE,
 } from '@/lib/task-utils';
 import { STATUS, STAGE_RANK, SUB_LABELS } from '@/lib/task-constants';
-import {
-  getBusinessDayCutoff,
-  useLastCommentByTask,
-} from '@/lib/use-last-comment';
+import { useLastCommentByTask } from '@/lib/use-last-comment';
 import { useFocoDone, type FocoContexto } from '@/lib/use-foco-done';
 import { createClient } from '@/lib/supabase/client';
 import type { Task } from '@/lib/types';
 
 const PRIO_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3 };
-
-// Cutoff para "sem comment" — milissegundos de 24h atrás (ou último
-// dia útil pra evitar pressão em segunda).
 const SEM_COMMENT_HOURS = 24;
 
-type ContextoMeta = {
-  key: FocoContexto;
-  title: string;
-  emptyMsg: string;
-  defaultOpen: boolean;
-};
-
-// Motivos pré-definidos pro bloqueio · picklist (não texto livre).
 const MOTIVOS_BLOQUEIO = [
   'Aguardando cliente',
   'Aguardando aprovação interna',
@@ -61,15 +42,18 @@ const MOTIVOS_BLOQUEIO = [
   'Bloqueio técnico',
 ] as const;
 
-// Todas defaultOpen=true · usuário colapsa se quiser.
-const CONTEXTOS: ContextoMeta[] = [
-  { key: 'atrasadas', title: 'Atrasadas', emptyMsg: 'Nada atrasado.', defaultOpen: true },
-  { key: 'hoje', title: 'Pra hoje', emptyMsg: 'Nada com prazo hoje.', defaultOpen: true },
-  { key: 'bloqueadas', title: 'Bloqueadas', emptyMsg: 'Sem represas.', defaultOpen: true },
-  { key: 'sem_comment', title: 'Sem comentário (24h)', emptyMsg: 'Todas comentadas recentemente.', defaultOpen: true },
-  { key: 'sem_esforco', title: 'Sem esforço', emptyMsg: 'Todas com esforço definido.', defaultOpen: true },
-  { key: 'sem_horas', title: 'Sem horas realizadas', emptyMsg: 'Todas as andamento têm horas.', defaultOpen: true },
+const PILL_ORDER: FocoContexto[] = [
+  'atrasadas', 'hoje', 'bloqueadas', 'sem_esforco', 'sem_horas', 'sem_comment',
 ];
+
+const PILL_LABELS: Record<FocoContexto, string> = {
+  atrasadas: 'atrasada',
+  hoje: 'pra hoje',
+  bloqueadas: 'bloqueada',
+  sem_esforco: 'sem esforço',
+  sem_horas: 'sem hora realizada',
+  sem_comment: 'sem comentário',
+};
 
 export function FocoClient() {
   const { tasks, loading, error, currentPessoa, viewerRole } = useData();
@@ -81,11 +65,9 @@ export function FocoClient() {
   const focusPessoaId = currentPessoa?.id ?? '';
 
   const [pillPrio, setPillPrio] = useState(false);
-  const [openSet, setOpenSet] = useState<Set<FocoContexto>>(
-    () => new Set(CONTEXTOS.filter((c) => c.defaultOpen).map((c) => c.key)),
-  );
-  const toggleSection = useCallback((k: FocoContexto) => {
-    setOpenSet((cur) => {
+  const [activePills, setActivePills] = useState<Set<FocoContexto>>(new Set());
+  const togglePill = useCallback((k: FocoContexto) => {
+    setActivePills((cur) => {
       const next = new Set(cur);
       if (next.has(k)) next.delete(k);
       else next.add(k);
@@ -95,7 +77,6 @@ export function FocoClient() {
 
   const { isResolved, toggle: toggleResolved } = useFocoDone();
 
-  // ===== minhas tasks ativas =====
   const mine = useMemo(
     () =>
       tasks.filter(
@@ -108,14 +89,12 @@ export function FocoClient() {
     [tasks, focusPessoaId],
   );
 
-  // ===== ids p/ query de comments do próprio dono =====
   const andamentoIds = useMemo(
     () => mine.filter((t) => t.status === 'andamento').map((t) => t.id),
     [mine],
   );
   const { lastCommentMap } = useLastCommentByTask(andamentoIds, focusPessoaId || null);
 
-  // ===== 6 listas independentes (sem dedup entre si) =====
   const groups = useMemo<Record<FocoContexto, Task[]>>(() => {
     const today = new Date().toISOString().slice(0, 10);
     const cutoff = Date.now() - SEM_COMMENT_HOURS * 3600 * 1000;
@@ -143,7 +122,7 @@ export function FocoClient() {
       .sort((a, b) => {
         const la = lastCommentMap.get(a.id)?.getTime() ?? 0;
         const lb = lastCommentMap.get(b.id)?.getTime() ?? 0;
-        return la - lb; // mais antigos primeiro
+        return la - lb;
       });
 
     const sem_esforco = mine
@@ -165,64 +144,107 @@ export function FocoClient() {
     return { atrasadas, hoje, bloqueadas, sem_comment, sem_esforco, sem_horas };
   }, [mine, lastCommentMap]);
 
-  // Pill P0/P1 filtra dentro de cada seção (AND).
-  const filterPrio = useCallback(
-    (arr: Task[]) =>
-      pillPrio ? arr.filter((t) => t.prioridade === 'P0' || t.prioridade === 'P1') : arr,
-    [pillPrio],
-  );
+  // taskId → all contexts it belongs to
+  const taskCtxMap = useMemo(() => {
+    const map = new Map<string, Set<FocoContexto>>();
+    for (const ctx of PILL_ORDER) {
+      for (const t of groups[ctx]) {
+        if (!map.has(t.id)) map.set(t.id, new Set());
+        map.get(t.id)!.add(ctx);
+      }
+    }
+    return map;
+  }, [groups]);
 
-  // Counts (após pill, antes de resolver) e total pendente p/ narrativa.
+  // Flat deduped list: each task once under its first (primary) ctx.
+  // Sorted: ctxIdx → prio asc → prazo asc.
+  const focoFlat = useMemo(() => {
+    const seen = new Set<string>();
+    const entries: Array<{ task: Task; primaryCtx: FocoContexto; ctxIdx: number }> = [];
+    for (let i = 0; i < PILL_ORDER.length; i++) {
+      for (const t of groups[PILL_ORDER[i]]) {
+        if (!seen.has(t.id)) {
+          seen.add(t.id);
+          entries.push({ task: t, primaryCtx: PILL_ORDER[i], ctxIdx: i });
+        }
+      }
+    }
+    entries.sort((a, b) => {
+      if (a.ctxIdx !== b.ctxIdx) return a.ctxIdx - b.ctxIdx;
+      const pd = (PRIO_RANK[a.task.prioridade] ?? 9) - (PRIO_RANK[b.task.prioridade] ?? 9);
+      if (pd !== 0) return pd;
+      const pa = a.task.prazo || '9999';
+      const pb = b.task.prazo || '9999';
+      return pa < pb ? -1 : pa > pb ? 1 : 0;
+    });
+    return entries;
+  }, [groups]);
+
+  // OR pill filter + AND prio filter
+  const focoFiltered = useMemo(() => {
+    let result = focoFlat;
+    if (activePills.size > 0) {
+      result = result.filter(({ task }) => {
+        const ctxs = taskCtxMap.get(task.id);
+        if (!ctxs) return false;
+        for (const p of activePills) {
+          if (ctxs.has(p)) return true;
+        }
+        return false;
+      });
+    }
+    if (pillPrio) {
+      result = result.filter(({ task }) => task.prioridade === 'P0' || task.prioridade === 'P1');
+    }
+    return result;
+  }, [focoFlat, activePills, pillPrio, taskCtxMap]);
+
+  // Per-pill counts (raw, prio filter applied)
   const counts = useMemo(() => {
     const c: Record<FocoContexto, number> = {
-      atrasadas: 0,
-      hoje: 0,
-      bloqueadas: 0,
-      sem_comment: 0,
-      sem_esforco: 0,
-      sem_horas: 0,
+      atrasadas: 0, hoje: 0, bloqueadas: 0,
+      sem_comment: 0, sem_esforco: 0, sem_horas: 0,
     };
-    for (const ctx of CONTEXTOS) {
-      c[ctx.key] = filterPrio(groups[ctx.key]).length;
+    for (const ctx of PILL_ORDER) {
+      const arr = pillPrio
+        ? groups[ctx].filter((t) => t.prioridade === 'P0' || t.prioridade === 'P1')
+        : groups[ctx];
+      c[ctx] = arr.length;
     }
     return c;
-  }, [groups, filterPrio]);
+  }, [groups, pillPrio]);
 
-  // Counts pendentes (descontando resolvidos) — usados na narrativa
-  // e nos chips de count da pill colapsável.
+  // Resolved-aware counts for narrative
   const pending = useMemo(() => {
     const c: Record<FocoContexto, number> = {
-      atrasadas: 0,
-      hoje: 0,
-      bloqueadas: 0,
-      sem_comment: 0,
-      sem_esforco: 0,
-      sem_horas: 0,
+      atrasadas: 0, hoje: 0, bloqueadas: 0,
+      sem_comment: 0, sem_esforco: 0, sem_horas: 0,
     };
-    for (const ctx of CONTEXTOS) {
+    for (const ctx of PILL_ORDER) {
+      const arr = pillPrio
+        ? groups[ctx].filter((t) => t.prioridade === 'P0' || t.prioridade === 'P1')
+        : groups[ctx];
       let n = 0;
-      for (const t of filterPrio(groups[ctx.key])) {
-        if (!isResolved(t.id, ctx.key)) n++;
+      for (const t of arr) {
+        if (!isResolved(t.id, ctx)) n++;
       }
-      c[ctx.key] = n;
+      c[ctx] = n;
     }
     return c;
-  }, [groups, filterPrio, isResolved]);
+  }, [groups, pillPrio, isResolved]);
 
   const totalPending =
     pending.atrasadas + pending.hoje + pending.bloqueadas +
     pending.sem_comment + pending.sem_esforco + pending.sem_horas;
 
-  // Narrativa "seu dia"
   const todayLabel = useMemo(
     () =>
       new Date().toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
+        weekday: 'long', day: 'numeric', month: 'long',
       }),
     [],
   );
+
   const headline = useMemo(() => {
     if (totalPending === 0) return 'Tudo no controle.';
     const parts: string[] = [];
@@ -243,7 +265,6 @@ export function FocoClient() {
 
   return (
     <div>
-      {/* Desktop · header com pill P0/P1 no slot direito (padrão Triagem) */}
       <div className="hidden md:block">
         <PageHeader
           title={
@@ -252,18 +273,6 @@ export function FocoClient() {
             ) : (
               'Foco indisponível'
             )
-          }
-          right={
-            hasFocus ? (
-              <button
-                type="button"
-                className={cn('triage-filter-chip', pillPrio && 'is-on')}
-                onClick={() => setPillPrio((v) => !v)}
-                title="Filtrar só prioridades P0/P1 em todas as seções"
-              >
-                <strong>P0/P1</strong>
-              </button>
-            ) : null
           }
         />
       </div>
@@ -281,34 +290,20 @@ export function FocoClient() {
         </div>
       )}
 
-      {/* Mobile · título compacto */}
       {hasFocus && (
         <div className="md:hidden">
           <div className="m-pagetitle">
             <h1>Foco de <em>hoje</em></h1>
             <div className="narr">
               <b>{totalPending}</b> pendente{totalPending !== 1 ? 's' : ''}
-              {pillPrio && <span className="sep">·</span>}
-              {pillPrio && <b>filtro P0/P1</b>}
             </div>
-          </div>
-          <div className="flex items-center gap-2 mb-3 px-0.5">
-            <button
-              type="button"
-              className={cn('triage-filter-chip', pillPrio && 'is-on')}
-              onClick={() => setPillPrio((v) => !v)}
-              title="Filtrar só prioridades P0/P1 em todas as seções"
-            >
-              <strong>P0/P1</strong>
-            </button>
           </div>
         </div>
       )}
 
-      {/* 6 seções colapsáveis · desktop + mobile */}
       {hasFocus && (
         <div className="space-y-4">
-          {/* Seu dia · narrativa + counts */}
+          {/* Seu dia · narrativa */}
           <div
             className="card p-4 md:p-5 min-h-[116px] flex flex-col justify-center"
             style={{ borderLeft: '3px solid var(--brand)' }}
@@ -328,115 +323,55 @@ export function FocoClient() {
             )}
           </div>
 
-          {/* 6 seções (pill P0/P1 já no header) */}
-          {CONTEXTOS.map((ctx) => {
-            const items = filterPrio(groups[ctx.key]);
-            const open = openSet.has(ctx.key);
-            const pendingN = pending[ctx.key];
-            return (
-              <FocoSection
-                key={ctx.key}
-                meta={ctx}
-                items={items}
-                pending={pendingN}
-                total={counts[ctx.key]}
-                open={open}
-                onToggle={() => toggleSection(ctx.key)}
-                isResolved={(id) => isResolved(id, ctx.key)}
-                onToggleResolved={(id) => toggleResolved(id, ctx.key)}
-                lastCommentMap={lastCommentMap}
-                clientesById={clientesById}
-                projetosById={projetosById}
-                openEdit={openEdit}
-              />
-            );
-          })}
-
-        </div>
-      )}
-    </div>
-  );
-}
-
-// =========================================================================
-//  Seção colapsável
-// =========================================================================
-function FocoSection({
-  meta,
-  items,
-  pending,
-  total,
-  open,
-  onToggle,
-  isResolved,
-  onToggleResolved,
-  lastCommentMap,
-  clientesById,
-  projetosById,
-  openEdit,
-}: {
-  meta: ContextoMeta;
-  items: Task[];
-  pending: number;
-  total: number;
-  open: boolean;
-  onToggle: () => void;
-  isResolved: (id: string) => boolean;
-  onToggleResolved: (id: string) => void;
-  lastCommentMap: Map<string, Date>;
-  clientesById: ReturnType<typeof useClientesById>;
-  projetosById: ReturnType<typeof useProjetosById>;
-  openEdit: (id: string) => void;
-}) {
-  return (
-    <div>
-      <button
-        type="button"
-        className="flex items-center justify-between w-full mb-2 px-1 text-left"
-        onClick={onToggle}
-      >
-        <div className="flex items-center gap-2 font-brand font-semibold text-sm">
-          <Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} className="text-muted" />
-          <span>{meta.title}</span>
-          {pending > 0 && (
-            <span
-              className="inline-flex items-center justify-center min-w-[18px] h-4 rounded-full text-[9px] font-bold text-white px-1.5"
-              style={{ background: 'var(--danger)' }}
-              title={`${pending} pendente${pending > 1 ? 's' : ''}`}
+          {/* Pills de filtro */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {PILL_ORDER.map((pill) => (
+              <button
+                key={pill}
+                type="button"
+                className={cn('triage-filter-chip', activePills.has(pill) && 'is-on')}
+                onClick={() => togglePill(pill)}
+              >
+                {PILL_LABELS[pill]}
+                {counts[pill] > 0 && (
+                  <span className="ml-1 font-mono text-[10px] opacity-70">{counts[pill]}</span>
+                )}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={cn('triage-filter-chip', pillPrio && 'is-on')}
+              onClick={() => setPillPrio((v) => !v)}
             >
-              {pending}
-            </span>
-          )}
-        </div>
-        <span className="text-xs text-muted">
-          {total === 0 ? '—' : total === 1 ? '1 task' : `${total} tasks`}
-        </span>
-      </button>
+              <strong>P0/P1</strong>
+            </button>
+          </div>
 
-      {open && (
-        <>
-          {items.length === 0 ? (
-            <div className="card text-center py-4 px-3 text-muted text-xs italic">
-              {meta.emptyMsg}
+          {/* Lista plana */}
+          {focoFiltered.length === 0 ? (
+            <div className="card text-center py-6 px-3 text-muted text-xs italic">
+              {activePills.size > 0 || pillPrio
+                ? 'Nenhuma task neste filtro.'
+                : 'Tudo no controle.'}
             </div>
           ) : (
             <div className="space-y-2">
-              {items.map((t) => (
+              {focoFiltered.map(({ task, primaryCtx }) => (
                 <FocoTaskRow
-                  key={t.id}
-                  task={t}
-                  contexto={meta.key}
-                  resolved={isResolved(t.id)}
-                  onToggleResolved={() => onToggleResolved(t.id)}
-                  lastComment={lastCommentMap.get(t.id) ?? null}
-                  clienteName={clientesById.get(t.clienteId)?.nome ?? '—'}
-                  projetoName={projetosById.get(t.projetoId)?.nome ?? '—'}
+                  key={task.id}
+                  task={task}
+                  contexto={primaryCtx}
+                  resolved={isResolved(task.id, primaryCtx)}
+                  onToggleResolved={() => toggleResolved(task.id, primaryCtx)}
+                  lastComment={lastCommentMap.get(task.id) ?? null}
+                  clienteName={clientesById.get(task.clienteId)?.nome ?? '—'}
+                  projetoName={projetosById.get(task.projetoId)?.nome ?? '—'}
                   openEdit={openEdit}
                 />
               ))}
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
@@ -445,16 +380,6 @@ function FocoSection({
 // =========================================================================
 //  Linha · card largo · 5 inputs padronizados + motivo (cond.) + comment
 // =========================================================================
-//
-// Anatomia (igual Triagem):
-//   ┌ Top area (clickable → openEdit) ──────────────────────
-//   │ prio · 🔒 · 🤖 · título  ·  status-pill
-//   │ subetapa · idade · prazo · cliente · projeto
-//   ├ Action bar (stopPropagation) ─────────────────────────
-//   │ Row A · [📅 prazo] [📋 subetapa] [⏱ esforço] [⏱ horas] [🚫 motivo*]
-//   │ Row B · [💬 comment (flex-1)]              [Resolver] [Salvar]
-//   └────────────────────────────────────────────────────────
-// (*motivo disabled enquanto subetapa ≠ bloqueado)
 
 function FocoTaskRow({
   task,
@@ -505,7 +430,6 @@ function FocoTaskRow({
 
   const motivoRequired = draft.subetapa === 'bloqueado';
 
-  // Dirty: algo realmente mudou (field ≠ task OU motivo/comment com texto)
   const isDirty =
     draft.prazo !== (task.prazo || '') ||
     draft.subetapa !== task.subetapa ||
@@ -514,7 +438,6 @@ function FocoTaskRow({
     draft.comment.trim() !== '' ||
     (motivoRequired && draft.motivo.trim() !== '');
 
-  // Requireds por contexto (em cima de dirty)
   const faltam: string[] = [];
   if (motivoRequired && !draft.motivo.trim()) faltam.push('motivo');
   switch (contexto) {
@@ -566,7 +489,6 @@ function FocoTaskRow({
       patchTask(task.id, localPatch);
     }
 
-    // Posta motivo (se virou bloqueado) e/ou comment livre.
     const nowIso = new Date().toISOString();
     const commentsToInsert: Record<string, unknown>[] = [];
     if (motivoRequired && draft.motivo.trim()) {
@@ -600,11 +522,9 @@ function FocoTaskRow({
 
     toast.success('Salvo.');
     setDraft((d) => ({ ...d, motivo: '', comment: '' }));
-    // Auto-resolve no contexto atual — usuário não precisa clicar Resolver
     if (!resolved) onToggleResolved();
   }, [draft, task, sb, patchTask, toast, currentPessoa, motivoRequired, resolved, onToggleResolved]);
 
-  // Meta visual
   const etapaCor = etapaTempoColor(task);
   const etapaDias = etapaTempoDays(task);
   const corFrase =
@@ -622,7 +542,6 @@ function FocoTaskRow({
         resolved && 'opacity-50',
       )}
     >
-      {/* Top · area clicável (esquerda) + botões Resolver/Salvar (direita) */}
       <div className="flex items-start justify-between gap-3">
         <div
           className="cursor-pointer hover:opacity-90 flex-1 min-w-0"
@@ -635,10 +554,14 @@ function FocoTaskRow({
               {task.prioridade}
             </span>
             {task.privada && (
-              <span className="ia-chip ia-chip-mini" title="Task privada">🔒</span>
+              <span className="ia-chip ia-chip-mini" title="Task privada">
+                <Icon name="lock" size={9} />
+              </span>
             )}
             {task.criadoPorIa && (
-              <span className="ia-chip ia-chip-mini" title="Criada por automação IA">🤖 IA</span>
+              <span className="ia-chip ia-chip-mini" title="Criada por automação IA">
+                <Icon name="bot" size={9} /> IA
+              </span>
             )}
             <span
               className={cn(
@@ -680,7 +603,7 @@ function FocoTaskRow({
           </div>
         </div>
 
-        {/* Botões no topo direito · Resolver (ghost) + Salvar */}
+        {/* Botões no topo direito */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
@@ -710,7 +633,7 @@ function FocoTaskRow({
         </div>
       </div>
 
-      {/* Action bar · 6 inputs em UMA linha · comment ocupa o resto */}
+      {/* Action bar */}
       <div className="mt-3 pt-3 border-t border-line flex items-center gap-2 flex-nowrap overflow-x-auto">
         {/* 1. Prazo */}
         <span className="triage-inline-field w-[150px] shrink-0" title="Prazo">
@@ -722,9 +645,9 @@ function FocoTaskRow({
             className="triage-inline-select"
           />
         </span>
-        {/* 2. Esforço */}
-        <span className="triage-inline-field w-[95px] shrink-0" title="Esforço em horas">
-          <Icon name="timer" size={13} className="ic" />
+        {/* 2. Esforço previsto */}
+        <span className="triage-inline-field w-[95px] shrink-0" title="Esforço previsto (h)">
+          <Icon name="hourglass" size={13} className="ic" />
           <input
             type="number"
             min={0}
@@ -737,7 +660,7 @@ function FocoTaskRow({
         </span>
         {/* 3. Horas realizadas */}
         <span className="triage-inline-field w-[95px] shrink-0" title="Horas realizadas">
-          <Icon name="history" size={13} className="ic" />
+          <Icon name="timer" size={13} className="ic" />
           <input
             type="number"
             min={0}
@@ -750,7 +673,7 @@ function FocoTaskRow({
             className="triage-inline-select"
           />
         </span>
-        {/* 4. Status (subetapa) */}
+        {/* 4. Subetapa */}
         <span className="triage-inline-field w-[150px] shrink-0" title="Subetapa">
           <Icon name="list-filter" size={13} className="ic" />
           <select
@@ -790,7 +713,7 @@ function FocoTaskRow({
             ))}
           </select>
         </span>
-        {/* 6. Comment (flex-1) */}
+        {/* 6. Comment */}
         <span
           className="triage-inline-field flex-1 min-w-[140px]"
           title="Comentário rápido (opcional)"
@@ -817,9 +740,7 @@ function fmtRelative(d: Date): string {
 }
 
 
-/** Hook helper exportado pra computar count do Foco no header.
- *  Não precisa de DB (skip sem_comment) — só usa as 5 contextos
- *  imediatamente computáveis. Match com o que aparece como bolinha. */
+/** Hook helper exportado pra computar count do Foco no header. */
 export function computeFocoCount(args: {
   tasks: Task[];
   pessoaId: string | null;
@@ -836,13 +757,9 @@ export function computeFocoCount(args: {
   const today = new Date().toISOString().slice(0, 10);
   let n = 0;
   for (const t of mine) {
-    // atrasadas
     if (atrasada(t) && !args.isResolved(t.id, 'atrasadas')) n++;
-    // hoje
     if (t.prazo === today && !atrasada(t) && !args.isResolved(t.id, 'hoje')) n++;
-    // bloqueadas
     if (t.status === 'bloqueado' && !args.isResolved(t.id, 'bloqueadas')) n++;
-    // sem esforco
     if (
       (!Number(t.esforco) || t.esforco <= 0) &&
       (STAGE_RANK[t.subetapa] ?? 0) >= TRIAGE_RANK_GATE &&
@@ -850,7 +767,6 @@ export function computeFocoCount(args: {
     ) {
       n++;
     }
-    // sem horas
     if (
       t.status === 'andamento' &&
       (!Number(t.tempoRealHoras) || Number(t.tempoRealHoras) <= 0) &&
@@ -858,7 +774,7 @@ export function computeFocoCount(args: {
     ) {
       n++;
     }
-    // sem_comment NÃO entra (precisa query async)
+    // sem_comment não entra (precisa query async)
   }
   return n;
 }

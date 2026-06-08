@@ -1,7 +1,95 @@
 'use client';
 
 /** Bulk bar — barra fixa de ações em massa (Backlog desktop). */
-import React from 'react';
+import { useState } from 'react';
+import { useClickAway } from '@/lib/use-click-away';
+import { Icon, type IconName } from '@/components/icons';
+import { cn } from '@/lib/utils';
+
+// ── BulkSelect · dropdown no padrão .fselect (mesmo visual do FilterBar) ──
+interface BulkSelectOption { v: string; label: string; }
+
+/** Select customizado para a bulk bar. Padrão visual idêntico ao FilterBar. */
+export function BulkSelect({
+  icon,
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+  allowRemove = true,
+  className,
+}: {
+  icon: IconName;
+  label: string;
+  value: string;
+  options: ReadonlyArray<BulkSelectOption>;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+  allowRemove?: boolean;
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useClickAway<HTMLSpanElement>(() => setOpen(false));
+  const isRemove = value === '__none__';
+  const cur = options.find((o) => o.v === value);
+  const display = isRemove ? '— remover' : (cur?.label ?? label);
+  const isActive = !!value && !isRemove;
+
+  return (
+    <span className={cn('fs-wrap', className)} ref={ref}>
+      <button
+        type="button"
+        className={cn('fselect', isActive && 'on', disabled && 'is-disabled')}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled}
+      >
+        <Icon name={icon} size={14} className="ic" />
+        <span>{display}</span>
+        <Icon name="chevron-down" size={14} className="ic" />
+      </button>
+      {open && !disabled && (
+        <div className="fmenu" style={{ minWidth: '160px' }}>
+          <button
+            type="button"
+            className={!value ? 'sel' : ''}
+            onClick={() => { onChange(''); setOpen(false); }}
+          >
+            <span className="grow">{label}</span>
+            {!value && <Icon name="check" size={14} />}
+          </button>
+          {allowRemove && (
+            <>
+              <div className="fmenu-div" />
+              <button
+                type="button"
+                className={isRemove ? 'sel' : ''}
+                onClick={() => { onChange('__none__'); setOpen(false); }}
+              >
+                <span className="grow" style={{ color: 'var(--ink-soft)' }}>— remover</span>
+                {isRemove && <Icon name="check" size={14} />}
+              </button>
+            </>
+          )}
+          {options.length > 0 && <div className="fmenu-div" />}
+          {options.map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              className={value === o.v ? 'sel' : ''}
+              onClick={() => { onChange(o.v); setOpen(false); }}
+            >
+              <span className="grow">{o.label}</span>
+              {value === o.v && <Icon name="check" size={14} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
+
+// ── BulkBar wrapper ──────────────────────────────────────────────────────────
 
 export function BulkBar({
   selectedCount,
@@ -45,15 +133,10 @@ export function BulkBar({
   );
 }
 
-/** Separador vertical entre grupos de controles (campos vs ações).
- *  Renderiza só no desktop pra não desperdiçar linha no mobile. */
 export function BulkBarSep() {
   return <div className="hidden md:block w-px h-4 mx-1 bg-line" />;
 }
 
-/** Botão "limpar" do desktop — fica colado nos botões de ação.
- *  Usa .btn padrão (não .btn-ghost) pra ter border + bg nativos que
- *  funcionam tanto em light quanto dark mode sem precisar de override. */
 export function BulkBarClearButton({ onClick }: { onClick: () => void }) {
   return (
     <button

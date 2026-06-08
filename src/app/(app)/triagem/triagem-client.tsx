@@ -253,7 +253,7 @@ export function TriagemClient() {
   if (error) return <div className="text-[color:var(--danger)] text-sm">Erro: {error}</div>;
 
   return (
-    <div className="space-y-4 md:space-y-5">
+    <div className="space-y-2 md:space-y-3">
       {/* Desktop · PageHeader + chips filtros (mantém comportamento existente, visual novo) */}
       {triagemTasks.length > 0 && (
         <div className="hidden md:block">
@@ -348,7 +348,7 @@ export function TriagemClient() {
               setFilter({ ...filter, origem: filter.origem === 'ia' ? '' : 'ia' })
             }
             count={counts.ia}
-            label="🤖 IA"
+            label="IA"
             mobile
           />
         </div>
@@ -378,7 +378,7 @@ export function TriagemClient() {
         return (
           <div
             key={t.id}
-            className={`card p-3 md:p-5 cursor-pointer hover:border-line-strong transition-colors ${preTriagem ? 'border-l-[3px]' : ''}`}
+            className={`card p-2 md:p-3 cursor-pointer hover:border-line-strong transition-colors ${preTriagem ? 'border-l-[3px]' : ''}`}
             style={preTriagem ? { borderLeftColor: 'var(--green)' } : undefined}
             onClick={() => openEdit(t.id)}
           >
@@ -389,7 +389,7 @@ export function TriagemClient() {
                     {t.prioridade && <PriChip prio={t.prioridade} />}
                     {t.privada && (
                       <span className="ia-chip ia-chip-mini" title="Task privada">
-                        🔒
+                        <Icon name="lock" size={9} />
                       </span>
                     )}
                     {t.criadoPorIa && <TagIA />}
@@ -656,7 +656,7 @@ function IaTriageActions({
         </TriageInlineField>
 
         {/* Esforço (horas) */}
-        <TriageInlineField icon="timer" title="Esforço em horas" width={FIELD_W}>
+        <TriageInlineField icon="hourglass" title="Esforço previsto (h)" width={FIELD_W}>
           <input
             type="number"
             min={0}

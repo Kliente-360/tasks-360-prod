@@ -20,7 +20,7 @@ import { useData, useClientesById, useProjetosById, usePessoasById, useProjetosB
 import { createClient } from '@/lib/supabase/client';
 import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
-import { BulkBar, BulkBarClearButton, BulkBarSep } from '@/components/bulk-bar';
+import { BulkBar, BulkBarClearButton, BulkBarSep, BulkSelect } from '@/components/bulk-bar';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { atrasada, fmtDate, fmtDateShort, fmtTempoEtapa, isPreTriagem, lblComplex, lblStatus } from '@/lib/task-utils';
@@ -774,8 +774,8 @@ export function BacklogClient() {
                     </td>
                     <td>
                       <div className="tbl-title" title={t.titulo}>
-                        {t.privada && <span className="ia-chip ia-chip-mini mr-1" title="Task privada">🔒</span>}
-                        {t.criadoPorIa && <span className="ia-chip ia-chip-mini mr-1" title="Criada por automação IA">🤖 IA</span>}
+                        {t.privada && <span className="ia-chip ia-chip-mini mr-1" title="Task privada"><Icon name="lock" size={9} /></span>}
+                        {t.criadoPorIa && <span className="ia-chip ia-chip-mini mr-1" title="Criada por automação IA"><Icon name="bot" size={9} /> IA</span>}
                         {t.titulo}
                       </div>
                       {t.tags.length > 0 && (
@@ -872,112 +872,83 @@ export function BacklogClient() {
 
       <BulkBar selectedCount={selectedIds.length} onClear={clearSelection}>
         {/* cliente */}
-        <div className="bulk-field w-full md:w-[130px]">
-          <span className="bulk-ic"><Icon name="building" size={12} /></span>
-          <select
-            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
-            value={bulkPending.cliente}
-            onChange={(e) => setBulkPending({ ...bulkPending, cliente: e.target.value, projeto: '' })}
-            title="Cliente"
-          >
-            <option value="">cliente…</option>
-            <option value={NONE}>— remover</option>
-            {clientesAtivos.map((c) => (
-              <option key={c.id} value={c.id}>{c.nome}</option>
-            ))}
-          </select>
-        </div>
+        <BulkSelect
+          icon="building"
+          label="Cliente"
+          value={bulkPending.cliente}
+          options={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
+          onChange={(v) => setBulkPending({ ...bulkPending, cliente: v, projeto: '' })}
+        />
         {/* projeto */}
-        <div className="bulk-field w-full md:w-[130px]">
-          <span className="bulk-ic"><Icon name="folder" size={12} /></span>
-          <select
-            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
-            value={bulkPending.projeto}
-            disabled={!bulkPending.cliente || bulkPending.cliente === NONE}
-            onChange={(e) => setBulkPending({ ...bulkPending, projeto: e.target.value })}
-            title="Projeto"
-          >
-            <option value="">projeto…</option>
-            <option value={NONE}>— remover</option>
-            {(bulkPending.cliente && bulkPending.cliente !== NONE
-              ? (projetosByCliente.get(bulkPending.cliente) ?? []).filter((p) => !p.arquivadoEm)
-              : []
-            ).map((p) => (
-              <option key={p.id} value={p.id}>{p.nome}</option>
-            ))}
-          </select>
-        </div>
+        <BulkSelect
+          icon="folder"
+          label="Projeto"
+          value={bulkPending.projeto}
+          options={(bulkPending.cliente && bulkPending.cliente !== NONE
+            ? (projetosByCliente.get(bulkPending.cliente) ?? []).filter((p) => !p.arquivadoEm)
+            : []
+          ).map((p) => ({ v: p.id, label: p.nome }))}
+          onChange={(v) => setBulkPending({ ...bulkPending, projeto: v })}
+          disabled={!bulkPending.cliente || bulkPending.cliente === NONE}
+        />
         {/* responsável */}
-        <div className="bulk-field w-full md:w-[130px]">
-          <span className="bulk-ic"><Icon name="users" size={12} /></span>
-          <select
-            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
-            value={bulkPending.pessoa}
-            onChange={(e) => setBulkPending({ ...bulkPending, pessoa: e.target.value })}
-            title="Responsável"
-          >
-            <option value="">responsável…</option>
-            <option value={NONE}>— remover</option>
-            {pessoasNaoCliente.map((p) => (
-              <option key={p.id} value={p.id}>{p.nome}</option>
-            ))}
-          </select>
-        </div>
+        <BulkSelect
+          icon="users"
+          label="Responsável"
+          value={bulkPending.pessoa}
+          options={pessoasNaoCliente.map((p) => ({ v: p.id, label: p.nome }))}
+          onChange={(v) => setBulkPending({ ...bulkPending, pessoa: v })}
+        />
         {/* prazo */}
-        <div className="bulk-field w-full md:w-[120px]">
-          <span className="bulk-ic"><Icon name="calendar" size={12} /></span>
+        <span className="triage-inline-field w-full md:w-[130px]" title="Prazo">
+          <Icon name="calendar" size={13} className="ic" />
           <input
             type="date"
-            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
             value={bulkPending.prazo}
             onChange={(e) => setBulkPending({ ...bulkPending, prazo: e.target.value })}
-            title="Prazo"
+            className="triage-inline-select"
           />
-        </div>
+        </span>
         {/* prioridade */}
-        <div className="bulk-field w-full md:w-[90px]">
-          <span className="bulk-ic"><Icon name="flag" size={12} /></span>
-          <select
-            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
-            value={bulkPending.prioridade}
-            onChange={(e) => setBulkPending({ ...bulkPending, prioridade: e.target.value })}
-            title="Prioridade"
-          >
-            <option value="">pri…</option>
-            <option value="P0">P0</option>
-            <option value="P1">P1</option>
-            <option value="P2">P2</option>
-            <option value="P3">P3</option>
-          </select>
-        </div>
-        {/* esforço previsto */}
-        <div className="bulk-field w-full md:w-[96px]">
-          <span className="bulk-ic"><Icon name="clock" size={12} /></span>
+        <BulkSelect
+          icon="flag"
+          label="Prioridade"
+          value={bulkPending.prioridade}
+          options={[
+            { v: 'P0', label: 'P0' },
+            { v: 'P1', label: 'P1' },
+            { v: 'P2', label: 'P2' },
+            { v: 'P3', label: 'P3' },
+          ]}
+          onChange={(v) => setBulkPending({ ...bulkPending, prioridade: v })}
+          allowRemove={false}
+        />
+        {/* previsto */}
+        <span className="triage-inline-field w-full md:w-[100px]" title="Esforço previsto (h)">
+          <Icon name="hourglass" size={13} className="ic" />
           <input
             type="number"
             min={0}
             step={0.5}
-            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
-            placeholder="previsto (h)"
             value={bulkPending.esforco}
             onChange={(e) => setBulkPending({ ...bulkPending, esforco: e.target.value })}
-            title="Esforço previsto (h)"
+            placeholder="Previsto (h)"
+            className="triage-inline-select"
           />
-        </div>
+        </span>
         {/* realizado */}
-        <div className="bulk-field w-full md:w-[96px]">
-          <span className="bulk-ic"><Icon name="timer" size={12} /></span>
+        <span className="triage-inline-field w-full md:w-[100px]" title="Realizado (h)">
+          <Icon name="timer" size={13} className="ic" />
           <input
             type="number"
             min={0}
             step={0.5}
-            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
-            placeholder="realizado (h)"
             value={bulkPending.realizado}
             onChange={(e) => setBulkPending({ ...bulkPending, realizado: e.target.value })}
-            title="Realizado (h)"
+            placeholder="Realizado (h)"
+            className="triage-inline-select"
           />
-        </div>
+        </span>
         <div className="flex gap-2 md:contents">
           <button
             type="button"

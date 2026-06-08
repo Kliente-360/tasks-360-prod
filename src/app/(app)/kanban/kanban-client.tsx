@@ -504,7 +504,7 @@ function KCard({
     >
       <div className="font-medium text-sm leading-snug mb-2 flex items-start gap-1.5">
         {t.privada && (
-          <span className="ia-chip ia-chip-mini" title="Task privada">🔒</span>
+          <span className="ia-chip ia-chip-mini" title="Task privada"><Icon name="lock" size={9} /></span>
         )}
         {t.criadoPorIa && <TagIA />}
         <span>{t.titulo}</span>

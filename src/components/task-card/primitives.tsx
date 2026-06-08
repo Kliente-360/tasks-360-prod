@@ -150,7 +150,7 @@ export function PrazoLabel({ task, className }: PrazoLabelProps) {
 export function TagIA({ className }: { className?: string }) {
   return (
     <span className={cn('tag-ai', className)} aria-label="Criada por IA">
-      <Icon name="refresh" size={9} />
+      <Icon name="bot" size={9} />
       IA
     </span>
   );
