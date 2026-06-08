@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.122 · **Atualizado**: 08/06/2026 · branch `main`
+> **Versão**: v1.03.127 · **Atualizado**: 08/06/2026 · branch `main`
 
 ---
 
@@ -92,6 +92,9 @@ Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout es
 - ✅ **Backlog mobile · pill "minhas"** (v1.03.120) · admin vê pill toggle no cabeçalho do Backlog mobile; padrão = filtrado pelas próprias tasks; clica pra ver todas. Interno: sem pill, sempre só as próprias tasks
 - ✅ **Modal mobile · campo Responsável** (v1.03.121) · select Responsável abaixo de Descrição no modal mobile; desabilitado para interno, editável para admin
 - ✅ **Fix build · isAdmin não desestruturado** (v1.03.122) · `BacklogMobilePanel` listava `isAdmin` no tipo mas não na desestruturação de parâmetros → TS2304 quebrava CI/Vercel; corrigido
+- ✅ **A.16 · Bulk actions redesign** (v1.03.123-127) · BulkBar do Backlog reformulada no padrão DS: novo componente `BulkSelect` espelhando `.fselect` da FilterBar (mesma anatomia visual, mesma família de tokens), ordem de campos consolidada (cliente → projeto → responsável → prazo → prioridade → previsto → realizado), ícones `hourglass`/`timer` em previsto/realizado, seleção limpa automaticamente ao salvar/arquivar/excluir/abrir modal
+- ✅ **Meu Foco · flat list + OR pills** (v1.03.127) · revisão do A.18: substitui as 6 seções colapsáveis por uma lista única deduplicada (cada task aparece UMA vez sob seu contexto primário), 7 pills filtro (atrasada · pra hoje · bloqueada · sem esforço · sem hora · sem comentário · P0/P1) com OR entre contextos + AND com prio, sort: ctxIdx → prio asc → prazo asc. Componente `FocoSection` removido por completo
+- ✅ **Icon/emoji fixes globais** (v1.03.127) · 🔒 e 🤖 vira `<Icon name="lock"/>` e `<Icon name="bot"/>` em Foco/Kanban/Backlog/task-modal/TagIA. Action bars de Triagem/Foco trocam ícones de esforço (timer→hourglass) e horas reais (history→timer). Triagem com densidade reduzida (spacing dos cards menor)
 
 ---
 
@@ -122,7 +125,7 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | A.17 | **Card de task unificado · VISUAL** · **escopo redo**: A.14 entregou só dedup técnico. Falta a unificação visual real: cards iguais entre Foco desktop/mobile, Backlog mobile, Kanban, Triagem, Calendário detail. **Plano precisa ser refeito** — começar com auditoria visual real (prints lado-a-lado), decidir variante única por contexto, executar com mudança VISÍVEL em cada PR (não dedup invisível como A.14). Não tocar sem plano novo aprovado. | 1-2 semanas | Alto — entrega o que A.14 prometeu mas não cumpriu |
 | ~~A.18~~ | ~~**Meu foco · redesign UX-first**~~ | ✅ Entregue v1.03.075-077 (ver Marcos concluídos acima) |
 | ~~A.15~~ | ~~**Mobile · modal de task**~~ | ✅ Entregue v1.03.104-115 (ver sessão mobile modal acima). Modal full-screen mobile com 2 tabs, grid 2-col, prazo dd/mm/aaaa, Privada para CEO, header limpo. |
-| A.16 | **Revisar bulk actions** · auditar BulkBar (seleção múltipla no Backlog) — UX da seleção, ações disponíveis (atribuir cliente/projeto/pessoa/prazo/prioridade/esforço, arquivar, excluir), feedback visual (sticky bar com contador), comportamento mobile (não aparece hoje). Decidir: manter no Backlog desktop, levar pro Kanban também, adicionar atalhos teclado (ESC limpa seleção, Cmd+A seleciona tudo filtrado), confirmações pra ações destrutivas. | 3-5 dias | Médio — produtividade em operações repetitivas |
+| ~~A.16~~ | ~~**Revisar bulk actions**~~ | ✅ Entregue v1.03.123-127 — `BulkSelect` no padrão `.fselect`, ordem cliente→projeto→resp→prazo→prio→previsto→realizado, ícones hourglass/timer, clear automático em save/archive/delete/modal. Pendente: levar pro Kanban + atalhos de teclado (ESC/Cmd+A) — escopo separado se virar dor real |
 | ~~A.19~~ | ~~**Cadastros · 3 abas + modais**~~ | ✅ Entregue. Desktop: modais CRUD completos desde v1.03.002. Mobile: listas row-click + modais simplificados (nome/cor/cliente/papel) em `a830a5e`. |
 
 ### Bucket V · Visão cliente (pre-launch hardening)
@@ -212,15 +215,13 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 **Onda 1 · Design coeso** (~1-2 semanas)
 1. **A.17** Card de task · VISUAL (replan + execução)
 
-**Onda 2 · Closing loops** (~10-20 dias)
+**Onda 2 · Closing loops** (~5-10 dias)
 3. **A.12** Dashboard × Portal · padrão técnico convergente
-4. **A.16** Revisar bulk actions (BulkBar)
 
-**Onda 3 · Quick wins** (~10 dias)
-5. ~~**A.9** Timesheet · entrada manual + permissões~~ ✅ v1.03.118
-6. **C.3** Skill mismatch (heurística pura)
+**Onda 3 · Insight para o usuário** (~1-2 semanas)
+4. **C.10** Publicar heurísticas analytics na UI (Capacidade/Skill mismatch/Senioridade/Churn risk/Bottleneck/SLA breach)
 
-Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA — paralela) · C.10 (publicar heurísticas na UI).
+Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA — paralela).
 
 ---
 
