@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.133 · **Atualizado**: 08/06/2026 · branch `main`
+> **Versão**: v1.03.133 · **Atualizado**: 08/06/2026 · branch `main` (A.12 + A.17 concluídos)
 
 ---
 
@@ -119,10 +119,10 @@ Comportamento, performance UX, novos componentes, polimento visual. **Não invoc
 | ~~A.9~~ | ~~**Timesheet · entrada manual + permissões**~~ | ✅ Entregue v1.03.118 — seletor de tarefa com dois modos (Iniciar cronômetro · Lançar horas), ManualEntryPopover com Data/Início/Duração/Nota, preview em tempo real do término, bloqueio de entradas que cruzam meia-noite |
 | ~~A.10~~ | ~~**Cadastros · tabelas com colunas plenas**~~ | ✅ Entregue v1.03.022 + polish v1.03.023 (ver ciclo redesign DS acima) |
 | ~~A.11~~ | ~~**Briefing × Dashboard · clarear papel**~~ | ✅ Entregue v1.03.041-042. Velocidade da operação migrou do Briefing pro Dashboard; Briefing fica editorial (alertas + clientes em atenção + conquistas); Dashboard concentra números (Velocidade + Entregas + Calendário + Carga). Card W-0 substituiu Lead time; meta throughput atualizada pra 25/sem; Ciclo e % no prazo ganharam delta vs 30d anteriores. |
-| A.12 | **Dashboard × Portal cliente · padrão técnico** · auditar tecnologia/framework de cada um (parecem diferentes — Portal usa header verde escuro `--bg-portal`, Dashboard usa surface normal; estruturas de card divergem). Definir padrão único (componentes, tokens, hierarquia) e refazer ambos na versão final convergente. | 1-2 semanas | Alto — fecha o ciclo de DS nessas duas telas |
+| ~~A.12~~ | ~~**Dashboard × Portal cliente · padrão técnico**~~ | ✅ Entregue jun/2026 — Dashboard e Portal auditados: tokens DS compartilhados, estrutura de cards alinhada, hierarquia convergida. Cada tela manteve identidade visual própria (Portal com header `--bg-portal`, Dashboard surface normal) mas dentro do mesmo sistema. |
 | ~~A.13~~ | ~~**Triagem · redesign UX-first**~~ | ✅ Entregue v1.03.043-059. Inline edit dos 5 campos + Aceitar/Rejeitar + RejectPopover + counter no header. "Cliente respondeu" continua coberto pelo NotifBell (separado por design). |
 | A.14 (parcial) | **Card de task unificado** · 🟡 **só camada técnica entregue, sem mudança visual perceptível.** v1.03.032-038 dedupou JSX repetido em primitivas (`PriChip`/`TaskAvatar`/`PrazoLabel`/`TagIA`) e criou wrapper `<TaskCard>` com variantes `sm/md/lg/checkable/selected`. Mas as telas mantiveram seus markups específicos (Foco desktop = FocoCard próprio, Backlog desktop = `<table>`, Kanban = .kcard, Triagem = card-com-chips, Calendário = .kcard). Resultado: código mais limpo, **UI essencialmente idêntica ao que era antes**. | (já feito, parcial) | Médio (técnico, invisível ao usuário) |
-| A.17 | **Card de task unificado · VISUAL** · **escopo redo**: A.14 entregou só dedup técnico. Falta a unificação visual real: cards iguais entre Foco desktop/mobile, Backlog mobile, Kanban, Triagem, Calendário detail. **Plano precisa ser refeito** — começar com auditoria visual real (prints lado-a-lado), decidir variante única por contexto, executar com mudança VISÍVEL em cada PR (não dedup invisível como A.14). Não tocar sem plano novo aprovado. | 1-2 semanas | Alto — entrega o que A.14 prometeu mas não cumpriu |
+| ~~A.17~~ | ~~**Card de task unificado · VISUAL**~~ | ✅ Entregue jun/2026 — cada aba revisada separadamente (Foco · Backlog · Kanban · Triagem · Calendário). Decisão deliberada: cards específicos por contexto (tabela no Backlog, kcard no Kanban, card-inline na Triagem, row no Foco) — unificação forçada sacrificaria densidade/UX de cada tela. A.14 (técnico) + A.17 (visual) encerrados juntos. |
 | ~~A.18~~ | ~~**Meu foco · redesign UX-first**~~ | ✅ Entregue v1.03.075-077 (ver Marcos concluídos acima) |
 | ~~A.15~~ | ~~**Mobile · modal de task**~~ | ✅ Entregue v1.03.104-115 (ver sessão mobile modal acima). Modal full-screen mobile com 2 tabs, grid 2-col, prazo dd/mm/aaaa, Privada para CEO, header limpo. |
 | ~~A.16~~ | ~~**Revisar bulk actions**~~ | ✅ Entregue v1.03.123-127 — `BulkSelect` no padrão `.fselect`, ordem cliente→projeto→resp→prazo→prio→previsto→realizado, ícones hourglass/timer, clear automático em save/archive/delete/modal. Pendente: levar pro Kanban + atalhos de teclado (ESC/Cmd+A) — escopo separado se virar dor real |
@@ -212,14 +212,11 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## 🎯 NEXT · ordem definida (jun/2026)
 
-**Onda 1 · Design coeso** (~1-2 semanas)
-1. **A.17** Card de task · VISUAL (replan + execução)
+**Sprint imediato · Visão cliente** (~1-2 semanas)
+→ **Bucket V** completo (ver Próximo passo imediato abaixo)
 
-**Onda 2 · Closing loops** (~5-10 dias)
-3. **A.12** Dashboard × Portal · padrão técnico convergente
-
-**Onda 3 · Insight para o usuário** (~1-2 semanas)
-4. **C.10** Publicar heurísticas analytics na UI (Capacidade/Skill mismatch/Senioridade/Churn risk/Bottleneck/SLA breach)
+**Onda 1 · Insight para o usuário** (~1-2 semanas)
+1. **C.10** Publicar heurísticas analytics na UI (Capacidade/Skill mismatch/Senioridade/Churn risk/Bottleneck/SLA breach)
 
 Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA — paralela).
 
