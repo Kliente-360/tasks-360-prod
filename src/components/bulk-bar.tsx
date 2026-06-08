@@ -1,15 +1,6 @@
 'use client';
 
-/**
- * Bulk bar — barra fixa de ações em massa.
- * Layout padronizado entre Backlog e Triagem; cada tela controla os
- * campos via children. Visual: fundo --surface-1 + borda topo verde,
- * mesma estrutura mobile-stack / desktop-inline.
- *
- * Estrutura no children: selects/inputs primeiro, depois os botões
- * `.btn` (primary/ghost/danger) — eles mantêm contraste nativo sem
- * lutar com fundo escuro.
- */
+/** Bulk bar — barra fixa de ações em massa (Backlog desktop). */
 import React from 'react';
 
 export function BulkBar({

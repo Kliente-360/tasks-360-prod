@@ -59,6 +59,7 @@ type BulkPending = {
   prioridade: string;
   prazo: string;
   esforco: string;
+  realizado: string;
 };
 
 const EMPTY = '__empty__';
@@ -85,6 +86,7 @@ const DEFAULT_BULK: BulkPending = {
   prioridade: '',
   prazo: '',
   esforco: '',
+  realizado: '',
 };
 
 const SORT_OPTIONS: { key: string; label: string }[] = [
@@ -498,6 +500,15 @@ export function BacklogClient() {
       updates.esforco = num;
       localPatch.esforco = num;
     }
+    if (p.realizado !== '') {
+      const num = Number(p.realizado);
+      if (!(num >= 0)) {
+        toast.error('Realizado inválido.');
+        return;
+      }
+      updates.tempo_real_horas = num;
+      localPatch.tempoRealHoras = num;
+    }
     if (Object.keys(updates).length === 0) return;
     const { error } = await sb.from('tasks').update(updates).in('id', ids);
     if (error) {
@@ -505,8 +516,8 @@ export function BacklogClient() {
       return;
     }
     patchTasks(ids, localPatch);
-    setBulkPending(DEFAULT_BULK);
-  }, [bulkPending, selectedIds, sb, patchTasks, toast]);
+    clearSelection();
+  }, [bulkPending, selectedIds, sb, patchTasks, toast, clearSelection]);
 
   const bulkArquivar = useCallback(async () => {
     const ids = [...selectedIds];
@@ -518,8 +529,8 @@ export function BacklogClient() {
       return;
     }
     patchTasks(ids, { arquivadoEm: nowIso });
-    setSelectedIds([]);
-  }, [selectedIds, sb, patchTasks, toast]);
+    clearSelection();
+  }, [selectedIds, sb, patchTasks, toast, clearSelection]);
 
   const bulkDelete = useCallback(async () => {
     const ids = [...selectedIds];
@@ -538,11 +549,14 @@ export function BacklogClient() {
       return;
     }
     removeTasks(ids);
-    setSelectedIds([]);
-  }, [selectedIds, sb, removeTasks, toast]);
+    clearSelection();
+  }, [selectedIds, sb, removeTasks, toast, clearSelection]);
 
   const { openEdit: openEditModal, openNew } = useTaskModal();
-  const openEdit = useCallback((t: Task) => openEditModal(t.id), [openEditModal]);
+  const openEdit = useCallback((t: Task) => {
+    clearSelection();
+    openEditModal(t.id);
+  }, [openEditModal, clearSelection]);
 
   if (loading) return <div className="text-muted text-sm">Carregando…</div>;
   if (error) return <div className="text-[color:var(--danger)] text-sm">Erro: {error}</div>;
@@ -857,75 +871,113 @@ export function BacklogClient() {
 
 
       <BulkBar selectedCount={selectedIds.length} onClear={clearSelection}>
-        <select
-          className="inp text-sm md:text-xs py-2 md:py-1.5 w-full md:w-[130px]"
-          value={bulkPending.pessoa}
-          onChange={(e) => setBulkPending({ ...bulkPending, pessoa: e.target.value })}
-          title="Responsável"
-        >
-          <option value="">responsável…</option>
-          <option value={NONE}>— remover</option>
-          {pessoasNaoCliente.map((p) => (
-            <option key={p.id} value={p.id}>{p.nome}</option>
-          ))}
-        </select>
-        <select
-          className="inp text-sm md:text-xs py-2 md:py-1.5 w-full md:w-[120px]"
-          value={bulkPending.cliente}
-          onChange={(e) => setBulkPending({ ...bulkPending, cliente: e.target.value, projeto: '' })}
-          title="Cliente"
-        >
-          <option value="">cliente…</option>
-          <option value={NONE}>— remover</option>
-          {clientesAtivos.map((c) => (
-            <option key={c.id} value={c.id}>{c.nome}</option>
-          ))}
-        </select>
-        <select
-          className="inp text-sm md:text-xs py-2 md:py-1.5 w-full md:w-[120px]"
-          value={bulkPending.projeto}
-          disabled={!bulkPending.cliente || bulkPending.cliente === NONE}
-          onChange={(e) => setBulkPending({ ...bulkPending, projeto: e.target.value })}
-          title="Projeto"
-        >
-          <option value="">projeto…</option>
-          <option value={NONE}>— remover</option>
-          {(bulkPending.cliente && bulkPending.cliente !== NONE
-            ? (projetosByCliente.get(bulkPending.cliente) ?? []).filter((p) => !p.arquivadoEm)
-            : []
-          ).map((p) => (
-            <option key={p.id} value={p.id}>{p.nome}</option>
-          ))}
-        </select>
-        <select
-          className="inp text-sm md:text-xs py-2 md:py-1.5 w-full md:w-[80px]"
-          value={bulkPending.prioridade}
-          onChange={(e) => setBulkPending({ ...bulkPending, prioridade: e.target.value })}
-          title="Prioridade"
-        >
-          <option value="">pri…</option>
-          <option value="P0">P0</option>
-          <option value="P1">P1</option>
-          <option value="P2">P2</option>
-          <option value="P3">P3</option>
-        </select>
-        <input
-          type="date"
-          className="inp text-sm md:text-xs py-2 md:py-1.5 w-full md:w-[110px]"
-          value={bulkPending.prazo}
-          onChange={(e) => setBulkPending({ ...bulkPending, prazo: e.target.value })}
-          title="Prazo"
-        />
-        <input
-          type="number"
-          min={0}
-          step={0.5}
-          className="inp text-sm md:text-xs py-2 md:py-1.5 w-full md:w-[90px]"
-          placeholder="esforço (h)"
-          value={bulkPending.esforco}
-          onChange={(e) => setBulkPending({ ...bulkPending, esforco: e.target.value })}
-          title="Esforço (h)"
-        />
+        {/* cliente */}
+        <div className="bulk-field w-full md:w-[130px]">
+          <span className="bulk-ic"><Icon name="building" size={12} /></span>
+          <select
+            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
+            value={bulkPending.cliente}
+            onChange={(e) => setBulkPending({ ...bulkPending, cliente: e.target.value, projeto: '' })}
+            title="Cliente"
+          >
+            <option value="">cliente…</option>
+            <option value={NONE}>— remover</option>
+            {clientesAtivos.map((c) => (
+              <option key={c.id} value={c.id}>{c.nome}</option>
+            ))}
+          </select>
+        </div>
+        {/* projeto */}
+        <div className="bulk-field w-full md:w-[130px]">
+          <span className="bulk-ic"><Icon name="folder" size={12} /></span>
+          <select
+            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
+            value={bulkPending.projeto}
+            disabled={!bulkPending.cliente || bulkPending.cliente === NONE}
+            onChange={(e) => setBulkPending({ ...bulkPending, projeto: e.target.value })}
+            title="Projeto"
+          >
+            <option value="">projeto…</option>
+            <option value={NONE}>— remover</option>
+            {(bulkPending.cliente && bulkPending.cliente !== NONE
+              ? (projetosByCliente.get(bulkPending.cliente) ?? []).filter((p) => !p.arquivadoEm)
+              : []
+            ).map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
+        </div>
+        {/* responsável */}
+        <div className="bulk-field w-full md:w-[130px]">
+          <span className="bulk-ic"><Icon name="user" size={12} /></span>
+          <select
+            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
+            value={bulkPending.pessoa}
+            onChange={(e) => setBulkPending({ ...bulkPending, pessoa: e.target.value })}
+            title="Responsável"
+          >
+            <option value="">responsável…</option>
+            <option value={NONE}>— remover</option>
+            {pessoasNaoCliente.map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
+        </div>
+        {/* prazo */}
+        <div className="bulk-field w-full md:w-[120px]">
+          <span className="bulk-ic"><Icon name="calendar" size={12} /></span>
+          <input
+            type="date"
+            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
+            value={bulkPending.prazo}
+            onChange={(e) => setBulkPending({ ...bulkPending, prazo: e.target.value })}
+            title="Prazo"
+          />
+        </div>
+        {/* prioridade */}
+        <div className="bulk-field w-full md:w-[90px]">
+          <span className="bulk-ic"><Icon name="flag" size={12} /></span>
+          <select
+            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
+            value={bulkPending.prioridade}
+            onChange={(e) => setBulkPending({ ...bulkPending, prioridade: e.target.value })}
+            title="Prioridade"
+          >
+            <option value="">pri…</option>
+            <option value="P0">P0</option>
+            <option value="P1">P1</option>
+            <option value="P2">P2</option>
+            <option value="P3">P3</option>
+          </select>
+        </div>
+        {/* esforço previsto */}
+        <div className="bulk-field w-full md:w-[96px]">
+          <span className="bulk-ic"><Icon name="clock" size={12} /></span>
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
+            placeholder="previsto (h)"
+            value={bulkPending.esforco}
+            onChange={(e) => setBulkPending({ ...bulkPending, esforco: e.target.value })}
+            title="Esforço previsto (h)"
+          />
+        </div>
+        {/* realizado */}
+        <div className="bulk-field w-full md:w-[96px]">
+          <span className="bulk-ic"><Icon name="timer" size={12} /></span>
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
+            placeholder="realizado (h)"
+            value={bulkPending.realizado}
+            onChange={(e) => setBulkPending({ ...bulkPending, realizado: e.target.value })}
+            title="Realizado (h)"
+          />
+        </div>
         <div className="flex gap-2 md:contents">
           <button
             type="button"
@@ -938,7 +990,8 @@ export function BacklogClient() {
                 bulkPending.projeto ||
                 bulkPending.prioridade ||
                 bulkPending.prazo ||
-                bulkPending.esforco !== ''
+                bulkPending.esforco !== '' ||
+                bulkPending.realizado !== ''
               )
             }
           >

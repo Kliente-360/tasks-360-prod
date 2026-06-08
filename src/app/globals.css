@@ -584,15 +584,16 @@ input[type="checkbox"] { accent-color: var(--brand); }
 /* ============ BULK ACTIONS BAR ============ */
 .bulk-bar {
   position: fixed; z-index: 55;
-  background: var(--navy); color: #fff;
-  border: 1px solid var(--navy-soft);
   border-radius: var(--r-md);
-  box-shadow: 0 12px 32px -8px rgba(31,41,55,0.5), 0 4px 12px -4px rgba(31,41,55,0.35);
+  box-shadow: 0 8px 24px -4px rgba(0,0,0,0.12), 0 4px 8px -2px rgba(0,0,0,0.08);
 }
-.bulk-bar .inp { background: var(--navy-soft); border-color: rgba(255,255,255,0.15); color: #fff; }
-.bulk-bar .inp:focus { border-color: rgba(255,255,255,0.5); }
-.bulk-bar .btn-ghost { color: rgba(255,255,255,0.85); border-color: rgba(255,255,255,0.15); background: transparent; }
-.bulk-bar .btn-ghost:hover { background: rgba(255,255,255,0.08); color: #fff; }
+/* Ícone-prefixo dentro de cada campo da bulk bar */
+.bulk-field { position: relative; display: inline-flex; align-items: center; }
+.bulk-field .bulk-ic {
+  position: absolute; left: 8px; pointer-events: none;
+  color: var(--ink-soft); display: flex; align-items: center;
+}
+.bulk-field .inp { padding-left: 26px; }
 
 /* ============ PORTAL CLIENTE ============ */
 .portal-header {
