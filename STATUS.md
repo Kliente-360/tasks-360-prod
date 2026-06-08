@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.127 · **Atualizado**: 08/06/2026 · branch `main`
+> **Versão**: v1.03.133 · **Atualizado**: 08/06/2026 · branch `main`
 
 ---
 
