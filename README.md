@@ -112,7 +112,7 @@ Em CI (GitHub Actions) e em smoke local podem ser **placeholders** (`https://pla
 └── README.md                      # (este arquivo)
 ```
 
-> **Docs do projeto**: HOWTO, HOWTO_CLIENTE e ONBOARDING moram em `public/docs/` (servidos em runtime pelos modais Help/Onboarding). STATUS.md (estado vivo), CLAUDE.md (convenções), KPIS.md (definições) e ROADMAP.md (histórico) ficam na raiz.
+> **Docs do projeto**: HOWTO, HOWTO_CLIENTE e ONBOARDING moram em `public/docs/` (servidos em runtime pelos modais Help/Onboarding). Gestão (estado, KPIs, roadmap histórico) em `docs/gestao/` — `STATUS.md` (estado vivo), `KPIS.md` (definições), `ROADMAP.md` (histórico imutável). `CLAUDE.md` (convenções pro agente) fica na raiz por convenção do Claude Code.
 
 ## Testes
 
@@ -129,4 +129,4 @@ Em CI (GitHub Actions) e em smoke local podem ser **placeholders** (`https://pla
 
 Onda 0 completa · cutover executado · Alpine desativado (jun/2026).
 
-Estado atual e backlog em **`STATUS.md`**. Histórico completo em **`ROADMAP.md` §9.3**.
+Estado atual e backlog em **`docs/gestao/STATUS.md`**. Histórico completo em **`docs/gestao/ROADMAP.md` §9.3**.

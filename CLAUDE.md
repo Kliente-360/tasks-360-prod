@@ -4,7 +4,7 @@ Convenções do projeto que valem pra qualquer sessão.
 
 > **Sobre este repo**: `tasks-360-prod` é o repo produtivo do app Next — único ambiente de produção desde jun/2026. Foi separado de `Kliente-360/tasks-360-mvp` (Alpine desativado com o cutover em jun/2026). Trabalho diário acontece aqui.
 
-> **Roadmap vivo**: ler **`STATUS.md`** no início de toda sessão relevante — é a fonte de verdade do estado atual (NOW/NEXT/LATER/done). `ROADMAP.md` é arquivo histórico imutável; não editar para refletir estado corrente.
+> **Roadmap vivo**: ler **`docs/gestao/STATUS.md`** no início de toda sessão relevante — é a fonte de verdade do estado atual (NOW/NEXT/LATER/done). `docs/gestao/ROADMAP.md` é arquivo histórico imutável; não editar para refletir estado corrente.
 
 ## Supabase
 
@@ -45,7 +45,7 @@ Convenções do projeto que valem pra qualquer sessão.
 
 ## Onda 0 · migração Alpine → Next (✅ concluída · em produção jun/2026)
 
-Plano e blocos da Onda 0 foram entregues integralmente (jun/2026); ver histórico no git ou em `ROADMAP.md` §"Onda 0 (cutover)".
+Plano e blocos da Onda 0 foram entregues integralmente (jun/2026); ver histórico no git ou em `docs/gestao/ROADMAP.md` §"Onda 0 (cutover)".
 
 Arquitetura (na prática, virou **quase 100% Client Components**):
 - **Client Components com Supabase JS**: telas interativas (Backlog, Kanban, Modal, Triagem, Foco, Calendário) — boot + estado em memória + realtime channel.
@@ -79,5 +79,5 @@ No projeto:
 
 ## Roadmap
 
-Ver **`STATUS.md`** para o estado atual (fonte de verdade).
-Ver **`ROADMAP.md` §9.3** para o consolidado histórico Now/Next/Later/Cold.
+Ver **`docs/gestao/STATUS.md`** para o estado atual (fonte de verdade).
+Ver **`docs/gestao/ROADMAP.md` §9.3** para o consolidado histórico Now/Next/Later/Cold.
