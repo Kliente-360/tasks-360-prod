@@ -25,7 +25,7 @@ import { createClient } from '@/lib/supabase/client';
 import { agingDays, isPreTriagem, triageFailures, TRIAGE_RANK_GATE } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS, STAGE_RANK } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
-import type { Task, Pessoa, Cliente, Projeto } from '@/lib/types';
+import type { Task, Pessoa, Cliente, Projeto, Prioridade } from '@/lib/types';
 import { useClickAway } from '@/lib/use-click-away';
 import { Icon } from '@/components/icons';
 
@@ -176,7 +176,7 @@ export function TriagemClient() {
         projetoId: draft.projetoId,
         pessoaId: draft.pessoaId,
         prazo: draft.prazo,
-        prioridade: draft.prioridade,
+        prioridade: (draft.prioridade as Prioridade) || undefined,
         esforco: draft.esforco,
       };
       const nowIso = new Date().toISOString();
