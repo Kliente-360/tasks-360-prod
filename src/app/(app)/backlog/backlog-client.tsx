@@ -909,7 +909,7 @@ export function BacklogClient() {
         </div>
         {/* responsável */}
         <div className="bulk-field w-full md:w-[130px]">
-          <span className="bulk-ic"><Icon name="user" size={12} /></span>
+          <span className="bulk-ic"><Icon name="users" size={12} /></span>
           <select
             className="inp text-sm md:text-xs py-2 md:py-1.5 w-full"
             value={bulkPending.pessoa}
