@@ -5,10 +5,13 @@
  * filtrado por author_pessoa_id. Usado pelo Foco pra detectar tasks
  * sem comment recente do dono.
  *
- * Busca em uma única query no mount; sem polling.
+ * Busca em uma única query no mount; sem polling. Expõe
+ * `markCommented(taskId)` pra optimistic update após o usuário postar
+ * um comment — sem isso, a task continuaria aparecendo na seção
+ * "Sem comentário" até o próximo reload.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 export function useLastCommentByTask(
@@ -18,6 +21,7 @@ export function useLastCommentByTask(
 ): {
   lastCommentMap: Map<string, Date>;
   loading: boolean;
+  markCommented: (taskId: string, when?: Date) => void;
 } {
   const [lastCommentMap, setLastCommentMap] = useState<Map<string, Date>>(new Map());
   const [loading, setLoading] = useState(false);
@@ -63,5 +67,15 @@ export function useLastCommentByTask(
     };
   }, [key, sb]);
 
-  return { lastCommentMap, loading };
+  /** Optimistic update — usado quando o caller acabou de inserir
+   *  um comment e quer refletir imediatamente sem refetch. */
+  const markCommented = useCallback((taskId: string, when: Date = new Date()) => {
+    setLastCommentMap((prev) => {
+      const next = new Map(prev);
+      next.set(taskId, when);
+      return next;
+    });
+  }, []);
+
+  return { lastCommentMap, loading, markCommented };
 }

@@ -25,7 +25,7 @@ import {
   isPreTriagem,
   TRIAGE_RANK_GATE,
 } from '@/lib/task-utils';
-import { STATUS, STAGE_RANK, SUB_LABELS } from '@/lib/task-constants';
+import { STATUS, STAGE_RANK, SUB_LABELS, SUB_TO_MACRO } from '@/lib/task-constants';
 import { useLastCommentByTask } from '@/lib/use-last-comment';
 import { useFocoDone, type FocoContexto } from '@/lib/use-foco-done';
 import { createClient } from '@/lib/supabase/client';
@@ -93,7 +93,10 @@ export function FocoClient() {
     () => mine.filter((t) => t.status === 'andamento').map((t) => t.id),
     [mine],
   );
-  const { lastCommentMap } = useLastCommentByTask(andamentoIds, focusPessoaId || null);
+  const { lastCommentMap, markCommented } = useLastCommentByTask(
+    andamentoIds,
+    focusPessoaId || null,
+  );
 
   const groups = useMemo<Record<FocoContexto, Task[]>>(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -385,6 +388,7 @@ export function FocoClient() {
                   clienteName={clientesById.get(task.clienteId)?.nome ?? '—'}
                   projetoName={projetosById.get(task.projetoId)?.nome ?? '—'}
                   openEdit={openEdit}
+                  markCommented={markCommented}
                 />
               ))}
             </div>
@@ -408,6 +412,7 @@ function FocoTaskRow({
   clienteName,
   projetoName,
   openEdit,
+  markCommented,
 }: {
   task: Task;
   contexto: FocoContexto;
@@ -417,6 +422,8 @@ function FocoTaskRow({
   clienteName: string;
   projetoName: string;
   openEdit: (id: string) => void;
+  /** Optimistic update do lastCommentMap quando assignee comenta. */
+  markCommented: (taskId: string, when?: Date) => void;
 }) {
   const toast = useToast();
   const sb = useMemo(() => createClient(), []);
@@ -460,7 +467,13 @@ function FocoTaskRow({
   if (motivoRequired && !draft.motivo.trim()) faltam.push('motivo');
   switch (contexto) {
     case 'bloqueadas':
-      if (draft.subetapa === 'bloqueado') faltam.push('mudar subetapa');
+      // Sem requisito de mudar subetapa. Usuário pode (1) desbloquear
+      // mudando a subetapa OU (2) atualizar mantendo bloqueado — neste
+      // caso exigimos comentário (motivo já é obrigatório pelo gate
+      // global motivoRequired quando subetapa = bloqueado).
+      if (draft.subetapa === 'bloqueado' && !draft.comment.trim()) {
+        faltam.push('comentário');
+      }
       break;
     case 'sem_comment':
       if (!draft.comment.trim()) faltam.push('comentário');
@@ -489,6 +502,13 @@ function FocoTaskRow({
     if (draft.subetapa !== task.subetapa) {
       dbPatch.subetapa = draft.subetapa;
       localPatch.subetapa = draft.subetapa;
+      // Status macro deriva da subetapa via trigger no DB; replicamos
+      // localmente pra que `bloqueadas` / `sem_horas` re-avaliem
+      // imediatamente sem esperar refetch.
+      const newStatus = SUB_TO_MACRO[draft.subetapa] || task.status;
+      if (newStatus !== task.status) {
+        localPatch.status = newStatus as Task['status'];
+      }
     }
     if (draft.esforco !== (Number(task.esforco) || 0)) {
       dbPatch.esforco = draft.esforco;
@@ -507,7 +527,8 @@ function FocoTaskRow({
       patchTask(task.id, localPatch);
     }
 
-    const nowIso = new Date().toISOString();
+    const nowDate = new Date();
+    const nowIso = nowDate.toISOString();
     const commentsToInsert: Record<string, unknown>[] = [];
     if (motivoRequired && draft.motivo.trim()) {
       commentsToInsert.push({
@@ -531,17 +552,33 @@ function FocoTaskRow({
         posted_em: nowIso,
       });
     }
+    const commentedByAssignee =
+      commentsToInsert.length > 0 && task.pessoaId === currentPessoa?.id;
     if (commentsToInsert.length) {
       const { error } = await sb.from('task_comments').insert(commentsToInsert);
       if (error) {
         toast.error('Salvo, mas comentário falhou: ' + error.message);
+      } else if (commentedByAssignee) {
+        // Optimistic — sem isso, a task continuaria em "Sem comentário"
+        // até o próximo reload (lastCommentMap é fetched no mount).
+        markCommented(task.id, nowDate);
       }
+    }
+
+    // Determina se task AINDA bate o critério do contexto primário
+    // após o save. Se sim → marca como Resolved (fica visível, count
+    // decrementa). Se não → drops out naturalmente, sem auto-mark.
+    const updated: Task = { ...task, ...localPatch };
+    const stillMatches = matchesContext(updated, contexto, {
+      justCommentedByAssignee: commentedByAssignee,
+    });
+    if (stillMatches && !resolved) {
+      onToggleResolved();
     }
 
     toast.success('Salvo.');
     setDraft((d) => ({ ...d, motivo: '', comment: '' }));
-    if (!resolved) onToggleResolved();
-  }, [draft, task, sb, patchTask, toast, currentPessoa, motivoRequired, resolved, onToggleResolved]);
+  }, [draft, task, sb, patchTask, toast, currentPessoa, motivoRequired, resolved, onToggleResolved, markCommented, contexto]);
 
   const etapaCor = etapaTempoColor(task);
   const etapaDias = etapaTempoDays(task);
@@ -746,6 +783,39 @@ function fmtRelative(d: Date): string {
   if (days === 0) return 'hoje';
   if (days === 1) return 'ontem';
   return `${days}d atrás`;
+}
+
+/** Decide se uma task ainda bate no critério de um contexto · usado
+ *  pós-save pra decidir entre 'mark resolved' (still matches → stays
+ *  visible, count decrementa) e 'drops out' (criterion broke). */
+function matchesContext(
+  t: Task,
+  ctx: FocoContexto,
+  opts: { justCommentedByAssignee: boolean },
+): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  switch (ctx) {
+    case 'atrasadas':
+      return atrasada(t);
+    case 'hoje':
+      return t.prazo === today && !atrasada(t);
+    case 'bloqueadas':
+      return t.status === 'bloqueado';
+    case 'sem_esforco':
+      return (
+        (!Number(t.esforco) || t.esforco <= 0) &&
+        (STAGE_RANK[t.subetapa] ?? 0) >= TRIAGE_RANK_GATE
+      );
+    case 'sem_horas':
+      return (
+        t.status === 'andamento' &&
+        (!Number(t.tempoRealHoras) || Number(t.tempoRealHoras) <= 0)
+      );
+    case 'sem_comment':
+      // Se acabou de comentar como responsável, deixa de matchar.
+      if (opts.justCommentedByAssignee) return false;
+      return t.status === 'andamento';
+  }
 }
 
 
