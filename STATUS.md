@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.118 · **Atualizado**: 07/06/2026 · branch `main`
+> **Versão**: v1.03.122 · **Atualizado**: 08/06/2026 · branch `main`
 
 ---
 
@@ -86,6 +86,13 @@ Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout es
 - ✅ **Header mobile limpo** · só título da task — chips (IA, prioridade, prazo, cliente, reaberta, arquivada) e `.tmodal-head-right` (autosave, copy, fechar ×) ocultados via CSS `display:none !important` no bloco `@media (max-width:767px)`
 - ✅ **Profile menu** · ícone `sliders` no item Cadastros; link Backlog mobile-only acima de Cadastros
 
+### Pós-mobile (jun/2026 · v1.03.119 → v1.03.122)
+- ✅ **Portal cliente · admin-only** (v1.03.119) · aba do Portal no desktop restrita a `role=admin`; removida de interno/cliente
+- ✅ **Portal no carrossel mobile** (v1.03.119) · MobileTabShell expandido de 2 para 3 slots (Resumo · Backlog · Portal), carrossel circular com lógica modular `(idx ± 1) % N`. Admin mobile pode swipear até o Portal
+- ✅ **Backlog mobile · pill "minhas"** (v1.03.120) · admin vê pill toggle no cabeçalho do Backlog mobile; padrão = filtrado pelas próprias tasks; clica pra ver todas. Interno: sem pill, sempre só as próprias tasks
+- ✅ **Modal mobile · campo Responsável** (v1.03.121) · select Responsável abaixo de Descrição no modal mobile; desabilitado para interno, editável para admin
+- ✅ **Fix build · isAdmin não desestruturado** (v1.03.122) · `BacklogMobilePanel` listava `isAdmin` no tipo mas não na desestruturação de parâmetros → TS2304 quebrava CI/Vercel; corrigido
+
 ---
 
 ## 🎯 Roadmap ativo
@@ -138,7 +145,7 @@ Diferente dos buckets A/B/C que são features incrementais, V é **um lote coeso
 
 **Pré-req:** mobile fechamento (A.15) ajuda mas não bloqueia — cliente externo provavelmente abre no desktop primeiro. Se mobile estiver decente, V atende.
 
-**Quando atacar:** depois que tiver pelo menos UM cliente externo real definido (sabemos quem? qual cor? quais tasks?). Sem cliente concreto, V vira teoria.
+**Quando atacar:** temos cliente real definido — **Pão e Talho** (jun/2026). Bucket V é o sprint atual.
 
 ### Bucket B · Features com IA
 
@@ -213,10 +220,11 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 5. ~~**A.9** Timesheet · entrada manual + permissões~~ ✅ v1.03.118
 6. **C.3** Skill mismatch (heurística pura)
 
-Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · todo o Bucket V (Visão cliente — depende de ter cliente real) · todo o Bucket B (IA — paralela) · C.10 (publicar heurísticas na UI).
+Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA — paralela) · C.10 (publicar heurísticas na UI).
 
 ---
 
 ## Próximo passo imediato
 
-**A.17 · Card de task · VISUAL** — replan + execução. Auditoria visual real antes de tocar código.
+**Bucket V · Visão cliente (Pão e Talho)** — cliente real confirmado em jun/2026. Sprint focado de 1-2 semanas.
+Ordem sugerida: **V.3** (RLS audit · crítico) → **V.1** (Portal UX redesign) → **V.2** (KPIs/gráficos) → **V.4** (modal modo cliente) → **V.5** (login UX) → **V.6** (identidade visual) → **V.8** (notif cliente) → **V.9** (walkthrough final).
