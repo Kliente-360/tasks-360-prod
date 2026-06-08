@@ -1758,6 +1758,20 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   style={descricaoLoading ? { opacity: 0.6 } : undefined}
                 />
               </div>
+              <div>
+                <label className="lbl">Responsável</label>
+                <select
+                  className="inp"
+                  value={editing.pessoaId}
+                  disabled={!isAdmin}
+                  onChange={(e) => set('pessoaId', e.target.value)}
+                >
+                  <option value="">—</option>
+                  {pessoasNaoCliente.map((p) => (
+                    <option key={p.id} value={p.id}>{p.nome}</option>
+                  ))}
+                </select>
+              </div>
               {isCEO && (
                 <div>
                   <label className="lbl">Privacidade</label>
