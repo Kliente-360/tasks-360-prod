@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.133 · **Atualizado**: 08/06/2026 · branch `main`
+> **Versão**: v1.03.136 · **Atualizado**: 08/06/2026 · branch `main`
 
 ---
 
@@ -95,6 +95,9 @@ Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout es
 - ✅ **A.16 · Bulk actions redesign** (v1.03.123-127) · BulkBar do Backlog reformulada no padrão DS: novo componente `BulkSelect` espelhando `.fselect` da FilterBar (mesma anatomia visual, mesma família de tokens), ordem de campos consolidada (cliente → projeto → responsável → prazo → prioridade → previsto → realizado), ícones `hourglass`/`timer` em previsto/realizado, seleção limpa automaticamente ao salvar/arquivar/excluir/abrir modal
 - ✅ **Meu Foco · flat list + OR pills** (v1.03.127) · revisão do A.18: substitui as 6 seções colapsáveis por uma lista única deduplicada (cada task aparece UMA vez sob seu contexto primário), 7 pills filtro (atrasada · pra hoje · bloqueada · sem esforço · sem hora · sem comentário · P0/P1) com OR entre contextos + AND com prio, sort: ctxIdx → prio asc → prazo asc. Componente `FocoSection` removido por completo
 - ✅ **Icon/emoji fixes globais** (v1.03.127) · 🔒 e 🤖 vira `<Icon name="lock"/>` e `<Icon name="bot"/>` em Foco/Kanban/Backlog/task-modal/TagIA. Action bars de Triagem/Foco trocam ícones de esforço (timer→hourglass) e horas reais (history→timer). Triagem com densidade reduzida (spacing dos cards menor)
+- ✅ **Code review · dead code cleanup** (v1.03.134) · auditoria pós-A.18/Triagem/Bulk com knip. Removidos 1 arquivo (`use-filters.ts`), 9 funções não usadas, 16 types órfãos viraram locais, 2 menu items obsoletos (ExportCsvMenuItem, ThemeMenuItem). `postcss-load-config` declarado como devDep. `knip.json` criado pra futuras auditorias. Apagados: `docs/design_handoff_*/`, `docs/revisao-onboarding/`. Esvaziados (mantidas pastas): `supabase/migrations/applied/`, `supabase/seeds/`. Total: 119 arquivos / −9.734 linhas
+- ✅ **Reorg de gestão** (v1.03.135) · `ROADMAP.md`, `STATUS.md`, `KPIS.md` movidos pra `docs/gestao/`. `CLAUDE.md` mantido na raiz (auto-load do Claude Code). README + CLAUDE atualizados com novos paths
+- ✅ **Foco · Save/Resolver regra unificada** (v1.03.136) · 2 bugs corrigidos: (1) comentar task em "Sem comentário" não dropava o card — `useLastCommentByTask` agora expõe `markCommented(taskId)` pra optimistic update; (2) Save de Bloqueada com motivo+comment ficava disabled — gate "mudar subetapa" removido, agora bloqueadas com subetapa kept = bloqueado exige só comentário. Novo helper `matchesContext` decide pós-save entre 'mark resolved' (still matches → stays visible) e 'drops naturally' (criterion broke). Propagação local de status macro via `SUB_TO_MACRO` pra `bloqueadas`/`sem_horas` re-avaliarem instantaneamente sem refetch
 
 ---
 
