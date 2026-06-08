@@ -274,6 +274,29 @@ export function FocoClient() {
               'Foco indisponível'
             )
           }
+          right={
+            hasFocus ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                {PILL_ORDER.map((pill) => (
+                  <button
+                    key={pill}
+                    type="button"
+                    className={cn('triage-filter-chip', activePills.has(pill) && 'is-on')}
+                    onClick={() => togglePill(pill)}
+                  >
+                    <strong>{counts[pill]}</strong>&nbsp;{PILL_LABELS[pill]}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={cn('triage-filter-chip', pillPrio && 'is-on')}
+                  onClick={() => setPillPrio((v) => !v)}
+                >
+                  P0/P1
+                </button>
+              </div>
+            ) : null
+          }
         />
       </div>
 
@@ -298,6 +321,25 @@ export function FocoClient() {
               <b>{totalPending}</b> pendente{totalPending !== 1 ? 's' : ''}
             </div>
           </div>
+          <div className="flex items-center gap-1.5 flex-wrap mt-2 mb-3">
+            {PILL_ORDER.map((pill) => (
+              <button
+                key={pill}
+                type="button"
+                className={cn('triage-filter-chip', activePills.has(pill) && 'is-on')}
+                onClick={() => togglePill(pill)}
+              >
+                <strong>{counts[pill]}</strong>&nbsp;{PILL_LABELS[pill]}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={cn('triage-filter-chip', pillPrio && 'is-on')}
+              onClick={() => setPillPrio((v) => !v)}
+            >
+              P0/P1
+            </button>
+          </div>
         </div>
       )}
 
@@ -321,30 +363,6 @@ export function FocoClient() {
                 {' no total'}
               </div>
             )}
-          </div>
-
-          {/* Pills de filtro */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {PILL_ORDER.map((pill) => (
-              <button
-                key={pill}
-                type="button"
-                className={cn('triage-filter-chip', activePills.has(pill) && 'is-on')}
-                onClick={() => togglePill(pill)}
-              >
-                {PILL_LABELS[pill]}
-                {counts[pill] > 0 && (
-                  <span className="ml-1 font-mono text-[10px] opacity-70">{counts[pill]}</span>
-                )}
-              </button>
-            ))}
-            <button
-              type="button"
-              className={cn('triage-filter-chip', pillPrio && 'is-on')}
-              onClick={() => setPillPrio((v) => !v)}
-            >
-              <strong>P0/P1</strong>
-            </button>
           </div>
 
           {/* Lista plana */}
@@ -554,12 +572,12 @@ function FocoTaskRow({
               {task.prioridade}
             </span>
             {task.privada && (
-              <span className="ia-chip ia-chip-mini" title="Task privada">
+              <span className="priv-chip" title="Task privada">
                 <Icon name="lock" size={9} />
               </span>
             )}
             {task.criadoPorIa && (
-              <span className="ia-chip ia-chip-mini" title="Criada por automação IA">
+              <span className="ia-chip" title="Criada por automação IA">
                 <Icon name="bot" size={9} /> IA
               </span>
             )}

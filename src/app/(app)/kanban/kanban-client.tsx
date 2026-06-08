@@ -30,7 +30,7 @@ import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
-import { PriChip, TaskAvatar, PrazoLabel, TagIA } from '@/components/task-card/primitives';
+import { PriChip, TaskAvatar, PrazoLabel } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
 import { atrasada, etapaTempoColor, etapaTempoDays, fmtDateShort, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
@@ -502,12 +502,8 @@ function KCard({
       onDragEnd={onDragEnd}
       onClick={onClick}
     >
-      <div className="font-medium text-sm leading-snug mb-2 flex items-start gap-1.5">
-        {t.privada && (
-          <span className="ia-chip ia-chip-mini" title="Task privada"><Icon name="lock" size={9} /></span>
-        )}
-        {t.criadoPorIa && <TagIA />}
-        <span>{t.titulo}</span>
+      <div className="font-medium text-sm leading-snug mb-2">
+        {t.titulo}
       </div>
       <div className="flex items-center justify-between gap-2 mb-1">
         <div className="text-xs text-muted truncate">{clienteName + ' · ' + projetoName}</div>

@@ -774,8 +774,6 @@ export function BacklogClient() {
                     </td>
                     <td>
                       <div className="tbl-title" title={t.titulo}>
-                        {t.privada && <span className="ia-chip ia-chip-mini mr-1" title="Task privada"><Icon name="lock" size={9} /></span>}
-                        {t.criadoPorIa && <span className="ia-chip ia-chip-mini mr-1" title="Criada por automação IA"><Icon name="bot" size={9} /> IA</span>}
                         {t.titulo}
                       </div>
                       {t.tags.length > 0 && (
