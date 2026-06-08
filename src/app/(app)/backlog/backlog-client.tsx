@@ -1047,6 +1047,7 @@ function BacklogMobilePanel({
   onOpen,
   clearFilters,
   currentPessoaId,
+  isAdmin,
   sortKeys,
   sortBy,
 }: {
@@ -1075,7 +1076,8 @@ function BacklogMobilePanel({
     if (!currentPessoaId) return tasks;
     if (!isAdmin || showMine) return tasks.filter((t) => t.pessoaId === currentPessoaId);
     return tasks;
-  }, [tasks, currentPessoaId, isAdmin, showMine]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, currentPessoaId, showMine]);
 
   const nActive = (f.cliente ? 1 : 0) +
     (f.status && f.status !== 'abertas' ? 1 : 0) +
