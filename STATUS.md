@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.133 · **Atualizado**: 08/06/2026 · branch `main` (A.12 + A.17 concluídos)
+> **Versão**: v1.03.133 · **Atualizado**: 08/06/2026 · branch `main`
 
 ---
 
@@ -212,11 +212,12 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ## 🎯 NEXT · ordem definida (jun/2026)
 
-**Sprint imediato · Visão cliente** (~1-2 semanas)
-→ **Bucket V** completo (ver Próximo passo imediato abaixo)
+**Em andamento · Visão cliente (sessão local)**
+→ **Bucket V** completo — Portal cliente + hardening pré-launch Pão e Talho. Sendo trabalhado em sessão local separada.
+→ Ordem: V.3 (RLS audit) → V.1 (Portal UX) → V.2 (KPIs) → V.4 (modal cliente) → V.5 (login) → V.6 (identidade) → V.7 (onboarding) → V.8 (notif) → V.9 (walkthrough final)
 
-**Onda 1 · Insight para o usuário** (~1-2 semanas)
-1. **C.10** Publicar heurísticas analytics na UI (Capacidade/Skill mismatch/Senioridade/Churn risk/Bottleneck/SLA breach)
+**Após Bucket V · Insight para o usuário** (~1-2 semanas)
+1. **C.10** Publicar heurísticas analytics na UI (Capacidade · Skill mismatch · Senioridade · Churn risk · Bottleneck · SLA breach)
 
 Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA — paralela).
 
@@ -224,5 +225,5 @@ Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA
 
 ## Próximo passo imediato
 
-**Bucket V · Visão cliente (Pão e Talho)** — cliente real confirmado em jun/2026. Sprint focado de 1-2 semanas.
-Ordem sugerida: **V.3** (RLS audit · crítico) → **V.1** (Portal UX redesign) → **V.2** (KPIs/gráficos) → **V.4** (modal modo cliente) → **V.5** (login UX) → **V.6** (identidade visual) → **V.8** (notif cliente) → **V.9** (walkthrough final).
+**Bucket V · Visão cliente (Pão e Talho)** — em andamento em sessão local (jun/2026).
+Quando concluído: marcar V.1–V.9 como ✅ e avançar pra **C.10** (heurísticas na UI).
