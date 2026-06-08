@@ -655,6 +655,7 @@ export function BacklogClient() {
         onOpen={openEdit}
         clearFilters={clearFilters}
         currentPessoaId={currentPessoa?.id}
+        isAdmin={isAdmin}
         sortKeys={sortKeys}
         sortBy={sortBy}
       />
@@ -1062,16 +1063,19 @@ function BacklogMobilePanel({
   onOpen: (t: Task) => void;
   clearFilters: () => void;
   currentPessoaId: string | undefined;
+  isAdmin: boolean;
   sortKeys: SortKey[];
   sortBy: (key: string) => void;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Admin: toggle entre "minhas" (default) e todas. Interno: sempre só as suas.
+  const [showMine, setShowMine] = useState(true);
 
-  // RLS mobile: mostra apenas tarefas do usuário logado
-  const displayTasks = useMemo(
-    () => currentPessoaId ? tasks.filter((t) => t.pessoaId === currentPessoaId) : tasks,
-    [tasks, currentPessoaId],
-  );
+  const displayTasks = useMemo(() => {
+    if (!currentPessoaId) return tasks;
+    if (!isAdmin || showMine) return tasks.filter((t) => t.pessoaId === currentPessoaId);
+    return tasks;
+  }, [tasks, currentPessoaId, isAdmin, showMine]);
 
   const nActive = (f.cliente ? 1 : 0) +
     (f.status && f.status !== 'abertas' ? 1 : 0) +
@@ -1088,7 +1092,23 @@ function BacklogMobilePanel({
   return (
     <div className="md:hidden">
       <div className="m-pagetitle">
-        <h1>Backlog</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h1>Backlog</h1>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setShowMine((v) => !v)}
+              className={cn(
+                'text-xs font-medium px-3 py-1 rounded-full transition-colors',
+                showMine
+                  ? 'bg-[color:var(--brand)] text-white'
+                  : 'border border-[color:var(--line)] text-[color:var(--ink-soft)]',
+              )}
+            >
+              minhas
+            </button>
+          )}
+        </div>
         <div className="narr">
           <b>{displayTasks.length}</b> abertas
           <span className="sep">·</span>
