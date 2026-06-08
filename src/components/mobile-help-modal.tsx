@@ -9,7 +9,7 @@ import { Icon } from '@/components/icons';
 type MobileHelpApi = { open: () => void; close: () => void };
 const MobileHelpContext = createContext<MobileHelpApi | null>(null);
 
-export function useMobileHelp(): MobileHelpApi {
+function useMobileHelp(): MobileHelpApi {
   const ctx = useContext(MobileHelpContext);
   if (!ctx) throw new Error('useMobileHelp precisa de <MobileHelpProvider>');
   return ctx;

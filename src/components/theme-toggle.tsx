@@ -87,22 +87,3 @@ export function ThemeIconButton({ className }: { className?: string }) {
   );
 }
 
-/** Item do profile menu — mostra estado atual + ação. */
-export function ThemeMenuItem({ onClick }: { onClick?: () => void }) {
-  const { theme, toggle } = useTheme();
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        onClick?.();
-        toggle();
-      }}
-      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-brand-tint"
-    >
-      <span>Tema</span>
-      <span className="text-muted text-xs whitespace-nowrap">
-        {theme === 'dark' ? 'escuro · trocar' : 'claro · trocar'}
-      </span>
-    </button>
-  );
-}

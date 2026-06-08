@@ -22,7 +22,6 @@ import {
   effRemaining,
   effTamanho,
   atrasada,
-  needsTriage,
   taskWeekIndex,
   triageFailures,
   type CargaNivel,
@@ -32,7 +31,7 @@ import {
 //  Tipos
 // ─────────────────────────────────────────────────────────
 
-export type HeuristicSeverity = 'alta' | 'media' | 'baixa';
+type HeuristicSeverity = 'alta' | 'media' | 'baixa';
 
 export interface HeuristicAlert {
   severity: HeuristicSeverity;
@@ -45,13 +44,13 @@ export interface HeuristicAlert {
   weekIdx?: number;
 }
 
-export interface WeekData {
+interface WeekData {
   hours: number;
   pctCap: number | null;
   nivel: CargaNivel;
 }
 
-export interface PessoaCapacidade {
+interface PessoaCapacidade {
   pessoaId: string;
   nome: string;
   capacidade: number;
@@ -59,7 +58,7 @@ export interface PessoaCapacidade {
   anyOverload: boolean;
 }
 
-export interface SustentacaoCapacidade {
+interface SustentacaoCapacidade {
   projetoId: string;
   nome: string;
   clienteId: string;
@@ -70,7 +69,7 @@ export interface SustentacaoCapacidade {
   ociosaFlag: boolean;
 }
 
-export interface ProjetoFechadoCapacidade {
+interface ProjetoFechadoCapacidade {
   projetoId: string;
   nome: string;
   clienteId: string;
@@ -655,7 +654,7 @@ export function computeVelocidade(tasks: Task[]): VelocidadeMetrics {
 //  Semáforo de projetos (saúde operacional)
 // ─────────────────────────────────────────────────────────
 
-export type SinalProjeto = 'verde' | 'amarelo' | 'vermelho';
+type SinalProjeto = 'verde' | 'amarelo' | 'vermelho';
 
 export interface ProjetoSaude {
   projetoId: string;
@@ -724,56 +723,6 @@ export function computeProjetosSaude(
 
   const order: Record<SinalProjeto, number> = { vermelho: 0, amarelo: 1, verde: 2 };
   result.sort((a, b) => order[a.sinal] - order[b.sinal]);
-  return result;
-}
-
-// Re-exporta needsTriage para conveniência dos componentes
-export { needsTriage };
-
-// ─────────────────────────────────────────────────────────
-//  Throughput 12 semanas · split no-prazo / atrasada
-// ─────────────────────────────────────────────────────────
-
-export interface ThroughputWeek12 {
-  label: string;
-  noPrazo: number;
-  atrasada: number;
-  total: number;
-  isCurrent: boolean;
-}
-
-export function computeThroughput12w(tasks: Task[]): ThroughputWeek12[] {
-  const completed = tasks.filter((t) => t.status === STATUS.CONCLUIDO && t.statusEm);
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const offsetSeg = (now.getDay() + 6) % 7;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - offsetSeg);
-
-  const result: ThroughputWeek12[] = [];
-  for (let i = 11; i >= 0; i--) {
-    const start = new Date(monday);
-    start.setDate(monday.getDate() - i * 7);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 7);
-    const startMs = start.getTime();
-    const endMs = end.getTime();
-
-    let noPrazo = 0;
-    let lat = 0;
-    for (const t of completed) {
-      if (t.statusEm < startMs || t.statusEm >= endMs) continue;
-      if (!t.prazo) {
-        noPrazo++;
-      } else if (t.statusEm <= new Date(t.prazo).getTime() + 86400000) {
-        noPrazo++;
-      } else {
-        lat++;
-      }
-    }
-    const label = start.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    result.push({ label, noPrazo, atrasada: lat, total: noPrazo + lat, isCurrent: i === 0 });
-  }
   return result;
 }
 
@@ -1036,7 +985,7 @@ function prazoEndOfDay(iso: string): number {
 
 // ─── C.8 · SLA Breach Rate ──────────────────────────────────────────────────
 
-export type SLAStats = {
+type SLAStats = {
   total: number;
   breached: number;
   /** 0-1 */
@@ -1141,7 +1090,7 @@ export function computeSkillMismatches(
 
 // ─── C.4 · Senioridade malalocada ───────────────────────────────────────────
 
-export type SenioridadeAlertType = 'risco_qualidade' | 'desperdicio';
+type SenioridadeAlertType = 'risco_qualidade' | 'desperdicio';
 
 export type SenioridadeAlert = {
   taskId: string;
@@ -1238,9 +1187,9 @@ export function computeBottlenecks(tasks: Task[], now = Date.now()): SubetapaSta
 
 // ─── C.5 · Churn risk por cliente ───────────────────────────────────────────
 
-export type ChurnRiskLevel = 'ok' | 'atencao' | 'critico';
+type ChurnRiskLevel = 'ok' | 'atencao' | 'critico';
 
-export type ClienteChurnSignals = {
+type ClienteChurnSignals = {
   /** Tasks com subetapa='bloqueado' há mais de 14 dias. */
   tasksBloquadas14d: number;
   /** Dias desde a última task concluída (null = nenhuma concluída ainda). */
@@ -1331,9 +1280,9 @@ export function computeChurnRisk(
 
 // ─── C.2 · Capacidade prevista ───────────────────────────────────────────────
 
-export type CapacidadeNivel = 'ok' | 'atencao' | 'critico';
+type CapacidadeNivel = 'ok' | 'atencao' | 'critico';
 
-export type CapacidadePessoa = {
+type CapacidadePessoa = {
   pessoaId: string;
   /** Tasks concluídas nas últimas 4 semanas / 4. */
   throughput_semana: number;

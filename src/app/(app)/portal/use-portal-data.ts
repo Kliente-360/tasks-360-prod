@@ -21,13 +21,13 @@ export interface PortalCards {
   recentes: Task[];
 }
 
-export interface PortalDistItem {
+interface PortalDistItem {
   projetoId: string;
   nome: string;
   count: number;
 }
 
-export interface PortalMetrics {
+interface PortalMetrics {
   mesesLabels: string[];
   mesesCounts: number[];
   entregasMaxMes: number;
@@ -46,7 +46,7 @@ export interface PortalMetrics {
   totalConcluidas: number;
 }
 
-export interface PortalAlert {
+interface PortalAlert {
   severity: 'alta' | 'media' | 'positivo';
   icon: string;
   titulo: string;

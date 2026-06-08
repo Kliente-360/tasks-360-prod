@@ -169,20 +169,3 @@ export function ExportIconButton() {
   );
 }
 
-/** Item do profile menu (mobile). */
-export function ExportCsvMenuItem({ onClick }: { onClick?: () => void }) {
-  const exportCsv = useExportCsv();
-  return (
-    <button
-      type="button"
-      onClick={() => {
-        onClick?.();
-        exportCsv();
-      }}
-      className="flex w-full items-center justify-between gap-3 px-3 py-2 text-sm hover:bg-brand-tint"
-    >
-      <span>Exportar CSV</span>
-      <span className="text-muted text-xs whitespace-nowrap">visão atual</span>
-    </button>
-  );
-}

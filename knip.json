@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/app/**/{page,layout,loading,not-found,error,route}.{ts,tsx}",
+    "src/app/sw.ts",
+    "scripts/*.mjs",
+    "supabase/functions/*/index.ts"
+  ],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": ["docs/**"],
+  "ignoreDependencies": [
+    "eslint",
+    "eslint-config-next",
+    "@resvg/resvg-js"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "ignoreBinaries": [],
+  "rules": {
+    "exports": "warn",
+    "types": "warn"
+  }
+}

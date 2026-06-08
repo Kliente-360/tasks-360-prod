@@ -38,7 +38,7 @@ function todayKey(): string {
 }
 
 /** Compose `taskId:contexto`. */
-export function pairKey(taskId: string, contexto: FocoContexto): string {
+function pairKey(taskId: string, contexto: FocoContexto): string {
   return `${taskId}:${contexto}`;
 }
 

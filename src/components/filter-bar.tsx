@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 
 // ============ tipos compartilhados ============
 
-export type FilterKey = 'cliente' | 'projeto' | 'resp' | 'prazo';
+type FilterKey = 'cliente' | 'projeto' | 'resp' | 'prazo';
 
 interface Option {
   v: string;
@@ -126,7 +126,7 @@ interface MoreMenuProps {
   items: MoreMenuItem[];
 }
 
-export function MoreMenu({ items }: MoreMenuProps) {
+function MoreMenu({ items }: MoreMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useClickAway<HTMLSpanElement>(() => setOpen(false));
   return (

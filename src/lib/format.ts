@@ -39,7 +39,7 @@ export function fmtPostedEm(iso: string | null | undefined): string {
   return `${dd}/${mm}/${yy} ${hh}:${mi}`;
 }
 
-export function escapeHtml(s: string | null | undefined): string {
+function escapeHtml(s: string | null | undefined): string {
   return String(s ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
