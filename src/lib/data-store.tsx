@@ -21,6 +21,47 @@ const TASKS_CONCLUIDAS_WINDOW_DAYS = 60;
 /** Janela de time_entries trazidas no boot (timesheet UI mostra 500 mais recentes). */
 const TIME_ENTRIES_WINDOW_DAYS = 90;
 
+// Mapa snake_case (Postgres) → camelCase (Task) · usado no merge
+// de payloads parciais do realtime quando `replica identity full`
+// não está aplicado. Veja src/lib/adapters.ts:taskFromDb pra a fonte
+// de verdade do mapeamento.
+const COL_TO_FIELD: Record<string, keyof Task> = {
+  id: 'id',
+  titulo: 'titulo',
+  descricao: 'descricao',
+  cliente_id: 'clienteId',
+  projeto_id: 'projetoId',
+  pessoa_id: 'pessoaId',
+  prioridade: 'prioridade',
+  esforco: 'esforco',
+  complexidade: 'complexidade',
+  prazo: 'prazo',
+  status: 'status',
+  subetapa: 'subetapa',
+  bloqueado_por: 'bloqueadoPor',
+  visivel_cliente: 'visivelCliente',
+  criado_em: 'criadoEm',
+  status_em: 'statusEm',
+  subetapa_em: 'subetapaEm',
+  andamento_em: 'andamentoEm',
+  ordem: 'ordem',
+  tags: 'tags',
+  checklist: 'checklist',
+  reopen_count: 'reopenCount',
+  escopo: 'escopo',
+  tempo_real_horas: 'tempoRealHoras',
+  external_source: 'externalSource',
+  external_id: 'externalId',
+  arquivado_em: 'arquivadoEm',
+  criado_por_ia: 'criadoPorIa',
+  triada_em: 'triadaEm',
+  triada_por: 'triadaPor',
+  motivo_arquivamento: 'motivoArquivamento',
+  privada: 'privada',
+  webhook_sync_status: 'webhookSyncStatus',
+  webhook_sync_error: 'webhookSyncError',
+};
+
 export type RealtimeStatus = 'idle' | 'connecting' | 'subscribed' | 'error' | 'closed';
 
 interface DataState {
@@ -379,8 +420,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             setTasks((cur) => {
               const i = cur.findIndex((t) => t.id === next.id);
               if (i >= 0) {
+                // MERGE em vez de replace · proteção contra payload
+                // parcial caso `replica identity full` não esteja
+                // aplicado em tasks. taskFromDb preenche defaults nas
+                // colunas ausentes (titulo='', prazo='', etc), o que
+                // gutava a task local. Aqui sobrescrevemos só os
+                // campos cuja coluna snake_case existia no payload.
                 const out = cur.slice();
-                out[i] = next;
+                const existing = cur[i];
+                const present = new Set(Object.keys(row));
+                const filtered: Partial<Task> = {};
+                for (const [k, v] of Object.entries(COL_TO_FIELD)) {
+                  if (present.has(k)) {
+                    (filtered as Record<string, unknown>)[v] =
+                      (next as unknown as Record<string, unknown>)[v];
+                  }
+                }
+                out[i] = { ...existing, ...filtered };
                 return out;
               }
               return [next, ...cur];

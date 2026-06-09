@@ -377,20 +377,30 @@ export function FocoClient() {
             </div>
           ) : (
             <div className="space-y-2">
-              {focoFiltered.map(({ task, primaryCtx }) => (
-                <FocoTaskRow
-                  key={task.id}
-                  task={task}
-                  contexto={primaryCtx}
-                  resolved={isResolved(task.id, primaryCtx)}
-                  onToggleResolved={() => toggleResolved(task.id, primaryCtx)}
-                  lastComment={lastCommentMap.get(task.id) ?? null}
-                  clienteName={clientesById.get(task.clienteId)?.nome ?? '—'}
-                  projetoName={projetosById.get(task.projetoId)?.nome ?? '—'}
-                  openEdit={openEdit}
-                  markCommented={markCommented}
-                />
-              ))}
+              {focoFiltered.map(({ task, primaryCtx }) => {
+                // Todos os contextos que a task hoje bate · ordenados
+                // pelo PILL_ORDER pra ordem visual estável (atrasada
+                // primeiro, sem_comment por último).
+                const ctxs = taskCtxMap.get(task.id);
+                const allCtxs = ctxs
+                  ? PILL_ORDER.filter((p) => ctxs.has(p))
+                  : [primaryCtx];
+                return (
+                  <FocoTaskRow
+                    key={task.id}
+                    task={task}
+                    contexto={primaryCtx}
+                    allContextos={allCtxs}
+                    resolved={isResolved(task.id, primaryCtx)}
+                    onToggleResolved={() => toggleResolved(task.id, primaryCtx)}
+                    lastComment={lastCommentMap.get(task.id) ?? null}
+                    clienteName={clientesById.get(task.clienteId)?.nome ?? '—'}
+                    projetoName={projetosById.get(task.projetoId)?.nome ?? '—'}
+                    openEdit={openEdit}
+                    markCommented={markCommented}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -406,6 +416,7 @@ export function FocoClient() {
 function FocoTaskRow({
   task,
   contexto,
+  allContextos,
   resolved,
   onToggleResolved,
   lastComment,
@@ -415,7 +426,10 @@ function FocoTaskRow({
   markCommented,
 }: {
   task: Task;
+  /** Contexto primário (pra gate de Save + Resolve). */
   contexto: FocoContexto;
+  /** Todos os contextos que a task hoje bate · pra render dos chips. */
+  allContextos: FocoContexto[];
   resolved: boolean;
   onToggleResolved: () => void;
   lastComment: Date | null;
@@ -649,8 +663,15 @@ function FocoTaskRow({
         </div>
 
         {/* Botões no topo direito */}
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="triage-chip hidden md:inline-block">{PILL_LABELS[contexto]}</span>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {/* Chips de TODOS os contextos que a task hoje bate (não só
+              o primário). Atrasada/pra hoje aparecem com pillPrio
+              quando há intersecção. */}
+          <div className="hidden md:flex items-center gap-1 flex-wrap">
+            {allContextos.map((c) => (
+              <span key={c} className="triage-chip">{PILL_LABELS[c]}</span>
+            ))}
+          </div>
           <button
             type="button"
             onClick={onToggleResolved}
