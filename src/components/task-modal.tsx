@@ -1702,12 +1702,22 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 </div>
                 <div>
                   <label className="lbl">Prazo</label>
-                  <input
-                    type="date"
-                    className="inp"
-                    value={editing.prazo}
-                    onChange={(e) => set('prazo', e.target.value)}
-                  />
+                  {/* Mobile · date picker nativo abre no tap, mas o display
+                      visível segue dd/mm/aaaa (input nativo é position:absolute
+                      opacity:0 sobre o span). Evita locale verboso
+                      "12 de jun. de 2026" estourando a coluna. */}
+                  <label className="inp m-date-field">
+                    <input
+                      type="date"
+                      value={editing.prazo}
+                      onChange={(e) => set('prazo', e.target.value)}
+                    />
+                    <span className={editing.prazo ? 'value' : 'placeholder'}>
+                      {editing.prazo
+                        ? editing.prazo.split('-').reverse().join('/')
+                        : 'dd/mm/aaaa'}
+                    </span>
+                  </label>
                 </div>
                 <div>
                   <label className="lbl">Previsto (h)</label>
