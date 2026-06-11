@@ -1703,22 +1703,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 <div>
                   <label className="lbl">Prazo</label>
                   <input
-                    type="text"
-                    inputMode="numeric"
-                    key={editing.id + (editing.prazo ?? '')}
+                    type="date"
                     className="inp"
-                    placeholder="dd/mm/aaaa"
-                    defaultValue={
-                      editing.prazo
-                        ? editing.prazo.split('-').reverse().join('/')
-                        : ''
-                    }
-                    onBlur={(e) => {
-                      const v = e.target.value.trim();
-                      if (!v) { set('prazo', ''); return; }
-                      const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-                      if (m) set('prazo', `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`);
-                    }}
+                    value={editing.prazo}
+                    onChange={(e) => set('prazo', e.target.value)}
                   />
                 </div>
                 <div>
