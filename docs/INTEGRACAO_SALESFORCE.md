@@ -107,6 +107,7 @@ Cria ou atualiza uma task identificada por `external_id`. **Upsert idempotente**
 
 **Erros**:
 - `401 unauthorized` — API key inválida
+- `409 cliente_blocks_ai_ingest` — `criado_por_ia=true` + cliente com `webhook_enabled=true` (ex: VB, CTF). Tasks desses clientes devem vir pelo fluxo SF→ingest, não pelo Cowork/IA (anti-duplicação). Detalhes em §2.1.2.
 - `422 invalid_<campo>` — validação de tipo/enum
 - `422 cliente_not_found` / `projeto_not_found` / `responsavel_not_found` — nome não bate (só ao usar `responsavel` por nome)
 - `500 db_error` — erro inesperado
@@ -123,6 +124,23 @@ O campo `external_status` é **opcional** e age como sinal semântico:
 | Outros casos | Sem efeito especial. |
 
 **Recomendação**: sempre que houver mudança de status que reflita cancelamento (Closed Lost, Cancelled, etc.), envie `external_status: "Cancelado"`. Para reabertura, envie o novo status (ex: `"Em andamento"`) junto com o `subetapa` apropriado.
+
+#### 2.1.2 Anti-duplicação · `webhook_enabled` bloqueia ingest IA
+
+Clientes com **integração SF bidirecional** (`clientes.webhook_enabled=true` — hoje **VB** e **CTF**) **não recebem ingest via IA** (Cowork, Apps Script etc.). A regra existe pra evitar tasks duplicadas: como o próprio Salesforce já cria a task aqui via `ingest-task` com `external_id`, e mudanças bidirecionais fluem via webhook, qualquer ingest IA paralelo geraria ruído ou conflito.
+
+**Quando dispara o gate:**
+- Body do `ingest-task` contém `criado_por_ia: true`
+- O cliente resolvido tem `webhook_enabled = true`
+
+Resposta: `409 cliente_blocks_ai_ingest`.
+
+**Detalhes técnicos:**
+- O gate **só** dispara se o body trouxer `criado_por_ia=true`. Ingests normais do Salesforce (que não setam esse flag) passam pelo gate sem afetar.
+- Os domínios cadastrados em VB/CTF (ex: `corpay.com.br`) são compartilhados entre os dois clientes — não daria pra distinguir só pelo email. `webhook_enabled` é o critério estável.
+- Pra ativar/desativar pro cliente, basta toggle no banco: `update clientes set webhook_enabled = <bool> where nome = '...'`.
+
+**Recomendação pro lado do AppScript/Cowork:** opcionalmente, pular emails dos domínios bloqueados antes de chamar `ingest-task` (economiza chamada API que retornaria 409). O servidor protege em qualquer caso.
 
 ---
 

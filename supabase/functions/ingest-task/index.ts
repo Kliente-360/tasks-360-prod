@@ -149,6 +149,34 @@ Deno.serve(async (req) => {
     } catch (e) { return err(500, 'db_error', String((e as Error).message)); }
   }
 
+  // Gate · clientes com integração SF bidirecional (webhook_enabled=true,
+  // hoje VB e CTF) NÃO recebem ingest IA. As tasks deles vêm via o
+  // próprio fluxo SF→ingest-task com external_source=salesforce. Bloquear
+  // aqui evita duplicação quando o Cowork lê emails desses domínios
+  // (corpay.com.br). Aplica-se só quando o body sinaliza origem IA via
+  // criado_por_ia=true; o SF não setta esse flag, então segue fluindo.
+  const isAiIngest = (() => {
+    const v = body.criado_por_ia;
+    if (typeof v === 'boolean') return v;
+    if (typeof v === 'string') return v.toLowerCase().trim() === 'true' || v === '1';
+    if (typeof v === 'number') return v === 1;
+    return false;
+  })();
+  if (isAiIngest && clienteId) {
+    const { data: cli } = await sb
+      .from('clientes')
+      .select('webhook_enabled, nome')
+      .eq('id', clienteId)
+      .maybeSingle();
+    if ((cli as { webhook_enabled: boolean; nome: string } | null)?.webhook_enabled === true) {
+      return err(
+        409,
+        'cliente_blocks_ai_ingest',
+        `cliente "${(cli as { nome: string }).nome}" tem integração SF ativa — task deve ser criada no Salesforce, não via IA`,
+      );
+    }
+  }
+
   // Projeto: depende de cliente. Se cliente é null (omitido/sentinel/vazio),
   // ignora projeto silenciosamente — não faz sentido projeto sem cliente,
   // e lookup global é arriscado (nomes genéricos tipo "Sustentação" existem
