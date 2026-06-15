@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.149 · **Atualizado**: 11/06/2026 · branch `main`
+> **Versão**: v1.03.151 · **Atualizado**: 11/06/2026 · branch `main`
 
 ---
 
@@ -104,6 +104,7 @@ Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout es
 - ✅ **Modal mobile · Prazo · picker nativo + display dd/mm/aaaa** (v1.03.143-144) · input `type=date` invisível por cima de span formatado evita locale verboso "12 de jun. de 2026" estourando coluna · `font-size:16px` anti-zoom iOS. Best of both: picker nativo aberto no tap + display compacto
 - ✅ **Anti-duplicação IA × SF · gate webhook_enabled no ingest-task** (v1.03.145-147) · clientes com integração SF bidirecional (VB/CTF) bloqueiam ingest IA. Servidor retorna 409 `cliente_blocks_ai_ingest` quando body tem `criado_por_ia=true` + cliente.webhook_enabled. `get-clientes` agora retorna `webhook_enabled` pra AppScript fazer gate local também. `docs/APPSCRIPT_GATE.md` traz script completo do Gemini Notes Ingestor com 2 gates novos: (a) skip se cliente identificado tem webhook_enabled; (b) skip se domínio externo não cadastrado (prospect/lead — não vira task)
 - ✅ **Campo solucao_implementada · entrega vs pedido** (v1.03.148-149) · prep pra IA-summary (Bucket B). `descricao` continua sendo "pedido"; novo campo "Solução implementada" aparece no modal só de subetapa ≥ em_homologacao em diante (não polui tasks iniciais). Cowork/SF podem mandar opcionalmente via `ingest-task`. IA-summary futuro vai usar os 2 campos pra montar narrativa pedido→entrega sem inferir da thread de comments
+- ✅ **Capacidade · Sustentação alinha com Pessoa** (v1.03.151) · `computeWeeklyCapacityAnalysis` agora usa `effRemaining` no bucket de sustentação (era `effEsforco` bruto). Resolve inconsistência: pessoa descontava horas já realizadas, sustentação não — clientes com tasks abertas e muito `tempoRealHoras` declarado mostravam capacidade fantasma. Ganho imediato e cirúrgico (1 linha). Cálculo de "realizado-na-semana via time_entries" fica gated em Bucket T (adoção timesheet)
 
 ---
 
@@ -195,6 +196,24 @@ Todas as funções puras abaixo estão prontas, testadas (64 testes) e disponív
 | # | Item | Esforço | Impacto |
 |---|---|---|---|
 | C.10 | **Publicar heurísticas na UI** · decidir onde cada função aparece (Dashboard? Briefing? nova aba Analytics?), desenhar cards/widgets por heurística, ligar aos dados do DataProvider | 1-2 semanas | Alto — transforma os KPIs em valor percebido |
+| C.11 | **Capacidade · realizado + previsto via timesheet** · evolução do `computeWeeklyCapacityAnalysis` pra somar horas realmente registradas em `time_entries` na semana (independente do prazo da task) + remaining das tasks abertas. Hoje só conta forward (effRemaining bucketed by prazo). Permite ver "carga real consumida vs prevista" alinhada à `capacidade_horas_semana`/`orcamento_horas`. **Gated em adoção do timesheet ≥ 60%** (medido em jun/2026: <10% · bloqueado). Atacar após Bucket T. | 3-5 dias (depois de adoção OK) | Alto — métrica honesta de carga |
+
+### Bucket T · Adoção do Timesheet (pré-req do C.11)
+
+Cobertura atual: **<10% das tasks concluídas têm time_entries** (medido jun/2026). Sem isso, qualquer cálculo de "realizado" em capacidade vira ficção. Pré-requisito do C.11. Atacar em ordem de impacto/custo:
+
+| # | Item | Esforço | Impacto adoção |
+|---|---|---|---|
+| T.1 | **Auto-iniciar cronômetro ao abrir task no modal** · com prompt opcional ("você está trabalhando agora? Iniciar timer"). Default ativado pra interno/admin. | 1d | ⭐⭐⭐ |
+| T.6 | **Trava no concluir** · task não conclui sem `tempoRealHoras > 0` (campo OU sum de time_entries). Hoje conclui em branco. Pode irritar mas é o gate mais forte. | 0.5d | ⭐⭐⭐ |
+| T.4 | **Bulk-fill timesheet retroativo** · tela "lançar horas da semana passada" com grid pessoa × dia × task pra preenchimento rápido (1 sessão de 10 min/semana). | 2-3d | ⭐⭐⭐ retroativo |
+| T.2 | **Card "Suas horas hoje" no header/Foco** · contador rolando · gamifica · vê na hora se esqueceu. | 1d | ⭐⭐ |
+| T.3 | **Lembrete passivo no Foco** se pessoa logou < 4h até as 15h em dia útil · texto leve "Você ainda não registrou horas hoje. [Iniciar]". | 1d | ⭐⭐ |
+| T.5 | **Email digest sexta** · "essa semana você registrou Xh de Y previstas. Faltou Z. [Lançar agora]". | 2d | ⭐ |
+
+**Sequência sugerida**: T.1 + T.6 primeiro (2 semanas em prod). Re-medir cobertura. Se subir pra >40%, ataca T.4 + T.2. Se >60% após 1-2 meses, destrava C.11.
+
+**Meta de cobertura**: > 60% das tasks concluídas com `time_entries` somando > 0.
 
 ---
 

@@ -151,6 +151,10 @@ export function computeWeeklyCapacityAnalysis(
   });
 
   // ---- Sustentação × semana ----
+  // Soma usa effRemaining (esforço restante após descontar tempoRealHoras
+  // declarado na task), consistente com o cálculo por pessoa. Antes usava
+  // effEsforco bruto, o que inflava o consumo quando uma task já tinha
+  // boa parte das horas registradas — mostrando capacidade fantasma.
   const sustHours = new Map<string, [number, number, number, number]>();
   for (const proj of projetos) {
     if (proj.arquivadoEm || proj.tipo !== 'sustentacao') continue;
@@ -162,8 +166,8 @@ export function computeWeeklyCapacityAnalysis(
     const arr = sustHours.get(t.projetoId);
     if (!arr) continue;
     const idx = taskWeekIndex(t, todayRef);
-    if (idx === -1) arr[0] += effEsforco(t);
-    else if (idx !== null) arr[idx] += effEsforco(t);
+    if (idx === -1) arr[0] += effRemaining(t);
+    else if (idx !== null) arr[idx] += effRemaining(t);
   }
   const sustentacoesResult: SustentacaoCapacidade[] = [];
   for (const proj of projetos) {
