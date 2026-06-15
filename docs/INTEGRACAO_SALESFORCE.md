@@ -73,7 +73,8 @@ Cria ou atualiza uma task identificada por `external_id`. **Upsert idempotente**
   "tipo_trabalho":   "feature",
   "tags":            ["frontend", "lightning"],
   "criado_por_ia":   false,
-  "external_status": "Em andamento"
+  "external_status": "Em andamento",
+  "solucao_implementada": "Layout customizado com Lightning Record Page, deployado em sandbox X"
 }
 ```
 
@@ -81,7 +82,8 @@ Cria ou atualiza uma task identificada por `external_id`. **Upsert idempotente**
 |---|---|---|---|
 | `external_id` | string | **sim** | Record Id do custom object no SF |
 | `titulo` | string | **sim** no create | até 255 chars |
-| `descricao` | string | não | markdown ok |
+| `descricao` | string | não | markdown ok · **pedido/escopo** da task |
+| `solucao_implementada` | string | não | **entrega** da task · usado pelo IA-summary pra gerar narrativa pedido→entrega · normalmente preenchido quando subetapa ≥ em_homologacao |
 | `cliente` | string | não | **resolução por nome** case-insensitive. `null`/`""`/`"Triagem"` = task sem cliente |
 | `projeto` | string | não | resolução por nome dentro do cliente. Ignorado se `cliente` for null |
 | `responsavel_id` | string (UUID) | não | **preferencial** — UUID direto da pessoa (obtido via `GET /get-pessoas`). Sem lookup. Tem precedência sobre `responsavel`. |

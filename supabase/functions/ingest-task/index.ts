@@ -10,7 +10,8 @@
 //   {
 //     "external_id":  "a0X5g000000XYZ",            // id do registro no SF
 //     "titulo":       "Customizar layout",
-//     "descricao":    "...",                        // opcional
+//     "descricao":    "...",                        // opcional · pedido / escopo
+//     "solucao_implementada": "...",                 // opcional · entrega · usado pelo IA-summary
 //     "cliente":      "Bodytech",                   // opcional, by name. Pode ser "" / null
 //                                                   // / "Triagem" (sentinel) = task entra
 //                                                   // sem cliente, aparece direto na Triagem.
@@ -309,6 +310,8 @@ Deno.serve(async (req) => {
   // last_ingest_at: sinaliza pro trigger que veio do ingest → não dispara webhook.
   const payload: Record<string, unknown> = { titulo, last_ingest_at: nowIso };
   if (body.descricao !== undefined) payload.descricao    = String(body.descricao ?? '');
+  if (body.solucao_implementada !== undefined)
+    payload.solucao_implementada = String(body.solucao_implementada ?? '');
   if (clienteId)                    payload.cliente_id   = clienteId;
   if (projetoId)                    payload.projeto_id   = projetoId;
   if (pessoaId)                     payload.pessoa_id    = pessoaId;

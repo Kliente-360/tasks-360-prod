@@ -29,6 +29,7 @@ const COL_TO_FIELD: Record<string, keyof Task> = {
   id: 'id',
   titulo: 'titulo',
   descricao: 'descricao',
+  solucao_implementada: 'solucaoImplementada',
   cliente_id: 'clienteId',
   projeto_id: 'projetoId',
   pessoa_id: 'pessoaId',

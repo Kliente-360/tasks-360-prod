@@ -166,7 +166,8 @@ create table public.tasks (
   andamento_em timestamp with time zone,
   triada_em timestamp without time zone,
   triada_por uuid,
-  motivo_arquivamento text
+  motivo_arquivamento text,
+  solucao_implementada text
 );
 
 create table public.time_entries (

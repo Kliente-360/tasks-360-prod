@@ -24,6 +24,10 @@ export interface Task {
   titulo: string;
   /** Lazy: undefined quando não carregada (boot exclui pra payload menor). */
   descricao?: string;
+  /** Solução implementada · "entrega" vs "pedido" da descricao. Aparece no
+   *  modal só de subetapa ≥ em_homologacao em diante. Usado pelo IA-summary
+   *  (B.2/B.3/B.7) pra montar narrativa pedido→entrega. */
+  solucaoImplementada?: string;
   clienteId: string;
   projetoId: string;
   pessoaId: string;

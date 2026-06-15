@@ -138,6 +138,7 @@ function blankEditing(): Task {
     id: '',
     titulo: '',
     descricao: '',
+    solucaoImplementada: '',
     clienteId: '',
     projetoId: '',
     pessoaId: '',
@@ -177,6 +178,7 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     titulo: e.titulo.trim(),
     descricao: e.descricao ?? '',
+    solucao_implementada: e.solucaoImplementada ?? '',
     cliente_id: e.clienteId || null,
     projeto_id: e.projetoId || null,
     pessoa_id: e.pessoaId || null,
@@ -202,6 +204,19 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
 
 const TASK_LIGHT_COLS =
   'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,triada_em,triada_por,motivo_arquivamento,privada';
+
+/** Subetapas onde o campo "Solução implementada" aparece no modal.
+ *  Lógica: só mostra de em_homologacao em diante (quando entrega já
+ *  está rolando ou foi concluída). Em backlog/em_definicao/priorizado/
+ *  escopo_definido/em_desenvolvimento esconde — task ainda nem tem
+ *  solução pra descrever. */
+const SHOWS_SOLUCAO = new Set([
+  'em_homologacao',
+  'em_revisao',
+  'pronto_producao',
+  'em_implantacao',
+  'concluido',
+]);
 
 // ============================================================
 // Mention picker hook — espelho de anexos.js:341 (onMentionInput)
@@ -593,12 +608,21 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     if (!taskId || taskId === '__new__') return;
     let cancelled = false;
     (async () => {
-      // Lazy descricao se não veio do boot. `undefined` no source = nunca
-      // foi carregada (light cols não incluem). `''` ou string = já temos.
-      if (editingRef.current.descricao === undefined) {
-        const { data } = await sb.from('tasks').select('descricao').eq('id', taskId).single();
+      // Lazy descricao + solucao_implementada se não vieram do boot.
+      // `undefined` no source = nunca foi carregada (light cols não
+      // incluem). `''` ou string = já temos.
+      if (editingRef.current.descricao === undefined || editingRef.current.solucaoImplementada === undefined) {
+        const { data } = await sb
+          .from('tasks')
+          .select('descricao, solucao_implementada')
+          .eq('id', taskId)
+          .single();
         if (!cancelled) {
-          setEditing((cur) => ({ ...cur, descricao: data?.descricao ?? '' }));
+          setEditing((cur) => ({
+            ...cur,
+            descricao: data?.descricao ?? '',
+            solucaoImplementada: data?.solucao_implementada ?? '',
+          }));
           setDescricaoLoading(false);
           skipNextDirty.current = true;
         }
@@ -697,6 +721,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           patchTask(e.id, {
             titulo: e.titulo.trim(),
             descricao: e.descricao ?? '',
+            solucaoImplementada: e.solucaoImplementada ?? '',
             clienteId: e.clienteId,
             projetoId: e.projetoId,
             pessoaId: e.pessoaId,
@@ -1757,6 +1782,23 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   style={descricaoLoading ? { opacity: 0.6 } : undefined}
                 />
               </div>
+              {/* Solução implementada · só aparece de em_homologacao em diante.
+                  Captura "o que foi feito" pra IA-summary gerar narrativa
+                  pedido→entrega sem inferir da thread de comments. */}
+              {SHOWS_SOLUCAO.has(editing.subetapa) && (
+                <div>
+                  <label className="lbl">Solução implementada</label>
+                  <textarea
+                    className="inp"
+                    rows={3}
+                    value={descricaoLoading ? '' : (editing.solucaoImplementada ?? '')}
+                    onChange={(e) => set('solucaoImplementada', e.target.value)}
+                    placeholder={descricaoLoading ? 'Carregando…' : 'O que foi feito de fato (vai pro histórico e pra resumos automáticos)…'}
+                    disabled={descricaoLoading}
+                    style={descricaoLoading ? { opacity: 0.6 } : undefined}
+                  />
+                </div>
+              )}
               <div>
                 <label className="lbl">Responsável</label>
                 <select
@@ -1894,6 +1936,22 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 style={descricaoLoading ? { opacity: 0.6 } : undefined}
               />
             </div>
+
+            {/* Solução implementada · só aparece de em_homologacao em diante */}
+            {SHOWS_SOLUCAO.has(editing.subetapa) && (
+              <div className="tmodal-section hidden md:block">
+                <div className="tmodal-section-title">Solução implementada</div>
+                <textarea
+                  className="inp"
+                  rows={3}
+                  value={descricaoLoading ? '' : (editing.solucaoImplementada ?? '')}
+                  onChange={(e) => set('solucaoImplementada', e.target.value)}
+                  placeholder={descricaoLoading ? 'Carregando…' : 'O que foi feito de fato (vai pro histórico e pra resumos automáticos)…'}
+                  disabled={descricaoLoading}
+                  style={descricaoLoading ? { opacity: 0.6 } : undefined}
+                />
+              </div>
+            )}
 
             {/* Checklist */}
             <div className="tmodal-section hidden md:block">

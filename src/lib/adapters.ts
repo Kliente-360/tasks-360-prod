@@ -19,8 +19,12 @@ export function taskFromDb(r: Row): Task {
   return {
     id: str(r.id),
     titulo: str(r.titulo),
-    // descricao: lazy — preserva undefined quando não veio no SELECT.
+    // descricao + solucaoImplementada: lazy — preservam undefined quando
+    // não vieram no SELECT (TASK_LIGHT_COLS exclui ambos pra payload menor).
     descricao: r.descricao === undefined ? undefined : str(r.descricao),
+    solucaoImplementada: r.solucao_implementada === undefined
+      ? undefined
+      : str(r.solucao_implementada),
     clienteId: str(r.cliente_id),
     projetoId: str(r.projeto_id),
     pessoaId: str(r.pessoa_id),
