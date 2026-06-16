@@ -2,7 +2,7 @@
 -- Kliente 360 · tasks 360 · Schema canônico
 -- ============================================================
 --
--- Snapshot do estado vivo do banco gerado em 10/06/2026 (v1.03.141).
+-- Snapshot do estado vivo do banco gerado em 15/06/2026 (v1.03.152).
 -- Source-of-truth para auditoria, cold-start de novo projeto Supabase,
 -- e detecção de drift entre repo ↔ Dashboard.
 --
@@ -14,10 +14,11 @@
 --   • Histórico completo da fase pré-cleanup vive na tag git
 --     `schema-pre-cleanup` (commit 4fec7e2).
 --
--- Notas sobre o estado atual (observações da auditoria 10/06):
---   • notifications tem `notifications_staff_all` (qualquer staff full)
---     além das 3 self-policies — pode ser drift de algum patch antigo.
---     Avaliar consolidar.
+-- Notas sobre o estado atual (observações da auditoria 15/06):
+--   • V.3 RLS audit (v1.03.152) · notifications consolidada (staff_all virou
+--     admin_all · select_self duplicado dropado · cliente self habilitado).
+--     task_field_history com whitelist de field. task_attachments com coluna
+--     visivel_cliente. Detalhes em docs/gestao/AUDIT_RLS.md.
 --   • task_field_history está em supabase_realtime publication mas NÃO
 --     tem replica identity full — payloads de UPDATE virão parciais
 --     (mesmo bug que tasks tinha antes do fix de v1.03.138).
@@ -98,7 +99,8 @@ create table public.task_attachments (
   width integer,
   height integer,
   author_pessoa_id uuid,
-  criado_em timestamp with time zone not null default now()
+  criado_em timestamp with time zone not null default now(),
+  visivel_cliente boolean not null default true
 );
 
 create table public.task_comments (
@@ -701,20 +703,27 @@ create policy clientes_staff_all on public.clientes
 create policy clientes_cliente_self on public.clientes
   for select using (((app_pessoa_role() = 'cliente'::text) AND (id = app_pessoa_cliente_id())));
 
--- notifications · ATENÇÃO: tem permissive staff_all + 3 self-policies (drift?)
-create policy notifications_staff_all on public.notifications
-  for all using (app_is_staff()) with check (app_is_staff());
+-- notifications · admin tudo · interno e cliente só self
+-- (apertado em v1.03.152 / migration 2026-06-15_rls_audit_v3 — antes staff_all
+-- permitia interno ver notif de outro interno; agora staff_all virou admin_all.)
+create policy notifications_admin_all on public.notifications
+  for all using (app_is_admin()) with check (app_is_admin());
 create policy notifications_insert_any on public.notifications
   for insert with check ((auth.uid() IS NOT NULL));
 create policy notifications_select_self on public.notifications
   for select using ((recipient_pessoa_id = app_pessoa_id()));
--- notifications_self_select é duplicada de notifications_select_self (mesmo predicate).
--- Manter por enquanto pra refletir estado vivo; consolidar em migration futura.
-create policy notifications_self_select on public.notifications
-  for select using ((recipient_pessoa_id = app_pessoa_id()));
 create policy notifications_update_self on public.notifications
   for update using ((recipient_pessoa_id = app_pessoa_id()))
   with check ((recipient_pessoa_id = app_pessoa_id()));
+-- cliente self · adicionado em v1.03.152 (pré-req V.8).
+create policy notifications_cliente_self_select on public.notifications
+  for select using ((app_pessoa_role() = 'cliente'::text)
+    AND (recipient_pessoa_id = app_pessoa_id()));
+create policy notifications_cliente_self_update on public.notifications
+  for update using ((app_pessoa_role() = 'cliente'::text)
+    AND (recipient_pessoa_id = app_pessoa_id()))
+  with check ((app_pessoa_role() = 'cliente'::text)
+    AND (recipient_pessoa_id = app_pessoa_id()));
 
 -- pessoas
 create policy pessoas_staff_all on public.pessoas
@@ -731,8 +740,11 @@ create policy projetos_cliente_select on public.projetos
 -- task_attachments
 create policy task_attachments_staff_all on public.task_attachments
   for all using (app_is_staff()) with check (app_is_staff());
+-- task_attachments_cliente_select · em v1.03.152 ganhou filtro de coluna
+-- visivel_cliente do próprio anexo (default true). Anexos marcados false
+-- ficam só staff.
 create policy task_attachments_cliente_select on public.task_attachments
-  for select using (((app_pessoa_role() = 'cliente'::text) AND (EXISTS (
+  for select using (((app_pessoa_role() = 'cliente'::text) AND (visivel_cliente = true) AND (EXISTS (
     SELECT 1 FROM tasks tk
     WHERE ((tk.id = task_attachments.task_id) AND (tk.cliente_id = app_pessoa_cliente_id()) AND (tk.visivel_cliente = true))
   ))));
@@ -754,11 +766,18 @@ create policy task_comments_cliente_insert on public.task_comments
 -- task_field_history
 create policy task_field_history_staff_all on public.task_field_history
   for all using (app_is_staff()) with check (app_is_staff());
+-- task_field_history_cliente_select · em v1.03.152 ganhou whitelist de
+-- field (antes vazava esforco, tempo_real_horas, pessoa, bloqueado_por,
+-- prioridade, complexidade, escopo, tipo_trabalho).
 create policy task_field_history_cliente_select on public.task_field_history
-  for select using (((app_pessoa_role() = 'cliente'::text) AND (EXISTS (
-    SELECT 1 FROM tasks tk
-    WHERE ((tk.id = task_field_history.task_id) AND (tk.cliente_id = app_pessoa_cliente_id()) AND (tk.visivel_cliente = true))
-  ))));
+  for select using (
+    (app_pessoa_role() = 'cliente'::text)
+    AND (field IN ('subetapa','prazo','titulo','descricao','solucao_implementada'))
+    AND (EXISTS (
+      SELECT 1 FROM tasks tk
+      WHERE ((tk.id = task_field_history.task_id) AND (tk.cliente_id = app_pessoa_cliente_id()) AND (tk.visivel_cliente = true))
+    ))
+  );
 
 -- tasks · permissivas em camadas + restrictive de privada
 create policy tasks_admin_all on public.tasks

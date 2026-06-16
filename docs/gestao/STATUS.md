@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.151 · **Atualizado**: 11/06/2026 · branch `main`
+> **Versão**: v1.03.152 · **Atualizado**: 15/06/2026 · branch `main`
 
 ---
 
@@ -104,6 +104,7 @@ Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout es
 - ✅ **Modal mobile · Prazo · picker nativo + display dd/mm/aaaa** (v1.03.143-144) · input `type=date` invisível por cima de span formatado evita locale verboso "12 de jun. de 2026" estourando coluna · `font-size:16px` anti-zoom iOS. Best of both: picker nativo aberto no tap + display compacto
 - ✅ **Anti-duplicação IA × SF · gate webhook_enabled no ingest-task** (v1.03.145-147) · clientes com integração SF bidirecional (VB/CTF) bloqueiam ingest IA. Servidor retorna 409 `cliente_blocks_ai_ingest` quando body tem `criado_por_ia=true` + cliente.webhook_enabled. `get-clientes` agora retorna `webhook_enabled` pra AppScript fazer gate local também. `docs/APPSCRIPT_GATE.md` traz script completo do Gemini Notes Ingestor com 2 gates novos: (a) skip se cliente identificado tem webhook_enabled; (b) skip se domínio externo não cadastrado (prospect/lead — não vira task)
 - ✅ **Campo solucao_implementada · entrega vs pedido** (v1.03.148-149) · prep pra IA-summary (Bucket B). `descricao` continua sendo "pedido"; novo campo "Solução implementada" aparece no modal só de subetapa ≥ em_homologacao em diante (não polui tasks iniciais). Cowork/SF podem mandar opcionalmente via `ingest-task`. IA-summary futuro vai usar os 2 campos pra montar narrativa pedido→entrega sem inferir da thread de comments
+- ✅ **V.3 · RLS audit · fixes críticos pré-launch Pão e Talho** (v1.03.152) · `docs/gestao/AUDIT_RLS.md` com matriz role×tabela×CRUD + 6 gaps identificados. Migration `2026-06-15_rls_audit_v3` aplicada: (a) `task_field_history` ganhou whitelist de `field` pro cliente (`subetapa`,`prazo`,`titulo`,`descricao`,`solucao_implementada`) — antes vazava `esforco`, `tempo_real_horas`, `pessoa`, `bloqueado_por`, `prioridade`, `complexidade`, `escopo`, `tipo_trabalho`; (b) `task_attachments` ganhou coluna `visivel_cliente` (default true) + policy filtra; (c) `notifications` consolidada — `staff_all` virou `admin_all` (interno deixa de ver notif de outro interno), policy `select_self` duplicada removida, cliente self habilitado (pré-req V.8). Pendente em V.4: mapear labels de subetapa pra rótulos amigáveis no modo cliente (timeline mostra `em_definicao` etc).
 - ✅ **Capacidade · Sustentação alinha com Pessoa** (v1.03.151) · `computeWeeklyCapacityAnalysis` agora usa `effRemaining` no bucket de sustentação (era `effEsforco` bruto). Resolve inconsistência: pessoa descontava horas já realizadas, sustentação não — clientes com tasks abertas e muito `tempoRealHoras` declarado mostravam capacidade fantasma. Ganho imediato e cirúrgico (1 linha). Cálculo de "realizado-na-semana via time_entries" fica gated em Bucket T (adoção timesheet)
 
 ---
