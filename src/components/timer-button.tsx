@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTimer, fmtElapsed } from '@/lib/use-timer';
 import { useData, useClientesById } from '@/lib/data-store';
 import { useClickAway } from '@/lib/use-click-away';
@@ -227,6 +227,19 @@ export function ManualEntryPopover({
   const [durM, setDurM] = useState(initFrom?.durM ?? 0);
   const [note, setNote] = useState(initFrom?.note ?? '');
   const ref = useClickAway<HTMLDivElement>(onCancel);
+  // Placement dinâmico: por padrão abre pra baixo (top-full); se não couber
+  // no viewport (ex.: registro no fim da lista), flipa pra cima (bottom-full).
+  const [placement, setPlacement] = useState<'bottom' | 'top'>('bottom');
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const overflowsBottom = rect.bottom > window.innerHeight - 8;
+    const parentRect = el.parentElement?.getBoundingClientRect();
+    const spaceAbove = parentRect ? parentRect.top : rect.top;
+    if (overflowsBottom && spaceAbove >= rect.height + 8) setPlacement('top');
+  }, [ref]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
@@ -266,7 +279,10 @@ export function ManualEntryPopover({
   return (
     <div
       ref={ref}
-      className="absolute top-full right-0 mt-2 z-50 w-[360px] max-w-[calc(100vw-24px)] bg-bg-elev border border-line rounded-lg shadow-xl overflow-hidden"
+      className={cn(
+        'absolute right-0 z-50 w-[360px] max-w-[calc(100vw-24px)] bg-bg-elev border border-line rounded-lg shadow-xl overflow-hidden',
+        placement === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2',
+      )}
       role="dialog"
       aria-label="Lançar horas"
     >
