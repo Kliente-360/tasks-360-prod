@@ -32,6 +32,15 @@ export interface Task {
    *  Lazy junto com descricao. Sub-campo da seção "Descrição" no modal
    *  (Solicitação = descricao · Valor Esperado = este campo). */
   valorEsperado?: string;
+  /** Definition of Done — critério de aceite. Obrigatório de escopo_definido+. */
+  criterioAceite?: string;
+  /** Valor entregue (impacto realizado). Obrigatório ao concluir. */
+  valorEntregue?: string;
+  /** Prioridade que o cliente sinalizou. Separado de `prioridade` (interna).
+   *  Enum: 'alta' · 'media' · 'baixa' · null (não informado). */
+  prioridadeSolicitadaCliente?: 'alta' | 'media' | 'baixa' | null;
+  /** Motivo capturado quando uma task é reaberta (concluido → outra). */
+  motivoReabertura?: string;
   clienteId: string;
   projetoId: string;
   pessoaId: string;

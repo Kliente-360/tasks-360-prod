@@ -169,7 +169,11 @@ create table public.tasks (
   triada_por uuid,
   motivo_arquivamento text,
   solucao_implementada text,
-  valor_esperado text not null default ''
+  valor_esperado text not null default '',
+  criterio_aceite text not null default '',
+  valor_entregue text not null default '',
+  prioridade_solicitada_cliente text,
+  motivo_reabertura text
 );
 
 create table public.time_entries (
@@ -274,6 +278,8 @@ alter table public.tasks add constraint tasks_tipo_trabalho_check
   CHECK (((tipo_trabalho IS NULL) OR (tipo_trabalho = ANY (ARRAY['bug'::text, 'feature'::text, 'discovery'::text, 'manutencao'::text, 'admin'::text]))));
 alter table public.tasks add constraint tasks_webhook_sync_status_check
   CHECK ((webhook_sync_status = ANY (ARRAY['synced'::text, 'error'::text])));
+alter table public.tasks add constraint tasks_prio_solicitada_check
+  CHECK (((prioridade_solicitada_cliente IS NULL) OR (prioridade_solicitada_cliente = ANY (ARRAY['alta'::text, 'media'::text, 'baixa'::text]))));
 alter table public.tasks add constraint tasks_cliente_id_fkey
   FOREIGN KEY (cliente_id) REFERENCES clientes(id) ON DELETE RESTRICT;
 alter table public.tasks add constraint tasks_projeto_id_fkey

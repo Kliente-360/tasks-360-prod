@@ -556,8 +556,19 @@ input[type="checkbox"] { accent-color: var(--brand); }
 .autosave[data-state="saving"] .as-dot { background: var(--cyan); animation: as-pulse 1s ease-in-out infinite; }
 .autosave[data-state="saved"]  { color: rgba(255,255,255,0.65); }
 .autosave[data-state="saved"]  .as-dot { background: var(--brand-light); animation: none; }
-.autosave[data-state="error"]  { color: #F4C8C3; background: rgba(200,57,43,0.18); }
-.autosave[data-state="error"]  .as-dot { background: var(--p0); }
+.autosave[data-state="error"]  {
+  color: #FFFFFF;
+  background: var(--danger);
+  font-weight: 600;
+  padding: 5px 10px;
+  box-shadow: 0 0 0 2px rgba(200,57,43,0.45);
+  animation: as-error-pulse 1.8s ease-in-out infinite;
+}
+.autosave[data-state="error"]  .as-dot { background: #FFFFFF; }
+@keyframes as-error-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(200,57,43,0.45); }
+  50%      { box-shadow: 0 0 0 4px rgba(200,57,43,0.18); }
+}
 @keyframes as-pulse {
   0%, 100% { opacity: 1;  transform: scale(1); }
   50%      { opacity: 0.35; transform: scale(1.4); }

@@ -43,7 +43,7 @@ import { useToastSafe } from '@/components/toast';
 import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
 import { fmtDate, fmtDateShort, lblStatus, sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
-import { SUB_TO_MACRO, SKILL_GROUPS, ALL_SKILLS } from '@/lib/task-constants';
+import { SUB_TO_MACRO, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK } from '@/lib/task-constants';
 import { timeEntryFromDb } from '@/lib/adapters';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { Icon } from '@/components/icons';
@@ -140,6 +140,10 @@ function blankEditing(): Task {
     descricao: '',
     solucaoImplementada: '',
     valorEsperado: '',
+    criterioAceite: '',
+    valorEntregue: '',
+    prioridadeSolicitadaCliente: null,
+    motivoReabertura: '',
     clienteId: '',
     projetoId: '',
     pessoaId: '',
@@ -180,6 +184,10 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
     descricao: e.descricao ?? '',
     solucao_implementada: e.solucaoImplementada ?? '',
     valor_esperado: e.valorEsperado ?? '',
+    criterio_aceite: e.criterioAceite ?? '',
+    valor_entregue: e.valorEntregue ?? '',
+    prioridade_solicitada_cliente: e.prioridadeSolicitadaCliente || null,
+    motivo_reabertura: e.motivoReabertura || null,
     cliente_id: e.clienteId || null,
     projeto_id: e.projetoId || null,
     pessoa_id: e.pessoaId || null,
@@ -609,17 +617,21 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     if (!taskId || taskId === '__new__') return;
     let cancelled = false;
     (async () => {
-      // Lazy descricao + solucao_implementada + valor_esperado se não
+      // Lazy descricao + solucao_implementada + valor_esperado +
+      // criterio_aceite + valor_entregue + motivo_reabertura se não
       // vieram do boot. `undefined` no source = nunca foi carregada
-      // (light cols não incluem os 3). `''` ou string = já temos.
+      // (light cols não incluem os textos longos pra payload menor).
       if (
         editingRef.current.descricao === undefined ||
         editingRef.current.solucaoImplementada === undefined ||
-        editingRef.current.valorEsperado === undefined
+        editingRef.current.valorEsperado === undefined ||
+        editingRef.current.criterioAceite === undefined ||
+        editingRef.current.valorEntregue === undefined ||
+        editingRef.current.motivoReabertura === undefined
       ) {
         const { data } = await sb
           .from('tasks')
-          .select('descricao, solucao_implementada, valor_esperado')
+          .select('descricao, solucao_implementada, valor_esperado, criterio_aceite, valor_entregue, motivo_reabertura')
           .eq('id', taskId)
           .single();
         if (!cancelled) {
@@ -628,6 +640,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             descricao: data?.descricao ?? '',
             solucaoImplementada: data?.solucao_implementada ?? '',
             valorEsperado: data?.valor_esperado ?? '',
+            criterioAceite: data?.criterio_aceite ?? '',
+            valorEntregue: data?.valor_entregue ?? '',
+            motivoReabertura: data?.motivo_reabertura ?? '',
           }));
           setDescricaoLoading(false);
           skipNextDirty.current = true;
@@ -715,6 +730,16 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         : 0;
       const gate = validateSubetapaAdvance(e, e.subetapa, { timeEntriesHours: sumHoursForTask });
       if (!gate.ok) return { ok: false, error: gate.error };
+      // 3.3 · gate de reabertura: se estava 'concluido' e mudou pra outra,
+      // exige motivo_reabertura preenchido.
+      if (e.id) {
+        const prevTask = tasksById.get(e.id) ?? null;
+        if (prevTask && prevTask.status === 'concluido' && e.subetapa !== 'concluido') {
+          if (!(e.motivoReabertura && e.motivoReabertura.trim().length > 0)) {
+            return { ok: false, error: 'Informe o motivo da reabertura antes de salvar.' };
+          }
+        }
+      }
       // Auto-fill silencioso (modo d): se manual vazio e tem horas no
       // timesheet, completa tempo_real_horas com a soma. Patcha editing
       // pra UI refletir e cai no payload abaixo.
@@ -744,6 +769,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             descricao: e.descricao ?? '',
             solucaoImplementada: e.solucaoImplementada ?? '',
             valorEsperado: e.valorEsperado ?? '',
+            criterioAceite: e.criterioAceite ?? '',
+            valorEntregue: e.valorEntregue ?? '',
+            prioridadeSolicitadaCliente: e.prioridadeSolicitadaCliente ?? null,
+            motivoReabertura: e.motivoReabertura ?? '',
             clienteId: e.clienteId,
             projetoId: e.projetoId,
             pessoaId: e.pessoaId,
@@ -965,14 +994,14 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     [sb, tasksById, patchTask, replaceTask, upsertTask, currentPessoa?.id, currentPessoa?.nome, timeEntries],
   );
 
-  const autosaveNow = useCallback(async () => {
+  const autosaveNow = useCallback(async (opts?: { quiet?: boolean }) => {
     const e = editingRef.current;
-    if (!e.id) return; // só autosalva tasks já criadas
-    if (!e.titulo.trim()) return;
+    if (!e.id) return { ok: false } as { ok: false }; // só autosalva tasks já criadas
+    if (!e.titulo.trim()) return { ok: false } as { ok: false };
     const seq = ++autosaveSeq.current;
     setSaveState('saving');
     const res = await persist({ silent: true });
-    if (seq !== autosaveSeq.current) return;
+    if (seq !== autosaveSeq.current) return res;
     if (res.ok) {
       setSaveState('saved');
       // Marca pra o watcher global toastar quando o webhook completar
@@ -980,10 +1009,15 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       markUserEditedTask(e.id);
     } else {
       setSaveState('error');
+      // Antes só logava em warn — usuário podia fechar achando salvo.
+      // Agora emite toast com o erro real (gates de subetapa, etc) pra
+      // o usuário ver o motivo da falha imediatamente.
+      if (!opts?.quiet) toast.error(res.error ?? 'Erro ao salvar (autosave).');
       // eslint-disable-next-line no-console
       console.warn('[autosave]', res.error);
     }
-  }, [persist, markUserEditedTask]);
+    return res;
+  }, [persist, markUserEditedTask, toast]);
   // Ref sempre atualizado — evita incluir autosaveNow nas deps do effect
   // de dirty/debounce e previne o loop (patchTask → tasksById → persist
   // → autosaveNow ref muda → effect re-dispara → loop).
@@ -1051,7 +1085,18 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     if (newComment.trim()) pending.push(postComment());
     if (replyingToId && newReply.trim()) pending.push(submitReply(replyingToId));
     if (editingCommentId && editingCommentDraft.trim()) pending.push(saveEditComment(editingCommentId));
-    if (saveStateRef.current === 'dirty' && editing.id) pending.push(autosaveNow());
+    // Autosave de fechamento: se falha (gate de subetapa por ex.),
+    // emite toast E NÃO FECHA o modal — evita o caso do usuário ver
+    // o autosave parado em "error" e fechar achando que tá tudo certo.
+    let autosaveFailed = false;
+    if (saveStateRef.current === 'dirty' && editing.id) {
+      try {
+        const res = await autosaveNow();
+        if (res && 'ok' in res && !res.ok) autosaveFailed = true;
+      } catch {
+        autosaveFailed = true;
+      }
+    }
     if (pending.length) {
       try {
         await Promise.all(pending);
@@ -1059,6 +1104,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         /* segue mesmo com erro — onClose fecha */
       }
     }
+    if (autosaveFailed) return; // mantém aberto pra usuário corrigir
     onClose();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newComment, replyingToId, newReply, editingCommentId, editingCommentDraft, editing.id, autosaveNow, onClose]);
@@ -1540,7 +1586,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     if (saveState === 'off') return 'autosave off';
     if (saveState === 'saving') return 'salvando…';
     if (saveState === 'dirty') return 'editando…';
-    if (saveState === 'error') return 'falhou · tentar de novo';
+    if (saveState === 'error') return '⚠ FALHOU · clique Salvar';
     if (saveState === 'saved') return 'salvo';
     return 'autosave ativo';
   };
@@ -1954,6 +2000,19 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     <option value="P3">P3 · Baixa</option>
                   </select>
                 </div>
+                <div className="hidden md:block">
+                  <label className="lbl">Solicitada pelo cliente</label>
+                  <select
+                    className="inp"
+                    value={editing.prioridadeSolicitadaCliente ?? ''}
+                    onChange={(e) => set('prioridadeSolicitadaCliente', (e.target.value || null) as Task['prioridadeSolicitadaCliente'])}
+                  >
+                    <option value="">— não informado</option>
+                    <option value="alta">Alta</option>
+                    <option value="media">Média</option>
+                    <option value="baixa">Baixa</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -1980,12 +2039,25 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 disabled={descricaoLoading}
                 style={descricaoLoading ? { opacity: 0.6 } : undefined}
               />
+              <label className="lbl mt-3">Critério de aceite {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</label>
+              <textarea
+                className="inp"
+                rows={2}
+                value={descricaoLoading ? '' : (editing.criterioAceite ?? '')}
+                onChange={(e) => set('criterioAceite', e.target.value)}
+                placeholder={descricaoLoading ? 'Carregando…' : 'Como saberemos que está pronto · obrigatório de escopo definido em diante'}
+                disabled={descricaoLoading}
+                style={descricaoLoading ? { opacity: 0.6 } : undefined}
+              />
             </div>
 
-            {/* Solução implementada · só aparece de em_homologacao em diante */}
+            {/* Solução implementada + Valor entregue · só aparecem de
+                em_homologacao em diante. Valor entregue é obrigatório
+                em 'concluido' (gate em validateSubetapaAdvance). */}
             {SHOWS_SOLUCAO.has(editing.subetapa) && (
               <div className="tmodal-section hidden md:block">
-                <div className="tmodal-section-title">Solução implementada</div>
+                <div className="tmodal-section-title">Entrega</div>
+                <label className="lbl mt-0">Solução implementada</label>
                 <textarea
                   className="inp"
                   rows={3}
@@ -1995,6 +2067,35 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   disabled={descricaoLoading}
                   style={descricaoLoading ? { opacity: 0.6 } : undefined}
                 />
+                <label className="lbl mt-3">Valor entregue {editing.subetapa === 'concluido' && <span className="text-danger">*</span>}</label>
+                <textarea
+                  className="inp"
+                  rows={2}
+                  value={descricaoLoading ? '' : (editing.valorEntregue ?? '')}
+                  onChange={(e) => set('valorEntregue', e.target.value)}
+                  placeholder={descricaoLoading ? 'Carregando…' : 'Impacto realizado (versão honesta · obrigatório ao concluir)…'}
+                  disabled={descricaoLoading}
+                  style={descricaoLoading ? { opacity: 0.6 } : undefined}
+                />
+              </div>
+            )}
+
+            {/* Motivo de reabertura · só aparece quando a task FOI concluída
+                anteriormente E está sendo reaberta (ou já foi reaberta) */}
+            {editing.id && tasksById.get(editing.id)?.status === 'concluido' && editing.subetapa !== 'concluido' && (
+              <div className="tmodal-section hidden md:block">
+                <div className="tmodal-section-title">Reabertura <span className="text-danger">*</span></div>
+                <select
+                  className="inp"
+                  value={editing.motivoReabertura ?? ''}
+                  onChange={(e) => set('motivoReabertura', e.target.value)}
+                >
+                  <option value="">— escolher motivo</option>
+                  <option value="mudanca_cliente">Mudança de escopo solicitada pelo cliente</option>
+                  <option value="erro_qualidade">Erro / problema de qualidade detectado</option>
+                  <option value="regressao">Regressão (algo quebrou)</option>
+                  <option value="novo_requisito">Novo requisito interno</option>
+                </select>
               </div>
             )}
 

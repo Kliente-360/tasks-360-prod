@@ -342,25 +342,23 @@ const REQUIRES_TEMPO_REAL = new Set([
 ]);
 
 /**
- * Bucket D · Ondas 2.A + 2.B · gate de avanço de subetapa.
- *
- * Valida se a task tem os campos necessários pra entrar em uma nova
- * subetapa. Centralizado aqui pra modal, kanban e triagem usarem o
- * mesmo critério.
+ * Bucket D · Ondas 2.A + 2.B + 3.A · gate de avanço de subetapa.
  *
  * Regras (alinhadas com docs/gestao/DISCIPLINA_DADOS.md):
  *   • em_definicao+        →  escopo[] não vazio                (2.6)
  *   • escopo_definido+     →  esforco > 0                       (2.4)
+ *   • escopo_definido+     →  criterio_aceite não vazio         (3.1)
  *   • em_homologacao→concluido (exceto bloqueado)
  *                          →  tempoRealHoras > 0                (2.5)
  *                             fallback: opts.timeEntriesHours > 0
  *                             → retorna autoFillTempo (modo d:
  *                                só preenche se manual vazio).
+ *   • concluido            →  valor_entregue não vazio          (3.5)
  *
  * Bloqueado tem rank -1 → não bloqueia.
  */
 export function validateSubetapaAdvance(
-  task: Pick<Task, 'esforco' | 'escopo' | 'tempoRealHoras'>,
+  task: Pick<Task, 'esforco' | 'escopo' | 'tempoRealHoras' | 'criterioAceite' | 'valorEntregue'>,
   novaSubetapa: string,
   opts?: { timeEntriesHours?: number },
 ): { ok: true; autoFillTempo?: number } | { ok: false; error: string } {
@@ -373,16 +371,29 @@ export function validateSubetapaAdvance(
   if (rank >= 3 && !(Number(task.esforco) > 0)) {
     return { ok: false, error: 'Preencha o esforço estimado (h) antes de avançar.' };
   }
+  if (rank >= 3 && !(task.criterioAceite && task.criterioAceite.trim().length > 0)) {
+    return { ok: false, error: 'Preencha o critério de aceite antes de avançar.' };
+  }
 
   if (REQUIRES_TEMPO_REAL.has(novaSubetapa)) {
     const manual = Number(task.tempoRealHoras) || 0;
-    if (manual > 0) return { ok: true };
-    const sumHours = opts?.timeEntriesHours ?? 0;
-    if (sumHours > 0) {
-      // Modo (d): manual vazio → usa timesheet como fallback.
-      return { ok: true, autoFillTempo: Math.round(sumHours * 100) / 100 };
+    if (manual > 0) {
+      // ok — passa pro check de valor_entregue abaixo se concluido
+    } else {
+      const sumHours = opts?.timeEntriesHours ?? 0;
+      if (sumHours > 0) {
+        // Modo (d): manual vazio → usa timesheet como fallback.
+        if (novaSubetapa === 'concluido' && !(task.valorEntregue && task.valorEntregue.trim().length > 0)) {
+          return { ok: false, error: 'Preencha o valor entregue (impacto realizado) antes de concluir.' };
+        }
+        return { ok: true, autoFillTempo: Math.round(sumHours * 100) / 100 };
+      }
+      return { ok: false, error: 'Registre o tempo real (h) ou lance no timesheet antes de avançar.' };
     }
-    return { ok: false, error: 'Registre o tempo real (h) ou lance no timesheet antes de avançar.' };
+  }
+
+  if (novaSubetapa === 'concluido' && !(task.valorEntregue && task.valorEntregue.trim().length > 0)) {
+    return { ok: false, error: 'Preencha o valor entregue (impacto realizado) antes de concluir.' };
   }
 
   return { ok: true };
