@@ -88,6 +88,25 @@ export function PessoaModal({
       setErr('Cliente externo precisa de um cliente vinculado.');
       return;
     }
+    // Bucket D · Onda 2.E · gates de disciplina pra staff (admin/interno):
+    //  - senioridade obrigatória (2.11)
+    //  - skills mínimo 2 (2.10)
+    //  - capacidade > 0 (2.12) — força revisão consciente do default 40
+    if (role !== 'cliente') {
+      if (!senioridade) {
+        setErr('Senioridade é obrigatória.');
+        return;
+      }
+      if (!skills || skills.length < 2) {
+        setErr('Marque ao menos 2 skills.');
+        return;
+      }
+      const capNumCheck = Number(capacidade) || 0;
+      if (capNumCheck <= 0) {
+        setErr('Capacidade semanal (h) deve ser > 0.');
+        return;
+      }
+    }
     const capNum =
       capacidade === '' || capacidade == null ? 40 : Number(capacidade) || 40;
     const row = {
@@ -242,7 +261,7 @@ export function PessoaModal({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="lbl">Senioridade</label>
+                  <label className="lbl">Senioridade <span className="text-danger">*</span></label>
                   <select
                     className="inp"
                     value={senioridade}
@@ -256,7 +275,7 @@ export function PessoaModal({
                   </select>
                 </div>
                 <div>
-                  <label className="lbl">Capacidade (h/sem)</label>
+                  <label className="lbl">Capacidade (h/sem) <span className="text-danger">*</span></label>
                   <input
                     type="number"
                     min={0}
@@ -269,7 +288,7 @@ export function PessoaModal({
               </div>
 
               <div>
-                <label className="lbl">Skills</label>
+                <label className="lbl">Skills <span className="text-danger">*</span> <span className="text-[11px] text-muted font-normal">(mínimo 2)</span></label>
                 <div className="flex flex-col gap-2 mt-1">
                   {SKILL_GROUPS.map((g) => (
                     <div key={g.group}>
