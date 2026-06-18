@@ -173,7 +173,8 @@ create table public.tasks (
   criterio_aceite text not null default '',
   valor_entregue text not null default '',
   prioridade_solicitada_cliente text,
-  motivo_reabertura text
+  motivo_reabertura text,
+  bloqueada_por_tasks uuid[] not null default '{}'::uuid[]
 );
 
 create table public.time_entries (

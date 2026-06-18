@@ -40,9 +40,10 @@ import {
 } from 'react';
 import { useData, useClientesById, useProjetosById, usePessoasById, useProjetosByCliente, useTasksById } from '@/lib/data-store';
 import { useToastSafe } from '@/components/toast';
+import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
-import { fmtDate, fmtDateShort, lblStatus, sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
+import { fmtDate, fmtDateShort, lblStatus, missingFieldsForCurrentSubetapa, sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
 import { SUB_TO_MACRO, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK } from '@/lib/task-constants';
 import { timeEntryFromDb } from '@/lib/adapters';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
@@ -144,6 +145,7 @@ function blankEditing(): Task {
     valorEntregue: '',
     prioridadeSolicitadaCliente: null,
     motivoReabertura: '',
+    bloqueadaPorTasks: [],
     clienteId: '',
     projetoId: '',
     pessoaId: '',
@@ -188,6 +190,7 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
     valor_entregue: e.valorEntregue ?? '',
     prioridade_solicitada_cliente: e.prioridadeSolicitadaCliente || null,
     motivo_reabertura: e.motivoReabertura || null,
+    bloqueada_por_tasks: e.bloqueadaPorTasks ?? [],
     cliente_id: e.clienteId || null,
     projeto_id: e.projetoId || null,
     pessoa_id: e.pessoaId || null,
@@ -459,6 +462,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const {
     clientes,
     pessoas,
+    tasks,
     patchTask,
     replaceTask,
     upsertTask,
@@ -514,6 +518,18 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({});
   // True enquanto o lazy-load da descrição roda (skeleton no textarea).
+  // Set de campos obrigatórios pendentes pra subetapa atual.
+  // Usado pra pintar borda vermelha (.is-missing) em inputs.
+  const missingFields = useMemo(() => {
+    const sumHours = editing.id
+      ? sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === editing.id))
+      : 0;
+    const prev = editing.id ? tasksById.get(editing.id) : null;
+    const wasConcluido = !!prev && prev.status === 'concluido' && editing.subetapa !== 'concluido';
+    return missingFieldsForCurrentSubetapa(editing, { timeEntriesHours: sumHours, wasConcluido });
+  }, [editing, timeEntries, tasksById]);
+  const isMissing = (f: string) => (missingFields.has(f) ? 'is-missing' : '');
+
   const [descricaoLoading, setDescricaoLoading] = useState<boolean>(
     !!source && source.descricao === undefined,
   );
@@ -728,7 +744,15 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       const sumHoursForTask = e.id
         ? sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === e.id))
         : 0;
-      const gate = validateSubetapaAdvance(e, e.subetapa, { timeEntriesHours: sumHoursForTask });
+      // 3.B · pré-reqs abertas bloqueiam conclusão
+      const hasOpenPreReqs = (e.bloqueadaPorTasks ?? []).some((id) => {
+        const dep = tasksById.get(id);
+        return dep && dep.status !== 'concluido' && !dep.arquivadoEm;
+      });
+      const gate = validateSubetapaAdvance(e, e.subetapa, {
+        timeEntriesHours: sumHoursForTask,
+        hasOpenPreReqs,
+      });
       if (!gate.ok) return { ok: false, error: gate.error };
       // 3.3 · gate de reabertura: se estava 'concluido' e mudou pra outra,
       // exige motivo_reabertura preenchido.
@@ -773,6 +797,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             valorEntregue: e.valorEntregue ?? '',
             prioridadeSolicitadaCliente: e.prioridadeSolicitadaCliente ?? null,
             motivoReabertura: e.motivoReabertura ?? '',
+            bloqueadaPorTasks: [...(e.bloqueadaPorTasks ?? [])],
             clienteId: e.clienteId,
             projetoId: e.projetoId,
             pessoaId: e.pessoaId,
@@ -1919,7 +1944,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 <div>
                   <label className="lbl">Cliente</label>
                   <select
-                    className="inp"
+                    className={cn('inp', isMissing('clienteId'))}
                     value={editing.clienteId}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -1937,7 +1962,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 <div>
                   <label className="lbl">Projeto</label>
                   <select
-                    className="inp"
+                    className={cn('inp', isMissing('projetoId'))}
                     value={editing.projetoId}
                     disabled={!editing.clienteId}
                     onChange={(e) => set('projetoId', e.target.value)}
@@ -1953,7 +1978,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 <div className="hidden md:block">
                   <label className="lbl">Responsável</label>
                   <select
-                    className="inp"
+                    className={cn('inp', isMissing('pessoaId'))}
                     value={editing.pessoaId}
                     onChange={(e) => set('pessoaId', e.target.value)}
                   >
@@ -1989,7 +2014,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 <div className="hidden md:block">
                   <label className="lbl">Prioridade</label>
                   <select
-                    className="inp"
+                    className={cn('inp', isMissing('prioridade'))}
                     value={editing.prioridade}
                     onChange={(e) => set('prioridade', e.target.value as Task['prioridade'])}
                   >
@@ -2041,7 +2066,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               />
               <label className="lbl mt-3">Critério de aceite {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</label>
               <textarea
-                className="inp"
+                className={cn('inp', isMissing('criterioAceite'))}
                 rows={2}
                 value={descricaoLoading ? '' : (editing.criterioAceite ?? '')}
                 onChange={(e) => set('criterioAceite', e.target.value)}
@@ -2069,7 +2094,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 />
                 <label className="lbl mt-3">Valor entregue {editing.subetapa === 'concluido' && <span className="text-danger">*</span>}</label>
                 <textarea
-                  className="inp"
+                  className={cn('inp', isMissing('valorEntregue'))}
                   rows={2}
                   value={descricaoLoading ? '' : (editing.valorEntregue ?? '')}
                   onChange={(e) => set('valorEntregue', e.target.value)}
@@ -2086,7 +2111,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               <div className="tmodal-section hidden md:block">
                 <div className="tmodal-section-title">Reabertura <span className="text-danger">*</span></div>
                 <select
-                  className="inp"
+                  className={cn('inp', isMissing('motivoReabertura'))}
                   value={editing.motivoReabertura ?? ''}
                   onChange={(e) => set('motivoReabertura', e.target.value)}
                 >
@@ -2098,6 +2123,68 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 </select>
               </div>
             )}
+
+            {/* 3.B · Dependências · tasks pré-req. Conclusão bloqueada
+                até todas estarem concluídas. */}
+            <div className="tmodal-section hidden md:block">
+              <div className="tmodal-section-title">Bloqueada por (pré-requisitos)</div>
+              {editing.bloqueadaPorTasks.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {editing.bloqueadaPorTasks.map((depId) => {
+                    const dep = tasksById.get(depId);
+                    const open = dep && dep.status !== 'concluido' && !dep.arquivadoEm;
+                    return (
+                      <span
+                        key={depId}
+                        className="tag-chip"
+                        style={{
+                          background: open ? 'var(--p0-soft)' : 'var(--brand-soft)',
+                          color: open ? 'var(--danger)' : 'var(--brand-dark)',
+                        }}
+                        title={open ? 'Aberta · bloqueia conclusão' : 'Concluída ou arquivada'}
+                      >
+                        {dep?.titulo ?? depId.slice(0, 8)}
+                        <button
+                          type="button"
+                          className="ml-1 text-muted hover:text-danger"
+                          onClick={() => set('bloqueadaPorTasks', editing.bloqueadaPorTasks.filter((x) => x !== depId))}
+                          title="Remover"
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              <select
+                className="inp"
+                value=""
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (!v) return;
+                  if (editing.bloqueadaPorTasks.includes(v)) return;
+                  set('bloqueadaPorTasks', [...editing.bloqueadaPorTasks, v]);
+                }}
+              >
+                <option value="">+ adicionar pré-requisito…</option>
+                {tasks
+                  .filter((t) =>
+                    t.id !== editing.id &&
+                    !t.arquivadoEm &&
+                    t.status !== 'concluido' &&
+                    (!editing.clienteId || t.clienteId === editing.clienteId) &&
+                    !editing.bloqueadaPorTasks.includes(t.id),
+                  )
+                  .slice(0, 200)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>{t.titulo}</option>
+                  ))}
+              </select>
+              <div className="text-[11px] text-muted mt-1">
+                Conclusão fica bloqueada enquanto pré-requisitos estiverem abertos.
+              </div>
+            </div>
 
             {/* Checklist */}
             <div className="tmodal-section hidden md:block">
@@ -2141,7 +2228,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   <label className="lbl">Prazo</label>
                   <input
                     type="date"
-                    className="inp"
+                    className={cn('inp', isMissing('prazo'))}
                     value={editing.prazo}
                     onChange={(e) => set('prazo', e.target.value)}
                   />
@@ -2152,7 +2239,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     type="number"
                     min={0}
                     step={0.5}
-                    className="inp"
+                    className={cn('inp', isMissing('esforco'))}
                     value={editing.esforco}
                     onChange={(e) => set('esforco', Number(e.target.value) || 0)}
                   />
@@ -2163,7 +2250,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     type="number"
                     min={0}
                     step={0.5}
-                    className="inp"
+                    className={cn('inp', isMissing('tempoRealHoras'))}
                     value={editing.tempoRealHoras ?? ''}
                     onChange={(e) =>
                       set('tempoRealHoras', e.target.value === '' ? null : Number(e.target.value))

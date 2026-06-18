@@ -41,6 +41,8 @@ export interface Task {
   prioridadeSolicitadaCliente?: 'alta' | 'media' | 'baixa' | null;
   /** Motivo capturado quando uma task é reaberta (concluido → outra). */
   motivoReabertura?: string;
+  /** UUIDs de tasks que precisam estar concluídas antes desta poder concluir. */
+  bloqueadaPorTasks: string[];
   clienteId: string;
   projetoId: string;
   pessoaId: string;

@@ -495,6 +495,15 @@ input[type="checkbox"] { accent-color: var(--brand); }
    user ativar dark via toggle manual, a barra escurece junto. */
 .inp:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px var(--cyan-soft); }
 .inp.is-active { border-color: var(--cyan); background: var(--cyan-soft); }
+/* Bucket D · campo obrigatório não preenchido pra subetapa atual. */
+.inp.is-missing {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger);
+}
+.inp.is-missing:focus {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgba(200,57,43,0.25);
+}
 .lbl {
   display: block; font-size: var(--fs-xs); font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase;

@@ -342,6 +342,72 @@ const REQUIRES_TEMPO_REAL = new Set([
 ]);
 
 /**
+ * Bucket D · campos obrigatórios não preenchidos pra subetapa atual da task.
+ *
+ * Centraliza as regras dos validators (validateSubetapaAdvance,
+ * triageFailures, gate de reabertura) numa visão por-campo: dado uma
+ * task, retorna o conjunto de field-names que estão pendentes.
+ *
+ * Usado pra pintar bordas vermelhas em inputs no modal, sem duplicar
+ * lógica nos componentes.
+ *
+ * `wasConcluido` é true quando a task PREVIAMENTE estava em 'concluido'
+ * mas agora foi movida pra outra subetapa (caso de reabertura).
+ */
+export function missingFieldsForCurrentSubetapa(
+  t: Pick<Task,
+    'subetapa' | 'status' | 'prioridade' | 'pessoaId' | 'clienteId' | 'projetoId' |
+    'prazo' | 'esforco' | 'escopo' | 'tempoRealHoras' | 'criterioAceite' | 'valorEntregue' |
+    'motivoReabertura'
+  >,
+  opts?: { timeEntriesHours?: number; wasConcluido?: boolean },
+): Set<string> {
+  const missing = new Set<string>();
+  if (!t || t.status === STATUS.CONCLUIDO && t.subetapa === 'concluido') {
+    // task concluída já — só checar valor_entregue/tempo_real (que são exigidos AO concluir)
+  }
+  const sub = t.subetapa;
+  const rank = STAGE_RANK[sub] ?? 0;
+
+  // Sempre obrigatórios (gates de Triagem)
+  if (!t.clienteId) missing.add('clienteId');
+  if (!t.projetoId) missing.add('projetoId');
+  if (!t.pessoaId) missing.add('pessoaId');
+  if (!t.prioridade) missing.add('prioridade');
+
+  // A partir de escopo_definido (rank >= 3)
+  if (rank >= TRIAGE_RANK_GATE) {
+    if (!t.prazo) missing.add('prazo');
+    if (!Number(t.esforco)) missing.add('esforco');
+    if (!(t.criterioAceite && t.criterioAceite.trim().length > 0)) missing.add('criterioAceite');
+  }
+
+  // A partir de em_definicao (rank >= 1)
+  if (rank >= 1) {
+    if (!t.escopo || t.escopo.length === 0) missing.add('escopo');
+  }
+
+  // tempo_real em em_homologacao→concluido (exceto bloqueado)
+  if (REQUIRES_TEMPO_REAL.has(sub)) {
+    const manual = Number(t.tempoRealHoras) || 0;
+    const fromSheet = opts?.timeEntriesHours ?? 0;
+    if (manual <= 0 && fromSheet <= 0) missing.add('tempoRealHoras');
+  }
+
+  // valor_entregue no concluido
+  if (sub === 'concluido') {
+    if (!(t.valorEntregue && t.valorEntregue.trim().length > 0)) missing.add('valorEntregue');
+  }
+
+  // motivo_reabertura quando reabrindo
+  if (opts?.wasConcluido && sub !== 'concluido') {
+    if (!(t.motivoReabertura && t.motivoReabertura.trim().length > 0)) missing.add('motivoReabertura');
+  }
+
+  return missing;
+}
+
+/**
  * Bucket D · Ondas 2.A + 2.B + 3.A · gate de avanço de subetapa.
  *
  * Regras (alinhadas com docs/gestao/DISCIPLINA_DADOS.md):
@@ -360,7 +426,7 @@ const REQUIRES_TEMPO_REAL = new Set([
 export function validateSubetapaAdvance(
   task: Pick<Task, 'esforco' | 'escopo' | 'tempoRealHoras' | 'criterioAceite' | 'valorEntregue'>,
   novaSubetapa: string,
-  opts?: { timeEntriesHours?: number },
+  opts?: { timeEntriesHours?: number; hasOpenPreReqs?: boolean },
 ): { ok: true; autoFillTempo?: number } | { ok: false; error: string } {
   if (novaSubetapa === 'bloqueado') return { ok: true };
 
@@ -394,6 +460,11 @@ export function validateSubetapaAdvance(
 
   if (novaSubetapa === 'concluido' && !(task.valorEntregue && task.valorEntregue.trim().length > 0)) {
     return { ok: false, error: 'Preencha o valor entregue (impacto realizado) antes de concluir.' };
+  }
+
+  // 3.B · gate de conclusão por dependências
+  if (novaSubetapa === 'concluido' && opts?.hasOpenPreReqs) {
+    return { ok: false, error: 'Há tasks pré-requisito ainda abertas — conclua-as primeiro.' };
   }
 
   return { ok: true };

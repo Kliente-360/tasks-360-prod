@@ -30,6 +30,7 @@ export function taskFromDb(r: Row): Task {
     valorEntregue: r.valor_entregue === undefined ? undefined : str(r.valor_entregue),
     prioridadeSolicitadaCliente: (r.prioridade_solicitada_cliente as 'alta' | 'media' | 'baixa' | null) ?? null,
     motivoReabertura: r.motivo_reabertura === undefined ? undefined : (r.motivo_reabertura as string | null) ?? undefined,
+    bloqueadaPorTasks: arr<string>(r.bloqueada_por_tasks),
     clienteId: str(r.cliente_id),
     projetoId: str(r.projeto_id),
     pessoaId: str(r.pessoa_id),
@@ -131,4 +132,4 @@ export function timeEntryFromDb(r: Row): TimeEntry {
 
 /** Colunas leves carregadas no boot. `descricao` é lazy (modal puxa). */
 export const TASK_LIGHT_COLS =
-  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,prioridade_solicitada_cliente,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,triada_em,triada_por,motivo_arquivamento,privada,webhook_sync_status,webhook_sync_error';
+  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,prioridade_solicitada_cliente,esforco,complexidade,prazo,status,subetapa,bloqueado_por,bloqueada_por_tasks,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,triada_em,triada_por,motivo_arquivamento,privada,webhook_sync_status,webhook_sync_error';
