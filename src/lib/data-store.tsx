@@ -38,6 +38,7 @@ const COL_TO_FIELD: Record<string, keyof Task> = {
   bloqueada_por_tasks: 'bloqueadaPorTasks',
   homologacao_em: 'homologacaoEm',
   aprovado_em: 'aprovadoEm',
+  criado_por_cliente: 'criadoPorCliente',
   cliente_id: 'clienteId',
   projeto_id: 'projetoId',
   pessoa_id: 'pessoaId',

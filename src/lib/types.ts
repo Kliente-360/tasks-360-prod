@@ -75,6 +75,9 @@ export interface Task {
   externalId: string;
   arquivadoEm: string | null;
   criadoPorIa: boolean;
+  /** Criada pelo cliente externo via Portal (Onda 3.D). Passa pelo mesmo
+   *  gate de Triagem que IA — `isPreTriagem` ativa enquanto `triadaEm` null. */
+  criadoPorCliente: boolean;
   /** Gate de triagem pra tasks IA · null = aguardando aceitação (escondida
    *  de Backlog/Foco/Kanban/Calendário/Dashboard, visível só em Triagem).
    *  Após aceitar OU rejeitar, recebe timestamp. Tasks não-IA têm null mas

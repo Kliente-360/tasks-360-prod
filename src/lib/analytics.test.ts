@@ -44,6 +44,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     externalId: '',
     arquivadoEm: null,
     criadoPorIa: false,
+    criadoPorCliente: false,
     triadaEm: null,
     triadaPor: null,
     motivoArquivamento: null,

@@ -26,16 +26,16 @@ export function effRemaining(t: Pick<Task, 'esforco' | 'tempoRealHoras'>): numbe
 }
 
 /**
- * Task aguardando aceitação na Triagem (gate A.4 jun/2026):
- *  - Criada por IA E ainda não foi triada (aceita ou rejeitada).
+ * Task aguardando aceitação na Triagem (gate A.4 jun/2026 + 3.D):
+ *  - Criada por IA OU pelo cliente externo E ainda não foi triada.
  *  - Enquanto isPreTriagem=true, a task NÃO deve aparecer em
  *    Backlog/Foco/Kanban/Calendário/Dashboard. Só visível em Triagem.
  *  - Após aceitar (set triada_em) entra no fluxo normal.
  *  - Após rejeitar (set triada_em + arquivado_em + motivo_arquivamento)
  *    fica arquivada → some normalmente.
  */
-export function isPreTriagem(t: Pick<Task, 'criadoPorIa' | 'triadaEm'>): boolean {
-  return t.criadoPorIa === true && !t.triadaEm;
+export function isPreTriagem(t: Pick<Task, 'criadoPorIa' | 'criadoPorCliente' | 'triadaEm'>): boolean {
+  return (t.criadoPorIa === true || t.criadoPorCliente === true) && !t.triadaEm;
 }
 
 /** Tamanho de task baseado no effEsforco. */

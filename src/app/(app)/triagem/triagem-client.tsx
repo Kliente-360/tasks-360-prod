@@ -394,6 +394,15 @@ export function TriagemClient() {
                       </span>
                     )}
                     {t.criadoPorIa && <TagIA />}
+                    {t.criadoPorCliente && (
+                      <span
+                        className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
+                        style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}
+                        title="Criada pelo cliente via Portal"
+                      >
+                        🙋 cliente
+                      </span>
+                    )}
                     <span className="font-medium text-ink break-words">{t.titulo}</span>
                   </div>
                   {/* Linha 2 (subetapa · criada há Xd) — fonte mono pra dar

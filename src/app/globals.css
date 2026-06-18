@@ -504,6 +504,13 @@ input[type="checkbox"] { accent-color: var(--brand); }
   border-color: var(--danger);
   box-shadow: 0 0 0 3px rgba(200,57,43,0.25);
 }
+/* Bucket D · seção inteira obrigatória vazia (ex.: escopo de skills) */
+.tmodal-section.section-missing {
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  padding: 12px;
+  box-shadow: 0 0 0 1px var(--danger);
+}
 .lbl {
   display: block; font-size: var(--fs-xs); font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase;

@@ -172,6 +172,7 @@ function blankEditing(): Task {
     externalId: '',
     arquivadoEm: null,
     criadoPorIa: false,
+    criadoPorCliente: false,
     triadaEm: null,
     triadaPor: null,
     motivoArquivamento: null,
@@ -2345,9 +2346,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               </div>
             </div>
 
-            {/* Escopo / Skills */}
-            <div className="tmodal-section hidden md:block">
-              <div className="tmodal-section-title">Escopo</div>
+            {/* Escopo / Skills · seção ganha borda vermelha quando obrigatório
+                e vazio (em_definicao+) — sinal análogo ao .inp.is-missing */}
+            <div
+              className={cn('tmodal-section hidden md:block', isMissing('escopo') && 'section-missing')}
+            >
+              <div className="tmodal-section-title">Escopo {isMissing('escopo') && <span className="text-danger">*</span>}</div>
               <div className="flex flex-col gap-2">
                 {SKILL_GROUPS.map((g) => (
                   <div key={g.group}>

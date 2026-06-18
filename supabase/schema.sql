@@ -176,7 +176,8 @@ create table public.tasks (
   motivo_reabertura text,
   bloqueada_por_tasks uuid[] not null default '{}'::uuid[],
   homologacao_em timestamp with time zone,
-  aprovado_em timestamp with time zone
+  aprovado_em timestamp with time zone,
+  criado_por_cliente boolean not null default false
 );
 
 create table public.time_entries (
@@ -803,6 +804,19 @@ create policy tasks_interno_owner on public.tasks
   with check (((app_pessoa_role() = 'interno'::text) AND (pessoa_id = app_pessoa_id())));
 create policy tasks_cliente_select on public.tasks
   for select using (((app_pessoa_role() = 'cliente'::text) AND (cliente_id = app_pessoa_cliente_id()) AND (visivel_cliente = true)));
+-- Onda 3.D · cliente externo pode INSERT (Portal · cai pré-triagem).
+create policy tasks_cliente_insert on public.tasks
+  for insert with check (
+    (app_pessoa_role() = 'cliente'::text)
+    AND (cliente_id = app_pessoa_cliente_id())
+    AND (visivel_cliente = true)
+    AND (subetapa = 'backlog'::text)
+    AND (status = 'backlog'::text)
+    AND (criado_por_cliente = true)
+    AND (triada_em IS NULL)
+    AND (pessoa_id IS NULL)
+    AND (privada = false)
+  );
 
 create policy task_privada_somente_dono on public.tasks as restrictive
   for select using (((privada = false) OR (pessoa_id = (

@@ -25,6 +25,7 @@ import { fmtDate } from '@/lib/format';
 import type { Task } from '@/lib/types';
 import { usePortalData, type PortalCards } from './use-portal-data';
 import { PortalTaskModal } from './portal-task-modal';
+import { PortalNewTaskForm } from './portal-new-task-form';
 
 const LS_KEY = 'kliente360-portal-cliente';
 
@@ -88,6 +89,8 @@ export function PortalClient() {
   // Modal state
   const [openTask, setOpenTask] = useState<Task | null>(null);
   const closeModal = () => setOpenTask(null);
+  // 3.D · estado do form "Nova solicitação"
+  const [showNewTask, setShowNewTask] = useState(false);
 
   const openPortalTask = (t: Task) => {
     // Defesa em profundidade: garante que a task pertence ao cliente
@@ -175,7 +178,24 @@ export function PortalClient() {
             </select>
           </div>
         )}
+        {/* 3.D · botão "Nova solicitação" — cliente abre task que cai
+            na Triagem do time (não direto no Backlog). */}
+        <button
+          type="button"
+          onClick={() => setShowNewTask(true)}
+          className="absolute right-3 bottom-3 md:right-5 md:bottom-5 px-3 py-2 rounded-md text-sm font-medium shadow-sm"
+          style={{ background: 'rgba(255,255,255,0.92)', color: 'var(--brand-dark)' }}
+        >
+          + Nova solicitação
+        </button>
       </div>
+
+      {showNewTask && effectiveCid && (
+        <PortalNewTaskForm
+          clienteId={effectiveCid}
+          onClose={() => setShowNewTask(false)}
+        />
+      )}
 
       {/* 2. ALERTAS amigáveis */}
       {alerts.length > 0 && (
