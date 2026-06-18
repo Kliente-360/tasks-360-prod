@@ -146,6 +146,8 @@ function blankEditing(): Task {
     prioridadeSolicitadaCliente: null,
     motivoReabertura: '',
     bloqueadaPorTasks: [],
+    homologacaoEm: null,
+    aprovadoEm: null,
     clienteId: '',
     projetoId: '',
     pessoaId: '',

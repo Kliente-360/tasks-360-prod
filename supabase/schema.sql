@@ -174,7 +174,9 @@ create table public.tasks (
   valor_entregue text not null default '',
   prioridade_solicitada_cliente text,
   motivo_reabertura text,
-  bloqueada_por_tasks uuid[] not null default '{}'::uuid[]
+  bloqueada_por_tasks uuid[] not null default '{}'::uuid[],
+  homologacao_em timestamp with time zone,
+  aprovado_em timestamp with time zone
 );
 
 create table public.time_entries (

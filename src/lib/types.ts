@@ -43,6 +43,12 @@ export interface Task {
   motivoReabertura?: string;
   /** UUIDs de tasks que precisam estar concluídas antes desta poder concluir. */
   bloqueadaPorTasks: string[];
+  /** Timestamp da PRIMEIRA entrada em em_homologacao (set por trigger DB).
+   *  Usado pra métrica "tempo até aprovação cliente". */
+  homologacaoEm: number | null;
+  /** Timestamp da aprovação do cliente (RPC) ou auto-set ao concluir
+   *  via trigger. Usado pra métrica de tempo de aprovação. */
+  aprovadoEm: number | null;
   clienteId: string;
   projetoId: string;
   pessoaId: string;

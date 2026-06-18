@@ -207,6 +207,34 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
   const aguardandoCliente =
     task.subetapa === 'bloqueado' && task.bloqueadoPor === 'cliente';
 
+  // 3.7 · Portal cliente pode aprovar entrega quando task está em
+  // homologação ou estágios pós-homologação E ainda não foi aprovada.
+  const APROVAR_SUBS = new Set(['em_homologacao', 'em_revisao', 'pronto_producao', 'em_implantacao']);
+  const podeAprovar = APROVAR_SUBS.has(task.subetapa) && task.aprovadoEm == null;
+  const jaAprovado = task.aprovadoEm != null && task.subetapa !== 'concluido';
+
+  async function aprovarEntrega() {
+    if (!task) return;
+    const { data, error } = await sb.rpc('app_aprovar_entrega', { p_task_id: task.id });
+    if (error) {
+      console.warn('[aprovar_entrega]', error.message);
+      return;
+    }
+    // Optimistic — propaga aprovado_em pro modal local (lista do parent
+    // vai re-sync no próximo refetch ou via realtime).
+    if (data) {
+      (task as { aprovadoEm: number | null }).aprovadoEm = new Date(data as string).getTime();
+    }
+    // Notif fire-and-forget pro responsável
+    if (task.pessoaId) {
+      sb.from('notifications').insert({
+        recipient_pessoa_id: task.pessoaId,
+        kind: 'cliente_respondeu',
+        payload: { author: clienteNome || 'cliente', task_id: task.id, preview: 'Aprovou a entrega' },
+      });
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 px-2 py-2 md:items-center md:px-4 md:py-4"
@@ -324,6 +352,32 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
               </div>
             )}
           </div>
+
+          {/* 3.7 · Botão Aprovar entrega · cliente fecha o loop quando a
+              entrega está em homologação/pós-homologação. Dispara RPC
+              security-definer que marca aprovado_em. */}
+          {podeAprovar && (
+            <div className="card mb-4 p-4" style={{ background: 'var(--brand-soft)', borderColor: 'var(--brand)' }}>
+              <div className="mb-1 font-brand text-sm font-semibold" style={{ color: 'var(--brand-dark)' }}>
+                Entrega pronta pra sua aprovação
+              </div>
+              <div className="mb-3 text-xs text-ink-soft">
+                Reveja a solução implementada e aprove pra fechar a entrega. Você ainda pode comentar dúvidas antes.
+              </div>
+              <button
+                className="btn btn-primary text-sm"
+                onClick={aprovarEntrega}
+                disabled={sending}
+              >
+                ✓ Aprovo a entrega
+              </button>
+            </div>
+          )}
+          {jaAprovado && (
+            <div className="mb-4 rounded px-3 py-2 text-xs" style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}>
+              ✓ Aprovado em {fmtDate(new Date(task.aprovadoEm!).toISOString().slice(0, 10))}
+            </div>
+          )}
 
           {aguardandoCliente && (
             <div
