@@ -5,6 +5,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useData, useTasksById, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { useTaskModal } from '@/components/task-modal';
+import { ManualEntryPopover } from '@/components/timer-button';
+import { Icon } from '@/components/icons';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { atrasada } from '@/lib/task-utils';
@@ -20,7 +22,7 @@ function fmtDateTime(ms: number) {
 }
 
 export function TimesheetClient() {
-  const { currentPessoa, viewerRole, clientes, projetos, loading, timeEntries, removeTimeEntry } = useData();
+  const { currentPessoa, viewerRole, clientes, projetos, loading, timeEntries, removeTimeEntry, upsertTimeEntry } = useData();
   const { activeEntry, startTimer } = useTimer();
   const tasksById = useTasksById();
   const clientesById = useClientesById();
@@ -126,6 +128,35 @@ export function TimesheetClient() {
     removeTimeEntry(id);
   }
 
+  // Edição de registro · admin edita qualquer · interno só self (gate
+  // espelha RLS time_entries_self_update / time_entries_admin_all).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  async function saveEntry(id: string, startedAt: Date, endedAt: Date, note?: string) {
+    const supabase = createClient();
+    const startedIso = startedAt.toISOString();
+    const endedIso = endedAt.toISOString();
+    const { data, error } = await supabase
+      .from('time_entries')
+      .update({ started_at: startedIso, ended_at: endedIso, note: note ?? null })
+      .eq('id', id)
+      .select('id, task_id, pessoa_id, started_at, ended_at, note, criado_em')
+      .single();
+    if (error || !data) {
+      setEditingId(null);
+      return;
+    }
+    upsertTimeEntry({
+      id: data.id,
+      taskId: data.task_id,
+      pessoaId: data.pessoa_id,
+      startedAt: new Date(data.started_at).getTime(),
+      endedAt: data.ended_at ? new Date(data.ended_at).getTime() : null,
+      note: data.note,
+      criadoEm: data.criado_em ? new Date(data.criado_em).getTime() : Date.now(),
+    });
+    setEditingId(null);
+  }
+
   const totalMs = useMemo(
     () =>
       entries.reduce((acc, e) => {
@@ -225,7 +256,7 @@ export function TimesheetClient() {
                 <th className="text-left px-4 py-2.5 font-medium hidden sm:table-cell">Início</th>
                 <th className="text-left px-4 py-2.5 font-medium hidden sm:table-cell">Fim</th>
                 <th className="text-right px-4 py-2.5 font-medium">Duração</th>
-                <th className="w-8 px-2" />
+                <th className="w-16 px-2" />
               </tr>
             </thead>
             <tbody>
@@ -278,16 +309,38 @@ export function TimesheetClient() {
                         <td className={`px-4 py-2.5 text-right font-mono font-medium ${isRunning ? 'text-[color:var(--brand)]' : ''}`}>
                           {fmtDuration(durMs)}
                         </td>
-                        <td className="px-2 py-2.5 text-center">
+                        <td className="px-2 py-2.5 text-right relative">
                           {canDel && !isRunning && (
-                            <button
-                              type="button"
-                              className="text-muted hover:text-danger text-base leading-none"
-                              onClick={() => deleteEntry(e.id)}
-                              title="Excluir registro"
-                            >
-                              ×
-                            </button>
+                            <div className="inline-flex items-center gap-2 justify-end">
+                              <button
+                                type="button"
+                                className="text-muted hover:text-brand"
+                                onClick={() => setEditingId(e.id)}
+                                title="Editar registro"
+                              >
+                                <Icon name="edit" size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                className="text-muted hover:text-danger text-base leading-none"
+                                onClick={() => deleteEntry(e.id)}
+                                title="Excluir registro"
+                              >
+                                ×
+                              </button>
+                              {editingId === e.id && (
+                                <ManualEntryPopover
+                                  taskTitulo={task?.titulo ?? e.taskId.slice(0, 8)}
+                                  initial={{
+                                    startedAt: new Date(e.startedAt),
+                                    endedAt: new Date(e.endedAt ?? e.startedAt),
+                                    note: e.note ?? undefined,
+                                  }}
+                                  onConfirm={(s, en, n) => saveEntry(e.id, s, en, n)}
+                                  onCancel={() => setEditingId(null)}
+                                />
+                              )}
+                            </div>
                           )}
                         </td>
                       </tr>

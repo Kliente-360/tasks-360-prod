@@ -195,22 +195,37 @@ function TaskPickerPopover({
  * Modal de lançamento manual de horas. Campos: data, hora início,
  * duração (Xh Ymin), nota. Preview do término em tempo real.
  * Bloqueia entradas que cruzam meia-noite.
+ *
+ * `initial` opcional → modo edição (reutiliza o mesmo popover).
  */
-function ManualEntryPopover({
+export function ManualEntryPopover({
   taskTitulo,
+  initial,
   onConfirm,
   onCancel,
 }: {
   taskTitulo: string;
+  initial?: { startedAt: Date; endedAt: Date; note?: string };
   onConfirm: (startedAt: Date, endedAt: Date, note?: string) => void;
   onCancel: () => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
-  const [date, setDate] = useState(today);
-  const [startTime, setStartTime] = useState('');
-  const [durH, setDurH] = useState(0);
-  const [durM, setDurM] = useState(0);
-  const [note, setNote] = useState('');
+  const isEdit = !!initial;
+  const initFrom = useMemo(() => {
+    if (!initial) return null;
+    const s = initial.startedAt;
+    const e = initial.endedAt;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateIso = `${s.getFullYear()}-${pad(s.getMonth() + 1)}-${pad(s.getDate())}`;
+    const start = `${pad(s.getHours())}:${pad(s.getMinutes())}`;
+    const mins = Math.max(0, Math.round((e.getTime() - s.getTime()) / 60_000));
+    return { dateIso, start, durH: Math.floor(mins / 60), durM: mins % 60, note: initial.note ?? '' };
+  }, [initial]);
+  const [date, setDate] = useState(initFrom?.dateIso ?? today);
+  const [startTime, setStartTime] = useState(initFrom?.start ?? '');
+  const [durH, setDurH] = useState(initFrom?.durH ?? 0);
+  const [durM, setDurM] = useState(initFrom?.durM ?? 0);
+  const [note, setNote] = useState(initFrom?.note ?? '');
   const ref = useClickAway<HTMLDivElement>(onCancel);
 
   useEffect(() => {
@@ -257,7 +272,7 @@ function ManualEntryPopover({
     >
       <div className="flex items-center gap-2 px-3 py-2 border-b border-line">
         <div className="w-2 h-2 rounded-full bg-[color:var(--green)] shrink-0" />
-        <span className="text-sm font-medium">Lançar horas</span>
+        <span className="text-sm font-medium">{isEdit ? 'Editar registro' : 'Lançar horas'}</span>
       </div>
       <div className="p-3 flex flex-col gap-3">
         <p className="text-xs text-muted truncate" title={taskTitulo}>{taskTitulo}</p>
@@ -335,7 +350,7 @@ function ManualEntryPopover({
             disabled={!canSubmit}
             onClick={handleSubmit}
           >
-            Lançar
+            {isEdit ? 'Salvar' : 'Lançar'}
           </button>
         </div>
       </div>
