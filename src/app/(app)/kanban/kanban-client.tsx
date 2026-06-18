@@ -32,7 +32,7 @@ import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
 import { PriChip, TaskAvatar, PrazoLabel } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
-import { atrasada, etapaTempoColor, etapaTempoDays, fmtDateShort, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, validateSubetapaAdvance, type PrazoFilter } from '@/lib/task-utils';
+import { atrasada, etapaTempoColor, etapaTempoDays, fmtDateShort, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, sumTimeEntriesHours, triageFailures, validateSubetapaAdvance, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
@@ -43,7 +43,7 @@ const EMPTY = '__empty__';
 const MACROS = ['backlog', 'andamento', 'bloqueado', 'concluido'] as const;
 
 export function KanbanClient() {
-  const { tasks, patchTask, replaceTask, loading, error } = useData();
+  const { tasks, patchTask, replaceTask, loading, error, timeEntries } = useData();
   const { openEdit } = useTaskModal();
   const toast = useToast();
   const clientesById = useClientesById();
@@ -212,8 +212,9 @@ export function KanbanClient() {
   const setTaskSubetapa = useCallback(
     async (t: Task, newSub: string) => {
       if (!t || t.subetapa === newSub) return;
-      // Gate Onda 2.A · escopo/esforco antes de avançar
-      const gate = validateSubetapaAdvance(t, newSub);
+      // Gates Ondas 2.A + 2.B · escopo/esforco/tempo_real
+      const sumHoursForTask = sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === t.id));
+      const gate = validateSubetapaAdvance(t, newSub, { timeEntriesHours: sumHoursForTask });
       if (!gate.ok) {
         toast.error(gate.error);
         return;
@@ -228,11 +229,18 @@ export function KanbanClient() {
         status: newMacro as Task['status'],
         subetapaEm: nowMs,
         statusEm: macroChanged ? nowMs : t.statusEm,
+        // Onda 2.B · auto-fill silencioso de tempo_real_horas via timesheet
+        ...(gate.autoFillTempo !== undefined && gate.autoFillTempo > 0
+          ? { tempoRealHoras: gate.autoFillTempo }
+          : {}),
       });
       if (!prev) return;
 
       const payload: Record<string, unknown> = { subetapa: newSub, subetapa_em: nowIso };
       if (macroChanged) payload.status_em = nowIso;
+      if (gate.autoFillTempo !== undefined && gate.autoFillTempo > 0) {
+        payload.tempo_real_horas = gate.autoFillTempo;
+      }
       const { error } = await sb.from('tasks').update(payload).eq('id', t.id);
       if (error) {
         replaceTask(t.id, prev);
@@ -251,7 +259,7 @@ export function KanbanClient() {
         });
       }
     },
-    [patchTask, replaceTask, sb, toast],
+    [patchTask, replaceTask, sb, toast, timeEntries],
   );
 
   // ===== DnD handlers =====

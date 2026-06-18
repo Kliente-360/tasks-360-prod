@@ -42,7 +42,7 @@ import { useData, useClientesById, useProjetosById, usePessoasById, useProjetosB
 import { useToastSafe } from '@/components/toast';
 import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
-import { fmtDate, fmtDateShort, lblStatus, validateSubetapaAdvance } from '@/lib/task-utils';
+import { fmtDate, fmtDateShort, lblStatus, sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
 import { SUB_TO_MACRO, SKILL_GROUPS, ALL_SKILLS } from '@/lib/task-constants';
 import { timeEntryFromDb } from '@/lib/adapters';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
@@ -461,6 +461,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     viewerRole,
     isCEO,
     markUserEditedTask,
+    timeEntries,
   } = useData();
   const isAdmin = viewerRole === 'admin';
   const projetosByCliente = useProjetosByCliente();
@@ -708,9 +709,21 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       if (e.subetapa === 'bloqueado' && !e.bloqueadoPor) {
         return { ok: false, error: 'Informe quem está bloqueando (Nós / Cliente / Terceiro).' };
       }
-      // Onda 2.A · gates por subetapa (escopo em em_definicao+ · esforco em escopo_definido+)
-      const gate = validateSubetapaAdvance(e, e.subetapa);
+      // Ondas 2.A + 2.B · gates por subetapa
+      // (escopo em em_definicao+ · esforco em escopo_definido+ ·
+      //  tempo_real em em_homologacao→concluido com fallback timesheet)
+      const sumHoursForTask = e.id
+        ? sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === e.id))
+        : 0;
+      const gate = validateSubetapaAdvance(e, e.subetapa, { timeEntriesHours: sumHoursForTask });
       if (!gate.ok) return { ok: false, error: gate.error };
+      // Auto-fill silencioso (modo d): se manual vazio e tem horas no
+      // timesheet, completa tempo_real_horas com a soma. Patcha editing
+      // pra UI refletir e cai no payload abaixo.
+      if (gate.autoFillTempo !== undefined && gate.autoFillTempo > 0) {
+        e.tempoRealHoras = gate.autoFillTempo;
+        setEditing((cur) => ({ ...cur, tempoRealHoras: gate.autoFillTempo as number }));
+      }
       const payload = editingToDbPayload(e);
       const nowMs = Date.now();
       const nowIso = new Date(nowMs).toISOString();

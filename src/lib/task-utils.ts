@@ -318,31 +318,70 @@ export function cargaNivelFromPctCap(pctCap: number | null): CargaNivel {
 
 
 /**
- * Bucket D · Onda 2.A · gate de avanço de subetapa.
+ * Soma horas de uma lista de time_entries (entries em aberto ignoradas).
+ */
+export function sumTimeEntriesHours(entries: Array<{ startedAt: number; endedAt: number | null }>): number {
+  let ms = 0;
+  for (const e of entries) {
+    if (!e.endedAt) continue;
+    ms += Math.max(0, e.endedAt - e.startedAt);
+  }
+  return ms / 3_600_000;
+}
+
+/** Subetapas que exigem tempo real registrado antes de avançar (Onda 2.B). */
+const REQUIRES_TEMPO_REAL = new Set([
+  'em_homologacao',
+  'em_revisao',
+  'pronto_producao',
+  'em_implantacao',
+  'concluido',
+]);
+
+/**
+ * Bucket D · Ondas 2.A + 2.B · gate de avanço de subetapa.
  *
  * Valida se a task tem os campos necessários pra entrar em uma nova
  * subetapa. Centralizado aqui pra modal, kanban e triagem usarem o
  * mesmo critério.
  *
  * Regras (alinhadas com docs/gestao/DISCIPLINA_DADOS.md):
- *   • escopo_definido+  →  esforco > 0           (2.4)
- *   • em_definicao+     →  escopo[] não vazio    (2.6)
+ *   • em_definicao+        →  escopo[] não vazio                (2.6)
+ *   • escopo_definido+     →  esforco > 0                       (2.4)
+ *   • em_homologacao→concluido (exceto bloqueado)
+ *                          →  tempoRealHoras > 0                (2.5)
+ *                             fallback: opts.timeEntriesHours > 0
+ *                             → retorna autoFillTempo (modo d:
+ *                                só preenche se manual vazio).
  *
- * Bloqueado e concluído têm rank -1 → não validam (não 'avançam').
- * Outras subetapas validam regras cumulativas baseadas em STAGE_RANK.
+ * Bloqueado tem rank -1 → não bloqueia.
  */
 export function validateSubetapaAdvance(
-  task: Pick<Task, 'esforco' | 'escopo'>,
+  task: Pick<Task, 'esforco' | 'escopo' | 'tempoRealHoras'>,
   novaSubetapa: string,
-): { ok: true } | { ok: false; error: string } {
+  opts?: { timeEntriesHours?: number },
+): { ok: true; autoFillTempo?: number } | { ok: false; error: string } {
+  if (novaSubetapa === 'bloqueado') return { ok: true };
+
   const rank = STAGE_RANK[novaSubetapa] ?? 0;
-  if (rank < 0) return { ok: true }; // bloqueado / concluido — não bloqueia
   if (rank >= 1 && (!task.escopo || task.escopo.length === 0)) {
     return { ok: false, error: 'Preencha o escopo técnico antes de avançar.' };
   }
   if (rank >= 3 && !(Number(task.esforco) > 0)) {
     return { ok: false, error: 'Preencha o esforço estimado (h) antes de avançar.' };
   }
+
+  if (REQUIRES_TEMPO_REAL.has(novaSubetapa)) {
+    const manual = Number(task.tempoRealHoras) || 0;
+    if (manual > 0) return { ok: true };
+    const sumHours = opts?.timeEntriesHours ?? 0;
+    if (sumHours > 0) {
+      // Modo (d): manual vazio → usa timesheet como fallback.
+      return { ok: true, autoFillTempo: Math.round(sumHours * 100) / 100 };
+    }
+    return { ok: false, error: 'Registre o tempo real (h) ou lance no timesheet antes de avançar.' };
+  }
+
   return { ok: true };
 }
 
