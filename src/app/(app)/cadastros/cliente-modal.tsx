@@ -25,6 +25,8 @@ export type ClienteInitial = {
   corPortal?: string | null;
   /** light=texto branco · dark=texto preto sobre corPortal. */
   corPortalTexto?: 'light' | 'dark' | null;
+  /** Bidirecional Salesforce ativo (CTF/VB). Gate de IA-ingest e dispatch webhook. */
+  webhookEnabled?: boolean;
 };
 
 export const BLANK: ClienteInitial = {
@@ -35,6 +37,7 @@ export const BLANK: ClienteInitial = {
   dominios: [],
   corPortal: null,
   corPortalTexto: null,
+  webhookEnabled: false,
 };
 
 export function ClienteModal({
@@ -52,6 +55,7 @@ export function ClienteModal({
   const [corPortalTexto, setCorPortalTexto] = useState<'light' | 'dark'>(
     initial.corPortalTexto ?? 'light',
   );
+  const [webhookEnabled, setWebhookEnabled] = useState<boolean>(initial.webhookEnabled ?? false);
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const nomeRef = useRef<HTMLInputElement | null>(null);
@@ -104,6 +108,7 @@ export function ClienteModal({
         dominios: dominiosNorm,
         cor_portal: corPortalVal,
         cor_portal_texto: corPortalTextoVal,
+        webhook_enabled: webhookEnabled,
       };
       const { data, error } = initial.id
         ? await sb
@@ -124,7 +129,7 @@ export function ClienteModal({
       upsertCliente(clienteFromDb(data as Record<string, unknown>));
       onClose();
     });
-  }, [initial.id, nome, tier, dominios, corPortal, corPortalTexto, onClose, upsertCliente]);
+  }, [initial.id, nome, tier, dominios, corPortal, corPortalTexto, webhookEnabled, onClose, upsertCliente]);
 
   return (
     <div
@@ -288,6 +293,24 @@ export function ClienteModal({
                 )}
                 <div className="text-[11px] text-muted mt-1">
                   Aplica skin de marca no header do Portal cliente. Vazio = padrão Kliente (verde).
+                </div>
+              </div>
+
+              {/* === Webhook bidirecional · Salesforce (CTF/VB) === */}
+              <div>
+                <label className="lbl">Integração Salesforce</label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={webhookEnabled}
+                    onChange={(e) => setWebhookEnabled(e.target.checked)}
+                  />
+                  <span className="text-sm">
+                    Webhook bidirecional ativo
+                  </span>
+                </label>
+                <div className="text-[11px] text-muted mt-1">
+                  Quando ativo: tasks/comments visíveis ao cliente disparam pro Salesforce e o AppScript de IA bloqueia ingest pra este cliente (anti-duplicação).
                 </div>
               </div>
             </>

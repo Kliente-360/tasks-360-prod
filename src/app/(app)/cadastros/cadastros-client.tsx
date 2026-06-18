@@ -447,6 +447,7 @@ export function CadastrosClient() {
                           <span className="font-medium text-[color:var(--ink)]">{c.nome}</span>
                           <Chip show={!!c.arquivadoEm} label="arquivado" variant="muted" />
                           <Chip show={isInterno} label="interno" variant="muted" />
+                          <Chip show={c.webhookEnabled} label="webhook" variant="muted" />
                         </div>
                       </div>
                     </td>
@@ -493,6 +494,7 @@ export function CadastrosClient() {
                           dominios: c.dominios,
                           corPortal: c.corPortal,
                           corPortalTexto: c.corPortalTexto,
+                          webhookEnabled: c.webhookEnabled,
                         }}
                       />
                       {isAdmin && (
@@ -795,14 +797,18 @@ export function CadastrosClient() {
                   'flex items-center gap-3 px-3 py-3 border-b border-line last:border-b-0 cursor-pointer active:bg-[color:var(--surface-3)] transition-colors',
                   c.arquivadoEm && 'opacity-50',
                 )}
-                onClick={() => setMobileEditCliente({ id: c.id, nome: c.nome, tier: c.tier, ehInterno: c.ehInterno, dominios: c.dominios, corPortal: c.corPortal, corPortalTexto: c.corPortalTexto })}
+                onClick={() => setMobileEditCliente({ id: c.id, nome: c.nome, tier: c.tier, ehInterno: c.ehInterno, dominios: c.dominios, corPortal: c.corPortal, corPortalTexto: c.corPortalTexto, webhookEnabled: c.webhookEnabled })}
               >
                 <Avatar label={c.nome} shape="square" />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm text-ink truncate">{c.nome}</div>
-                  {(c.arquivadoEm || c.ehInterno) && (
+                  {(c.arquivadoEm || c.ehInterno || c.webhookEnabled) && (
                     <div className="text-[10px] text-muted">
-                      {c.ehInterno ? 'interno' : ''}{c.ehInterno && c.arquivadoEm ? ' · ' : ''}{c.arquivadoEm ? 'arquivado' : ''}
+                      {[
+                        c.ehInterno ? 'interno' : null,
+                        c.webhookEnabled ? 'webhook' : null,
+                        c.arquivadoEm ? 'arquivado' : null,
+                      ].filter(Boolean).join(' · ')}
                     </div>
                   )}
                 </div>
