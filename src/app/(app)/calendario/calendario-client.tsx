@@ -217,7 +217,6 @@ export function CalendarioClient() {
         const hay = [
           t.titulo, cli, proj, pess, t.descricao ?? '',
           t.prioridade, t.status, t.subetapa,
-          (t.tags ?? []).join(' '),
         ].join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
@@ -611,15 +610,6 @@ export function CalendarioClient() {
                         ' · ' +
                         (projetosById.get(t.projetoId)?.nome ?? '—')}
                     </div>
-                    {t.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {t.tags.map((tag) => (
-                          <span key={tag} className="tag-chip">
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                     <div className="flex items-center justify-between text-xs gap-2">
                       <span className="flex items-center gap-1.5 min-w-0">
                         <TaskAvatar name={pessoasById.get(t.pessoaId)?.nome ?? ''} />

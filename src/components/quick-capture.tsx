@@ -79,7 +79,6 @@ function Modal({ onClose }: { onClose: () => void }) {
       prazo: null,
       status: 'backlog',
       subetapa: 'backlog',
-      tags: [],
       status_em: nowIso,
       subetapa_em: nowIso,
     };

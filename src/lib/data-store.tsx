@@ -47,7 +47,6 @@ const COL_TO_FIELD: Record<string, keyof Task> = {
   subetapa_em: 'subetapaEm',
   andamento_em: 'andamentoEm',
   ordem: 'ordem',
-  tags: 'tags',
   checklist: 'checklist',
   reopen_count: 'reopenCount',
   escopo: 'escopo',

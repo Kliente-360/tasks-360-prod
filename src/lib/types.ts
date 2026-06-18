@@ -50,7 +50,6 @@ export interface Task {
   /** Timestamp de quando a task entrou em andamento pela última vez. Null se nunca entrou. */
   andamentoEm: number;
   ordem: number | null;
-  tags: string[];
   checklist: ChecklistItem[];
   reopenCount: number;
   escopo: string[];

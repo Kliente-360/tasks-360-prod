@@ -148,7 +148,6 @@ create table public.tasks (
   external_source text,
   external_id text,
   ordem double precision,
-  tags text[] not null default '{}'::text[],
   complexidade text not null default 'media'::text,
   subetapa text not null default 'backlog'::text,
   subetapa_em timestamp with time zone,

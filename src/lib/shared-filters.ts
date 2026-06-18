@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react';
  * filtro antigo aplicado sem entender por quê).
  *
  * Decisão de escopo:
- *  - Persistir: cliente, projeto, pessoa, prazo, tag.
+ *  - Persistir: cliente, projeto, pessoa, prazo.
  *  - **Não** persistir: `q` (busca livre). Carregar busca entre telas é
  *    confuso — busca é intencionalmente one-off por tela.
  *  - **Não** persistir: filtros muito específicos de tela (onlyIA,
@@ -23,7 +23,6 @@ export interface SharedFilters {
   projeto: string;
   pessoa: string;
   prazo: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
-  tag: string;
 }
 
 export const EMPTY_SHARED_FILTERS: SharedFilters = {
@@ -31,7 +30,6 @@ export const EMPTY_SHARED_FILTERS: SharedFilters = {
   projeto: '',
   pessoa: '',
   prazo: '',
-  tag: '',
 };
 
 const STORAGE_KEY = 'tasks360.filters.shared.v1';

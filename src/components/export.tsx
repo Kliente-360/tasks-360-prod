@@ -46,7 +46,6 @@ function tasksToCsv(
     'Status',
     'Esforço (h)',
     'Prazo',
-    'Tags',
     'Descrição',
     'Criado em',
   ];
@@ -62,7 +61,6 @@ function tasksToCsv(
         lblStatus(t.status),
         t.esforco,
         t.prazo || '',
-        (t.tags || []).join(', '),
         t.descricao || '',
         t.criadoEm ? new Date(t.criadoEm).toISOString().slice(0, 10) : '',
       ]

@@ -43,7 +43,6 @@ export function taskFromDb(r: Row): Task {
     subetapaEm: dateMs(r.subetapa_em),
     andamentoEm: dateMs(r.andamento_em),
     ordem: numNull(r.ordem),
-    tags: arr<string>(r.tags),
     // Normaliza itens salvos com chave `text` (bug temporário do preview
     // pré-v1.02.161) pra `body` — convenção do app Alpine + DB.
     checklist: arr<Record<string, unknown>>(r.checklist).map((c) => ({
@@ -128,4 +127,4 @@ export function timeEntryFromDb(r: Row): TimeEntry {
 
 /** Colunas leves carregadas no boot. `descricao` é lazy (modal puxa). */
 export const TASK_LIGHT_COLS =
-  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,triada_em,triada_por,motivo_arquivamento,privada,webhook_sync_status,webhook_sync_error';
+  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,triada_em,triada_por,motivo_arquivamento,privada,webhook_sync_status,webhook_sync_error';

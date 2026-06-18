@@ -156,7 +156,6 @@ function blankEditing(): Task {
     subetapaEm: 0,
     andamentoEm: 0,
     ordem: null,
-    tags: [],
     checklist: [],
     reopenCount: 0,
     escopo: [],
@@ -192,7 +191,6 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
     status: SUB_TO_MACRO[e.subetapa] || 'backlog',
     bloqueado_por: e.subetapa === 'bloqueado' ? e.bloqueadoPor || null : null,
     visivel_cliente: e.visivelCliente !== false,
-    tags: e.tags ?? [],
     checklist: e.checklist ?? [],
     escopo: e.escopo ?? [],
     tempo_real_horas: e.tempoRealHoras == null || (e.tempoRealHoras as unknown as string) === '' ? null : Number(e.tempoRealHoras),
@@ -205,7 +203,7 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
 }
 
 const TASK_LIGHT_COLS =
-  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,tags,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,triada_em,triada_por,motivo_arquivamento,privada';
+  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,esforco,complexidade,prazo,status,subetapa,bloqueado_por,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,ordem,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,triada_em,triada_por,motivo_arquivamento,privada';
 
 /** Subetapas onde o campo "Solução implementada" aparece no modal.
  *  Lógica: só mostra de em_homologacao em diante (quando entrega já
@@ -757,7 +755,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             complexidade: e.complexidade,
             bloqueadoPor: e.subetapa === 'bloqueado' ? e.bloqueadoPor : '',
             visivelCliente: e.visivelCliente,
-            tags: [...e.tags],
             checklist: e.checklist.map((c) => ({ ...c })),
             escopo: [...(e.escopo ?? [])],
             tempoRealHoras: (e.tempoRealHoras as unknown as string) === '' ? null : e.tempoRealHoras,
@@ -965,7 +962,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         return { ok: true };
       }
     },
-    [sb, tasksById, patchTask, replaceTask, upsertTask, currentPessoa?.id, currentPessoa?.nome],
+    [sb, tasksById, patchTask, replaceTask, upsertTask, currentPessoa?.id, currentPessoa?.nome, timeEntries],
   );
 
   const autosaveNow = useCallback(async () => {

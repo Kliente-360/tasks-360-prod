@@ -48,7 +48,6 @@ type Filters = {
   pri: string;
   complexidade: string;
   status: string;
-  tag: string;
   origem: '' | 'ia' | 'humano';
   prazo: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
 };
@@ -75,7 +74,6 @@ const DEFAULT_FILTERS: Filters = {
   pri: '',
   complexidade: '',
   status: 'abertas',
-  tag: '',
   origem: '',
   prazo: '',
 };
@@ -134,7 +132,6 @@ export function BacklogClient() {
       cliente: s.cliente,
       projeto: s.projeto,
       pessoa: s.pessoa,
-      tag: s.tag,
       prazo: s.prazo,
     };
   });
@@ -143,10 +140,9 @@ export function BacklogClient() {
       cliente: f.cliente,
       projeto: f.projeto,
       pessoa: f.pessoa,
-      tag: f.tag,
       prazo: f.prazo,
     });
-  }, [f.cliente, f.projeto, f.pessoa, f.tag, f.prazo]);
+  }, [f.cliente, f.projeto, f.pessoa, f.prazo]);
   const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
   const [groupBy, setGroupBy] = useState<string>('');
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
@@ -160,17 +156,16 @@ export function BacklogClient() {
   const [qDraft, setQDraft] = useState('');
 
   // Aplica filtros vindos da URL (Command Palette navega assim).
-  // Lê cliente/projeto/pessoa/tag/q dos search params na mount e quando
+  // Lê cliente/projeto/pessoa/q dos search params na mount e quando
   // mudam — usuário pode chegar via palette ou link e cair filtrado.
   const searchParams = useSearchParams();
   useEffect(() => {
     const cliente = searchParams.get('cliente') ?? '';
     const projeto = searchParams.get('projeto') ?? '';
     const pessoa = searchParams.get('pessoa') ?? '';
-    const tag = searchParams.get('tag') ?? '';
     const q = searchParams.get('q') ?? '';
-    if (cliente || projeto || pessoa || tag || q) {
-      setF((cur) => ({ ...cur, cliente, projeto, pessoa, tag, q }));
+    if (cliente || projeto || pessoa || q) {
+      setF((cur) => ({ ...cur, cliente, projeto, pessoa, q }));
       setQDraft(q);
     }
   }, [searchParams]);
@@ -178,13 +173,6 @@ export function BacklogClient() {
     const tid = setTimeout(() => setF((cur) => ({ ...cur, q: qDraft })), 150);
     return () => clearTimeout(tid);
   }, [qDraft]);
-
-  // Tags disponíveis (memoizado — só muda quando tasks muda).
-  const allTags = useMemo(() => {
-    const s = new Set<string>();
-    for (const t of tasks) for (const tag of t.tags) s.add(tag);
-    return Array.from(s).sort();
-  }, [tasks]);
 
   const clientesAtivos = useMemo(
     () => clientes.filter((c) => !c.arquivadoEm),
@@ -215,7 +203,6 @@ export function BacklogClient() {
         const hay = [
           t.titulo, t.descricao ?? '', cli, proj, pess,
           t.prioridade, t.status, t.subetapa,
-          (t.tags ?? []).join(' '),
         ].join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
@@ -237,9 +224,6 @@ export function BacklogClient() {
       if (f.complexidade === EMPTY) {
         if (t.complexidade) return false;
       } else if (f.complexidade && (t.complexidade || 'media') !== f.complexidade) return false;
-      if (f.tag === EMPTY) {
-        if (t.tags.length > 0) return false;
-      } else if (f.tag && !t.tags.includes(f.tag)) return false;
       if (f.origem === 'ia' && !t.criadoPorIa) return false;
       if (f.origem === 'humano' && t.criadoPorIa) return false;
       if (f.prazo) {
@@ -779,22 +763,6 @@ export function BacklogClient() {
                         {t.criadoPorIa && <TagIA className="mr-1" />}
                         {t.titulo}
                       </div>
-                      {t.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {t.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="tag-chip tag-chip-link"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setF({ ...f, tag });
-                              }}
-                            >
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </td>
                     <td>
                       <span className="tbl-cliproj" title={`${clientesById.get(t.clienteId)?.nome ?? '—'} · ${projetosById.get(t.projetoId)?.nome ?? '—'}`}>

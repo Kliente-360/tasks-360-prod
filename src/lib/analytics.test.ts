@@ -33,7 +33,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     subetapaEm: NOW - 10 * 86400000,
     andamentoEm: 0,
     ordem: null,
-    tags: [],
     checklist: [],
     reopenCount: 0,
     escopo: [],
