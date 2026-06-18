@@ -24,8 +24,8 @@ import type { Task } from '@/lib/types';
 // ───────────────────────────────────────────────────────────────────
 
 interface PriChipProps {
-  /** P0 | P1 | P2 | P3 */
-  prio: string;
+  /** P0 | P1 | P2 | P3 · ou '' / null pra "não revisada" (Onda 2.C). */
+  prio: string | null | undefined;
   /** size visual (default = chip padrão; sm = mais compacto pro Kanban) */
   size?: 'sm' | 'md';
   className?: string;
@@ -34,8 +34,21 @@ interface PriChipProps {
 /**
  * Chip de prioridade · reusa `.pri .pri-P{0..3}` do globals.css.
  * P0/P1 = fundo cheio (alto signal); P2/P3 = fundo muted + border.
+ * Vazio/null = chip "Revisar" cinza tracejado (Onda 2.C · força revisão).
  */
 export function PriChip({ prio, size = 'md', className }: PriChipProps) {
+  if (!prio) {
+    return (
+      <span
+        className={cn('pri pri-empty', size === 'sm' && 'pri-sm', className)}
+        aria-label="Prioridade não revisada"
+        title="Não revisada"
+      >
+        <span className="pri-dot" />
+        revisar
+      </span>
+    );
+  }
   return (
     <span
       className={cn('pri', `pri-${prio}`, size === 'sm' && 'pri-sm', className)}

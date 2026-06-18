@@ -139,7 +139,7 @@ create table public.tasks (
   cliente_id uuid,
   projeto_id uuid,
   pessoa_id uuid,
-  prioridade text not null default 'P2'::text,
+  prioridade text,
   esforco numeric not null default 0,
   prazo date,
   status text not null default 'backlog'::text,

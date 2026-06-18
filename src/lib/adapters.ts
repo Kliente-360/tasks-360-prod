@@ -29,7 +29,8 @@ export function taskFromDb(r: Row): Task {
     clienteId: str(r.cliente_id),
     projetoId: str(r.projeto_id),
     pessoaId: str(r.pessoa_id),
-    prioridade: (r.prioridade as Prioridade) || 'P2',
+    // '' = não revisada · default antigo era 'P2' silencioso (Onda 2.C)
+    prioridade: (r.prioridade as Prioridade) || '',
     esforco: num(r.esforco),
     complexidade: ((r.complexidade as Complexidade) || 'media'),
     prazo: str(r.prazo),

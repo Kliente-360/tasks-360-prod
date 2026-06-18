@@ -369,6 +369,13 @@ html, body {
 .pri-P2 .pri-dot { background: var(--cyan); }
 .pri-P3 { background: var(--surface-3); color: var(--muted); border: 1px solid var(--line); }
 .pri-P3 .pri-dot { background: var(--p3); }
+/* Onda 2.C · prioridade não revisada */
+.pri-empty {
+  background: transparent; color: var(--muted);
+  border: 1px dashed var(--line);
+  font-style: italic; text-transform: lowercase;
+}
+.pri-empty .pri-dot { background: var(--muted); opacity: 0.6; }
 
 /* complexidade */
 .cx {

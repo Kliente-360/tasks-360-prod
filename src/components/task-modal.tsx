@@ -143,7 +143,7 @@ function blankEditing(): Task {
     clienteId: '',
     projetoId: '',
     pessoaId: '',
-    prioridade: 'P2',
+    prioridade: '',
     esforco: 4,
     complexidade: 'media',
     prazo: '',
@@ -184,7 +184,7 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
     cliente_id: e.clienteId || null,
     projeto_id: e.projetoId || null,
     pessoa_id: e.pessoaId || null,
-    prioridade: e.prioridade,
+    prioridade: e.prioridade || null,
     esforco: Number(e.esforco) || 0,
     complexidade: e.complexidade || 'media',
     prazo: e.prazo || null,
@@ -1950,6 +1950,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     value={editing.prioridade}
                     onChange={(e) => set('prioridade', e.target.value as Task['prioridade'])}
                   >
+                    <option value="">— revisar</option>
                     <option value="P0">P0 · Urgente</option>
                     <option value="P1">P1 · Alta</option>
                     <option value="P2">P2 · Normal</option>

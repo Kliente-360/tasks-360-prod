@@ -35,7 +35,8 @@ export interface Task {
   clienteId: string;
   projetoId: string;
   pessoaId: string;
-  prioridade: Prioridade;
+  /** '' = não revisada (Onda 2.C · força revisão explícita na Triagem). */
+  prioridade: Prioridade | '';
   esforco: number;
   complexidade: Complexidade;
   prazo: string;

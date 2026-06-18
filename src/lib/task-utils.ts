@@ -150,10 +150,12 @@ export function fmtAtrasoLabel(dias: number): string {
 export const TRIAGE_RANK_GATE = 3;
 
 /** Lista o que falta na task pra estar "triada". Vazio = ok.
- *  Sempre obrigatórios: cliente, projeto, responsável.
- *  A partir de `escopo_definido` (rank >= 3): também prazo e esforço. */
+ *  Sempre obrigatórios: cliente, projeto, responsável, prioridade.
+ *  A partir de `escopo_definido` (rank >= 3): também prazo e esforço.
+ *  (Onda 2.C: prioridade obrigatória em todas as subetapas — força
+ *   revisão explícita, default 'P2' silencioso foi removido.) */
 export function triageFailures(
-  t: Pick<Task, 'status' | 'subetapa' | 'pessoaId' | 'clienteId' | 'projetoId' | 'prazo' | 'esforco'>,
+  t: Pick<Task, 'status' | 'subetapa' | 'pessoaId' | 'clienteId' | 'projetoId' | 'prazo' | 'esforco' | 'prioridade'>,
 ): string[] {
   if (!t || t.status === STATUS.CONCLUIDO) return [];
   const rank = STAGE_RANK[t.subetapa] ?? 0;
@@ -161,6 +163,7 @@ export function triageFailures(
   if (!t.clienteId) out.push('sem cliente');
   if (!t.projetoId) out.push('sem projeto');
   if (!t.pessoaId) out.push('sem responsável');
+  if (!t.prioridade) out.push('sem prioridade');
   if (rank >= TRIAGE_RANK_GATE && !t.prazo) out.push('sem prazo');
   if (rank >= TRIAGE_RANK_GATE && !Number(t.esforco)) out.push('sem esforço');
   return out;

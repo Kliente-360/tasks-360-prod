@@ -136,6 +136,7 @@ describe('triageFailures', () => {
     pessoaId: 'p1',
     prazo: '2026-06-01',
     esforco: 8,
+    prioridade: 'P2' as const,
   };
 
   it('vazio quando tudo preenchido (rank >= escopo_definido)', () => {
@@ -144,23 +145,26 @@ describe('triageFailures', () => {
   it('vazio sempre pra task concluída', () => {
     expect(triageFailures({ ...base, status: 'concluido', pessoaId: '', clienteId: '', projetoId: '' })).toEqual([]);
   });
-  it('cliente/projeto/responsável são obrigatórios em qualquer rank', () => {
-    const out = triageFailures({ ...base, subetapa: 'backlog', clienteId: '', projetoId: '', pessoaId: '' });
-    expect(out).toEqual(['sem cliente', 'sem projeto', 'sem responsável']);
+  it('cliente/projeto/responsável/prioridade são obrigatórios em qualquer rank', () => {
+    const out = triageFailures({ ...base, subetapa: 'backlog', clienteId: '', projetoId: '', pessoaId: '', prioridade: '' });
+    expect(out).toEqual(['sem cliente', 'sem projeto', 'sem responsável', 'sem prioridade']);
   });
   it('prazo/esforço só a partir de escopo_definido (rank 3)', () => {
     expect(triageFailures({ ...base, subetapa: 'priorizado', prazo: '', esforco: 0 })).toEqual([]);
     expect(triageFailures({ ...base, subetapa: 'escopo_definido', prazo: '', esforco: 0 })).toEqual(['sem prazo', 'sem esforço']);
     expect(triageFailures({ ...base, subetapa: 'em_desenvolvimento', prazo: '', esforco: 0 })).toEqual(['sem prazo', 'sem esforço']);
   });
+  it('Onda 2.C · prioridade vazia também é falha de triagem', () => {
+    expect(triageFailures({ ...base, prioridade: '' })).toEqual(['sem prioridade']);
+  });
 });
 
 describe('needsTriage', () => {
   it('true se há ao menos uma falha', () => {
-    expect(needsTriage({ status: 'andamento', subetapa: 'backlog', pessoaId: '', clienteId: 'c', projetoId: 'pr', prazo: '2026-06-01', esforco: 8 })).toBe(true);
+    expect(needsTriage({ status: 'andamento', subetapa: 'backlog', pessoaId: '', clienteId: 'c', projetoId: 'pr', prazo: '2026-06-01', esforco: 8, prioridade: 'P2' })).toBe(true);
   });
   it('false quando triada', () => {
-    expect(needsTriage({ status: 'andamento', subetapa: 'escopo_definido', pessoaId: 'p', clienteId: 'c', projetoId: 'pr', prazo: '2026-06-01', esforco: 8 })).toBe(false);
+    expect(needsTriage({ status: 'andamento', subetapa: 'escopo_definido', pessoaId: 'p', clienteId: 'c', projetoId: 'pr', prazo: '2026-06-01', esforco: 8, prioridade: 'P2' })).toBe(false);
   });
 });
 
