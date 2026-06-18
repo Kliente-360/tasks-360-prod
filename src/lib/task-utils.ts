@@ -315,3 +315,34 @@ export function cargaNivelFromPctCap(pctCap: number | null): CargaNivel {
   return 'ok';
 }
 
+
+
+/**
+ * Bucket D · Onda 2.A · gate de avanço de subetapa.
+ *
+ * Valida se a task tem os campos necessários pra entrar em uma nova
+ * subetapa. Centralizado aqui pra modal, kanban e triagem usarem o
+ * mesmo critério.
+ *
+ * Regras (alinhadas com docs/gestao/DISCIPLINA_DADOS.md):
+ *   • escopo_definido+  →  esforco > 0           (2.4)
+ *   • em_definicao+     →  escopo[] não vazio    (2.6)
+ *
+ * Bloqueado e concluído têm rank -1 → não validam (não 'avançam').
+ * Outras subetapas validam regras cumulativas baseadas em STAGE_RANK.
+ */
+export function validateSubetapaAdvance(
+  task: Pick<Task, 'esforco' | 'escopo'>,
+  novaSubetapa: string,
+): { ok: true } | { ok: false; error: string } {
+  const rank = STAGE_RANK[novaSubetapa] ?? 0;
+  if (rank < 0) return { ok: true }; // bloqueado / concluido — não bloqueia
+  if (rank >= 1 && (!task.escopo || task.escopo.length === 0)) {
+    return { ok: false, error: 'Preencha o escopo técnico antes de avançar.' };
+  }
+  if (rank >= 3 && !(Number(task.esforco) > 0)) {
+    return { ok: false, error: 'Preencha o esforço estimado (h) antes de avançar.' };
+  }
+  return { ok: true };
+}
+

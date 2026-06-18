@@ -169,7 +169,8 @@ create table public.tasks (
   triada_em timestamp without time zone,
   triada_por uuid,
   motivo_arquivamento text,
-  solucao_implementada text
+  solucao_implementada text,
+  valor_esperado text not null default ''
 );
 
 create table public.time_entries (

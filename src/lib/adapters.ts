@@ -25,6 +25,7 @@ export function taskFromDb(r: Row): Task {
     solucaoImplementada: r.solucao_implementada === undefined
       ? undefined
       : str(r.solucao_implementada),
+    valorEsperado: r.valor_esperado === undefined ? undefined : str(r.valor_esperado),
     clienteId: str(r.cliente_id),
     projetoId: str(r.projeto_id),
     pessoaId: str(r.pessoa_id),

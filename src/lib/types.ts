@@ -28,6 +28,10 @@ export interface Task {
    *  modal só de subetapa ≥ em_homologacao em diante. Usado pelo IA-summary
    *  (B.2/B.3/B.7) pra montar narrativa pedido→entrega. */
   solucaoImplementada?: string;
+  /** Valor que a entrega deve gerar como impacto positivo para o cliente.
+   *  Lazy junto com descricao. Sub-campo da seção "Descrição" no modal
+   *  (Solicitação = descricao · Valor Esperado = este campo). */
+  valorEsperado?: string;
   clienteId: string;
   projetoId: string;
   pessoaId: string;

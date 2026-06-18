@@ -32,7 +32,7 @@ import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
 import { PriChip, TaskAvatar, PrazoLabel } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
-import { atrasada, etapaTempoColor, etapaTempoDays, fmtDateShort, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, type PrazoFilter } from '@/lib/task-utils';
+import { atrasada, etapaTempoColor, etapaTempoDays, fmtDateShort, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, triageFailures, validateSubetapaAdvance, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
@@ -212,6 +212,12 @@ export function KanbanClient() {
   const setTaskSubetapa = useCallback(
     async (t: Task, newSub: string) => {
       if (!t || t.subetapa === newSub) return;
+      // Gate Onda 2.A · escopo/esforco antes de avançar
+      const gate = validateSubetapaAdvance(t, newSub);
+      if (!gate.ok) {
+        toast.error(gate.error);
+        return;
+      }
       const newMacro = SUB_TO_MACRO[newSub] ?? t.status;
       const macroChanged = t.status !== newMacro;
       const nowMs = Date.now();

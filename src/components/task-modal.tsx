@@ -42,7 +42,7 @@ import { useData, useClientesById, useProjetosById, usePessoasById, useProjetosB
 import { useToastSafe } from '@/components/toast';
 import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
-import { fmtDate, fmtDateShort, lblStatus } from '@/lib/task-utils';
+import { fmtDate, fmtDateShort, lblStatus, validateSubetapaAdvance } from '@/lib/task-utils';
 import { SUB_TO_MACRO, SKILL_GROUPS, ALL_SKILLS } from '@/lib/task-constants';
 import { timeEntryFromDb } from '@/lib/adapters';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
@@ -139,6 +139,7 @@ function blankEditing(): Task {
     titulo: '',
     descricao: '',
     solucaoImplementada: '',
+    valorEsperado: '',
     clienteId: '',
     projetoId: '',
     pessoaId: '',
@@ -179,6 +180,7 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
     titulo: e.titulo.trim(),
     descricao: e.descricao ?? '',
     solucao_implementada: e.solucaoImplementada ?? '',
+    valor_esperado: e.valorEsperado ?? '',
     cliente_id: e.clienteId || null,
     projeto_id: e.projetoId || null,
     pessoa_id: e.pessoaId || null,
@@ -608,13 +610,17 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     if (!taskId || taskId === '__new__') return;
     let cancelled = false;
     (async () => {
-      // Lazy descricao + solucao_implementada se não vieram do boot.
-      // `undefined` no source = nunca foi carregada (light cols não
-      // incluem). `''` ou string = já temos.
-      if (editingRef.current.descricao === undefined || editingRef.current.solucaoImplementada === undefined) {
+      // Lazy descricao + solucao_implementada + valor_esperado se não
+      // vieram do boot. `undefined` no source = nunca foi carregada
+      // (light cols não incluem os 3). `''` ou string = já temos.
+      if (
+        editingRef.current.descricao === undefined ||
+        editingRef.current.solucaoImplementada === undefined ||
+        editingRef.current.valorEsperado === undefined
+      ) {
         const { data } = await sb
           .from('tasks')
-          .select('descricao, solucao_implementada')
+          .select('descricao, solucao_implementada, valor_esperado')
           .eq('id', taskId)
           .single();
         if (!cancelled) {
@@ -622,6 +628,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             ...cur,
             descricao: data?.descricao ?? '',
             solucaoImplementada: data?.solucao_implementada ?? '',
+            valorEsperado: data?.valor_esperado ?? '',
           }));
           setDescricaoLoading(false);
           skipNextDirty.current = true;
@@ -701,6 +708,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       if (e.subetapa === 'bloqueado' && !e.bloqueadoPor) {
         return { ok: false, error: 'Informe quem está bloqueando (Nós / Cliente / Terceiro).' };
       }
+      // Onda 2.A · gates por subetapa (escopo em em_definicao+ · esforco em escopo_definido+)
+      const gate = validateSubetapaAdvance(e, e.subetapa);
+      if (!gate.ok) return { ok: false, error: gate.error };
       const payload = editingToDbPayload(e);
       const nowMs = Date.now();
       const nowIso = new Date(nowMs).toISOString();
@@ -722,6 +732,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             titulo: e.titulo.trim(),
             descricao: e.descricao ?? '',
             solucaoImplementada: e.solucaoImplementada ?? '',
+            valorEsperado: e.valorEsperado ?? '',
             clienteId: e.clienteId,
             projetoId: e.projetoId,
             pessoaId: e.pessoaId,
@@ -1771,13 +1782,25 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 </div>
               </div>
               <div>
-                <label className="lbl">Descrição</label>
+                <label className="lbl">Solicitação</label>
                 <textarea
                   className="inp"
                   rows={4}
                   value={descricaoLoading ? '' : (editing.descricao ?? '')}
                   onChange={(e) => set('descricao', e.target.value)}
                   placeholder={descricaoLoading ? 'Carregando…' : 'Contexto, links, critérios de aceite…'}
+                  disabled={descricaoLoading}
+                  style={descricaoLoading ? { opacity: 0.6 } : undefined}
+                />
+              </div>
+              <div>
+                <label className="lbl">Valor Esperado</label>
+                <textarea
+                  className="inp"
+                  rows={3}
+                  value={descricaoLoading ? '' : (editing.valorEsperado ?? '')}
+                  onChange={(e) => set('valorEsperado', e.target.value)}
+                  placeholder={descricaoLoading ? 'Carregando…' : 'Valor que a entrega desta task deve gerar como impacto positivo para o cliente…'}
                   disabled={descricaoLoading}
                   style={descricaoLoading ? { opacity: 0.6 } : undefined}
                 />
@@ -1923,15 +1946,26 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               </div>
             </div>
 
-            {/* Descrição */}
+            {/* Descrição · Solicitação + Valor Esperado */}
             <div className="tmodal-section hidden md:block">
               <div className="tmodal-section-title">Descrição</div>
+              <label className="lbl mt-0">Solicitação</label>
               <textarea
                 className="inp"
                 rows={3}
                 value={descricaoLoading ? '' : (editing.descricao ?? '')}
                 onChange={(e) => set('descricao', e.target.value)}
                 placeholder={descricaoLoading ? 'Carregando…' : 'Contexto, links, critérios de aceite…'}
+                disabled={descricaoLoading}
+                style={descricaoLoading ? { opacity: 0.6 } : undefined}
+              />
+              <label className="lbl mt-3">Valor Esperado</label>
+              <textarea
+                className="inp"
+                rows={2}
+                value={descricaoLoading ? '' : (editing.valorEsperado ?? '')}
+                onChange={(e) => set('valorEsperado', e.target.value)}
+                placeholder={descricaoLoading ? 'Carregando…' : 'Valor que a entrega desta task deve gerar como impacto positivo para o cliente…'}
                 disabled={descricaoLoading}
                 style={descricaoLoading ? { opacity: 0.6 } : undefined}
               />
