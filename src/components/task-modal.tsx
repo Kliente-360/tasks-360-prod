@@ -637,6 +637,15 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   });
   const newCommentRef = useRef<HTMLTextAreaElement | null>(null);
   const [newCommentPublico, setNewCommentPublico] = useState(false);
+  // Detecta viewport mobile pra ajustar placeholder do composer
+  const [isMobileVp, setIsMobileVp] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobileVp(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
   const mentionPicker = useMentionPicker(
     newComment,
@@ -3115,7 +3124,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                         value={newComment}
                         onChange={mentionPicker.onChange}
                         rows={1}
-                        placeholder="@ pra mencionar · ⌘↵ envia"
+                        placeholder={isMobileVp ? '@ pra mencionar' : '@ pra mencionar · ⌘↵ envia'}
                         onKeyDown={(e) => {
                           if (mentionPicker.onKeyDown(e)) return;
                           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
