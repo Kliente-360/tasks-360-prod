@@ -1063,7 +1063,15 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
   width: 100%; max-width: 1080px; background: var(--surface-1);
   border: 0; border-radius: var(--r-lg);
   box-shadow: var(--shadow-modal); overflow: hidden;
-  display: flex; flex-direction: column; max-height: 90vh;
+  display: flex; flex-direction: column;
+  /* Altura fixa em desktop · evita o modal "respirar" ao trocar de aba
+     com menos campos. Conteúdo curto fica com espaço vazio embaixo;
+     conteúdo longo scrolla no .tmodal-left. */
+  height: 90vh; max-height: 90vh;
+}
+@media (max-width: 767px) {
+  /* Mobile mantém o comportamento original (full-screen com max-height) */
+  .tmodal { height: auto; max-height: 100vh; }
 }
 .tmodal-head {
   background: var(--header-task); color: #fff;
