@@ -737,6 +737,7 @@ export function computeProjetosSaude(
 export interface EntregaSemana {
   label: string;
   hours: number;
+  count: number;
   isAtrasada: boolean;
   isCurrent: boolean;
 }
@@ -751,10 +752,14 @@ export function computeEntregasSemanas(tasks: Task[], today?: string): EntregaSe
   const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO && !t.arquivadoEm);
 
   const result: EntregaSemana[] = [];
-  const horasAtras = abertas
-    .filter((t) => t.prazo && t.prazo < todayStr)
-    .reduce((s, t) => s + effEsforco(t), 0);
-  result.push({ label: 'Atrasadas', hours: horasAtras, isAtrasada: true, isCurrent: false });
+  const atrasadas = abertas.filter((t) => t.prazo && t.prazo < todayStr);
+  result.push({
+    label: 'Atrasadas',
+    hours: atrasadas.reduce((s, t) => s + effEsforco(t), 0),
+    count: atrasadas.length,
+    isAtrasada: true,
+    isCurrent: false,
+  });
 
   for (let i = 0; i <= 4; i++) {
     const wStart = new Date(monday);
@@ -763,11 +768,15 @@ export function computeEntregasSemanas(tasks: Task[], today?: string): EntregaSe
     wEnd.setDate(wStart.getDate() + 7);
     const wStartStr = wStart.toISOString().slice(0, 10);
     const wEndStr = wEnd.toISOString().slice(0, 10);
-    const hours = abertas
-      .filter((t) => t.prazo && t.prazo >= wStartStr && t.prazo < wEndStr)
-      .reduce((s, t) => s + effEsforco(t), 0);
+    const inWeek = abertas.filter((t) => t.prazo && t.prazo >= wStartStr && t.prazo < wEndStr);
     const label = wStart.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-    result.push({ label, hours, isAtrasada: false, isCurrent: i === 0 });
+    result.push({
+      label,
+      hours: inWeek.reduce((s, t) => s + effEsforco(t), 0),
+      count: inWeek.length,
+      isAtrasada: false,
+      isCurrent: i === 0,
+    });
   }
   return result;
 }

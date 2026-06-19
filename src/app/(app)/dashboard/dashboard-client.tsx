@@ -15,9 +15,8 @@ import {
   computeCalendario,
   computeVolumeByCliente,
   computeCargaByPessoa,
-  computeProjetosSaude,
-  computeSaudePorPessoa,
   computeVelocidade,
+  computeWeeklyCapacityAnalysis,
 } from '@/lib/analytics';
 import { VelocidadeOperacao } from '@/components/velocidade-operacao';
 
@@ -25,11 +24,15 @@ import { VelocidadeOperacao } from '@/components/velocidade-operacao';
 //  Helpers
 // ─────────────────────────────────────────────────────────
 
-function sinalDot(sinal: string) {
-  if (sinal === 'vermelho') return 'bg-[var(--danger)]';
-  if (sinal === 'amarelo') return 'bg-[var(--warn)]';
-  return 'bg-[var(--brand)]';
+// Heatmap de capacidade · mesmas regras do Briefing
+function heatmapColor(nivel: string) {
+  if (nivel === 'sobrecarga') return 'bg-[var(--p0-soft)] text-[var(--p0)] font-semibold';
+  if (nivel === 'pressao') return 'bg-[var(--p1-soft)] text-[var(--warn)] font-semibold';
+  if (nivel === 'ok') return 'bg-[var(--brand-tint)] text-[var(--brand-dark)]';
+  return 'bg-[var(--surface-3)] text-[var(--muted)]';
 }
+const WEEK_LABELS_SHORT = ['Agora', '+1s', '+2s', '+3s'];
+const WEEK_LABELS_LONG = ['Esta sem.', 'Próx. sem.', 'Em 2 sem.', 'Em 3 sem.'];
 
 function calDayBg(dia: { count: number; isPast: boolean }) {
   if (dia.count === 0) return '';
@@ -53,35 +56,6 @@ function SectionHeader({ title, sub }: { title: string; sub?: string }) {
     <div className="px-3 md:px-4 py-3 border-b border-line">
       <h2 className="text-sm font-semibold text-ink">{title}</h2>
       {sub && <p className="text-[10px] text-muted mt-0.5">{sub}</p>}
-    </div>
-  );
-}
-
-/**
- * Bloco padronizado de 3 métricas à direita do row de Saúde
- * (por pessoa e por projeto). Anatomia: abertas · atrasadas · bloqueadas.
- * Cor por métrica: muted default, vermelho se atrasadas>0, âmbar se bloq>0.
- */
-function SaudeMetrics({
-  nAbertas,
-  nAtrasadas,
-  nBloqueadas,
-}: {
-  nAbertas: number;
-  nAtrasadas: number;
-  nBloqueadas: number;
-}) {
-  return (
-    <div className="text-right shrink-0 text-[10px] font-mono tabular-nums leading-tight space-y-0.5">
-      <div className="text-muted">
-        <span className="text-ink font-semibold">{nAbertas}</span> abertas
-      </div>
-      <div className={nAtrasadas > 0 ? 'text-[var(--danger)] font-semibold' : 'text-muted'}>
-        <span className={nAtrasadas > 0 ? '' : 'opacity-60'}>{nAtrasadas}</span> atrasadas
-      </div>
-      <div className={nBloqueadas > 0 ? 'text-[var(--warn)] font-semibold' : 'text-muted'}>
-        <span className={nBloqueadas > 0 ? '' : 'opacity-60'}>{nBloqueadas}</span> bloqueadas
-      </div>
     </div>
   );
 }
@@ -149,7 +123,7 @@ export function DashboardClient() {
 
   // ── Entregas + calendário
   const entregasSemanas = useMemo(() => computeEntregasSemanas(filteredTasks), [filteredTasks]);
-  const maxEntregasH = Math.max(...entregasSemanas.map((s) => s.hours), 1);
+  const maxEntregasN = Math.max(...entregasSemanas.map((s) => s.count), 1);
   const calendario = useMemo(() => computeCalendario(filteredTasks), [filteredTasks]);
   const calWeeks: typeof calendario[] = [];
   for (let i = 0; i < calendario.length; i += 7) {
@@ -163,14 +137,18 @@ export function DashboardClient() {
   const cargaPessoa = useMemo(() => computeCargaByPessoa(filteredTasks, pessoas), [filteredTasks, pessoas]);
   const maxCarga = Math.max(...cargaPessoa.map((p) => p.total), 1);
 
-  // ── Saúde
-  const saudeProjeto = useMemo(
-    () => computeProjetosSaude(filteredTasks, projetos, clientes),
-    [filteredTasks, projetos, clientes],
+  // ── Capacidade (substituiu Saúde por projeto + por pessoa em jul/2026)
+  const wca = useMemo(
+    () => computeWeeklyCapacityAnalysis(filteredTasks, clientes, projetos, pessoas),
+    [filteredTasks, clientes, projetos, pessoas],
   );
-  const saudePessoa = useMemo(
-    () => computeSaudePorPessoa(filteredTasks, pessoas),
-    [filteredTasks, pessoas],
+  const pessoasAtivasIds = useMemo(
+    () => new Set(pessoas.filter((p) => p.invited_at !== null).map((p) => p.id)),
+    [pessoas],
+  );
+  const pessoasCap = useMemo(
+    () => wca.pessoas.filter((p) => pessoasAtivasIds.has(p.pessoaId)),
+    [wca.pessoas, pessoasAtivasIds],
   );
 
   // ── Bottom cards
@@ -348,22 +326,22 @@ export function DashboardClient() {
       {/* ── 2. Entregas + Calendário ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 
-        {/* Entregas semana atual + 4 */}
+        {/* Entregas semana atual + 4 · métrica = quantidade de tasks */}
         <div className="bg-elev border border-line rounded-xl">
-          <SectionHeader title="Entregas — semana atual + 4" sub="horas de tarefas abertas por semana do prazo (atrasadas em vermelho)" />
+          <SectionHeader title="Entregas — semana atual + 4" sub="tarefas abertas por semana do prazo (atrasadas em vermelho)" />
           <div className="p-3 md:p-4">
             <div className="flex items-end gap-1.5 h-36">
               {entregasSemanas.map((sem, i) => (
                 <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
                   <div className="text-[9px] text-muted tabular-nums">
-                    {sem.hours > 0 ? `${Math.round(sem.hours)}h` : ''}
+                    {sem.count > 0 ? sem.count : ''}
                   </div>
                   <div
                     className="w-full rounded-t-sm min-h-[3px]"
                     style={{
-                      height: `${Math.max(3, (sem.hours / maxEntregasH) * 110)}px`,
+                      height: `${Math.max(3, (sem.count / maxEntregasN) * 110)}px`,
                       background: sem.isAtrasada
-                        ? (sem.hours > 0 ? '#ef4444' : '#fecaca')
+                        ? (sem.count > 0 ? '#ef4444' : '#fecaca')
                         : sem.isCurrent
                           ? 'var(--brand)'
                           : 'var(--brand-soft)',
@@ -504,49 +482,88 @@ export function DashboardClient() {
         </div>
       </div>
 
-      {/* ── 5. Saúde por projeto + por pessoa ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+      {/* ── 5. Capacidade · sustentação + time ──
+           Substituiu Saúde por projeto/pessoa (jul/2026).
+           Layouts espelham os blocos 4 e 6 do Briefing, sem coluna
+           "Meta/sem" e sem footer (mais limpo · só semana + %).
+           Cards de altura igual via items-stretch + h-full. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 items-stretch">
 
-        {/* Saúde por projeto */}
-        <div className="bg-elev border border-line rounded-xl overflow-hidden">
-          <SectionHeader title="Saúde por projeto" sub="vermelho = atrasadas · âmbar = bloqueadas · verde = sem bloqueios" />
-          {saudeProjeto.length === 0
-            ? <div className="px-4 py-5 text-sm text-muted">Nenhum projeto ativo</div>
-            : (
-              <div className="divide-y divide-line">
-                {saudeProjeto.map((ps) => (
-                  <div key={ps.projetoId} className="flex items-center gap-3 px-3 md:px-4 py-2.5">
-                    <span className={cn('shrink-0 w-2.5 h-2.5 rounded-full', sinalDot(ps.sinal))} />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-ink truncate">{ps.nome}</div>
-                      <div className="text-xs text-muted truncate">{ps.nomeCliente}</div>
+        {/* Capacidade · sustentação */}
+        <div className="bg-elev border border-line rounded-xl overflow-hidden h-full flex flex-col">
+          <SectionHeader title="Capacidade semanal · sustentação" sub="% de uso vs orçamento semanal · vermelho = estouro · âmbar = pressão" />
+          <div className="overflow-x-auto flex-1">
+            {wca.sustentacoes.length === 0 ? (
+              <div className="px-4 py-5 text-sm text-muted">Sem dados</div>
+            ) : (
+              <div className="px-3 md:px-4 py-3" style={{ minWidth: 320 }}>
+                <div className="grid gap-1 mb-1.5" style={{ gridTemplateColumns: '150px repeat(4, 1fr)' }}>
+                  <div />
+                  {WEEK_LABELS_SHORT.map((l, i) => (
+                    <div key={l} className="text-center text-[10px] text-muted font-medium uppercase tracking-wide">
+                      <span className="md:hidden">{l}</span>
+                      <span className="hidden md:inline">{WEEK_LABELS_LONG[i]}</span>
                     </div>
-                    <SaudeMetrics nAbertas={ps.nAbertas} nAtrasadas={ps.nAtrasadas} nBloqueadas={ps.nBloqueadas} />
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div className="space-y-1">
+                  {wca.sustentacoes.map((s) => {
+                    const cliNome = clientesById.get(s.clienteId)?.nome ?? '—';
+                    return (
+                      <div key={s.projetoId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '150px repeat(4, 1fr)' }}>
+                        <div className="text-xs truncate pr-1" title={`${cliNome} · ${s.nome}`}>
+                          <span className="text-muted">{cliNome}</span>
+                          <span className="text-muted mx-0.5">·</span>
+                          <span className="text-ink">{s.nome}</span>
+                        </div>
+                        {s.weeks.map((wk, i) => (
+                          <div key={i} className={cn('text-center text-[11px] py-1.5 rounded font-mono', heatmapColor(wk.nivel))}
+                            title={`${wk.hours}h / ${s.capSemanal}h`}>
+                            {wk.pctCap != null ? `${wk.pctCap}%` : '—'}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
+          </div>
         </div>
 
-        {/* Saúde por pessoa */}
-        <div className="bg-elev border border-line rounded-xl overflow-hidden">
-          <SectionHeader title="Saúde por pessoa" sub="vermelho = atrasadas · âmbar = bloqueadas · verde = sem bloqueios · exclui PMs e clientes" />
-          {saudePessoa.length === 0
-            ? <div className="px-4 py-5 text-sm text-muted">Sem dados</div>
-            : (
-              <div className="divide-y divide-line">
-                {saudePessoa.map((ps) => (
-                  <div key={ps.pessoaId} className="flex items-center gap-3 px-3 md:px-4 py-2.5">
-                    <span className={cn('shrink-0 w-2.5 h-2.5 rounded-full', sinalDot(ps.sinal))} />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-ink">{ps.nome}</div>
-                      <div className="text-[10px] text-muted">{ps.totalHoras}h remanescente</div>
+        {/* Capacidade · do time */}
+        <div className="bg-elev border border-line rounded-xl overflow-hidden h-full flex flex-col">
+          <SectionHeader title="Capacidade do time" sub="% de capacidade ocupada por pessoa nas próximas 4 semanas · exclui PMs e clientes" />
+          <div className="overflow-x-auto flex-1">
+            {pessoasCap.length === 0 ? (
+              <div className="px-4 py-5 text-sm text-muted">Sem dados</div>
+            ) : (
+              <div className="px-3 md:px-4 py-3" style={{ minWidth: 280 }}>
+                <div className="grid gap-1 mb-1.5" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
+                  <div />
+                  {WEEK_LABELS_SHORT.map((l, i) => (
+                    <div key={l} className="text-center text-[10px] text-muted font-medium uppercase tracking-wide">
+                      <span className="md:hidden">{l}</span>
+                      <span className="hidden md:inline">{WEEK_LABELS_LONG[i]}</span>
                     </div>
-                    <SaudeMetrics nAbertas={ps.nAbertas} nAtrasadas={ps.nAtrasadas} nBloqueadas={ps.nBloqueadas} />
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <div className="space-y-1">
+                  {pessoasCap.map((p) => (
+                    <div key={p.pessoaId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
+                      <div className="text-xs text-ink truncate pr-1" title={p.nome}>{p.nome.split(' ')[0]}</div>
+                      {p.weeks.map((wk, i) => (
+                        <div key={i} className={cn('text-center text-[11px] py-1.5 rounded font-mono', heatmapColor(wk.nivel))}
+                          title={`${wk.hours}h`}>
+                          {wk.pctCap != null ? `${wk.pctCap}%` : '—'}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+          </div>
         </div>
       </div>
 

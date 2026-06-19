@@ -140,13 +140,6 @@ export function VelocidadeOperacao({ vel }: VelocidadeOperacaoProps) {
           }
         />
       </div>
-      {vel.pctNoPrazo != null && vel.pctNoPrazo < 80 && (
-        <div className="px-3 md:px-4 pb-3 text-xs text-[var(--danger)]">
-          {vel.pctNoPrazo < 50
-            ? `${vel.pctNoPrazo}% de entregas no prazo — abaixo do crítico (meta ≥ 80%). Investigar gargalo.`
-            : `${vel.pctNoPrazo}% de entregas no prazo — abaixo da meta. Revisar prazos ou capacidade.`}
-        </div>
-      )}
     </div>
   );
 }
