@@ -17,7 +17,24 @@ import {
   computeChurnRisk,
   computeBottlenecks,
   computeSLABreach,
-  type HeuristicAlert,
+  computeN1Reaberturas,
+  computeN2Aging,
+  computeN3MixOfWork,
+  computeN4EstimGap,
+  computeN5VelocidadeIndividual,
+  computeN6Concentracao,
+  computeN7Bloqueios,
+  computeN8TempoAprovacao,
+  computeN9Privadas,
+  computeN10CriterioCob,
+  computeN11ValorEntregueCob,
+  computeN12WIP,
+  computeN13PrazoDesalinhado,
+  computeN14SemResponsavel,
+  computeN15SemProjeto,
+  computeN16Stale,
+  computeN17TriagemAtrasada,
+  computeN18OrigemDemanda,
 } from '@/lib/analytics';
 
 // ─────────────────────────────────────────────────────────
@@ -36,14 +53,49 @@ function budgetBg(pct: number) {
   return 'bg-[var(--brand-soft)]';
 }
 
-function severityColor(s: string) {
-  if (s === 'alta') return 'text-[var(--danger)] bg-[var(--p0-soft)] border-[var(--p0)]';
-  if (s === 'media') return 'text-[var(--warn)] bg-[var(--p1-soft)] border-[var(--p1)]';
-  return 'text-[var(--muted)] bg-[var(--surface-3)] border-[var(--line)]';
-}
-
 function clienteHref(clienteId: string) {
   return `/backlog?cliente=${clienteId}`;
+}
+
+// ─────────────────────────────────────────────────────────
+//  Card genérico de heurística (uniforme · sem design fancy)
+// ─────────────────────────────────────────────────────────
+
+function HCard({
+  id, title, count, emptyMsg, collapsed, onToggle, severity, children,
+}: {
+  id: string;
+  title: string;
+  count: number;
+  emptyMsg?: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  severity?: 'alta' | 'media' | 'baixa' | null;
+  children?: React.ReactNode;
+}) {
+  const sevDot = severity === 'alta' ? 'bg-[var(--danger)]'
+    : severity === 'media' ? 'bg-[var(--warn)]'
+    : 'bg-[var(--brand)]';
+  return (
+    <div className="bg-elev border border-line rounded-xl overflow-hidden" data-h={id}>
+      <SectionHeader
+        title={title}
+        collapsed={collapsed}
+        onToggle={onToggle}
+        right={
+          <div className="flex items-center gap-2">
+            {severity && <span className={cn('w-1.5 h-1.5 rounded-full', sevDot)} />}
+            <span className="text-xs text-muted">{count === 0 ? 'ok ✓' : count}</span>
+          </div>
+        }
+      />
+      {!collapsed && (
+        count === 0
+          ? <div className="px-4 py-4 text-sm text-[var(--brand)]">{emptyMsg ?? '✓ nada a reportar'}</div>
+          : <div className="divide-y divide-line">{children}</div>
+      )}
+    </div>
+  );
 }
 
 function projetoHref(clienteId: string, projetoId: string) {
@@ -80,39 +132,14 @@ function SectionHeader({
 }
 
 // ─────────────────────────────────────────────────────────
-//  Alerta row — sempre exibe detalhe
-// ─────────────────────────────────────────────────────────
-
-function AlertRow({ alert }: { alert: HeuristicAlert }) {
-  return (
-    <div className={cn('border rounded-lg px-3 py-2 text-sm', severityColor(alert.severity))}>
-      <div className="flex items-start gap-2">
-        <span className="shrink-0 text-xs font-bold mt-0.5 opacity-60">
-          {alert.severity === 'alta' ? '●' : '○'}
-        </span>
-        <div className="min-w-0">
-          <div className="font-medium leading-snug text-[13px]">{alert.titulo}</div>
-          {alert.detalhe && (
-            <div className="text-xs opacity-75 mt-1 leading-snug">{alert.detalhe}</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────
 //  Briefing principal
 // ─────────────────────────────────────────────────────────
 
 export function BriefingClient() {
-  const { tasks, clientes, projetos, pessoas, loading, refreshing } = useData();
+  const { tasks, clientes, projetos, pessoas, loading, isCEO } = useData();
   const { openEdit } = useTaskModal();
 
-  // Alertas: expand/collapse after 6
-  const [alertsExpanded, setAlertsExpanded] = useState(false);
-
-  // Seções colapsáveis (blocos 3-8) — expandidas por padrão
+  // Seções colapsáveis — expandidas por padrão
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const toggle = (key: string) =>
     setCollapsed((s) => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
@@ -125,9 +152,27 @@ export function BriefingClient() {
     () => computeHeuristicAlerts(baseTasks, clientes, projetos, pessoas),
     [baseTasks, clientes, projetos, pessoas],
   );
-  const countAlta = heuristicAlerts.filter((a) => a.severity === 'alta').length;
-  const countMedia = heuristicAlerts.filter((a) => a.severity === 'media').length;
-  const alertsVisible = alertsExpanded ? heuristicAlerts : heuristicAlerts.slice(0, 6);
+  const tasksById = useMemo(() => new Map(tasks.map((t) => [t.id, t])), [tasks]);
+
+  // ── Heurísticas N.1-N.18 ──
+  const n1 = useMemo(() => computeN1Reaberturas(baseTasks), [baseTasks]);
+  const n2 = useMemo(() => computeN2Aging(baseTasks), [baseTasks]);
+  const n3 = useMemo(() => computeN3MixOfWork(baseTasks), [baseTasks]);
+  const n4 = useMemo(() => computeN4EstimGap(baseTasks), [baseTasks]);
+  const n5 = useMemo(() => computeN5VelocidadeIndividual(baseTasks), [baseTasks]);
+  const n6 = useMemo(() => computeN6Concentracao(baseTasks), [baseTasks]);
+  const n7 = useMemo(() => computeN7Bloqueios(baseTasks), [baseTasks]);
+  const n8 = useMemo(() => computeN8TempoAprovacao(baseTasks), [baseTasks]);
+  const n9 = useMemo(() => computeN9Privadas(baseTasks), [baseTasks]);
+  const n10 = useMemo(() => computeN10CriterioCob(baseTasks), [baseTasks]);
+  const n11 = useMemo(() => computeN11ValorEntregueCob(baseTasks), [baseTasks]);
+  const n12 = useMemo(() => computeN12WIP(baseTasks), [baseTasks]);
+  const n13 = useMemo(() => computeN13PrazoDesalinhado(baseTasks), [baseTasks]);
+  const n14 = useMemo(() => computeN14SemResponsavel(baseTasks), [baseTasks]);
+  const n15 = useMemo(() => computeN15SemProjeto(baseTasks), [baseTasks]);
+  const n16 = useMemo(() => computeN16Stale(baseTasks), [baseTasks]);
+  const n17 = useMemo(() => computeN17TriagemAtrasada(baseTasks), [baseTasks]);
+  const n18 = useMemo(() => computeN18OrigemDemanda(baseTasks), [baseTasks]);
 
   const projetosSaude = useMemo(
     () => computeProjetosSaude(baseTasks, projetos, clientes),
@@ -241,35 +286,6 @@ export function BriefingClient() {
     return out;
   }, [wca, baseTasks]);
 
-  // Disciplina operacional — dois grupos
-  const disciplinaGroups = useMemo(() => {
-    const now = Date.now();
-    const h24ago = now - 24 * 3600000;
-    const pessoasById = new Map(pessoas.map((p) => [p.id, p]));
-    type Issue = { id: string; titulo: string; motivo: string; pessoaNome: string; diasSem: number };
-    const andamento: Issue[] = [];
-    const bloqueados: Issue[] = [];
-
-    for (const t of baseTasks) {
-      if (t.status === 'concluido' || t.status === 'backlog') continue;
-      const lastUpdate = Math.max(t.statusEm ?? 0, t.subetapaEm ?? 0);
-      const pessoaNome = pessoasById.get(t.pessoaId)?.nome?.split(' ')[0] ?? '—';
-      const diasSem = Math.floor((now - lastUpdate) / 86400000);
-
-      if (t.status === 'bloqueado' && !t.bloqueadoPor) {
-        bloqueados.push({ id: t.id, titulo: t.titulo, motivo: 'sem motivo de bloqueio', pessoaNome, diasSem });
-      } else if (t.status === 'andamento' && lastUpdate < h24ago) {
-        andamento.push({ id: t.id, titulo: t.titulo, motivo: `sem atualização há ${diasSem === 0 ? '<1' : diasSem}d`, pessoaNome, diasSem });
-      }
-    }
-
-    andamento.sort((a, b) => b.diasSem - a.diasSem);
-    bloqueados.sort((a, b) => b.diasSem - a.diasSem);
-    return { andamento: andamento.slice(0, 10), bloqueados: bloqueados.slice(0, 10) };
-  }, [baseTasks, pessoas]);
-
-  const disciplinaTotal = disciplinaGroups.andamento.length + disciplinaGroups.bloqueados.length;
-
   if (loading) {
     return <div className="text-muted text-sm py-8">Carregando…</div>;
   }
@@ -314,43 +330,6 @@ export function BriefingClient() {
       </div>
 
       <div className="space-y-4 md:space-y-6">
-      {/* ── Bloco 1 · Alertas (Velocidade da operação foi movida pro
-            Dashboard em jun/2026 — Briefing fica focado em leitura
-            editorial: alertas + clientes em atenção + comentários) ── */}
-      <div className="bg-elev border border-line rounded-xl p-3 md:p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-sm font-semibold text-ink">Alertas</h2>
-          {countAlta > 0 && (
-            <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[var(--p0-soft)] text-[var(--danger)]">
-              {countAlta} crítico{countAlta > 1 ? 's' : ''}
-            </span>
-          )}
-          {countMedia > 0 && (
-            <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[var(--p1-soft)] text-[var(--warn)]">
-              {countMedia} atenção
-            </span>
-          )}
-          {heuristicAlerts.length === 0 && (
-            <span className="text-[11px] text-[var(--brand)]">✓ tudo certo</span>
-          )}
-          {heuristicAlerts.length > 6 && (
-            <button
-              onClick={() => setAlertsExpanded((v) => !v)}
-              className="text-xs text-muted hover:text-ink ml-auto"
-            >
-              {alertsExpanded ? '▴ menos' : `▾ ver todos (${heuristicAlerts.length})`}
-            </button>
-          )}
-        </div>
-        {alertsVisible.length === 0 ? (
-          <div className="text-sm text-muted">✓ Nenhum alerta no momento</div>
-        ) : (
-          <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
-            {alertsVisible.map((a, i) => <AlertRow key={i} alert={a} />)}
-          </div>
-        )}
-      </div>
-
       {/* ── Bloco 3 · Clientes em atenção ── */}
       <div className="bg-elev border border-line rounded-xl overflow-hidden">
         <SectionHeader
@@ -733,70 +712,307 @@ export function BriefingClient() {
         })()}
       </div>
 
-      {/* ── Bloco 8 · Disciplina operacional ── */}
-      <div className="bg-elev border border-line rounded-xl overflow-hidden">
-        <SectionHeader
-          title="Disciplina operacional"
-          collapsed={collapsed.has('disciplina')}
-          onToggle={() => toggle('disciplina')}
-          right={
-            disciplinaTotal > 0
-              ? <span className="text-xs font-bold text-[var(--warn)]">{disciplinaTotal} issue{disciplinaTotal > 1 ? 's' : ''}</span>
-              : undefined
-          }
-        />
-        {!collapsed.has('disciplina') && (
-          disciplinaTotal === 0 ? (
-            <div className="px-4 py-5 text-sm text-[var(--brand)]">
-              ✓ Todas as tasks ativas atualizadas nas últimas 24h · nenhum bloqueio sem motivo.
+      {/* ═══════════════════════════════════════════════════════════
+          H1-H15 · Cards individuais a partir de computeHeuristicAlerts
+          (cada alert vira um card · severidade preservada)
+          ═══════════════════════════════════════════════════════════ */}
+      {heuristicAlerts.map((a, idx) => {
+        const id = `h-${a.kind}-${a.weekIdx ?? idx}`;
+        const ids = a.taskIds ?? [];
+        return (
+          <HCard
+            key={id} id={id} title={a.titulo}
+            count={ids.length || 1}
+            severity={a.severity}
+            collapsed={collapsed.has(id)}
+            onToggle={() => toggle(id)}
+          >
+            {a.detalhe && (
+              <div className="px-3 md:px-4 py-2 text-xs text-muted">{a.detalhe}</div>
+            )}
+            {ids.slice(0, 20).map((tid) => {
+              const t = tasksById.get(tid);
+              if (!t) return null;
+              const cli = clientesById.get(t.clienteId)?.nome ?? '—';
+              const pes = pessoasById.get(t.pessoaId)?.nome.split(' ')[0] ?? '—';
+              return (
+                <button key={tid} type="button" onClick={() => openEdit(tid)}
+                  className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)] transition-colors">
+                  <span className="text-sm text-ink truncate flex-1">{t.titulo}</span>
+                  <span className="text-[11px] text-muted shrink-0">{cli} · {pes}</span>
+                </button>
+              );
+            })}
+            {ids.length > 20 && (
+              <div className="px-3 md:px-4 py-2 text-[11px] text-muted">+{ids.length - 20} task(s)</div>
+            )}
+          </HCard>
+        );
+      })}
+
+      {/* ═══════════════════════════════════════════════════════════
+          N.1-N.18 · novas heurísticas (jun/2026)
+          Renderização inicial enxuta · refinaremos UX ao vivo
+          ═══════════════════════════════════════════════════════════ */}
+
+      {/* N.1 · Reaberturas crônicas (≥ 2x) */}
+      <HCard id="n1" title="N.1 · Reaberturas crônicas (≥ 2x)" count={n1.length}
+        collapsed={collapsed.has('n1')} onToggle={() => toggle('n1')}>
+        {n1.slice(0, 30).map((x) => (
+          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+            <span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-[var(--p1-soft)] text-[var(--warn)] shrink-0">{x.reopenCount}x</span>
+            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+            <span className="text-[11px] text-muted shrink-0">{clientesById.get(x.clienteId)?.nome ?? '—'}</span>
+          </button>
+        ))}
+      </HCard>
+
+      {/* N.2 · Aging em backlog (>30d) */}
+      <HCard id="n2" title="N.2 · Aging em backlog (>30 dias)" count={n2.length}
+        collapsed={collapsed.has('n2')} onToggle={() => toggle('n2')}>
+        {n2.slice(0, 30).map((x) => (
+          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+            <span className="text-[11px] font-mono text-muted shrink-0 w-12 text-right">{x.diasParado}d</span>
+            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+            <span className="text-[11px] text-muted shrink-0">{clientesById.get(x.clienteId)?.nome ?? '—'}</span>
+          </button>
+        ))}
+      </HCard>
+
+      {/* N.3 · Mix-of-work por cliente */}
+      <HCard id="n3" title="N.3 · Mix-of-work por cliente (tipo de trabalho)" count={n3.length}
+        collapsed={collapsed.has('n3')} onToggle={() => toggle('n3')}>
+        {n3.slice(0, 20).map((r) => {
+          const nome = clientesById.get(r.clienteId)?.nome ?? '—';
+          return (
+            <div key={r.clienteId} className="px-3 md:px-4 py-2 flex items-center gap-3 text-xs">
+              <span className="text-sm text-ink truncate flex-1">{nome}</span>
+              <span className="font-mono text-muted">{r.total} tasks</span>
+              <span className="font-mono">B{r.bug} · F{r.feature} · D{r.discovery} · M{r.manutencao} · A{r.admin} · ?{r.semTipo}</span>
             </div>
-          ) : (
-            <div className="divide-y divide-line">
-              {/* Grupo 1: andamento sem atualização nas últimas 24h */}
-              {disciplinaGroups.andamento.length > 0 && (
-                <>
-                  <div className="px-3 md:px-4 py-1.5 bg-[var(--surface-3)] text-[10px] font-medium uppercase tracking-wide text-muted">
-                    Em andamento · sem atualização nas últimas 24h ({disciplinaGroups.andamento.length})
-                  </div>
-                  {disciplinaGroups.andamento.map((issue) => (
-                    <button key={issue.id} type="button" onClick={() => openEdit(issue.id)}
-                      className="w-full text-left px-3 md:px-4 py-2.5 flex items-start gap-3 hover:bg-[var(--surface-3)] transition-colors group">
-                      <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-[var(--warn)]" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm text-ink truncate group-hover:text-[var(--brand-dark)]">{issue.titulo}</div>
-                        <div className="text-xs text-muted mt-0.5">{issue.motivo}</div>
-                      </div>
-                      <span className="shrink-0 text-[11px] text-muted">{issue.pessoaNome}</span>
-                    </button>
-                  ))}
-                </>
-              )}
-              {/* Grupo 2: bloqueadas sem motivo */}
-              {disciplinaGroups.bloqueados.length > 0 && (
-                <>
-                  <div className={cn(
-                    'px-3 md:px-4 py-1.5 bg-[var(--surface-3)] text-[10px] font-medium uppercase tracking-wide text-muted',
-                    disciplinaGroups.andamento.length > 0 && 'border-t border-line',
-                  )}>
-                    Bloqueadas sem motivo ({disciplinaGroups.bloqueados.length})
-                  </div>
-                  {disciplinaGroups.bloqueados.map((issue) => (
-                    <button key={issue.id} type="button" onClick={() => openEdit(issue.id)}
-                      className="w-full text-left px-3 md:px-4 py-2.5 flex items-start gap-3 hover:bg-[var(--surface-3)] transition-colors group">
-                      <span className="shrink-0 mt-1.5 w-2 h-2 rounded-full bg-[var(--danger)]" />
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm text-ink truncate group-hover:text-[var(--brand-dark)]">{issue.titulo}</div>
-                        <div className="text-xs text-muted mt-0.5">{issue.motivo}</div>
-                      </div>
-                      <span className="shrink-0 text-[11px] text-muted">{issue.pessoaNome}</span>
-                    </button>
-                  ))}
-                </>
-              )}
+          );
+        })}
+      </HCard>
+
+      {/* N.4 · Estimativa × realizado */}
+      <HCard id="n4" title="N.4 · Estimativa vs. realizado (gap >50%)" count={n4.length}
+        collapsed={collapsed.has('n4')} onToggle={() => toggle('n4')}>
+        {n4.slice(0, 30).map((x) => (
+          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+            <span className={cn('text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0',
+              x.tipo === 'estourou' ? 'bg-[var(--p0-soft)] text-[var(--danger)]' : 'bg-[var(--brand-soft)] text-[var(--brand-dark)]')}>
+              {x.tipo === 'estourou' ? `+${Math.round((x.ratio - 1) * 100)}%` : `-${Math.round((1 - x.ratio) * 100)}%`}
+            </span>
+            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+            <span className="text-[11px] font-mono text-muted shrink-0">{x.esforco}h → {x.real}h</span>
+          </button>
+        ))}
+      </HCard>
+
+      {/* N.5 · Velocidade individual */}
+      <HCard id="n5" title="N.5 · Velocidade individual (concluídas últimas 4 semanas)" count={n5.length}
+        collapsed={collapsed.has('n5')} onToggle={() => toggle('n5')}>
+        {n5.map((r) => {
+          const nome = pessoasById.get(r.pessoaId)?.nome ?? '—';
+          return (
+            <div key={r.pessoaId} className="px-3 md:px-4 py-2 flex items-center gap-3 text-xs">
+              <span className="text-sm text-ink truncate flex-1">{nome}</span>
+              <span className="font-mono text-muted">{r.concluidas} concluídas</span>
+              <span className="font-mono">{r.porSemana}/sem</span>
             </div>
-          )
+          );
+        })}
+      </HCard>
+
+      {/* N.6 · Concentração de risco */}
+      <HCard id="n6" title="N.6 · Concentração de throughput (bus factor)"
+        count={n6.bus_factor_baixo ? 1 : 0}
+        emptyMsg="✓ Throughput bem distribuído (nenhuma pessoa concentra >40%)"
+        severity={n6.bus_factor_baixo ? 'alta' : null}
+        collapsed={collapsed.has('n6')} onToggle={() => toggle('n6')}>
+        <div className="px-3 md:px-4 py-3 text-xs">
+          <div className="text-sm text-ink mb-1">
+            {pessoasById.get(n6.topPessoaId ?? '')?.nome ?? '—'} concentra {Math.round(n6.topPessoaShare * 100)}% do throughput
+          </div>
+          <div className="text-muted">Total nas últimas 4 semanas: {n6.totalThroughput} tasks · Avaliar redundância de skill/cliente.</div>
+        </div>
+      </HCard>
+
+      {/* N.7 · Bloqueios recorrentes por cliente */}
+      <HCard id="n7" title="N.7 · Bloqueios recorrentes por cliente" count={n7.length}
+        collapsed={collapsed.has('n7')} onToggle={() => toggle('n7')}>
+        {n7.slice(0, 20).map((r) => {
+          const nome = clientesById.get(r.clienteId)?.nome ?? '—';
+          return (
+            <div key={r.clienteId} className="px-3 md:px-4 py-2 flex items-center gap-3 text-xs">
+              <span className="text-sm text-ink truncate flex-1">{nome}</span>
+              <span className="font-mono text-muted">{r.total} bloqueada(s)</span>
+              <span className="font-mono">Cliente {r.cliente} · Nós {r.nos} · Terceiro {r.terceiro}</span>
+            </div>
+          );
+        })}
+      </HCard>
+
+      {/* N.8 · Tempo até aprovação cliente */}
+      <HCard id="n8" title="N.8 · Tempo até aprovação cliente (homologacao → aprovacao)"
+        count={n8.amostras}
+        emptyMsg="Sem amostras com homologacao_em E aprovado_em preenchidos ainda"
+        collapsed={collapsed.has('n8')} onToggle={() => toggle('n8')}>
+        {n8.amostras > 0 && (
+          <div className="px-3 md:px-4 py-2 text-xs">
+            <div className="text-sm text-ink">
+              Mediana: <b>{n8.medianaHoras}h</b> · P75: <b>{n8.p75Horas}h</b> · {n8.amostras} amostra(s)
+            </div>
+          </div>
         )}
-      </div>
+        {n8.outliers.length > 0 && (
+          <>
+            <div className="px-3 md:px-4 py-1.5 bg-[var(--surface-3)] text-[10px] uppercase tracking-wide text-muted">Outliers (&gt;7d aguardando aprovação)</div>
+            {n8.outliers.map((x) => (
+              <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+                className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+                <span className="text-[11px] font-mono text-muted shrink-0 w-16 text-right">{Math.round(x.horas / 24)}d</span>
+                <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+              </button>
+            ))}
+          </>
+        )}
+      </HCard>
+
+      {/* N.9 · Tasks privadas (só CEO) */}
+      {isCEO && (
+        <HCard id="n9" title="N.9 · Tasks privadas por pessoa" count={n9.length}
+          collapsed={collapsed.has('n9')} onToggle={() => toggle('n9')}>
+          {n9.map((r) => (
+            <div key={r.pessoaId} className="px-3 md:px-4 py-2 flex items-center gap-3 text-xs">
+              <span className="text-sm text-ink truncate flex-1">{pessoasById.get(r.pessoaId)?.nome ?? '—'}</span>
+              <span className="font-mono text-muted">{r.count} privada(s)</span>
+            </div>
+          ))}
+        </HCard>
+      )}
+
+      {/* N.10 · Cobertura critério de aceite */}
+      <HCard id="n10" title={`N.10 · Cobertura critério de aceite (${n10.pct}%)`}
+        count={n10.faltando.length}
+        emptyMsg={n10.elegiveis === 0 ? 'Nenhuma task em escopo definido ou além' : '✓ Todas elegíveis têm critério preenchido'}
+        collapsed={collapsed.has('n10')} onToggle={() => toggle('n10')}>
+        <div className="px-3 md:px-4 py-2 text-xs text-muted">{n10.preenchidas}/{n10.elegiveis} elegíveis com critério preenchido</div>
+        {n10.faltando.map((x) => (
+          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+            <span className="text-[11px] text-muted shrink-0">{clientesById.get(x.clienteId)?.nome ?? '—'}</span>
+          </button>
+        ))}
+      </HCard>
+
+      {/* N.11 · Cobertura valor entregue */}
+      <HCard id="n11" title={`N.11 · Cobertura valor entregue (${n11.pct}%)`}
+        count={n11.faltando.length}
+        emptyMsg={n11.concluidas === 0 ? 'Nenhuma task concluída' : '✓ Todas concluídas têm valor entregue preenchido'}
+        collapsed={collapsed.has('n11')} onToggle={() => toggle('n11')}>
+        <div className="px-3 md:px-4 py-2 text-xs text-muted">{n11.preenchidas}/{n11.concluidas} concluídas com valor entregue</div>
+        {n11.faltando.map((x) => (
+          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+            <span className="text-[11px] text-muted shrink-0">{clientesById.get(x.clienteId)?.nome ?? '—'}</span>
+          </button>
+        ))}
+      </HCard>
+
+      {/* N.12 · WIP excessivo por pessoa */}
+      <HCard id="n12" title="N.12 · WIP excessivo por pessoa (≥5 ativas)" count={n12.length}
+        collapsed={collapsed.has('n12')} onToggle={() => toggle('n12')}>
+        {n12.map((r) => (
+          <div key={r.pessoaId} className="px-3 md:px-4 py-2 flex items-center gap-3 text-xs">
+            <span className="text-sm text-ink truncate flex-1">{pessoasById.get(r.pessoaId)?.nome ?? '—'}</span>
+            <span className="font-mono">Dev {r.emDesenvolvimento} · Homolog {r.emHomologacao}</span>
+            <span className="font-mono text-muted">total {r.total}</span>
+          </div>
+        ))}
+      </HCard>
+
+      {/* N.13 · Prazo desalinhado (passado mas não concluída) */}
+      <HCard id="n13" title="N.13 · Prazo desalinhado (vencido + aberta)" count={n13.length}
+        collapsed={collapsed.has('n13')} onToggle={() => toggle('n13')}>
+        {n13.slice(0, 30).map((x) => (
+          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+            <span className="text-[11px] font-mono text-[var(--danger)] shrink-0 w-12 text-right">{x.diasAtraso}d</span>
+            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+            <span className="text-[11px] text-muted shrink-0">{clientesById.get(x.clienteId)?.nome ?? '—'}</span>
+          </button>
+        ))}
+      </HCard>
+
+      {/* N.14 · Sem responsável */}
+      <HCard id="n14" title="N.14 · Sem responsável atribuído" count={n14.length}
+        collapsed={collapsed.has('n14')} onToggle={() => toggle('n14')}>
+        {n14.slice(0, 30).map((x) => (
+          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+            <span className="text-[11px] font-mono text-muted shrink-0 w-12 text-right">{x.diasParado}d</span>
+            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+            <span className="text-[11px] text-muted shrink-0">{x.subetapa}</span>
+          </button>
+        ))}
+      </HCard>
+
+      {/* N.15 · Sem projeto */}
+      <HCard id="n15" title="N.15 · Sem projeto atribuído" count={n15.length}
+        collapsed={collapsed.has('n15')} onToggle={() => toggle('n15')}>
+        {n15.slice(0, 30).map((x) => (
+          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+            <span className="text-[11px] text-muted shrink-0">{clientesById.get(x.clienteId)?.nome ?? '—'}</span>
+          </button>
+        ))}
+      </HCard>
+
+      {/* N.16 · Sem update há +7d */}
+      <HCard id="n16" title="N.16 · Sem atualização há +7 dias" count={n16.length}
+        collapsed={collapsed.has('n16')} onToggle={() => toggle('n16')}>
+        {n16.slice(0, 30).map((x) => (
+          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+            <span className="text-[11px] font-mono text-muted shrink-0 w-12 text-right">{x.diasSemUpdate}d</span>
+            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+            <span className="text-[11px] text-muted shrink-0">{pessoasById.get(x.pessoaId)?.nome.split(' ')[0] ?? '—'}</span>
+          </button>
+        ))}
+      </HCard>
+
+      {/* N.17 · Triagem atrasada (IA/cliente > 48h) */}
+      <HCard id="n17" title="N.17 · Triagem atrasada (IA/cliente > 48h)" count={n17.length}
+        collapsed={collapsed.has('n17')} onToggle={() => toggle('n17')}>
+        {n17.slice(0, 30).map((x) => (
+          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
+            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
+            <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 bg-[var(--surface-3)] text-muted">{x.origem}</span>
+            <span className="text-[11px] font-mono text-muted shrink-0 w-16 text-right">{x.horasNaFila}h</span>
+            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
+            <span className="text-[11px] text-muted shrink-0">{clientesById.get(x.clienteId)?.nome ?? '—'}</span>
+          </button>
+        ))}
+      </HCard>
+
+      {/* N.18 · Origem da demanda por cliente */}
+      <HCard id="n18" title="N.18 · Origem da demanda (manual / IA / cliente)" count={n18.length}
+        collapsed={collapsed.has('n18')} onToggle={() => toggle('n18')}>
+        {n18.slice(0, 20).map((r) => (
+          <div key={r.clienteId} className="px-3 md:px-4 py-2 flex items-center gap-3 text-xs">
+            <span className="text-sm text-ink truncate flex-1">{clientesById.get(r.clienteId)?.nome ?? '—'}</span>
+            <span className="font-mono text-muted">{r.total} total</span>
+            <span className="font-mono">manual {r.manual} · IA {r.ia} · cliente {r.cliente}</span>
+          </div>
+        ))}
+      </HCard>
 
       </div>
     </div>

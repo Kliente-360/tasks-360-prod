@@ -1359,3 +1359,276 @@ export function computeCapacidade(tasks: Task[], now = Date.now()): CapacidadeRe
     byPessoa,
   };
 }
+
+// ═════════════════════════════════════════════════════════════════
+//  Heurísticas adicionais N.1-N.18 (jun/2026)
+//  Todas puro código · sem IA · usadas no Briefing como cards
+//  independentes pra filtragem ao vivo. Refinaremos UX depois.
+// ═════════════════════════════════════════════════════════════════
+
+const ACTIVE = (t: Task) => !t.arquivadoEm && t.status !== STATUS.CONCLUIDO;
+
+// ─── N.1 · Reaberturas crônicas ──────────────────────────────────
+export interface N1Item { taskId: string; titulo: string; clienteId: string; pessoaId: string; reopenCount: number; }
+export function computeN1Reaberturas(tasks: Task[]): N1Item[] {
+  return tasks
+    .filter((t) => !t.arquivadoEm && (t.reopenCount ?? 0) >= 2)
+    .map((t) => ({ taskId: t.id, titulo: t.titulo, clienteId: t.clienteId, pessoaId: t.pessoaId, reopenCount: t.reopenCount ?? 0 }))
+    .sort((a, b) => b.reopenCount - a.reopenCount);
+}
+
+// ─── N.2 · Aging em backlog ──────────────────────────────────────
+export interface N2Item { taskId: string; titulo: string; clienteId: string; diasParado: number; }
+export function computeN2Aging(tasks: Task[], now = Date.now()): N2Item[] {
+  return tasks
+    .filter((t) => ACTIVE(t) && t.subetapa === 'backlog')
+    .map((t) => {
+      const ref = t.subetapaEm || t.criadoEm || now;
+      return { taskId: t.id, titulo: t.titulo, clienteId: t.clienteId, diasParado: Math.floor((now - ref) / 86400000) };
+    })
+    .filter((x) => x.diasParado >= 30)
+    .sort((a, b) => b.diasParado - a.diasParado);
+}
+
+// ─── N.3 · Mix-of-work por cliente ───────────────────────────────
+export interface N3Row { clienteId: string; total: number; bug: number; feature: number; discovery: number; manutencao: number; admin: number; semTipo: number; }
+export function computeN3MixOfWork(tasks: Task[]): N3Row[] {
+  const map = new Map<string, N3Row>();
+  for (const t of tasks) {
+    if (t.arquivadoEm) continue;
+    if (!t.clienteId) continue;
+    let row = map.get(t.clienteId);
+    if (!row) { row = { clienteId: t.clienteId, total: 0, bug: 0, feature: 0, discovery: 0, manutencao: 0, admin: 0, semTipo: 0 }; map.set(t.clienteId, row); }
+    row.total++;
+    const k = t.tipoTrabalho;
+    if (k === 'bug') row.bug++;
+    else if (k === 'feature') row.feature++;
+    else if (k === 'discovery') row.discovery++;
+    else if (k === 'manutencao') row.manutencao++;
+    else if (k === 'admin') row.admin++;
+    else row.semTipo++;
+  }
+  return Array.from(map.values()).sort((a, b) => b.total - a.total);
+}
+
+// ─── N.4 · Estimativa × realizado ────────────────────────────────
+export interface N4Item { taskId: string; titulo: string; esforco: number; real: number; ratio: number; tipo: 'estourou' | 'subestimou'; }
+export function computeN4EstimGap(tasks: Task[]): N4Item[] {
+  const out: N4Item[] = [];
+  for (const t of tasks) {
+    if (t.tempoRealHoras == null || t.esforco <= 0) continue;
+    const ratio = t.tempoRealHoras / t.esforco;
+    if (ratio > 1.5) out.push({ taskId: t.id, titulo: t.titulo, esforco: t.esforco, real: t.tempoRealHoras, ratio, tipo: 'estourou' });
+    else if (ratio < 0.5) out.push({ taskId: t.id, titulo: t.titulo, esforco: t.esforco, real: t.tempoRealHoras, ratio, tipo: 'subestimou' });
+  }
+  return out.sort((a, b) => Math.abs(b.ratio - 1) - Math.abs(a.ratio - 1));
+}
+
+// ─── N.5 · Velocidade individual ─────────────────────────────────
+export interface N5Row { pessoaId: string; concluidas: number; porSemana: number; }
+export function computeN5VelocidadeIndividual(tasks: Task[], now = Date.now()): N5Row[] {
+  const win = now - 28 * 86400000;
+  const map = new Map<string, number>();
+  for (const t of tasks) {
+    if (t.status !== STATUS.CONCLUIDO) continue;
+    if (!t.statusEm || t.statusEm < win) continue;
+    if (!t.pessoaId) continue;
+    map.set(t.pessoaId, (map.get(t.pessoaId) ?? 0) + 1);
+  }
+  return Array.from(map.entries())
+    .map(([pessoaId, concluidas]) => ({ pessoaId, concluidas, porSemana: Math.round((concluidas / 4) * 10) / 10 }))
+    .sort((a, b) => b.concluidas - a.concluidas);
+}
+
+// ─── N.6 · Concentração de risco ─────────────────────────────────
+export interface N6Result { totalThroughput: number; topPessoaId: string | null; topPessoaShare: number; bus_factor_baixo: boolean; }
+export function computeN6Concentracao(tasks: Task[], now = Date.now()): N6Result {
+  const win = now - 28 * 86400000;
+  const map = new Map<string, number>();
+  let total = 0;
+  for (const t of tasks) {
+    if (t.status !== STATUS.CONCLUIDO || !t.statusEm || t.statusEm < win || !t.pessoaId) continue;
+    map.set(t.pessoaId, (map.get(t.pessoaId) ?? 0) + 1);
+    total++;
+  }
+  if (total === 0) return { totalThroughput: 0, topPessoaId: null, topPessoaShare: 0, bus_factor_baixo: false };
+  const top = Array.from(map.entries()).sort((a, b) => b[1] - a[1])[0];
+  const share = top[1] / total;
+  return { totalThroughput: total, topPessoaId: top[0], topPessoaShare: share, bus_factor_baixo: share > 0.4 };
+}
+
+// ─── N.7 · Bloqueios recorrentes ─────────────────────────────────
+export interface N7Row { clienteId: string; cliente: number; nos: number; terceiro: number; total: number; }
+export function computeN7Bloqueios(tasks: Task[]): N7Row[] {
+  const map = new Map<string, N7Row>();
+  for (const t of tasks) {
+    if (t.arquivadoEm) continue;
+    if (t.subetapa !== 'bloqueado') continue;
+    if (!t.clienteId) continue;
+    let row = map.get(t.clienteId);
+    if (!row) { row = { clienteId: t.clienteId, cliente: 0, nos: 0, terceiro: 0, total: 0 }; map.set(t.clienteId, row); }
+    row.total++;
+    if (t.bloqueadoPor === 'cliente') row.cliente++;
+    else if (t.bloqueadoPor === 'nos') row.nos++;
+    else if (t.bloqueadoPor === 'terceiro') row.terceiro++;
+  }
+  return Array.from(map.values()).sort((a, b) => b.total - a.total);
+}
+
+// ─── N.8 · Tempo até aprovação cliente ───────────────────────────
+export interface N8Result { amostras: number; medianaHoras: number | null; p75Horas: number | null; outliers: Array<{ taskId: string; titulo: string; horas: number }>; }
+export function computeN8TempoAprovacao(tasks: Task[]): N8Result {
+  const horas: Array<{ taskId: string; titulo: string; h: number }> = [];
+  for (const t of tasks) {
+    if (!t.homologacaoEm || !t.aprovadoEm) continue;
+    if (t.aprovadoEm <= t.homologacaoEm) continue;
+    horas.push({ taskId: t.id, titulo: t.titulo, h: (t.aprovadoEm - t.homologacaoEm) / 3600000 });
+  }
+  if (horas.length === 0) return { amostras: 0, medianaHoras: null, p75Horas: null, outliers: [] };
+  const sorted = [...horas].sort((a, b) => a.h - b.h);
+  const med = sorted[Math.floor(sorted.length / 2)].h;
+  const p75 = sorted[Math.floor(sorted.length * 0.75)].h;
+  const outliers = [...horas].filter((x) => x.h > 168).sort((a, b) => b.h - a.h).slice(0, 10).map(({ taskId, titulo, h }) => ({ taskId, titulo, horas: Math.round(h * 10) / 10 }));
+  return { amostras: horas.length, medianaHoras: Math.round(med * 10) / 10, p75Horas: Math.round(p75 * 10) / 10, outliers };
+}
+
+// ─── N.9 · Tasks privadas por pessoa ─────────────────────────────
+export interface N9Row { pessoaId: string; count: number; }
+export function computeN9Privadas(tasks: Task[]): N9Row[] {
+  const map = new Map<string, number>();
+  for (const t of tasks) {
+    if (!t.privada || t.arquivadoEm) continue;
+    if (!t.pessoaId) continue;
+    map.set(t.pessoaId, (map.get(t.pessoaId) ?? 0) + 1);
+  }
+  return Array.from(map.entries()).map(([pessoaId, count]) => ({ pessoaId, count })).sort((a, b) => b.count - a.count);
+}
+
+// ─── N.10 · Cobertura de critério de aceite ──────────────────────
+const STAGES_AFTER_ESCOPO_DEFINIDO = new Set(['escopo_definido','em_desenvolvimento','em_homologacao','em_revisao','pronto_producao','em_implantacao','concluido']);
+export interface N10Result { elegiveis: number; preenchidas: number; pct: number; faltando: Array<{ taskId: string; titulo: string; clienteId: string }>; }
+export function computeN10CriterioCob(tasks: Task[]): N10Result {
+  let elegiveis = 0, preenchidas = 0;
+  const faltando: N10Result['faltando'] = [];
+  for (const t of tasks) {
+    if (t.arquivadoEm) continue;
+    if (!STAGES_AFTER_ESCOPO_DEFINIDO.has(t.subetapa)) continue;
+    elegiveis++;
+    if (t.criterioAceite && t.criterioAceite.trim()) preenchidas++;
+    else faltando.push({ taskId: t.id, titulo: t.titulo, clienteId: t.clienteId });
+  }
+  const pct = elegiveis === 0 ? 100 : Math.round((preenchidas / elegiveis) * 100);
+  return { elegiveis, preenchidas, pct, faltando: faltando.slice(0, 30) };
+}
+
+// ─── N.11 · Cobertura de valor entregue ──────────────────────────
+export interface N11Result { concluidas: number; preenchidas: number; pct: number; faltando: Array<{ taskId: string; titulo: string; clienteId: string }>; }
+export function computeN11ValorEntregueCob(tasks: Task[]): N11Result {
+  let conc = 0, ok = 0;
+  const faltando: N11Result['faltando'] = [];
+  for (const t of tasks) {
+    if (t.arquivadoEm) continue;
+    if (t.status !== STATUS.CONCLUIDO) continue;
+    conc++;
+    if (t.valorEntregue && t.valorEntregue.trim()) ok++;
+    else faltando.push({ taskId: t.id, titulo: t.titulo, clienteId: t.clienteId });
+  }
+  const pct = conc === 0 ? 100 : Math.round((ok / conc) * 100);
+  return { concluidas: conc, preenchidas: ok, pct, faltando: faltando.slice(0, 30) };
+}
+
+// ─── N.12 · WIP por pessoa ───────────────────────────────────────
+export interface N12Row { pessoaId: string; emDesenvolvimento: number; emHomologacao: number; total: number; }
+export function computeN12WIP(tasks: Task[]): N12Row[] {
+  const map = new Map<string, N12Row>();
+  for (const t of tasks) {
+    if (t.arquivadoEm) continue;
+    if (!t.pessoaId) continue;
+    if (t.subetapa !== 'em_desenvolvimento' && t.subetapa !== 'em_homologacao') continue;
+    let row = map.get(t.pessoaId);
+    if (!row) { row = { pessoaId: t.pessoaId, emDesenvolvimento: 0, emHomologacao: 0, total: 0 }; map.set(t.pessoaId, row); }
+    if (t.subetapa === 'em_desenvolvimento') row.emDesenvolvimento++;
+    else row.emHomologacao++;
+    row.total++;
+  }
+  return Array.from(map.values()).filter((r) => r.total >= 5).sort((a, b) => b.total - a.total);
+}
+
+// ─── N.13 · Prazo desalinhado ────────────────────────────────────
+export interface N13Item { taskId: string; titulo: string; clienteId: string; pessoaId: string; prazo: string; diasAtraso: number; }
+export function computeN13PrazoDesalinhado(tasks: Task[], todayStr?: string): N13Item[] {
+  const today = todayStr ?? new Date().toISOString().slice(0, 10);
+  const todayMs = new Date(today + 'T00:00:00').getTime();
+  const out: N13Item[] = [];
+  for (const t of tasks) {
+    if (!ACTIVE(t)) continue;
+    if (!t.prazo || t.prazo >= today) continue;
+    const prazoMs = new Date(t.prazo).getTime();
+    out.push({ taskId: t.id, titulo: t.titulo, clienteId: t.clienteId, pessoaId: t.pessoaId, prazo: t.prazo, diasAtraso: Math.floor((todayMs - prazoMs) / 86400000) });
+  }
+  return out.sort((a, b) => b.diasAtraso - a.diasAtraso);
+}
+
+// ─── N.14 · Sem responsável ──────────────────────────────────────
+export interface N14Item { taskId: string; titulo: string; clienteId: string; subetapa: string; diasParado: number; }
+export function computeN14SemResponsavel(tasks: Task[], now = Date.now()): N14Item[] {
+  return tasks
+    .filter((t) => ACTIVE(t) && !t.pessoaId)
+    .map((t) => ({ taskId: t.id, titulo: t.titulo, clienteId: t.clienteId, subetapa: t.subetapa, diasParado: Math.floor((now - (t.subetapaEm || t.criadoEm || now)) / 86400000) }))
+    .sort((a, b) => b.diasParado - a.diasParado);
+}
+
+// ─── N.15 · Sem projeto ──────────────────────────────────────────
+export interface N15Item { taskId: string; titulo: string; clienteId: string; subetapa: string; }
+export function computeN15SemProjeto(tasks: Task[]): N15Item[] {
+  return tasks
+    .filter((t) => ACTIVE(t) && !t.projetoId)
+    .map((t) => ({ taskId: t.id, titulo: t.titulo, clienteId: t.clienteId, subetapa: t.subetapa }));
+}
+
+// ─── N.16 · Sem update há +7d (proxy de "stale conversations") ───
+export interface N16Item { taskId: string; titulo: string; clienteId: string; pessoaId: string; diasSemUpdate: number; }
+export function computeN16Stale(tasks: Task[], now = Date.now()): N16Item[] {
+  const out: N16Item[] = [];
+  for (const t of tasks) {
+    if (!ACTIVE(t)) continue;
+    const last = Math.max(t.statusEm ?? 0, t.subetapaEm ?? 0, t.criadoEm ?? 0);
+    if (!last) continue;
+    const d = Math.floor((now - last) / 86400000);
+    if (d < 7) continue;
+    out.push({ taskId: t.id, titulo: t.titulo, clienteId: t.clienteId, pessoaId: t.pessoaId, diasSemUpdate: d });
+  }
+  return out.sort((a, b) => b.diasSemUpdate - a.diasSemUpdate);
+}
+
+// ─── N.17 · Triagem atrasada ─────────────────────────────────────
+export interface N17Item { taskId: string; titulo: string; clienteId: string; origem: 'ia' | 'cliente'; horasNaFila: number; }
+export function computeN17TriagemAtrasada(tasks: Task[], now = Date.now()): N17Item[] {
+  const out: N17Item[] = [];
+  for (const t of tasks) {
+    if (t.arquivadoEm) continue;
+    if (t.triadaEm) continue;
+    if (!t.criadoPorIa && !t.criadoPorCliente) continue;
+    const h = (now - (t.criadoEm || now)) / 3600000;
+    if (h < 48) continue;
+    out.push({ taskId: t.id, titulo: t.titulo, clienteId: t.clienteId, origem: t.criadoPorIa ? 'ia' : 'cliente', horasNaFila: Math.floor(h) });
+  }
+  return out.sort((a, b) => b.horasNaFila - a.horasNaFila);
+}
+
+// ─── N.18 · Origem da demanda por cliente ────────────────────────
+export interface N18Row { clienteId: string; manual: number; ia: number; cliente: number; total: number; }
+export function computeN18OrigemDemanda(tasks: Task[]): N18Row[] {
+  const map = new Map<string, N18Row>();
+  for (const t of tasks) {
+    if (t.arquivadoEm) continue;
+    if (!t.clienteId) continue;
+    let row = map.get(t.clienteId);
+    if (!row) { row = { clienteId: t.clienteId, manual: 0, ia: 0, cliente: 0, total: 0 }; map.set(t.clienteId, row); }
+    row.total++;
+    if (t.criadoPorCliente) row.cliente++;
+    else if (t.criadoPorIa) row.ia++;
+    else row.manual++;
+  }
+  return Array.from(map.values()).sort((a, b) => b.total - a.total);
+}
