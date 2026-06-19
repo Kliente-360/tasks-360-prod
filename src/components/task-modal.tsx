@@ -1824,39 +1824,50 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             ))}
           </select>
 
-          {/* Prioridade select · pill colorida por P0/P1/P2/P3 */}
+          {/* Prioridade select · pill colorida por P0/P1/P2/P3 ·
+              vazio renderiza "—" pra manter largura compacta */}
           <select
             className="tmodal-subhdr-prio"
             data-prio={editing.prioridade || ''}
             value={editing.prioridade}
             onChange={(e) => set('prioridade', e.target.value as Task['prioridade'])}
             aria-label="Mudar prioridade"
-            title="Mudar prioridade"
+            title={editing.prioridade ? `Prioridade ${editing.prioridade}` : 'Revisar prioridade'}
           >
-            <option value="">— revisar</option>
+            <option value="">—</option>
             <option value="P0">P0</option>
             <option value="P1">P1</option>
             <option value="P2">P2</option>
             <option value="P3">P3</option>
           </select>
 
-          {/* Prazo · date input inline com display dd/mm/aaaa */}
-          <label
+          {/* Prazo · button abre o picker nativo via showPicker() · input
+              date escondido fora-de-tela (mas no DOM pra Form behavior) */}
+          <button
+            type="button"
             className={cn('tmodal-subhdr-date', isMissing('prazo') && 'is-missing')}
             title={editing.prazo ? `Prazo: ${fmtDate(editing.prazo)}` : 'Definir prazo'}
+            onClick={(e) => {
+              const input = (e.currentTarget.querySelector('input[type=date]') as HTMLInputElement | null);
+              if (input) {
+                if (typeof input.showPicker === 'function') input.showPicker();
+                else input.focus();
+              }
+            }}
           >
             <input
               type="date"
               value={editing.prazo || ''}
               onChange={(e) => set('prazo', e.target.value)}
               aria-label="Mudar prazo"
+              tabIndex={-1}
             />
             <span className={editing.prazo ? 'has-val' : ''}>
               {editing.prazo
                 ? editing.prazo.split('-').reverse().join('/')
                 : 'dd/mm/aaaa'}
             </span>
-          </label>
+          </button>
 
           {/* Cliente · Projeto (read-only) */}
           {editing.clienteId && (
