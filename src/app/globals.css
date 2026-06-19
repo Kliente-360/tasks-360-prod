@@ -1355,6 +1355,10 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .tmodal-mobile-tabs { display: none; }
 
 @media (max-width: 767px) {
+  /* Bucket V · M.7 mobile · header sem autosave/×, com prio pill à direita.
+     Saída do modal é exclusivamente pelo footer (Fechar/Salvar). */
+  .tmodal-head-right { display: none !important; }
+  .tmodal-head-mobile-prio { margin-left: auto; flex-shrink: 0; }
   .modal-bg.p-2, .modal-bg.p-4 {
     padding: 12px !important;
     padding-top: 12px !important;

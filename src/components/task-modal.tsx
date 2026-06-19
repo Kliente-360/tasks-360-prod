@@ -1748,6 +1748,22 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             aria-label="Título da tarefa"
             autoFocus={!editing.id}
           />
+          {/* MOBILE-only · prioridade pill no header (substitui autosave + ×
+              que somem no mobile · saída via Fechar/Salvar do footer). */}
+          <select
+            className="tmodal-head-mobile-prio md:hidden tmodal-subhdr-prio"
+            data-prio={editing.prioridade || ''}
+            value={editing.prioridade}
+            onChange={(e) => set('prioridade', e.target.value as Task['prioridade'])}
+            aria-label="Mudar prioridade"
+            title={editing.prioridade ? `Prioridade ${editing.prioridade}` : 'Revisar prioridade'}
+          >
+            <option value="">—</option>
+            <option value="P0">P0</option>
+            <option value="P1">P1</option>
+            <option value="P2">P2</option>
+            <option value="P3">P3</option>
+          </select>
           <div className="tmodal-head-right">
             {editing.criadoPorIa && (
               <span className="ia-chip" title="Criada por automação IA">
@@ -2019,12 +2035,17 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           {/* LEFT */}
           <div className="tmodal-left" ref={leftRef}>
             {/* Mobile: grid 2 colunas */}
+            {/* Mobile · 1 tela única com scroll · campos dinâmicos por
+                subetapa (v1.03.181). Ordem: cliente-projeto · responsável-
+                prazo · esforço-realizado · status · solicitação · valor
+                esperado · condicionais por etapa. */}
             <div className="md:hidden space-y-3 py-3">
+              {/* Linha 1 · cliente + projeto */}
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="lbl">Cliente</label>
                   <select
-                    className="inp"
+                    className={cn('inp', isMissing('clienteId'))}
                     value={editing.clienteId}
                     onChange={(e) => {
                       const v = e.target.value;
@@ -2040,7 +2061,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 <div>
                   <label className="lbl">Projeto</label>
                   <select
-                    className="inp"
+                    className={cn('inp', isMissing('projetoId'))}
                     value={editing.projetoId}
                     disabled={!editing.clienteId}
                     onChange={(e) => set('projetoId', e.target.value)}
@@ -2051,71 +2072,81 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Linha 2 · responsável + prazo */}
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="lbl">Status</label>
+                  <label className="lbl">Responsável</label>
                   <select
-                    className="inp"
-                    value={editing.subetapa}
-                    onChange={(e) => set('subetapa', e.target.value)}
+                    className={cn('inp', isMissing('pessoaId'))}
+                    value={editing.pessoaId}
+                    disabled={!isAdmin}
+                    onChange={(e) => set('pessoaId', e.target.value)}
                   >
-                    <option value="backlog">Backlog</option>
-                    <option value="priorizado">Priorizado</option>
-                    <option value="em_definicao">Em definição</option>
-                    <option value="escopo_definido">Escopo definido</option>
-                    <option value="em_desenvolvimento">Em desenvolvimento</option>
-                    <option value="em_homologacao">Em homologação</option>
-                    <option value="em_revisao">Em revisão</option>
-                    <option value="pronto_producao">Pronto p/ produção</option>
-                    <option value="em_implantacao">Em implantação</option>
-                    <option value="bloqueado">Bloqueado</option>
-                    <option value="concluido">Concluído</option>
+                    <option value="">—</option>
+                    {pessoasNaoCliente.map((p) => (
+                      <option key={p.id} value={p.id}>{p.nome}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
-                  <label className="lbl">Prazo</label>
-                  {/* Mobile · date picker nativo abre no tap, mas o display
-                      visível segue dd/mm/aaaa (input nativo é position:absolute
-                      opacity:0 sobre o span). Evita locale verboso
-                      "12 de jun. de 2026" estourando a coluna. */}
-                  <label className="inp m-date-field">
+                  <label className="lbl">Prazo {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</label>
+                  <label className={cn('inp m-date-field', isMissing('prazo') && 'is-missing')}>
                     <input
                       type="date"
                       value={editing.prazo}
                       onChange={(e) => set('prazo', e.target.value)}
                     />
                     <span className={editing.prazo ? 'value' : 'placeholder'}>
-                      {editing.prazo
-                        ? editing.prazo.split('-').reverse().join('/')
-                        : 'dd/mm/aaaa'}
+                      {editing.prazo ? editing.prazo.split('-').reverse().join('/') : 'dd/mm/aaaa'}
                     </span>
                   </label>
                 </div>
+              </div>
+
+              {/* Linha 3 · esforço + realizado */}
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="lbl">Previsto (h)</label>
+                  <label className="lbl">Estimado (h) {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</label>
                   <input
                     type="number"
                     min={0}
                     step={0.5}
-                    className="inp"
+                    className={cn('inp', isMissing('esforco'))}
                     value={editing.esforco}
                     onChange={(e) => set('esforco', Number(e.target.value) || 0)}
                   />
                 </div>
                 <div>
-                  <label className="lbl">Realizado (h)</label>
+                  <label className="lbl">Realizado (h) {(['em_homologacao','em_revisao','pronto_producao','em_implantacao','concluido'].includes(editing.subetapa)) && <span className="text-danger">*</span>}</label>
                   <input
                     type="number"
                     min={0}
                     step={0.5}
-                    className="inp"
+                    className={cn('inp', isMissing('tempoRealHoras'))}
                     value={editing.tempoRealHoras ?? ''}
-                    onChange={(e) =>
-                      set('tempoRealHoras', e.target.value === '' ? null : Number(e.target.value))
-                    }
+                    onChange={(e) => set('tempoRealHoras', e.target.value === '' ? null : Number(e.target.value))}
                     placeholder="—"
                   />
                 </div>
               </div>
+
+              {/* Status (full) */}
+              <div>
+                <label className="lbl">Status</label>
+                <select
+                  className="inp"
+                  value={editing.subetapa}
+                  onChange={(e) => set('subetapa', e.target.value)}
+                >
+                  {SUBS_FLAT.map((s) => (
+                    <option key={s} value={s}>{SUB_LABELS[s]}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Solicitação (sempre visível) */}
               <div>
                 <label className="lbl">Solicitação</label>
                 <textarea
@@ -2123,11 +2154,13 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   rows={4}
                   value={descricaoLoading ? '' : (editing.descricao ?? '')}
                   onChange={(e) => set('descricao', e.target.value)}
-                  placeholder={descricaoLoading ? 'Carregando…' : 'Contexto, links, critérios de aceite…'}
+                  placeholder={descricaoLoading ? 'Carregando…' : 'Contexto, links…'}
                   disabled={descricaoLoading}
                   style={descricaoLoading ? { opacity: 0.6 } : undefined}
                 />
               </div>
+
+              {/* Valor Esperado (sempre visível) */}
               <div>
                 <label className="lbl">Valor Esperado</label>
                 <textarea
@@ -2135,14 +2168,69 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   rows={3}
                   value={descricaoLoading ? '' : (editing.valorEsperado ?? '')}
                   onChange={(e) => set('valorEsperado', e.target.value)}
-                  placeholder={descricaoLoading ? 'Carregando…' : 'Valor que a entrega desta task deve gerar como impacto positivo para o cliente…'}
+                  placeholder={descricaoLoading ? 'Carregando…' : 'Impacto esperado pro cliente…'}
                   disabled={descricaoLoading}
                   style={descricaoLoading ? { opacity: 0.6 } : undefined}
                 />
               </div>
-              {/* Solução implementada · só aparece de em_homologacao em diante.
-                  Captura "o que foi feito" pra IA-summary gerar narrativa
-                  pedido→entrega sem inferir da thread de comments. */}
+
+              {/* DINÂMICOS por subetapa · só campos efetivamente obrigatórios
+                  pra avançar a etapa atual. */}
+
+              {/* em_definicao+ (rank >= 1): escopo */}
+              {(STAGE_RANK[editing.subetapa] ?? 0) >= 1 && (
+                <div className={cn(isMissing('escopo') && 'section-missing rounded-md p-3 -m-3')}>
+                  <label className="lbl">Escopo {isMissing('escopo') && <span className="text-danger">*</span>}</label>
+                  <div className="flex flex-col gap-2 mt-1">
+                    {SKILL_GROUPS.map((g) => (
+                      <div key={g.group}>
+                        <div className="text-[10px] uppercase tracking-wide text-muted mb-1">{g.group}</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {g.values.map((skill) => {
+                            const active = (editing.escopo ?? []).includes(skill);
+                            return (
+                              <button
+                                key={skill}
+                                type="button"
+                                onClick={() => {
+                                  const cur = editing.escopo ?? [];
+                                  set('escopo', active ? cur.filter((s) => s !== skill) : [...cur, skill]);
+                                }}
+                                className={cn(
+                                  'text-xs px-2 py-1 rounded border',
+                                  active
+                                    ? 'bg-[var(--brand)] border-[var(--brand)] text-white font-medium'
+                                    : 'bg-[var(--surface-3)] border-[var(--line)] text-muted',
+                                )}
+                              >
+                                {skill}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* escopo_definido+ (rank >= 3): critério de aceite */}
+              {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && (
+                <div>
+                  <label className="lbl">Critério de aceite <span className="text-danger">*</span></label>
+                  <textarea
+                    className={cn('inp', isMissing('criterioAceite'))}
+                    rows={3}
+                    value={descricaoLoading ? '' : (editing.criterioAceite ?? '')}
+                    onChange={(e) => set('criterioAceite', e.target.value)}
+                    placeholder={descricaoLoading ? 'Carregando…' : 'Como saberemos que está pronto…'}
+                    disabled={descricaoLoading}
+                    style={descricaoLoading ? { opacity: 0.6 } : undefined}
+                  />
+                </div>
+              )}
+
+              {/* em_homologacao+ (rank >= 5): solução implementada */}
               {SHOWS_SOLUCAO.has(editing.subetapa) && (
                 <div>
                   <label className="lbl">Solução implementada {editing.subetapa === 'concluido' && <span className="text-danger">*</span>}</label>
@@ -2151,42 +2239,75 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     rows={3}
                     value={descricaoLoading ? '' : (editing.solucaoImplementada ?? '')}
                     onChange={(e) => set('solucaoImplementada', e.target.value)}
-                    placeholder={descricaoLoading ? 'Carregando…' : 'O que foi feito de fato (vai pro histórico e pra resumos automáticos)…'}
+                    placeholder={descricaoLoading ? 'Carregando…' : 'O que foi feito de fato…'}
                     disabled={descricaoLoading}
                     style={descricaoLoading ? { opacity: 0.6 } : undefined}
                   />
                 </div>
               )}
-              <div>
-                <label className="lbl">Responsável</label>
-                <select
-                  className="inp"
-                  value={editing.pessoaId}
-                  disabled={!isAdmin}
-                  onChange={(e) => set('pessoaId', e.target.value)}
-                >
-                  <option value="">—</option>
-                  {pessoasNaoCliente.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nome}</option>
-                  ))}
-                </select>
-              </div>
-              {isCEO && (
+
+              {/* concluido: valor entregue */}
+              {editing.subetapa === 'concluido' && (
                 <div>
-                  <label className="lbl">Privacidade</label>
-                  <label
-                    className="inp flex items-center gap-2 cursor-pointer select-none"
-                    style={{ background: 'var(--bg-elev)' }}
+                  <label className="lbl">Valor entregue <span className="text-danger">*</span></label>
+                  <textarea
+                    className={cn('inp', isMissing('valorEntregue'))}
+                    rows={2}
+                    value={descricaoLoading ? '' : (editing.valorEntregue ?? '')}
+                    onChange={(e) => set('valorEntregue', e.target.value)}
+                    placeholder={descricaoLoading ? 'Carregando…' : 'Impacto realizado…'}
+                    disabled={descricaoLoading}
+                    style={descricaoLoading ? { opacity: 0.6 } : undefined}
+                  />
+                </div>
+              )}
+
+              {/* bloqueado: bloqueado_por enum + motivo */}
+              {editing.subetapa === 'bloqueado' && (
+                <>
+                  <div>
+                    <label className="lbl">Bloqueado por <span className="text-danger">*</span></label>
+                    <select
+                      className={cn('inp', !editing.bloqueadoPor && 'is-missing')}
+                      value={editing.bloqueadoPor}
+                      onChange={(e) => set('bloqueadoPor', e.target.value)}
+                    >
+                      <option value="">— a classificar</option>
+                      <option value="cliente">Cliente</option>
+                      <option value="nos">Nós (interno)</option>
+                      <option value="terceiro">Terceiro</option>
+                    </select>
+                  </div>
+                  {isTransitionToBloqueado && (
+                    <div>
+                      <label className="lbl">Motivo do bloqueio</label>
+                      <textarea
+                        className="inp"
+                        rows={3}
+                        placeholder="Descreva o motivo (vira comentário interno)…"
+                        value={bloqueioMotivo}
+                        onChange={(e) => setBloqueioMotivo(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* wasConcluido: motivo de reabertura */}
+              {wasConcluido && (
+                <div>
+                  <label className="lbl">Motivo da reabertura <span className="text-danger">*</span></label>
+                  <select
+                    className={cn('inp', isMissing('motivoReabertura'))}
+                    value={editing.motivoReabertura ?? ''}
+                    onChange={(e) => set('motivoReabertura', e.target.value)}
                   >
-                    <input
-                      type="checkbox"
-                      checked={editing.privada}
-                      onChange={(e) => set('privada', e.target.checked)}
-                    />
-                    <span className="text-sm">
-                      {editing.privada ? '🔒 privada' : '— pública'}
-                    </span>
-                  </label>
+                    <option value="">— escolher motivo</option>
+                    <option value="mudanca_cliente">Mudança de escopo solicitada pelo cliente</option>
+                    <option value="erro_qualidade">Erro / problema de qualidade detectado</option>
+                    <option value="regressao">Regressão (algo quebrou)</option>
+                    <option value="novo_requisito">Novo requisito interno</option>
+                  </select>
                 </div>
               )}
             </div>
