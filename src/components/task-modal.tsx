@@ -1782,16 +1782,23 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           )}
 
           <div className="tmodal-subhdr-right">
-            {/* Toggle visível ao cliente */}
+            {/* Toggle visível ao cliente · label fixo, estado pelo switch */}
             {editing.id && (
-              <label className="tmodal-subhdr-toggle" title="Visível pro cliente no Portal">
+              <label
+                className="tmodal-subhdr-toggle"
+                data-on={editing.visivelCliente !== false ? '1' : '0'}
+                title={editing.visivelCliente !== false ? 'Visível pro cliente no Portal' : 'Oculta do cliente'}
+              >
                 <input
                   type="checkbox"
+                  className="sr-only"
                   checked={editing.visivelCliente !== false}
                   onChange={(e) => set('visivelCliente', e.target.checked)}
                 />
-                <Icon name={editing.visivelCliente !== false ? 'eye' : 'eye-off'} size={13} />
-                {editing.visivelCliente !== false ? 'visível ao cliente' : 'só time'}
+                <span className="tmodal-subhdr-switch" aria-hidden="true">
+                  <span className="tmodal-subhdr-switch-knob" />
+                </span>
+                <span>visível cliente</span>
               </label>
             )}
 
