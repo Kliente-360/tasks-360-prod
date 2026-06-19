@@ -666,7 +666,11 @@ export function CadastrosClient() {
                     <td>
                       <div className="flex items-center gap-3 min-w-0">
                         <Avatar label={p.nome} shape="circle" />
-                        <span className="font-medium text-[color:var(--ink)] truncate">{p.nome}</span>
+                        <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium text-[color:var(--ink)] truncate">{p.nome}</span>
+                          <Chip show={p.is_ceo === true} label="CEO" variant="muted" />
+                          <Chip show={p.is_pm === true} label="PM" variant="muted" />
+                        </div>
                       </div>
                     </td>
                     <td className="text-[color:var(--ink-soft)] font-mono text-xs truncate" style={{ maxWidth: 220 }}>
