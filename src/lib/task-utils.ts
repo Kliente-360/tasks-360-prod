@@ -358,7 +358,7 @@ export function missingFieldsForCurrentSubetapa(
   t: Pick<Task,
     'subetapa' | 'status' | 'prioridade' | 'pessoaId' | 'clienteId' | 'projetoId' |
     'prazo' | 'esforco' | 'escopo' | 'tempoRealHoras' | 'criterioAceite' | 'valorEntregue' |
-    'motivoReabertura'
+    'solucaoImplementada' | 'motivoReabertura'
   >,
   opts?: { timeEntriesHours?: number; wasConcluido?: boolean },
 ): Set<string> {
@@ -394,8 +394,9 @@ export function missingFieldsForCurrentSubetapa(
     if (manual <= 0 && fromSheet <= 0) missing.add('tempoRealHoras');
   }
 
-  // valor_entregue no concluido
+  // solucao_implementada + valor_entregue no concluido
   if (sub === 'concluido') {
+    if (!(t.solucaoImplementada && t.solucaoImplementada.trim().length > 0)) missing.add('solucaoImplementada');
     if (!(t.valorEntregue && t.valorEntregue.trim().length > 0)) missing.add('valorEntregue');
   }
 
@@ -424,7 +425,7 @@ export function missingFieldsForCurrentSubetapa(
  * Bloqueado tem rank -1 → não bloqueia.
  */
 export function validateSubetapaAdvance(
-  task: Pick<Task, 'esforco' | 'escopo' | 'tempoRealHoras' | 'criterioAceite' | 'valorEntregue'>,
+  task: Pick<Task, 'esforco' | 'escopo' | 'tempoRealHoras' | 'criterioAceite' | 'valorEntregue' | 'solucaoImplementada'>,
   novaSubetapa: string,
   opts?: { timeEntriesHours?: number; hasOpenPreReqs?: boolean },
 ): { ok: true; autoFillTempo?: number } | { ok: false; error: string } {
@@ -449,6 +450,9 @@ export function validateSubetapaAdvance(
       const sumHours = opts?.timeEntriesHours ?? 0;
       if (sumHours > 0) {
         // Modo (d): manual vazio → usa timesheet como fallback.
+        if (novaSubetapa === 'concluido' && !(task.solucaoImplementada && task.solucaoImplementada.trim().length > 0)) {
+          return { ok: false, error: 'Preencha a solução implementada (o que foi feito) antes de concluir.' };
+        }
         if (novaSubetapa === 'concluido' && !(task.valorEntregue && task.valorEntregue.trim().length > 0)) {
           return { ok: false, error: 'Preencha o valor entregue (impacto realizado) antes de concluir.' };
         }
@@ -458,6 +462,9 @@ export function validateSubetapaAdvance(
     }
   }
 
+  if (novaSubetapa === 'concluido' && !(task.solucaoImplementada && task.solucaoImplementada.trim().length > 0)) {
+    return { ok: false, error: 'Preencha a solução implementada (o que foi feito) antes de concluir.' };
+  }
   if (novaSubetapa === 'concluido' && !(task.valorEntregue && task.valorEntregue.trim().length > 0)) {
     return { ok: false, error: 'Preencha o valor entregue (impacto realizado) antes de concluir.' };
   }

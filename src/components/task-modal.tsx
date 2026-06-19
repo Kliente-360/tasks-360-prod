@@ -1104,10 +1104,18 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   }, [clienteWebhookEnabled]);
 
   // ============ Close flow (flush) ============
-  const close = useCallback(async () => {
+  const close = useCallback(async (opts?: { force?: boolean }) => {
     if (autosaveTimer.current) {
       clearTimeout(autosaveTimer.current);
       autosaveTimer.current = null;
+    }
+    // FORCE close (botão X) descarta edições inválidas sem persistir.
+    // ESC nunca chega aqui em estado de erro (bloqueado no listener).
+    // Save manual quando dá ruim também não chega aqui (toast.error +
+    // mantém aberto). Esse caminho é só "salvar pendências e fechar".
+    if (opts?.force && saveStateRef.current === 'error') {
+      onClose();
+      return;
     }
     const pending: Promise<unknown>[] = [];
     if (newComment.trim()) pending.push(postComment());
@@ -1137,11 +1145,17 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newComment, replyingToId, newReply, editingCommentId, editingCommentDraft, editing.id, autosaveNow, onClose]);
 
-  // ESC fecha
+  // ESC fecha · MAS bloqueado quando autosave falhou (gate de campo
+  // obrigatório). Só botão de fechar (×) consegue sair sem persistir
+  // edições inválidas — força o usuário a notar o erro antes.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (lightboxAttachment) setLightboxAttachment(null);
+        else if (saveStateRef.current === 'error') {
+          // bloqueia ESC com autosave em erro
+          return;
+        }
         else if (!replyingToId) close();
       }
     };
@@ -1627,7 +1641,11 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     <div
       className="fixed inset-0 z-50 flex items-center justify-center modal-bg p-2 md:p-4"
       onClick={(e) => {
-        if (e.target === e.currentTarget) close();
+        // Click no backdrop: bloqueia quando autosave em erro
+        // (mesmo gate do ESC) · força user a usar X explicitamente.
+        if (e.target !== e.currentTarget) return;
+        if (saveStateRef.current === 'error') return;
+        close();
       }}
       onPaste={onModalPaste}
     >
@@ -1741,7 +1759,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 <CopyIcon />
               </button>
             )}
-            <button className="icon-btn" aria-label="Fechar" onClick={close}>
+            <button className="icon-btn" aria-label="Fechar" onClick={() => close({ force: true })}>
               ×
             </button>
           </div>
@@ -1894,9 +1912,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   pedido→entrega sem inferir da thread de comments. */}
               {SHOWS_SOLUCAO.has(editing.subetapa) && (
                 <div>
-                  <label className="lbl">Solução implementada</label>
+                  <label className="lbl">Solução implementada {editing.subetapa === 'concluido' && <span className="text-danger">*</span>}</label>
                   <textarea
-                    className="inp"
+                    className={cn('inp', isMissing('solucaoImplementada'))}
                     rows={3}
                     value={descricaoLoading ? '' : (editing.solucaoImplementada ?? '')}
                     onChange={(e) => set('solucaoImplementada', e.target.value)}
@@ -2085,9 +2103,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             {SHOWS_SOLUCAO.has(editing.subetapa) && (
               <div className="tmodal-section hidden md:block">
                 <div className="tmodal-section-title">Entrega</div>
-                <label className="lbl mt-0">Solução implementada</label>
+                <label className="lbl mt-0">Solução implementada {editing.subetapa === 'concluido' && <span className="text-danger">*</span>}</label>
                 <textarea
-                  className="inp"
+                  className={cn('inp', isMissing('solucaoImplementada'))}
                   rows={3}
                   value={descricaoLoading ? '' : (editing.solucaoImplementada ?? '')}
                   onChange={(e) => set('solucaoImplementada', e.target.value)}
@@ -2676,7 +2694,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               <span className="btn-txt">excluir</span>
             </button>
           )}
-          <button className="btn" onClick={close}>
+          <button className="btn" onClick={() => close({ force: true })}>
             fechar
           </button>
           <button className="btn btn-primary" onClick={saveManual}>
