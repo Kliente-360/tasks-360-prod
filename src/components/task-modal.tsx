@@ -1911,34 +1911,66 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           </div>
         </div>
 
-        {/* Form tabs · DESKTOP ONLY · Bucket V · M.2
-            5 abas (3 sempre + 2 condicionais) + Admin.
-            Visível: Triagem · Definição · Execução · [Bloqueio se subetapa=bloqueado]
-                     · [Reabertura se wasConcluido] · Admin
-            Auto-active: pickInitialFormTab (override pra bloqueio/reabertura). */}
-        <div className="tmodal-formtabs hidden md:flex">
-          {([
-            { key: 'triagem',    label: 'Triagem',    show: true },
-            { key: 'definicao',  label: 'Definição',  show: true },
-            { key: 'execucao',   label: 'Execução',   show: true },
-            { key: 'bloqueio',   label: 'Bloqueio',   show: editing.subetapa === 'bloqueado' },
-            { key: 'reabertura', label: 'Reabertura', show: wasConcluido },
-            { key: 'admin',      label: 'Admin',      show: !!editing.id },
-          ] as Array<{ key: FormTab; label: string; show: boolean }>).filter((t) => t.show).map((t) => {
-            const n = tabPendency[t.key];
-            const active = activeFormTab === t.key;
-            return (
+        {/* Tabs strip unificada · DESKTOP · Bucket V · M.2 + iter
+            Form tabs à esquerda · Conversa/Anexos/Histórico/Tempo à direita
+            (mesma altura · divisor 1px no meio). */}
+        <div className="tmodal-tabstrip hidden md:grid">
+          <div>
+            {([
+              { key: 'triagem',    label: 'Triagem',    show: true },
+              { key: 'definicao',  label: 'Definição',  show: true },
+              { key: 'execucao',   label: 'Execução',   show: true },
+              { key: 'bloqueio',   label: 'Bloqueio',   show: editing.subetapa === 'bloqueado' },
+              { key: 'reabertura', label: 'Reabertura', show: wasConcluido },
+              { key: 'admin',      label: 'Admin',      show: !!editing.id },
+            ] as Array<{ key: FormTab; label: string; show: boolean }>).filter((t) => t.show).map((t) => {
+              const n = tabPendency[t.key];
+              const active = activeFormTab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  className={cn('tmodal-formtab', active && 'active')}
+                  onClick={() => setActiveFormTab(t.key)}
+                >
+                  {t.label}
+                  {n > 0 && <span className="ftab-badge">{n}</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div>
+            <button
+              type="button"
+              className={cn('tmodal-formtab', (modalTab === 'conversa' || modalTab === 'detalhes') && 'active')}
+              onClick={() => setModalTab('conversa')}
+            >
+              Conversa {comments.length > 0 && <span className="ftab-badge" style={{ background: 'var(--surface-3)', color: 'var(--ink-soft)' }}>{comments.length}</span>}
+            </button>
+            <button
+              type="button"
+              className={cn('tmodal-formtab', modalTab === 'anexos' && 'active')}
+              onClick={() => setModalTab('anexos')}
+            >
+              Anexos {attachments.length > 0 && <span className="ftab-badge" style={{ background: 'var(--surface-3)', color: 'var(--ink-soft)' }}>{attachments.length}</span>}
+            </button>
+            <button
+              type="button"
+              className={cn('tmodal-formtab', modalTab === 'historico' && 'active')}
+              onClick={() => setModalTab('historico')}
+            >
+              Histórico {history.length > 0 && <span className="ftab-badge" style={{ background: 'var(--surface-3)', color: 'var(--ink-soft)' }}>{history.length}</span>}
+            </button>
+            {editing.id && (
               <button
-                key={t.key}
                 type="button"
-                className={cn('tmodal-formtab', active && 'active')}
-                onClick={() => setActiveFormTab(t.key)}
+                className={cn('tmodal-formtab', modalTab === 'tempo' && 'active')}
+                onClick={() => setModalTab('tempo')}
               >
-                {t.label}
-                {n > 0 && <span className="ftab-badge">{n}</span>}
+                Tempo {tempoCount !== null && tempoCount > 0 && <span className="ftab-badge" style={{ background: 'var(--surface-3)', color: 'var(--ink-soft)' }}>{tempoCount}</span>}
               </button>
-            );
-          })}
+            )}
+          </div>
         </div>
 
         {/* Body */}
@@ -2118,7 +2150,16 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               )}
             </div>
 
-            {/* Bucket V · M.3 · Banners contextuais (independentes da aba) */}
+            {/* Bucket V · M.3 · Banners contextuais (independentes da aba).
+                Wrapper só renderiza se algum banner tá ativo · sem padding
+                fantasma quando lista vazia. */}
+            {(() => {
+              const showError = saveState === 'error';
+              const showBloq = editing.subetapa === 'bloqueado' && activeFormTab !== 'bloqueio';
+              const showReab = wasConcluido && activeFormTab !== 'reabertura' && missingFields.has('motivoReabertura');
+              const showAprov = !!editing.aprovadoEm && editing.subetapa !== 'concluido';
+              if (!showError && !showBloq && !showReab && !showAprov) return null;
+              return (
             <div className="hidden md:block pt-3">
               {saveState === 'error' && (
                 <div className="tmodal-banner tmodal-banner-error">
@@ -2159,7 +2200,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   </div>
                 </div>
               )}
-              {!!editing.aprovadoEm && editing.subetapa !== 'concluido' && (
+              {showAprov && editing.aprovadoEm && (
                 <div className="tmodal-banner tmodal-banner-ok">
                   <Icon name="check-circle" size={14} className="tmodal-banner-icon" />
                   <div className="tmodal-banner-body">
@@ -2171,11 +2212,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 </div>
               )}
             </div>
+              );
+            })()}
 
             {/* Atribuição · aba Triagem (Bucket V · M.2) */}
             {activeFormTab === 'triagem' && (
             <div className="tmodal-section hidden md:block">
-              <div className="tmodal-section-title">Atribuição</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="lbl">Cliente</label>
@@ -2286,7 +2328,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 (Critério de aceite foi pra Definição · M.2) */}
             {activeFormTab === 'triagem' && (
             <div className="tmodal-section hidden md:block">
-              <div className="tmodal-section-title">Descrição</div>
               <label className="lbl mt-0">Solicitação</label>
               <textarea
                 className="inp"
@@ -2314,7 +2355,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 Escopo (mais abaixo) + Bloqueada por (pré-reqs) + Checklist */}
             {activeFormTab === 'definicao' && (
             <div className="tmodal-section hidden md:block">
-              <div className="tmodal-section-title">Esforço</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="lbl">Complexidade</label>
@@ -2382,7 +2422,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
 
             {activeFormTab === 'definicao' && (
             <div className="tmodal-section hidden md:block">
-              <div className="tmodal-section-title">Critério de aceite {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</div>
+              <label className="lbl">Critério de aceite {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</label>
               <textarea
                 className={cn('inp', isMissing('criterioAceite'))}
                 rows={3}
@@ -2399,8 +2439,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 (a partir de em_homologacao) */}
             {activeFormTab === 'execucao' && (
             <div className="tmodal-section hidden md:block">
-              <div className="tmodal-section-title">Tempo realizado {(['em_homologacao','em_revisao','pronto_producao','em_implantacao','concluido'].includes(editing.subetapa)) && <span className="text-danger">*</span>}</div>
-              <label className="lbl mt-0">Realizado (h)</label>
+              <label className="lbl">Tempo realizado (h) {(['em_homologacao','em_revisao','pronto_producao','em_implantacao','concluido'].includes(editing.subetapa)) && <span className="text-danger">*</span>}</label>
               <input
                 type="number"
                 min={0}
@@ -2417,7 +2456,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 em_homologacao em diante (gate em validateSubetapaAdvance). */}
             {activeFormTab === 'execucao' && (
               <div className="tmodal-section hidden md:block">
-                <div className="tmodal-section-title">Entrega</div>
                 <label className="lbl mt-0">Solução implementada {editing.subetapa === 'concluido' && <span className="text-danger">*</span>}</label>
                 <textarea
                   className={cn('inp', isMissing('solucaoImplementada'))}
@@ -2466,7 +2504,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 Filtra pelo MESMO cliente E projeto. */}
             {activeFormTab === 'definicao' && (
             <div className="tmodal-section hidden md:block">
-              <div className="tmodal-section-title">Dependente de outra task</div>
+              <label className="lbl">Dependente de outra task</label>
               {editing.bloqueadaPorTasks.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {editing.bloqueadaPorTasks.map((depId) => {
@@ -2715,9 +2753,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             )}
           </div>
 
-          {/* RIGHT */}
+          {/* RIGHT · tabs subiram pra strip unificada acima */}
           <div className="tmodal-right">
-            <div className="tmodal-tabs">
+            {/* Mobile-only · mantém tabstrip antigo pra mobile */}
+            <div className="tmodal-tabs md:hidden">
               <div
                 className={`tmodal-tab ${(modalTab === 'conversa' || modalTab === 'detalhes') ? 'active' : ''}`}
                 onClick={() => setModalTab('conversa')}
@@ -2914,7 +2953,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                         value={newComment}
                         onChange={mentionPicker.onChange}
                         rows={1}
-                        placeholder="Escrever comentário… (use @ pra mencionar · ⌘↵ envia)"
+                        placeholder="@ pra mencionar · ⌘↵ envia"
                         onKeyDown={(e) => {
                           if (mentionPicker.onKeyDown(e)) return;
                           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
