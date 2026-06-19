@@ -511,6 +511,27 @@ input[type="checkbox"] { accent-color: var(--brand); }
   padding: 12px;
   box-shadow: 0 0 0 1px var(--danger);
 }
+
+/* Bucket V · M.3 · Banners contextuais (topo do form, independente da aba) */
+.tmodal-banner {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 14px; border-radius: var(--r-sm);
+  margin-bottom: 12px; font-size: 12.5px; line-height: 1.45;
+}
+.tmodal-banner-icon { flex-shrink: 0; margin-top: 1px; }
+.tmodal-banner-body { flex: 1 1 auto; min-width: 0; }
+.tmodal-banner-title { font-weight: 600; }
+.tmodal-banner-sub { color: var(--ink-soft); margin-top: 2px; font-size: 12px; }
+.tmodal-banner-cta {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600;
+  padding: 4px 8px; border-radius: var(--r-sm); border: 1px solid currentColor;
+  background: transparent; cursor: pointer; margin-top: 6px;
+}
+.tmodal-banner-error  { background: var(--p0-soft); color: var(--p0); }
+.tmodal-banner-warn   { background: var(--p1-soft); color: var(--p1); }
+.tmodal-banner-info   { background: var(--cyan-soft); color: #0066AD; }
+.tmodal-banner-ok     { background: var(--brand-soft); color: var(--brand-dark); }
 .lbl {
   display: block; font-size: var(--fs-xs); font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase;

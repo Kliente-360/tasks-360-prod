@@ -2117,6 +2117,60 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               )}
             </div>
 
+            {/* Bucket V · M.3 · Banners contextuais (independentes da aba) */}
+            <div className="hidden md:block pt-3">
+              {saveState === 'error' && (
+                <div className="tmodal-banner tmodal-banner-error">
+                  <Icon name="alert-triangle" size={14} className="tmodal-banner-icon" />
+                  <div className="tmodal-banner-body">
+                    <div className="tmodal-banner-title">Salvamento falhou</div>
+                    <div className="tmodal-banner-sub">
+                      Há campo(s) obrigatório(s) pendente(s) — borda vermelha. ESC e backdrop bloqueados; corrija e Salvar, ou Fechar (×) descarta sem persistir.
+                    </div>
+                  </div>
+                </div>
+              )}
+              {editing.subetapa === 'bloqueado' && activeFormTab !== 'bloqueio' && (
+                <div className="tmodal-banner tmodal-banner-warn">
+                  <Icon name="alert" size={14} className="tmodal-banner-icon" />
+                  <div className="tmodal-banner-body">
+                    <div className="tmodal-banner-title">Task bloqueada</div>
+                    <div className="tmodal-banner-sub">
+                      Vá na aba <strong>Bloqueio</strong> e classifique quem está bloqueando.
+                    </div>
+                    <button type="button" className="tmodal-banner-cta" onClick={() => setActiveFormTab('bloqueio')}>
+                      ir pra Bloqueio
+                    </button>
+                  </div>
+                </div>
+              )}
+              {wasConcluido && activeFormTab !== 'reabertura' && missingFields.has('motivoReabertura') && (
+                <div className="tmodal-banner tmodal-banner-warn">
+                  <Icon name="refresh" size={14} className="tmodal-banner-icon" />
+                  <div className="tmodal-banner-body">
+                    <div className="tmodal-banner-title">Reabertura sem motivo</div>
+                    <div className="tmodal-banner-sub">
+                      Esta task tinha sido concluída. Informe o motivo da reabertura.
+                    </div>
+                    <button type="button" className="tmodal-banner-cta" onClick={() => setActiveFormTab('reabertura')}>
+                      ir pra Reabertura
+                    </button>
+                  </div>
+                </div>
+              )}
+              {editing.aprovadoEm && editing.subetapa !== 'concluido' && (
+                <div className="tmodal-banner tmodal-banner-ok">
+                  <Icon name="check-circle" size={14} className="tmodal-banner-icon" />
+                  <div className="tmodal-banner-body">
+                    <div className="tmodal-banner-title">Entrega aprovada pelo cliente</div>
+                    <div className="tmodal-banner-sub">
+                      Em {fmtDate(new Date(editing.aprovadoEm).toISOString().slice(0, 10))}.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Atribuição · aba Triagem (Bucket V · M.2) */}
             {activeFormTab === 'triagem' && (
             <div className="tmodal-section hidden md:block">
