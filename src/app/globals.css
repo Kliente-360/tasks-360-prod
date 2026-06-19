@@ -1093,14 +1093,25 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
   background: #fff; color: var(--ink);
   border: 1px solid var(--line-strong); border-radius: var(--r-pill);
   font-size: 12.5px; font-weight: 600;
-  padding: 4px 10px 4px 8px; cursor: pointer;
-  transition: border-color 150ms cubic-bezier(.2,.7,.2,1);
+  padding: 4px 10px 4px 10px; cursor: pointer;
+  transition: border-color 150ms cubic-bezier(.2,.7,.2,1), box-shadow 150ms cubic-bezier(.2,.7,.2,1);
+  /* dot vira pseudo-elemento à esquerda; cor muda por data-macro */
 }
-.tmodal-subhdr-pill:hover { border-color: var(--ink); }
+.tmodal-subhdr-pill::before {
+  content: ""; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted); margin-right: 2px; flex-shrink: 0;
+}
+.tmodal-subhdr-pill:hover { border-color: currentColor; }
 .tmodal-subhdr-pill::-webkit-calendar-picker-indicator { display: none; }
-.tmodal-subhdr-pill .dot {
-  width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0;
-}
+/* Macro: backlog · andamento · bloqueado · concluido */
+.tmodal-subhdr-pill[data-macro="backlog"]    { border-color: var(--line-strong); color: var(--ink-soft); }
+.tmodal-subhdr-pill[data-macro="backlog"]::before    { background: var(--muted); }
+.tmodal-subhdr-pill[data-macro="andamento"]  { border-color: var(--cyan); color: #0066AD; box-shadow: inset 0 0 0 1px var(--cyan-soft); }
+.tmodal-subhdr-pill[data-macro="andamento"]::before  { background: var(--cyan); }
+.tmodal-subhdr-pill[data-macro="bloqueado"]  { border-color: var(--p1); color: var(--p1); box-shadow: inset 0 0 0 1px var(--p1-soft); }
+.tmodal-subhdr-pill[data-macro="bloqueado"]::before  { background: var(--p1); }
+.tmodal-subhdr-pill[data-macro="concluido"]  { border-color: var(--green); color: var(--green-dark, var(--green)); box-shadow: inset 0 0 0 1px var(--green-soft); }
+.tmodal-subhdr-pill[data-macro="concluido"]::before  { background: var(--green); }
 .tmodal-subhdr-chip {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 12px; color: var(--ink-soft);

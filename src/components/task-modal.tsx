@@ -1721,9 +1721,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             Status select + cliente/projeto + responsável + prioridade + prazo
             + toggle visivel_cliente + indicador agregado de prontidão. */}
         <div className="tmodal-subhdr hidden md:flex">
-          {/* Status select (única editável aqui) */}
+          {/* Status select · pill colorida por macro (backlog/andamento/bloqueado/concluido) */}
           <select
             className="tmodal-subhdr-pill"
+            data-macro={SUB_TO_MACRO[editing.subetapa] ?? 'backlog'}
             value={editing.subetapa}
             onChange={(e) => set('subetapa', e.target.value)}
             aria-label="Mudar subetapa"
