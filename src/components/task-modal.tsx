@@ -40,6 +40,7 @@ import {
 } from 'react';
 import { useData, useClientesById, useProjetosById, usePessoasById, useProjetosByCliente, useTasksById } from '@/lib/data-store';
 import { useToastSafe } from '@/components/toast';
+import { useClickAway } from '@/lib/use-click-away';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
@@ -2915,47 +2916,49 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 </div>
                 {editing.id && (
                   <div className="tmodal-composer relative">
-                    <textarea
-                      ref={newCommentRef}
-                      value={newComment}
-                      onChange={mentionPicker.onChange}
-                      placeholder="Escrever comentário… (use @ pra mencionar)"
-                      onKeyDown={(e) => {
-                        if (mentionPicker.onKeyDown(e)) return;
-                        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                          e.preventDefault();
-                          postComment();
-                        }
-                      }}
-                    />
-                    <MentionDropdown picker={mentionPicker} />
-                    {!newComment && (
-                      <div className="tmodal-composer-hint hidden md:block">
-                        <kbd>⌘</kbd>
-                        <kbd>↵</kbd> envia
-                      </div>
-                    )}
-                    <div className="tmodal-composer-row">
-                      <label
-                        className={`toggle text-[11px] select-none ${newCommentPublico ? 'text-brand-dark font-medium' : 'text-muted hover:text-ink'}`}
-                        title="Marque pra publicar este comentário no Portal do cliente."
-                      >
-                        <input
-                          type="checkbox"
-                          checked={newCommentPublico}
-                          onChange={(e) => setNewCommentPublico(e.target.checked)}
-                        />
-                        <span>Visível ao cliente no Portal</span>
-                      </label>
-                      <div className="spacer" style={{ flex: 1 }} />
+                    {/* Bucket V · M.5 · composer pill: textarea + botão
+                        circular verde de enviar. Visível ao cliente vira
+                        linha fina abaixo. */}
+                    <div className="tmodal-composer-pill">
+                      <textarea
+                        ref={newCommentRef}
+                        value={newComment}
+                        onChange={mentionPicker.onChange}
+                        placeholder="Escrever comentário… (use @ pra mencionar)"
+                        onKeyDown={(e) => {
+                          if (mentionPicker.onKeyDown(e)) return;
+                          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                            e.preventDefault();
+                            postComment();
+                          }
+                        }}
+                      />
                       <button
-                        className="btn btn-primary text-xs"
+                        type="button"
+                        className="tmodal-composer-send"
                         onClick={postComment}
                         disabled={!newComment.trim()}
+                        title="Enviar (⌘↵)"
+                        aria-label="Enviar comentário"
                       >
-                        comentar
+                        <Icon name="send" size={14} />
                       </button>
                     </div>
+                    <MentionDropdown picker={mentionPicker} />
+                    <label
+                      className={`tmodal-composer-toggle ${newCommentPublico ? 'on' : ''}`}
+                      title="Marque pra publicar este comentário no Portal do cliente."
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newCommentPublico}
+                        onChange={(e) => setNewCommentPublico(e.target.checked)}
+                      />
+                      <span>Visível ao cliente no Portal</span>
+                      <span className="tmodal-composer-hint">
+                        <kbd>⌘</kbd><kbd>↵</kbd> envia
+                      </span>
+                    </label>
                   </div>
                 )}
               </>
@@ -2967,40 +2970,28 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="tmodal-foot">
-          {!editing.id && <span className="hint">tarefa nova · clique em Salvar pra criar</span>}
-          <div className="spacer" />
-          {editing.id && !editing.arquivadoEm && (
-            <button
-              className="btn btn-ghost text-xs btn-foot"
-              onClick={arquivarTask}
-              title="Arquivar (esconder de listas/dashboards/heurísticas)"
-            >
-              <span className="btn-txt">arquivar</span>
-            </button>
-          )}
-          {editing.id && editing.arquivadoEm && (
-            <button className="btn btn-ghost text-xs btn-foot" onClick={desarquivarTask} title="Desarquivar">
-              <span className="btn-txt">desarquivar</span>
-            </button>
-          )}
-          {editing.id && isAdmin && (
-            <button
-              className="btn btn-danger text-xs btn-foot"
-              onClick={deleteTask}
-              title="Excluir tarefa"
-            >
-              <span className="btn-txt">excluir</span>
-            </button>
-          )}
-          <button className="btn" onClick={() => close({ force: true })}>
-            fechar
-          </button>
-          <button className="btn btn-primary" onClick={saveManual}>
-            {editing.id ? 'salvar' : 'criar'}
-          </button>
-        </div>
+        {/* Footer · Bucket V · M.4
+            Esquerda: ··· menu com arquivar/desarquivar + copiar link + excluir
+              (excluir com confirmação dupla inline).
+            Direita: Fechar + Salvar. */}
+        <FooterFoot
+          editing={editing}
+          isAdmin={isAdmin}
+          onArquivar={arquivarTask}
+          onDesarquivar={desarquivarTask}
+          onExcluir={deleteTask}
+          onClose={() => close({ force: true })}
+          onSave={saveManual}
+          onCopyLink={() => {
+            const sp = new URLSearchParams(window.location.search);
+            sp.set('task', editing.id);
+            const url = window.location.origin + window.location.pathname + '?' + sp.toString();
+            navigator.clipboard.writeText(url).then(
+              () => toast.success('Link copiado!', 2000),
+              () => toast.error('Não foi possível copiar.'),
+            );
+          }}
+        />
       </div>
 
       {/* Lightbox */}
@@ -3024,6 +3015,122 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
 // ============================================================
 // Sub-componentes
 // ============================================================
+
+/**
+ * Bucket V · M.4 · Footer reorganizado · destrutivos isolados num
+ * menu ··· pra evitar clique acidental. Excluir tem confirmação
+ * dupla inline (não usa window.confirm).
+ */
+function FooterFoot({
+  editing, isAdmin, onArquivar, onDesarquivar, onExcluir, onClose, onSave, onCopyLink,
+}: {
+  editing: Task;
+  isAdmin: boolean;
+  onArquivar: () => void;
+  onDesarquivar: () => void;
+  onExcluir: () => void;
+  onClose: () => void;
+  onSave: () => void;
+  onCopyLink: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
+  const popRef = useClickAway<HTMLDivElement>(() => { setMenuOpen(false); setConfirmDel(false); });
+
+  return (
+    <div className="tmodal-foot">
+      {/* Esquerda · ··· menu (só pra tasks existentes) */}
+      {editing.id ? (
+        <div className="relative" ref={popRef}>
+          <button
+            type="button"
+            className="btn btn-ghost text-xs btn-foot"
+            onClick={() => { setMenuOpen((v) => !v); setConfirmDel(false); }}
+            title="Mais ações"
+            aria-label="Mais ações"
+          >
+            <Icon name="more" size={14} />
+          </button>
+          {menuOpen && !confirmDel && (
+            <div className="absolute left-0 bottom-full mb-2 z-50 w-[220px] bg-bg-elev border border-line rounded-md shadow-xl overflow-hidden text-sm">
+              <button
+                type="button"
+                className="w-full text-left px-3 py-2 hover:bg-[color:var(--surface-3)] flex items-center gap-2"
+                onClick={() => { setMenuOpen(false); onCopyLink(); }}
+              >
+                <Icon name="paperclip" size={13} /> copiar link
+              </button>
+              {!editing.arquivadoEm && (
+                <button
+                  type="button"
+                  className="w-full text-left px-3 py-2 hover:bg-[color:var(--surface-3)] flex items-center gap-2"
+                  onClick={() => { setMenuOpen(false); onArquivar(); }}
+                >
+                  <Icon name="archive" size={13} /> arquivar
+                </button>
+              )}
+              {editing.arquivadoEm && (
+                <button
+                  type="button"
+                  className="w-full text-left px-3 py-2 hover:bg-[color:var(--surface-3)] flex items-center gap-2"
+                  onClick={() => { setMenuOpen(false); onDesarquivar(); }}
+                >
+                  <Icon name="refresh" size={13} /> desarquivar
+                </button>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  className="w-full text-left px-3 py-2 hover:bg-[color:var(--p0-soft)] flex items-center gap-2 border-t border-line"
+                  style={{ color: 'var(--p0)' }}
+                  onClick={() => setConfirmDel(true)}
+                >
+                  <Icon name="trash" size={13} /> excluir…
+                </button>
+              )}
+            </div>
+          )}
+          {menuOpen && confirmDel && (
+            <div className="absolute left-0 bottom-full mb-2 z-50 w-[260px] bg-bg-elev border border-line rounded-md shadow-xl overflow-hidden p-3">
+              <div className="text-sm font-semibold mb-1" style={{ color: 'var(--p0)' }}>
+                Excluir tarefa?
+              </div>
+              <div className="text-xs text-muted mb-3">
+                Esta ação é permanente. Considere arquivar se for só esconder.
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn text-xs"
+                  onClick={() => { setConfirmDel(false); }}
+                >
+                  cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn text-xs"
+                  style={{ background: 'var(--p0)', color: '#fff', borderColor: 'var(--p0)' }}
+                  onClick={() => { setMenuOpen(false); setConfirmDel(false); onExcluir(); }}
+                >
+                  sim, excluir
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <span className="hint">tarefa nova · clique em Salvar pra criar</span>
+      )}
+
+      <div className="spacer" />
+
+      <button className="btn" onClick={onClose}>fechar</button>
+      <button className="btn btn-primary" onClick={onSave}>
+        {editing.id ? 'salvar' : 'criar'}
+      </button>
+    </div>
+  );
+}
 
 function TimesheetTab({ taskId, onLoaded }: { taskId: string; onLoaded?: (n: number) => void }) {
   const { currentPessoa, viewerRole } = useData();
