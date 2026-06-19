@@ -1341,14 +1341,15 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .tmodal-composer-pill:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px var(--brand-soft); }
 .tmodal-composer-pill textarea {
   flex: 1 1 auto;
-  height: 22px; min-height: 22px; max-height: 22px;
+  height: 32px; min-height: 32px; max-height: 32px;
   resize: none; overflow: hidden;
   border: 0; padding: 0; margin: 0;
   font-size: var(--fs-sm); font-family: inherit;
   color: var(--ink); background: transparent; outline: none;
-  line-height: 22px;
-  /* iOS safari ignora rows={1} se line-height for fracionário · forçando */
+  /* line-height === height = vertical-center single line · iOS friendly */
+  line-height: 32px;
   white-space: nowrap;
+  vertical-align: middle;
 }
 .tmodal-composer-send {
   flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
