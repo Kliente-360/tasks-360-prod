@@ -521,17 +521,89 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({});
   // True enquanto o lazy-load da descrição roda (skeleton no textarea).
+  // wasConcluido = task estava em concluido E foi movida pra outra subetapa
+  // (caso de reabertura). Usado pelo missingFields (gate motivoReabertura)
+  // e pra auto-ativar a aba Reabertura.
+  const wasConcluido = useMemo(() => {
+    if (!editing.id) return false;
+    const prev = tasksById.get(editing.id);
+    return !!prev && prev.status === 'concluido' && editing.subetapa !== 'concluido';
+  }, [editing.id, editing.subetapa, tasksById]);
+
   // Set de campos obrigatórios pendentes pra subetapa atual.
-  // Usado pra pintar borda vermelha (.is-missing) em inputs.
   const missingFields = useMemo(() => {
     const sumHours = editing.id
       ? sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === editing.id))
       : 0;
-    const prev = editing.id ? tasksById.get(editing.id) : null;
-    const wasConcluido = !!prev && prev.status === 'concluido' && editing.subetapa !== 'concluido';
     return missingFieldsForCurrentSubetapa(editing, { timeEntriesHours: sumHours, wasConcluido });
-  }, [editing, timeEntries, tasksById]);
+  }, [editing, timeEntries, wasConcluido]);
   const isMissing = (f: string) => (missingFields.has(f) ? 'is-missing' : '');
+
+  // Bucket V · M.2 · tabs do formulário (desktop)
+  type FormTab = 'triagem' | 'definicao' | 'execucao' | 'bloqueio' | 'reabertura' | 'admin';
+  const FIELD_TO_TAB: Record<string, FormTab> = useMemo(() => ({
+    clienteId: 'triagem',
+    projetoId: 'triagem',
+    pessoaId: 'triagem',
+    prioridade: 'triagem',
+    prazo: 'triagem',
+    escopo: 'definicao',
+    esforco: 'definicao',
+    criterioAceite: 'definicao',
+    tempoRealHoras: 'execucao',
+    solucaoImplementada: 'execucao',
+    valorEntregue: 'execucao',
+    motivoReabertura: 'reabertura',
+  }), []);
+
+  // Conta pendências por aba. Bloqueio é gate manual (bloqueado_por
+  // vazio quando subetapa=bloqueado), não vive em missingFields.
+  const tabPendency = useMemo(() => {
+    const counts: Record<FormTab, number> = {
+      triagem: 0, definicao: 0, execucao: 0, bloqueio: 0, reabertura: 0, admin: 0,
+    };
+    missingFields.forEach((f) => {
+      const t = FIELD_TO_TAB[f];
+      if (t) counts[t] += 1;
+    });
+    if (editing.subetapa === 'bloqueado' && !editing.bloqueadoPor) counts.bloqueio += 1;
+    return counts;
+  }, [missingFields, FIELD_TO_TAB, editing.subetapa, editing.bloqueadoPor]);
+
+  function pickInitialFormTab(): FormTab {
+    if (wasConcluido && missingFields.has('motivoReabertura')) return 'reabertura';
+    if (editing.subetapa === 'bloqueado') return 'bloqueio';
+    if (tabPendency.triagem > 0) return 'triagem';
+    if (tabPendency.definicao > 0) return 'definicao';
+    if (tabPendency.execucao > 0) return 'execucao';
+    const rank = STAGE_RANK[editing.subetapa] ?? 0;
+    if (rank >= 5) return 'execucao';
+    if (rank >= 1) return 'definicao';
+    return 'triagem';
+  }
+
+  const [activeFormTab, setActiveFormTab] = useState<FormTab>(() => pickInitialFormTab());
+  // Quando muda taskId (abrir outra task no mesmo modal), recalcula aba.
+  const lastTaskIdRef = useRef<string>(editing.id);
+  useEffect(() => {
+    if (lastTaskIdRef.current !== editing.id) {
+      lastTaskIdRef.current = editing.id;
+      setActiveFormTab(pickInitialFormTab());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing.id]);
+
+  // Força aba Bloqueio quando entra em bloqueado · força Reabertura
+  // quando wasConcluido sem motivo. Sobrescreve escolha manual nesses
+  // estados críticos. Sem deps cíclicas — usa primitive comparators.
+  useEffect(() => {
+    if (editing.subetapa === 'bloqueado' && activeFormTab !== 'bloqueio') {
+      setActiveFormTab('bloqueio');
+    } else if (wasConcluido && missingFields.has('motivoReabertura') && activeFormTab !== 'reabertura') {
+      setActiveFormTab('reabertura');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing.subetapa, wasConcluido]);
 
   const [descricaoLoading, setDescricaoLoading] = useState<boolean>(
     !!source && source.descricao === undefined,
@@ -1838,6 +1910,36 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           </div>
         </div>
 
+        {/* Form tabs · DESKTOP ONLY · Bucket V · M.2
+            5 abas (3 sempre + 2 condicionais) + Admin.
+            Visível: Triagem · Definição · Execução · [Bloqueio se subetapa=bloqueado]
+                     · [Reabertura se wasConcluido] · Admin
+            Auto-active: pickInitialFormTab (override pra bloqueio/reabertura). */}
+        <div className="tmodal-formtabs hidden md:flex">
+          {([
+            { key: 'triagem',    label: 'Triagem',    show: true },
+            { key: 'definicao',  label: 'Definição',  show: true },
+            { key: 'execucao',   label: 'Execução',   show: true },
+            { key: 'bloqueio',   label: 'Bloqueio',   show: editing.subetapa === 'bloqueado' },
+            { key: 'reabertura', label: 'Reabertura', show: wasConcluido },
+            { key: 'admin',      label: 'Admin',      show: !!editing.id },
+          ] as Array<{ key: FormTab; label: string; show: boolean }>).filter((t) => t.show).map((t) => {
+            const n = tabPendency[t.key];
+            const active = activeFormTab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                className={cn('tmodal-formtab', active && 'active')}
+                onClick={() => setActiveFormTab(t.key)}
+              >
+                {t.label}
+                {n > 0 && <span className="ftab-badge">{n}</span>}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Body */}
         <div className="tmodal-body">
           {/* LEFT */}
@@ -2015,7 +2117,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               )}
             </div>
 
-            {/* Atribuição */}
+            {/* Atribuição · aba Triagem (Bucket V · M.2) */}
+            {activeFormTab === 'triagem' && (
             <div className="tmodal-section hidden md:block">
               <div className="tmodal-section-title">Atribuição</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2116,10 +2219,23 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     <option value="baixa">Baixa</option>
                   </select>
                 </div>
+                {/* Prazo · movido da seção Esforço pra aba Triagem (M.2) */}
+                <div>
+                  <label className="lbl">Prazo {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</label>
+                  <input
+                    type="date"
+                    className={cn('inp', isMissing('prazo'))}
+                    value={editing.prazo}
+                    onChange={(e) => set('prazo', e.target.value)}
+                  />
+                </div>
               </div>
             </div>
+            )}
 
-            {/* Descrição · Solicitação + Valor Esperado */}
+            {/* Descrição · Solicitação + Valor Esperado · aba Triagem
+                (Critério de aceite foi pra Definição · M.2) */}
+            {activeFormTab === 'triagem' && (
             <div className="tmodal-section hidden md:block">
               <div className="tmodal-section-title">Descrição</div>
               <label className="lbl mt-0">Solicitação</label>
@@ -2142,10 +2258,47 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 disabled={descricaoLoading}
                 style={descricaoLoading ? { opacity: 0.6 } : undefined}
               />
-              <label className="lbl mt-3">Critério de aceite {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</label>
+            </div>
+            )}
+
+            {/* Aba Definição · Esforço numérico + Critério de aceite +
+                Escopo (mais abaixo) + Bloqueada por (pré-reqs) + Checklist */}
+            {activeFormTab === 'definicao' && (
+            <div className="tmodal-section hidden md:block">
+              <div className="tmodal-section-title">Esforço</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="lbl">Complexidade</label>
+                  <select
+                    className="inp"
+                    value={editing.complexidade}
+                    onChange={(e) => set('complexidade', e.target.value as Task['complexidade'])}
+                  >
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="lbl">Estimado (h) {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    className={cn('inp', isMissing('esforco'))}
+                    value={editing.esforco}
+                    onChange={(e) => set('esforco', Number(e.target.value) || 0)}
+                  />
+                </div>
+              </div>
+            </div>
+            )}
+            {activeFormTab === 'definicao' && (
+            <div className="tmodal-section hidden md:block">
+              <div className="tmodal-section-title">Critério de aceite {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</div>
               <textarea
                 className={cn('inp', isMissing('criterioAceite'))}
-                rows={2}
+                rows={3}
                 value={descricaoLoading ? '' : (editing.criterioAceite ?? '')}
                 onChange={(e) => set('criterioAceite', e.target.value)}
                 placeholder={descricaoLoading ? 'Carregando…' : 'Como saberemos que está pronto · obrigatório de escopo definido em diante'}
@@ -2153,11 +2306,32 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 style={descricaoLoading ? { opacity: 0.6 } : undefined}
               />
             </div>
+            )}
+
+            {/* Aba Execução · Tempo realizado + Solução + Valor entregue
+                (a partir de em_homologacao) */}
+            {activeFormTab === 'execucao' && (
+            <div className="tmodal-section hidden md:block">
+              <div className="tmodal-section-title">Tempo realizado {(['em_homologacao','em_revisao','pronto_producao','em_implantacao','concluido'].includes(editing.subetapa)) && <span className="text-danger">*</span>}</div>
+              <label className="lbl mt-0">Realizado (h)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.5}
+                className={cn('inp', isMissing('tempoRealHoras'))}
+                value={editing.tempoRealHoras ?? ''}
+                onChange={(e) => set('tempoRealHoras', e.target.value === '' ? null : Number(e.target.value))}
+                placeholder="—"
+              />
+              <div className="text-[11px] text-muted mt-1">
+                Pode preencher manualmente ou deixar que o sistema use a soma do timesheet ao avançar.
+              </div>
+            </div>
+            )}
 
             {/* Solução implementada + Valor entregue · só aparecem de
-                em_homologacao em diante. Valor entregue é obrigatório
-                em 'concluido' (gate em validateSubetapaAdvance). */}
-            {SHOWS_SOLUCAO.has(editing.subetapa) && (
+                em_homologacao em diante (gate em validateSubetapaAdvance). */}
+            {activeFormTab === 'execucao' && SHOWS_SOLUCAO.has(editing.subetapa) && (
               <div className="tmodal-section hidden md:block">
                 <div className="tmodal-section-title">Entrega</div>
                 <label className="lbl mt-0">Solução implementada {editing.subetapa === 'concluido' && <span className="text-danger">*</span>}</label>
@@ -2183,9 +2357,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               </div>
             )}
 
-            {/* Motivo de reabertura · só aparece quando a task FOI concluída
-                anteriormente E está sendo reaberta (ou já foi reaberta) */}
-            {editing.id && tasksById.get(editing.id)?.status === 'concluido' && editing.subetapa !== 'concluido' && (
+            {/* Motivo de reabertura · aba Reabertura (cond) · só aparece
+                quando wasConcluido = true */}
+            {activeFormTab === 'reabertura' && wasConcluido && (
               <div className="tmodal-section hidden md:block">
                 <div className="tmodal-section-title">Reabertura <span className="text-danger">*</span></div>
                 <select
@@ -2202,8 +2376,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               </div>
             )}
 
-            {/* 3.B · Dependências · tasks pré-req. Conclusão bloqueada
-                até todas estarem concluídas. */}
+            {/* 3.B · Dependências · tasks pré-req. Aba Definição (M.2).
+                Diferente de "Bloqueado por" (enum Nós/Cliente/Terceiro
+                que vive na aba Bloqueio · só quando subetapa=bloqueado). */}
+            {activeFormTab === 'definicao' && (
             <div className="tmodal-section hidden md:block">
               <div className="tmodal-section-title">Bloqueada por (pré-requisitos)</div>
               {editing.bloqueadaPorTasks.length > 0 && (
@@ -2263,8 +2439,11 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 Conclusão fica bloqueada enquanto pré-requisitos estiverem abertos.
               </div>
             </div>
+            )}
 
-            {/* Checklist */}
+            {/* Checklist · renderiza tanto na aba Definição (criar itens)
+                como na Execução (marcar conforme avança). Mesma data. */}
+            {(activeFormTab === 'definicao' || activeFormTab === 'execucao') && (
             <div className="tmodal-section hidden md:block">
               <div
                 className="tmodal-section-title flex items-center gap-2 cursor-pointer select-none"
@@ -2285,144 +2464,48 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 />
               )}
             </div>
+            )}
 
-            {/* Esforço */}
-            <div className="tmodal-section hidden md:block">
-              <div className="tmodal-section-title">Esforço</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="hidden md:block">
-                  <label className="lbl">Complexidade</label>
-                  <select
-                    className="inp"
-                    value={editing.complexidade}
-                    onChange={(e) => set('complexidade', e.target.value as Task['complexidade'])}
-                  >
-                    <option value="baixa">Baixa</option>
-                    <option value="media">Média</option>
-                    <option value="alta">Alta</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="lbl">Prazo</label>
-                  <input
-                    type="date"
-                    className={cn('inp', isMissing('prazo'))}
-                    value={editing.prazo}
-                    onChange={(e) => set('prazo', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="lbl">Estimado (h)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.5}
-                    className={cn('inp', isMissing('esforco'))}
-                    value={editing.esforco}
-                    onChange={(e) => set('esforco', Number(e.target.value) || 0)}
-                  />
-                </div>
-                <div>
-                  <label className="lbl">Realizado (h)</label>
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.5}
-                    className={cn('inp', isMissing('tempoRealHoras'))}
-                    value={editing.tempoRealHoras ?? ''}
-                    onChange={(e) =>
-                      set('tempoRealHoras', e.target.value === '' ? null : Number(e.target.value))
-                    }
-                    placeholder="—"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Metadata */}
-            <div className="tmodal-section hidden md:block">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="lbl">Etapa</label>
-                  <select
-                    className="inp"
-                    value={editing.subetapa}
-                    onChange={(e) => set('subetapa', e.target.value)}
-                  >
-                    <optgroup label="Backlog">
-                      <option value="backlog">Backlog</option>
-                      <option value="priorizado">Priorizado</option>
-                      <option value="em_definicao">Em definição</option>
-                      <option value="escopo_definido">Escopo definido</option>
-                    </optgroup>
-                    <optgroup label="Em andamento">
-                      <option value="em_desenvolvimento">Em desenvolvimento</option>
-                      <option value="em_homologacao">Em homologação</option>
-                      <option value="em_revisao">Em revisão</option>
-                      <option value="pronto_producao">Pronto p/ produção</option>
-                      <option value="em_implantacao">Em implantação</option>
-                    </optgroup>
-                    <optgroup label="Bloqueado">
-                      <option value="bloqueado">Bloqueado</option>
-                    </optgroup>
-                    <optgroup label="Concluído">
-                      <option value="concluido">Concluído</option>
-                    </optgroup>
-                  </select>
-                  <div className="text-[10px] text-muted mt-1">
-                    macro: <span className="font-mono">{lblStatus(SUB_TO_MACRO[editing.subetapa] || 'backlog')}</span>
-                  </div>
-                </div>
-                <div className="hidden md:block">
-                  <label className="lbl">Visível ao cliente</label>
-                  <label
-                    className="inp flex items-center gap-2 cursor-pointer select-none"
-                    style={{ background: 'var(--bg-elev)' }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={editing.visivelCliente}
-                      onChange={(e) => set('visivelCliente', e.target.checked)}
+            {/* Aba Bloqueio · só renderiza quando subetapa = bloqueado.
+                Extrai o bloqueado_por enum (Nós/Cliente/Terceiro) +
+                motivo textarea que ficavam dispersos na Metadata. */}
+            {activeFormTab === 'bloqueio' && editing.subetapa === 'bloqueado' && (
+              <div className="tmodal-section hidden md:block">
+                <div className="tmodal-section-title">Bloqueio <span className="text-danger">*</span></div>
+                <label className="lbl mt-0">Bloqueado por <span className="text-danger text-xs">*</span></label>
+                <select
+                  className={cn('inp', !editing.bloqueadoPor && 'is-missing')}
+                  value={editing.bloqueadoPor}
+                  onChange={(e) => set('bloqueadoPor', e.target.value)}
+                >
+                  <option value="">— a classificar</option>
+                  <option value="cliente">Cliente</option>
+                  <option value="nos">Nós (interno)</option>
+                  <option value="terceiro">Terceiro</option>
+                </select>
+                {isTransitionToBloqueado && (
+                  <>
+                    <label className="lbl mt-3">Motivo do bloqueio</label>
+                    <textarea
+                      className="inp resize-none"
+                      rows={3}
+                      placeholder="Descreva o motivo (vira comentário interno)…"
+                      value={bloqueioMotivo}
+                      onChange={(e) => setBloqueioMotivo(e.target.value)}
                     />
-                    <span className="text-sm">{editing.visivelCliente ? '✓ sim' : '— não'}</span>
-                  </label>
-                </div>
-                {editing.subetapa === 'bloqueado' && (
-                  <div className="sm:col-span-2 hidden md:block"><div className="flex flex-col gap-2">
-                    <div>
-                      <label className="lbl">
-                        Bloqueado por <span className="text-danger text-xs">*</span>
-                      </label>
-                      <select
-                        className={`inp ${!editing.bloqueadoPor ? 'border-danger/50' : ''}`}
-                        value={editing.bloqueadoPor}
-                        onChange={(e) => set('bloqueadoPor', e.target.value)}
-                      >
-                        <option value="">— a classificar</option>
-                        <option value="cliente">Cliente</option>
-                        <option value="nos">Nós (interno)</option>
-                        <option value="terceiro">Terceiro</option>
-                      </select>
-                    </div>
-                    {isTransitionToBloqueado && (
-                      <div>
-                        <label className="lbl">Motivo do bloqueio</label>
-                        <textarea
-                          className="inp resize-none"
-                          rows={2}
-                          placeholder="Descreva o motivo (ficará como comentário interno)…"
-                          value={bloqueioMotivo}
-                          onChange={(e) => setBloqueioMotivo(e.target.value)}
-                        />
-                      </div>
-                    )}
-                  </div></div>
+                  </>
                 )}
+                <div className="text-[11px] text-muted mt-2">
+                  Esta aba aparece apenas enquanto a task está em <code>bloqueado</code>.
+                  Para gerenciar pré-requisitos (outras tasks que devem concluir antes),
+                  vá em <strong>Definição → Bloqueada por</strong>.
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Escopo / Skills · seção ganha borda vermelha quando obrigatório
-                e vazio (em_definicao+) — sinal análogo ao .inp.is-missing */}
+            {/* Escopo / Skills · aba Definição · borda vermelha quando
+                obrigatório e vazio (em_definicao+) */}
+            {activeFormTab === 'definicao' && (
             <div
               className={cn('tmodal-section hidden md:block', isMissing('escopo') && 'section-missing')}
             >
@@ -2457,28 +2540,134 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 ))}
               </div>
             </div>
+            )}
 
-            {/* Privacidade — só CEO. Task privada fica visível só pra
-                pessoa atribuída (regra do banco/RLS futuro). */}
-            {isCEO && (
-              <div className="tmodal-section hidden md:block">
-                <div className="tmodal-section-title">Privacidade</div>
-                <label
-                  className="inp flex items-center gap-2 cursor-pointer select-none"
-                  style={{ background: 'var(--bg-elev)' }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={editing.privada}
-                    onChange={(e) => set('privada', e.target.checked)}
-                  />
-                  <span className="text-sm">
-                    {editing.privada
-                      ? '🔒 task privada — visível só pra você'
-                      : '— pública (visível ao time)'}
-                  </span>
-                </label>
-              </div>
+            {/* ========== Aba Admin · metadados read-only + Privacidade (CEO) ========== */}
+            {activeFormTab === 'admin' && editing.id && (
+              <>
+                {/* Integração Salesforce */}
+                {(editing.externalId || editing.webhookSyncStatus || clienteWebhookEnabled) && (
+                  <div className="tmodal-section hidden md:block">
+                    <div className="tmodal-section-title">Integração Salesforce</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="lbl">External ID</label>
+                        <div className="text-xs font-mono text-ink-soft break-all">
+                          {editing.externalId || <span className="text-muted">—</span>}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="lbl">Status sync</label>
+                        {editing.webhookSyncStatus === 'error' && (
+                          <span
+                            className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono inline-flex"
+                            style={{ background: 'var(--p0-soft)', color: 'var(--p0)' }}
+                            title={editing.webhookSyncError || ''}
+                          >
+                            erro
+                          </span>
+                        )}
+                        {editing.webhookSyncStatus === 'synced' && (
+                          <span
+                            className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono inline-flex"
+                            style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}
+                          >
+                            ok
+                          </span>
+                        )}
+                        {!editing.webhookSyncStatus && (
+                          <span className="text-xs text-muted">—</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Origem da task */}
+                <div className="tmodal-section hidden md:block">
+                  <div className="tmodal-section-title">Origem</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {editing.criadoPorIa && (
+                      <span className="ia-chip" title="Criada por automação IA">
+                        <Icon name="bot" size={10} /> IA
+                      </span>
+                    )}
+                    {editing.criadoPorCliente && (
+                      <span
+                        className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono inline-flex items-center gap-1"
+                        style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}
+                      >
+                        <Icon name="user-plus" size={10} /> cliente
+                      </span>
+                    )}
+                    {!editing.criadoPorIa && !editing.criadoPorCliente && (
+                      <span className="text-xs text-muted">criada manualmente</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Auditoria (timestamps) */}
+                <div className="tmodal-section hidden md:block">
+                  <div className="tmodal-section-title">Auditoria</div>
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <label className="lbl">Criada em</label>
+                      <div className="font-mono text-ink-soft">
+                        {editing.criadoEm ? fmtDate(new Date(editing.criadoEm).toISOString().slice(0, 10)) : '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="lbl">Reaberta</label>
+                      <div className="font-mono text-ink-soft">
+                        {editing.reopenCount || 0}x
+                      </div>
+                    </div>
+                    {editing.triadaEm && (
+                      <div>
+                        <label className="lbl">Triada em</label>
+                        <div className="font-mono text-ink-soft">
+                          {fmtDate(editing.triadaEm.slice(0, 10))}
+                          {editing.triadaPor && (
+                            <span className="text-muted"> · {pessoasById.get(editing.triadaPor)?.nome ?? ''}</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {editing.arquivadoEm && (
+                      <div>
+                        <label className="lbl">Arquivada em</label>
+                        <div className="font-mono text-ink-soft">
+                          {fmtDate(new Date(editing.arquivadoEm).toISOString().slice(0, 10))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Privacidade — só CEO. Task privada fica visível só pra
+                    pessoa atribuída (regra do banco/RLS futuro). */}
+                {isCEO && (
+                  <div className="tmodal-section hidden md:block">
+                    <div className="tmodal-section-title">Privacidade</div>
+                    <label
+                      className="inp flex items-center gap-2 cursor-pointer select-none"
+                      style={{ background: 'var(--bg-elev)' }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={editing.privada}
+                        onChange={(e) => set('privada', e.target.checked)}
+                      />
+                      <span className="text-sm inline-flex items-center gap-1">
+                        <Icon name="lock" size={12} />
+                        {editing.privada
+                          ? 'task privada — visível só pra você'
+                          : 'pública (visível ao time)'}
+                      </span>
+                    </label>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
