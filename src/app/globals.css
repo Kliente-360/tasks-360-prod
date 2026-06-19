@@ -1106,17 +1106,19 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .tmodal-head .head-chip-muted { color: rgba(255,255,255,0.5); font-style: italic; }
 .tmodal-foot .btn { text-transform: none; }
 
-/* ── Subheader fixo (entre head e body) ────────────────────────────
+/* ── Subheader fixo · DESKTOP ONLY (entre head e body) ─────────────
    Status select + cliente/projeto + responsável + prioridade +
    prazo + visivel_cliente + indicador de prontidão.
    Bucket V · M.1 (handoff Modal de Task · opção A híbrido).        */
 .tmodal-subhdr {
-  display: flex; align-items: center; gap: var(--sp-3);
+  display: none;  /* default mobile · ativado em min-width:768px abaixo */
+  align-items: center; gap: var(--sp-3);
   padding: 10px var(--sp-5);
   background: var(--surface-1);
   border-bottom: 1px solid var(--line-strong);
   flex-shrink: 0; flex-wrap: wrap;
 }
+@media (min-width: 768px) { .tmodal-subhdr { display: flex; } }
 .tmodal-subhdr-pill {
   appearance: none; -webkit-appearance: none;
   background: #fff; color: var(--ink);
@@ -1242,15 +1244,16 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .tmodal-readiness.ok    { background: var(--ok-soft); color: var(--ok); }
 .tmodal-readiness.warn  { background: var(--warn-soft); color: var(--warn); }
 
-/* ── Tabs strip unificada (form à esquerda + Conversa/Anexos/etc à direita)
+/* ── Tabs strip unificada · DESKTOP ONLY (form à esquerda + Conversa/Anexos/etc à direita)
    alinhada com as 2 colunas do body (1.35fr / 1fr) com divisor discreto. */
 .tmodal-tabstrip {
-  display: grid;
+  display: none;  /* default mobile · ativado em min-width:768px abaixo */
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   border-bottom: 1px solid var(--line);
   background: var(--surface-1);
   flex-shrink: 0;
 }
+@media (min-width: 768px) { .tmodal-tabstrip { display: grid; } }
 .tmodal-tabstrip > div {
   display: flex; gap: var(--sp-4); padding: 0 var(--sp-6);
   align-items: stretch;
