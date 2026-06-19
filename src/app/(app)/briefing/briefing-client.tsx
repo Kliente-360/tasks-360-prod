@@ -7,23 +7,22 @@ import { PageHeader } from '@/components/page-header';
 import { Icon } from '@/components/icons';
 import { cn } from '@/lib/utils';
 import { atrasada, isPreTriagem } from '@/lib/task-utils';
+import { SUB_LABELS } from '@/lib/task-constants';
 import {
   computeWeeklyCapacityAnalysis,
   computeProjetosSaude,
   computeHeuristicAlerts,
+  computeSkillMismatches,
+  computeSenioridadeAlerts,
+  computeChurnRisk,
+  computeBottlenecks,
+  computeSLABreach,
   type HeuristicAlert,
 } from '@/lib/analytics';
 
 // ─────────────────────────────────────────────────────────
 //  Helpers visuais
 // ─────────────────────────────────────────────────────────
-
-function heatmapColor(nivel: string) {
-  if (nivel === 'sobrecarga') return 'bg-[var(--p0-soft)] text-[var(--p0)] font-semibold';
-  if (nivel === 'pressao') return 'bg-[var(--p1-soft)] text-[var(--warn)] font-semibold';
-  if (nivel === 'ok') return 'bg-[var(--brand-tint)] text-[var(--brand-dark)]';
-  return 'bg-[var(--surface-3)] text-[var(--muted)]';
-}
 
 function budgetColor(pct: number) {
   if (pct > 110) return 'bg-[var(--danger)]';
@@ -106,15 +105,8 @@ function AlertRow({ alert }: { alert: HeuristicAlert }) {
 //  Briefing principal
 // ─────────────────────────────────────────────────────────
 
-const WEEK_LABELS_SHORT = ['Agora', '+1s', '+2s', '+3s'];
-const WEEK_LABELS_LONG = ['Esta sem.', 'Próx. sem.', 'Em 2 sem.', 'Em 3 sem.'];
-
 export function BriefingClient() {
   const { tasks, clientes, projetos, pessoas, loading, refreshing } = useData();
-  const pessoasAtivasIds = useMemo(
-    () => new Set(pessoas.filter((p) => p.invited_at !== null).map((p) => p.id)),
-    [pessoas],
-  );
   const { openEdit } = useTaskModal();
 
   // Alertas: expand/collapse after 6
@@ -148,6 +140,29 @@ export function BriefingClient() {
   );
 
   const clientesById = useMemo(() => new Map(clientes.map((c) => [c.id, c])), [clientes]);
+  const pessoasById = useMemo(() => new Map(pessoas.map((p) => [p.id, p])), [pessoas]);
+  const projetosById = useMemo(() => new Map(projetos.map((p) => [p.id, p])), [projetos]);
+
+  // ── Heurísticas C (publicadas em jul/2026) ──
+  const skillMismatches = useMemo(
+    () => computeSkillMismatches(baseTasks, pessoasById),
+    [baseTasks, pessoasById],
+  );
+  const senioridadeAlerts = useMemo(
+    () => computeSenioridadeAlerts(baseTasks, pessoasById),
+    [baseTasks, pessoasById],
+  );
+  const churnRisk = useMemo(
+    () => computeChurnRisk(baseTasks, clientes),
+    [baseTasks, clientes],
+  );
+  const bottlenecks = useMemo(
+    () => computeBottlenecks(baseTasks)
+      .filter((b) => b.count > 0)
+      .sort((a, b) => b.mediana - a.mediana),
+    [baseTasks],
+  );
+  const slaBreach = useMemo(() => computeSLABreach(baseTasks), [baseTasks]);
 
   // Clientes em atenção
   const clientesAtencao = useMemo(() => {
@@ -396,72 +411,9 @@ export function BriefingClient() {
         )}
       </div>
 
-      {/* ── Bloco 4 · Capacidade semanal sustentação ── */}
-      {wca.sustentacoes.length > 0 && (
-        <div className="bg-elev border border-line rounded-xl overflow-hidden">
-          <SectionHeader
-            title="Capacidade semanal · sustentação"
-            collapsed={collapsed.has('sust')}
-            onToggle={() => toggle('sust')}
-            right={
-              <div className="flex items-center gap-2 text-[10px] text-muted">
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-sm bg-[var(--p0-soft)] inline-block" />
-                  <span className="hidden sm:inline">Estouro</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-sm bg-[var(--p1-soft)] inline-block" />
-                  <span className="hidden sm:inline">Pressão</span>
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-sm bg-[var(--surface-3)] inline-block" />
-                  <span className="hidden sm:inline">Ocioso</span>
-                </span>
-              </div>
-            }
-          />
-          {!collapsed.has('sust') && (
-            <div className="overflow-x-auto">
-              <div className="px-3 md:px-4 py-3" style={{ minWidth: 360 }}>
-                <div className="grid gap-1 mb-1.5" style={{ gridTemplateColumns: '150px repeat(4, 1fr) 60px' }}>
-                  <div />
-                  {WEEK_LABELS_SHORT.map((l, i) => (
-                    <div key={l} className="text-center text-[10px] text-muted font-medium uppercase tracking-wide">
-                      <span className="md:hidden">{l}</span>
-                      <span className="hidden md:inline">{WEEK_LABELS_LONG[i]}</span>
-                    </div>
-                  ))}
-                  <div className="text-center text-[10px] text-muted font-medium uppercase tracking-wide hidden md:block">Meta/sem</div>
-                </div>
-                <div className="space-y-1">
-                  {wca.sustentacoes.map((s) => {
-                    const cliNome = clientesById.get(s.clienteId)?.nome ?? '—';
-                    return (
-                      <div key={s.projetoId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '150px repeat(4, 1fr) 60px' }}>
-                        <div className="text-xs truncate pr-1">
-                          <a href={projetoHref(s.clienteId, s.projetoId)} className="hover:underline" title={`${cliNome} · ${s.nome}`}>
-                            <span className="text-muted">{cliNome}</span>
-                            <span className="text-muted mx-0.5">·</span>
-                            <span className="text-ink">{s.nome}</span>
-                          </a>
-                        </div>
-                        {s.weeks.map((wk, i) => (
-                          <div key={i} className={cn('text-center text-[11px] py-1.5 rounded font-mono', heatmapColor(wk.nivel))}
-                            title={`${wk.hours}h / ${s.capSemanal}h`}>
-                            {wk.pctCap != null ? `${wk.pctCap}%` : '—'}
-                          </div>
-                        ))}
-                        <div className="text-center text-[10px] text-muted font-mono hidden md:block">{s.capSemanal}h</div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="text-[10px] text-muted mt-2">Meta semanal = orçamento mensal ÷ 4</p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Bloco 4 (Capacidade sustentação) e Bloco 6 (Capacidade do time)
+          foram movidos pro Dashboard em jul/2026 — Briefing fica focado
+          em heurísticas e leitura editorial. */}
 
       {/* ── Bloco 5 · Orçamento projetos fechados ── */}
       {wca.projetosFechados.length > 0 && (
@@ -505,59 +457,6 @@ export function BriefingClient() {
         </div>
       )}
 
-      {/* ── Bloco 6 · Capacidade do time ── */}
-      <div className="bg-elev border border-line rounded-xl overflow-hidden">
-        <SectionHeader
-          title="Capacidade do time"
-          collapsed={collapsed.has('time')}
-          onToggle={() => toggle('time')}
-          right={
-            <div className="flex items-center gap-2 text-[10px] text-muted">
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-sm bg-[var(--p0-soft)] inline-block" />
-                <span className="hidden sm:inline">Sobrecarga</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-sm bg-[var(--p1-soft)] inline-block" />
-                <span className="hidden sm:inline">Pressão</span>
-              </span>
-            </div>
-          }
-        />
-        {!collapsed.has('time') && (
-          wca.pessoas.filter((p) => pessoasAtivasIds.has(p.pessoaId)).length === 0 ? (
-            <div className="px-4 py-5 text-sm text-muted">Nenhum dado de capacidade</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <div className="px-3 md:px-4 py-3" style={{ minWidth: 300 }}>
-                <div className="grid gap-1 mb-1.5" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
-                  <div />
-                  {WEEK_LABELS_SHORT.map((l, i) => (
-                    <div key={l} className="text-center text-[10px] text-muted font-medium uppercase tracking-wide">
-                      <span className="md:hidden">{l}</span>
-                      <span className="hidden md:inline">{WEEK_LABELS_LONG[i]}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="space-y-1">
-                  {wca.pessoas.filter((p) => pessoasAtivasIds.has(p.pessoaId)).map((p) => (
-                    <div key={p.pessoaId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
-                      <div className="text-xs text-ink truncate pr-1" title={p.nome}>{p.nome.split(' ')[0]}</div>
-                      {p.weeks.map((wk, i) => (
-                        <div key={i} className={cn('text-center text-[11px] py-1.5 rounded font-mono', heatmapColor(wk.nivel))}
-                          title={`${wk.hours}h`}>
-                          {wk.pctCap != null ? `${wk.pctCap}%` : '—'}
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )
-        )}
-      </div>
-
       {/* ── Bloco 7 · Redistribuição por heurística ── */}
       <div className="bg-elev border border-line rounded-xl overflow-hidden">
         <SectionHeader
@@ -598,6 +497,240 @@ export function BriefingClient() {
             </div>
           )
         )}
+      </div>
+
+      {/* ── Heurísticas analytics (C.3-C.8) · publicadas em jul/2026 ──
+           Renderização inicial simples · refinaremos UX/UI conforme uso real */}
+
+      {/* C.5 · Churn risk por cliente */}
+      <div className="bg-elev border border-line rounded-xl overflow-hidden">
+        <SectionHeader
+          title="Risco de churn · clientes externos"
+          collapsed={collapsed.has('churn')}
+          onToggle={() => toggle('churn')}
+          right={
+            <span className="text-xs text-muted">
+              {churnRisk.length === 0 ? 'Nenhum sinal ✓' : `${churnRisk.length} cliente(s)`}
+            </span>
+          }
+        />
+        {!collapsed.has('churn') && (
+          churnRisk.length === 0 ? (
+            <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Sem sinais de churn no momento.</div>
+          ) : (
+            <div className="divide-y divide-line">
+              {churnRisk.map((c) => {
+                const nome = clientesById.get(c.clienteId)?.nome ?? '—';
+                const levelColor = c.level === 'critico' ? 'text-[var(--danger)] bg-[var(--p0-soft)]'
+                  : c.level === 'atencao' ? 'text-[var(--warn)] bg-[var(--p1-soft)]'
+                  : 'text-muted bg-[var(--surface-3)]';
+                return (
+                  <div key={c.clienteId} className="px-3 md:px-4 py-3 flex items-center gap-3">
+                    <span className={cn('text-[11px] font-bold tabular-nums px-2 py-0.5 rounded', levelColor)}>
+                      {c.score}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <a href={`/backlog?cliente=${c.clienteId}`} className="text-sm font-medium text-ink hover:underline">{nome}</a>
+                      <div className="text-[11px] text-muted mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                        {c.sinais.tasksBloquadas14d > 0 && <span>{c.sinais.tasksBloquadas14d} bloqueada(s) &gt;14d</span>}
+                        {c.sinais.diasSemEntrega !== null && c.sinais.diasSemEntrega > 30 && <span>{c.sinais.diasSemEntrega}d sem entrega</span>}
+                        {c.sinais.slaBreachRate > 0.4 && <span>{Math.round(c.sinais.slaBreachRate * 100)}% SLA breach</span>}
+                        {c.sinais.tasksEmDefinicao21d > 0 && <span>{c.sinais.tasksEmDefinicao21d} em definição &gt;21d</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
+        )}
+      </div>
+
+      {/* C.3 · Skill mismatch */}
+      <div className="bg-elev border border-line rounded-xl overflow-hidden">
+        <SectionHeader
+          title="Skill mismatch · pessoa sem skill da task"
+          collapsed={collapsed.has('skill')}
+          onToggle={() => toggle('skill')}
+          right={
+            <span className="text-xs text-muted">
+              {skillMismatches.length === 0 ? 'Todas alinhadas ✓' : `${skillMismatches.length} task(s)`}
+            </span>
+          }
+        />
+        {!collapsed.has('skill') && (
+          skillMismatches.length === 0 ? (
+            <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Todas as tasks com escopo têm responsáveis compatíveis.</div>
+          ) : (
+            <div className="divide-y divide-line">
+              {skillMismatches.map((m) => {
+                const pessoa = pessoasById.get(m.pessoaId)?.nome ?? '—';
+                const cli = clientesById.get(m.clienteId)?.nome ?? '—';
+                return (
+                  <button key={m.taskId} type="button" onClick={() => openEdit(m.taskId)}
+                    className="w-full text-left px-3 md:px-4 py-2.5 hover:bg-[var(--surface-3)] transition-colors">
+                    <div className="flex items-start gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-ink truncate">{m.taskTitulo}</div>
+                        <div className="text-[11px] text-muted mt-0.5">{cli} · {pessoa}</div>
+                      </div>
+                      <div className="flex flex-wrap gap-1 shrink-0">
+                        {m.missingSkills.slice(0, 4).map((s) => (
+                          <span key={s} className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--p1-soft)] text-[var(--warn)]">
+                            {s}
+                          </span>
+                        ))}
+                        {m.missingSkills.length > 4 && (
+                          <span className="text-[10px] text-muted">+{m.missingSkills.length - 4}</span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )
+        )}
+      </div>
+
+      {/* C.4 · Senioridade malalocada */}
+      <div className="bg-elev border border-line rounded-xl overflow-hidden">
+        <SectionHeader
+          title="Senioridade malalocada"
+          collapsed={collapsed.has('senior')}
+          onToggle={() => toggle('senior')}
+          right={
+            <span className="text-xs text-muted">
+              {senioridadeAlerts.length === 0 ? 'Bem distribuído ✓' : `${senioridadeAlerts.length} caso(s)`}
+            </span>
+          }
+        />
+        {!collapsed.has('senior') && (
+          senioridadeAlerts.length === 0 ? (
+            <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Senioridade vs complexidade balanceada.</div>
+          ) : (
+            <div className="divide-y divide-line">
+              {senioridadeAlerts.map((a) => {
+                const pessoa = pessoasById.get(a.pessoaId)?.nome ?? '—';
+                const cli = clientesById.get(a.clienteId)?.nome ?? '—';
+                const isRisco = a.type === 'risco_qualidade';
+                return (
+                  <button key={a.taskId} type="button" onClick={() => openEdit(a.taskId)}
+                    className="w-full text-left px-3 md:px-4 py-2.5 hover:bg-[var(--surface-3)] transition-colors">
+                    <div className="flex items-start gap-3">
+                      <span className={cn('text-[10px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0',
+                        isRisco ? 'bg-[var(--p0-soft)] text-[var(--danger)]' : 'bg-[var(--surface-3)] text-muted')}>
+                        {isRisco ? 'Risco' : 'Desperdício'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm text-ink truncate">{a.taskTitulo}</div>
+                        <div className="text-[11px] text-muted mt-0.5">
+                          {cli} · {pessoa} ({a.senioridade}) · complexidade {a.complexidade}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )
+        )}
+      </div>
+
+      {/* C.7 · Bottleneck por sub-etapa */}
+      <div className="bg-elev border border-line rounded-xl overflow-hidden">
+        <SectionHeader
+          title="Bottlenecks · tempo médio por sub-etapa"
+          collapsed={collapsed.has('bottle')}
+          onToggle={() => toggle('bottle')}
+          right={<span className="text-xs text-muted">dias na sub-etapa atual</span>}
+        />
+        {!collapsed.has('bottle') && (
+          bottlenecks.length === 0 ? (
+            <div className="px-4 py-5 text-sm text-muted">Nenhuma task aberta com timestamp de subetapa.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="text-[10px] text-muted uppercase tracking-wide">
+                  <tr className="border-b border-line">
+                    <th className="text-left px-3 md:px-4 py-2 font-medium">Sub-etapa</th>
+                    <th className="text-right px-3 py-2 font-medium">N</th>
+                    <th className="text-right px-3 py-2 font-medium">Mediana</th>
+                    <th className="text-right px-3 py-2 font-medium">P75</th>
+                    <th className="text-right px-3 md:px-4 py-2 font-medium">P90</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bottlenecks.map((b) => (
+                    <tr key={b.subetapa} className="border-b border-line last:border-0">
+                      <td className="px-3 md:px-4 py-2 text-ink">{SUB_LABELS[b.subetapa] ?? b.subetapa}</td>
+                      <td className="text-right px-3 py-2 font-mono text-muted">{b.count}</td>
+                      <td className="text-right px-3 py-2 font-mono">{b.mediana}d</td>
+                      <td className="text-right px-3 py-2 font-mono text-muted">{b.p75}d</td>
+                      <td className="text-right px-3 md:px-4 py-2 font-mono text-muted">{b.p90}d</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* C.8 · SLA breach por cliente */}
+      <div className="bg-elev border border-line rounded-xl overflow-hidden">
+        <SectionHeader
+          title="SLA breach · % de tasks concluídas fora do prazo"
+          collapsed={collapsed.has('sla')}
+          onToggle={() => toggle('sla')}
+          right={
+            slaBreach.overall.total > 0 ? (
+              <span className="text-xs text-muted">
+                Geral: {Math.round(slaBreach.overall.rate * 100)}% ({slaBreach.overall.breached}/{slaBreach.overall.total})
+              </span>
+            ) : <span className="text-xs text-muted">Sem dados</span>
+          }
+        />
+        {!collapsed.has('sla') && slaBreach.overall.total > 0 && (() => {
+          const rows = [...slaBreach.byCliente.entries()]
+            .map(([clienteId, stats]) => ({ clienteId, ...stats }))
+            .filter((r) => r.total >= 3)
+            .sort((a, b) => b.rate - a.rate)
+            .slice(0, 10);
+          return rows.length === 0 ? (
+            <div className="px-4 py-5 text-sm text-muted">Sem clientes com ≥ 3 entregas concluídas.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="text-[10px] text-muted uppercase tracking-wide">
+                  <tr className="border-b border-line">
+                    <th className="text-left px-3 md:px-4 py-2 font-medium">Cliente</th>
+                    <th className="text-right px-3 py-2 font-medium">Concluídas</th>
+                    <th className="text-right px-3 py-2 font-medium">Fora do prazo</th>
+                    <th className="text-right px-3 md:px-4 py-2 font-medium">% breach</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => {
+                    const nome = clientesById.get(r.clienteId)?.nome ?? '—';
+                    const pct = Math.round(r.rate * 100);
+                    const color = pct >= 50 ? 'text-[var(--danger)]' : pct >= 20 ? 'text-[var(--warn)]' : 'text-muted';
+                    return (
+                      <tr key={r.clienteId} className="border-b border-line last:border-0">
+                        <td className="px-3 md:px-4 py-2 text-ink">
+                          <a href={`/backlog?cliente=${r.clienteId}`} className="hover:underline">{nome}</a>
+                        </td>
+                        <td className="text-right px-3 py-2 font-mono text-muted">{r.total}</td>
+                        <td className="text-right px-3 py-2 font-mono text-muted">{r.breached}</td>
+                        <td className={cn('text-right px-3 md:px-4 py-2 font-mono font-semibold', color)}>{pct}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Bloco 8 · Disciplina operacional ── */}
