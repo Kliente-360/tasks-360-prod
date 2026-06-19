@@ -2339,7 +2339,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   <div className="tmodal-banner-body">
                     <div className="tmodal-banner-title">Salvamento falhou</div>
                     <div className="tmodal-banner-sub">
-                      Há campo(s) obrigatório(s) pendente(s) — borda vermelha. ESC e backdrop bloqueados; corrija e Salvar, ou Fechar (×) descarta sem persistir.
+                      Há campo(s) obrigatório(s) pendente(s), revise os indicados em vermelho.
                     </div>
                   </div>
                 </div>

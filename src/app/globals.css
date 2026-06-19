@@ -1317,7 +1317,14 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .cmsg-who { font-size: var(--fs-sm); font-weight: 600; color: var(--ink); }
 .cmsg-badge { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; background: var(--cyan-soft); color: #0066AD; padding: 1px 5px; border-radius: 3px; }
 .cmsg-when { font-family: var(--font-mono); font-feature-settings: "tnum"; font-size: 10px; color: var(--muted); margin-left: auto; }
-.cmsg-body { font-size: var(--fs-sm); color: var(--ink-soft); line-height: 1.5; }
+.cmsg-body {
+  font-size: var(--fs-sm); color: var(--ink-soft); line-height: 1.5;
+  /* URLs e strings longas sem espaço quebram dentro da bolha em vez de
+     vazar pra direita do modal. break-word respeita palavras quando
+     possível; overflow-wrap:anywhere garante fallback em URLs gigantes. */
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
 .cmsg-body p, .cmsg-body div { margin: 0 0 8px 0; }
 .cmsg-body p:last-child, .cmsg-body div:last-child { margin-bottom: 0; }
 .cmsg-body ul, .cmsg-body ol { margin: 4px 0 8px 0; padding-left: 22px; }
