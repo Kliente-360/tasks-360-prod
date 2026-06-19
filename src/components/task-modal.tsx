@@ -575,16 +575,35 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   }, [editing.id]);
 
   // Força aba Bloqueio quando entra em bloqueado · força Reabertura
-  // quando wasConcluido sem motivo. Sobrescreve escolha manual nesses
-  // estados críticos. Sem deps cíclicas — usa primitive comparators.
+  // quando wasConcluido sem motivo. Quando sai de uma aba condicional
+  // (Bloqueio/Reabertura) que não está mais visível, faz fallback pra
+  // aba do estágio atual. Evita espaço em branco visual.
   useEffect(() => {
     if (editing.subetapa === 'bloqueado' && activeFormTab !== 'bloqueio') {
       setActiveFormTab('bloqueio');
-    } else if (wasConcluido && missingFields.has('motivoReabertura') && activeFormTab !== 'reabertura') {
+      return;
+    }
+    if (wasConcluido && missingFields.has('motivoReabertura') && activeFormTab !== 'reabertura') {
       setActiveFormTab('reabertura');
+      return;
+    }
+    // Aba ativa virou inválida (ex: subetapa saiu de bloqueado).
+    const validBloqueio = editing.subetapa === 'bloqueado';
+    const validReabertura = wasConcluido;
+    if (activeFormTab === 'bloqueio' && !validBloqueio) {
+      setActiveFormTab(pickInitialFormTab());
+    } else if (activeFormTab === 'reabertura' && !validReabertura) {
+      setActiveFormTab(pickInitialFormTab());
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing.subetapa, wasConcluido]);
+
+  // Reset scroll do tmodal-left ao trocar de aba · evita posição
+  // herdada da aba anterior.
+  const leftRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (leftRef.current) leftRef.current.scrollTop = 0;
+  }, [activeFormTab]);
 
   const [descricaoLoading, setDescricaoLoading] = useState<boolean>(
     !!source && source.descricao === undefined,
@@ -1703,9 +1722,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       onPaste={onModalPaste}
     >
       <div className="tmodal" role="dialog" aria-label="Editar tarefa" data-tab={modalTab}>
-        {/* Header · só título + chips icônicos read-only + autosave + ×.
-            Bucket V · M.1: chips P2/prazo/cliente/copy-link desceram pro
-            subheader. "Copiar link" foi movido pro footer ··· menu (M.4). */}
+        {/* Header · título à esquerda · chips + autosave + × agrupados à
+            direita pra maximizar espaço do título.
+            Bucket V · M.1+iter: chips IA/cliente/reaberta/arquivada
+            movidos pra direita (antes eram inline pós-título). */}
         <div className="tmodal-head">
           <input
             className="tmodal-title"
@@ -1715,39 +1735,39 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             aria-label="Título da tarefa"
             autoFocus={!editing.id}
           />
-          {editing.criadoPorIa && (
-            <span className="ia-chip" title="Criada por automação IA">
-              <Icon name="bot" size={10} /> IA
-            </span>
-          )}
-          {editing.criadoPorCliente && (
-            <span
-              className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0 inline-flex items-center gap-1"
-              style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.9)' }}
-              title="Criada pelo cliente via Portal"
-            >
-              <Icon name="user-plus" size={10} /> cliente
-            </span>
-          )}
-          {editing.id && (editing.reopenCount || 0) > 0 && (
-            <span
-              className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0 inline-flex items-center gap-1"
-              style={{ background: 'var(--p1-soft)', color: 'var(--p1)' }}
-              title={`Reaberta ${editing.reopenCount}x`}
-            >
-              <Icon name="refresh" size={10} /> {editing.reopenCount}x
-            </span>
-          )}
-          {editing.id && editing.arquivadoEm && (
-            <span
-              className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0 inline-flex items-center gap-1"
-              style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
-              title="Tarefa arquivada"
-            >
-              <Icon name="archive" size={10} /> arquivada
-            </span>
-          )}
           <div className="tmodal-head-right">
+            {editing.criadoPorIa && (
+              <span className="ia-chip" title="Criada por automação IA">
+                <Icon name="bot" size={10} /> IA
+              </span>
+            )}
+            {editing.criadoPorCliente && (
+              <span
+                className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0 inline-flex items-center gap-1"
+                style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.9)' }}
+                title="Criada pelo cliente via Portal"
+              >
+                <Icon name="user-plus" size={10} /> cliente
+              </span>
+            )}
+            {editing.id && (editing.reopenCount || 0) > 0 && (
+              <span
+                className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0 inline-flex items-center gap-1"
+                style={{ background: 'var(--p1-soft)', color: 'var(--p1)' }}
+                title={`Reaberta ${editing.reopenCount}x`}
+              >
+                <Icon name="refresh" size={10} /> {editing.reopenCount}x
+              </span>
+            )}
+            {editing.id && editing.arquivadoEm && (
+              <span
+                className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0 inline-flex items-center gap-1"
+                style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
+                title="Tarefa arquivada"
+              >
+                <Icon name="archive" size={10} /> arquivada
+              </span>
+            )}
             {editing.id && (
               <span
                 className="autosave"
@@ -1924,7 +1944,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         {/* Body */}
         <div className="tmodal-body">
           {/* LEFT */}
-          <div className="tmodal-left">
+          <div className="tmodal-left" ref={leftRef}>
             {/* Mobile: grid 2 colunas */}
             <div className="md:hidden space-y-3 py-3">
               <div className="grid grid-cols-2 gap-2">
@@ -2139,7 +2159,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   </div>
                 </div>
               )}
-              {editing.aprovadoEm && editing.subetapa !== 'concluido' && (
+              {!!editing.aprovadoEm && editing.subetapa !== 'concluido' && (
                 <div className="tmodal-banner tmodal-banner-ok">
                   <Icon name="check-circle" size={14} className="tmodal-banner-icon" />
                   <div className="tmodal-banner-body">
@@ -2228,7 +2248,14 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   </select>
                 </div>
                 <div className="hidden md:block">
-                  <label className="lbl">Prioridade</label>
+                  <label className="lbl">
+                    Prioridade
+                    {editing.prioridadeSolicitadaCliente && (
+                      <span className="text-[10px] font-normal text-muted normal-case tracking-normal ml-1">
+                        (cliente: {editing.prioridadeSolicitadaCliente === 'alta' ? 'Alta' : editing.prioridadeSolicitadaCliente === 'media' ? 'Média' : 'Baixa'})
+                      </span>
+                    )}
+                  </label>
                   <select
                     className={cn('inp', isMissing('prioridade'))}
                     value={editing.prioridade}
@@ -2239,19 +2266,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     <option value="P1">P1 · Alta</option>
                     <option value="P2">P2 · Normal</option>
                     <option value="P3">P3 · Baixa</option>
-                  </select>
-                </div>
-                <div className="hidden md:block">
-                  <label className="lbl">Solicitada pelo cliente</label>
-                  <select
-                    className="inp"
-                    value={editing.prioridadeSolicitadaCliente ?? ''}
-                    onChange={(e) => set('prioridadeSolicitadaCliente', (e.target.value || null) as Task['prioridadeSolicitadaCliente'])}
-                  >
-                    <option value="">— não informado</option>
-                    <option value="alta">Alta</option>
-                    <option value="media">Média</option>
-                    <option value="baixa">Baixa</option>
                   </select>
                 </div>
                 {/* Prazo · movido da seção Esforço pra aba Triagem (M.2) */}
@@ -2328,6 +2342,44 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               </div>
             </div>
             )}
+            {/* Escopo · aba Definição · antes do Critério de aceite */}
+            {activeFormTab === 'definicao' && (
+            <div
+              className={cn('tmodal-section hidden md:block', isMissing('escopo') && 'section-missing')}
+            >
+              <div className="tmodal-section-title">Escopo {isMissing('escopo') && <span className="text-danger">*</span>}</div>
+              <div className="flex flex-col gap-2">
+                {SKILL_GROUPS.map((g) => (
+                  <div key={g.group}>
+                    <div className="text-[10px] uppercase tracking-wide text-muted mb-1">{g.group}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {g.values.map((skill) => {
+                        const active = (editing.escopo ?? []).includes(skill);
+                        return (
+                          <button
+                            key={skill}
+                            type="button"
+                            onClick={() => {
+                              const cur = editing.escopo ?? [];
+                              set('escopo', active ? cur.filter((s) => s !== skill) : [...cur, skill]);
+                            }}
+                            className={`text-xs px-2 py-1 rounded border transition-colors ${
+                              active
+                                ? 'bg-[var(--brand)] border-[var(--brand)] text-white font-medium'
+                                : 'bg-[var(--surface-3)] border-[var(--line)] text-muted hover:border-[var(--brand)] hover:text-[var(--brand)]'
+                            }`}
+                          >
+                            {skill}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            )}
+
             {activeFormTab === 'definicao' && (
             <div className="tmodal-section hidden md:block">
               <div className="tmodal-section-title">Critério de aceite {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</div>
@@ -2358,15 +2410,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 onChange={(e) => set('tempoRealHoras', e.target.value === '' ? null : Number(e.target.value))}
                 placeholder="—"
               />
-              <div className="text-[11px] text-muted mt-1">
-                Pode preencher manualmente ou deixar que o sistema use a soma do timesheet ao avançar.
-              </div>
             </div>
             )}
 
             {/* Solução implementada + Valor entregue · só aparecem de
                 em_homologacao em diante (gate em validateSubetapaAdvance). */}
-            {activeFormTab === 'execucao' && SHOWS_SOLUCAO.has(editing.subetapa) && (
+            {activeFormTab === 'execucao' && (
               <div className="tmodal-section hidden md:block">
                 <div className="tmodal-section-title">Entrega</div>
                 <label className="lbl mt-0">Solução implementada {editing.subetapa === 'concluido' && <span className="text-danger">*</span>}</label>
@@ -2411,12 +2460,13 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               </div>
             )}
 
-            {/* 3.B · Dependências · tasks pré-req. Aba Definição (M.2).
+            {/* 3.B · Dependência entre tasks · aba Definição.
                 Diferente de "Bloqueado por" (enum Nós/Cliente/Terceiro
-                que vive na aba Bloqueio · só quando subetapa=bloqueado). */}
+                que vive na aba Bloqueio · só quando subetapa=bloqueado).
+                Filtra pelo MESMO cliente E projeto. */}
             {activeFormTab === 'definicao' && (
             <div className="tmodal-section hidden md:block">
-              <div className="tmodal-section-title">Bloqueada por (pré-requisitos)</div>
+              <div className="tmodal-section-title">Dependente de outra task</div>
               {editing.bloqueadaPorTasks.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {editing.bloqueadaPorTasks.map((depId) => {
@@ -2449,6 +2499,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               <select
                 className="inp"
                 value=""
+                disabled={!editing.clienteId || !editing.projetoId}
                 onChange={(e) => {
                   const v = e.target.value;
                   if (!v) return;
@@ -2456,13 +2507,18 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   set('bloqueadaPorTasks', [...editing.bloqueadaPorTasks, v]);
                 }}
               >
-                <option value="">+ adicionar pré-requisito…</option>
-                {tasks
+                <option value="">
+                  {!editing.clienteId || !editing.projetoId
+                    ? '— escolha cliente + projeto antes'
+                    : '+ adicionar task pré-requisito…'}
+                </option>
+                {editing.clienteId && editing.projetoId && tasks
                   .filter((t) =>
                     t.id !== editing.id &&
                     !t.arquivadoEm &&
                     t.status !== 'concluido' &&
-                    (!editing.clienteId || t.clienteId === editing.clienteId) &&
+                    t.clienteId === editing.clienteId &&
+                    t.projetoId === editing.projetoId &&
                     !editing.bloqueadaPorTasks.includes(t.id),
                   )
                   .slice(0, 200)
@@ -2470,9 +2526,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     <option key={t.id} value={t.id}>{t.titulo}</option>
                   ))}
               </select>
-              <div className="text-[11px] text-muted mt-1">
-                Conclusão fica bloqueada enquanto pré-requisitos estiverem abertos.
-              </div>
             </div>
             )}
 
@@ -2530,51 +2583,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     />
                   </>
                 )}
-                <div className="text-[11px] text-muted mt-2">
-                  Esta aba aparece apenas enquanto a task está em <code>bloqueado</code>.
-                  Para gerenciar pré-requisitos (outras tasks que devem concluir antes),
-                  vá em <strong>Definição → Bloqueada por</strong>.
-                </div>
               </div>
-            )}
-
-            {/* Escopo / Skills · aba Definição · borda vermelha quando
-                obrigatório e vazio (em_definicao+) */}
-            {activeFormTab === 'definicao' && (
-            <div
-              className={cn('tmodal-section hidden md:block', isMissing('escopo') && 'section-missing')}
-            >
-              <div className="tmodal-section-title">Escopo {isMissing('escopo') && <span className="text-danger">*</span>}</div>
-              <div className="flex flex-col gap-2">
-                {SKILL_GROUPS.map((g) => (
-                  <div key={g.group}>
-                    <div className="text-[10px] uppercase tracking-wide text-muted mb-1">{g.group}</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {g.values.map((skill) => {
-                        const active = (editing.escopo ?? []).includes(skill);
-                        return (
-                          <button
-                            key={skill}
-                            type="button"
-                            onClick={() => {
-                              const cur = editing.escopo ?? [];
-                              set('escopo', active ? cur.filter((s) => s !== skill) : [...cur, skill]);
-                            }}
-                            className={`text-xs px-2 py-1 rounded border transition-colors ${
-                              active
-                                ? 'bg-[var(--brand)] border-[var(--brand)] text-white font-medium'
-                                : 'bg-[var(--surface-3)] border-[var(--line)] text-muted hover:border-[var(--brand)] hover:text-[var(--brand)]'
-                            }`}
-                          >
-                            {skill}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
             )}
 
             {/* ========== Aba Admin · metadados read-only + Privacidade (CEO) ========== */}
@@ -2896,15 +2905,16 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 </div>
                 {editing.id && (
                   <div className="tmodal-composer relative">
-                    {/* Bucket V · M.5 · composer pill: textarea + botão
-                        circular verde de enviar. Visível ao cliente vira
-                        linha fina abaixo. */}
+                    {/* Bucket V · M.5 iter · composer linha única.
+                        Default = não-visível pro cliente. Toggle interno/externo
+                        no chip dentro do comentário publicado (CommentItem). */}
                     <div className="tmodal-composer-pill">
                       <textarea
                         ref={newCommentRef}
                         value={newComment}
                         onChange={mentionPicker.onChange}
-                        placeholder="Escrever comentário… (use @ pra mencionar)"
+                        rows={1}
+                        placeholder="Escrever comentário… (use @ pra mencionar · ⌘↵ envia)"
                         onKeyDown={(e) => {
                           if (mentionPicker.onKeyDown(e)) return;
                           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -2925,20 +2935,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                       </button>
                     </div>
                     <MentionDropdown picker={mentionPicker} />
-                    <label
-                      className={`tmodal-composer-toggle ${newCommentPublico ? 'on' : ''}`}
-                      title="Marque pra publicar este comentário no Portal do cliente."
-                    >
-                      <input
-                        type="checkbox"
-                        checked={newCommentPublico}
-                        onChange={(e) => setNewCommentPublico(e.target.checked)}
-                      />
-                      <span>Visível ao cliente no Portal</span>
-                      <span className="tmodal-composer-hint">
-                        <kbd>⌘</kbd><kbd>↵</kbd> envia
-                      </span>
-                    </label>
                   </div>
                 )}
               </>
@@ -2962,15 +2958,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           onExcluir={deleteTask}
           onClose={() => close({ force: true })}
           onSave={saveManual}
-          onCopyLink={() => {
-            const sp = new URLSearchParams(window.location.search);
-            sp.set('task', editing.id);
-            const url = window.location.origin + window.location.pathname + '?' + sp.toString();
-            navigator.clipboard.writeText(url).then(
-              () => toast.success('Link copiado!', 2000),
-              () => toast.error('Não foi possível copiar.'),
-            );
-          }}
         />
       </div>
 
@@ -3002,7 +2989,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
  * dupla inline (não usa window.confirm).
  */
 function FooterFoot({
-  editing, isAdmin, onArquivar, onDesarquivar, onExcluir, onClose, onSave, onCopyLink,
+  editing, isAdmin, onArquivar, onDesarquivar, onExcluir, onClose, onSave,
 }: {
   editing: Task;
   isAdmin: boolean;
@@ -3011,7 +2998,6 @@ function FooterFoot({
   onExcluir: () => void;
   onClose: () => void;
   onSave: () => void;
-  onCopyLink: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
@@ -3032,21 +3018,14 @@ function FooterFoot({
             <Icon name="more" size={14} />
           </button>
           {menuOpen && !confirmDel && (
-            <div className="absolute left-0 bottom-full mb-2 z-50 w-[220px] bg-bg-elev border border-line rounded-md shadow-xl overflow-hidden text-sm">
-              <button
-                type="button"
-                className="w-full text-left px-3 py-2 hover:bg-[color:var(--surface-3)] flex items-center gap-2"
-                onClick={() => { setMenuOpen(false); onCopyLink(); }}
-              >
-                <Icon name="paperclip" size={13} /> copiar link
-              </button>
+            <div className="absolute left-0 bottom-full mb-2 z-50 w-[200px] bg-bg-elev border border-line rounded-md shadow-xl overflow-hidden text-sm">
               {!editing.arquivadoEm && (
                 <button
                   type="button"
                   className="w-full text-left px-3 py-2 hover:bg-[color:var(--surface-3)] flex items-center gap-2"
                   onClick={() => { setMenuOpen(false); onArquivar(); }}
                 >
-                  <Icon name="archive" size={13} /> arquivar
+                  <Icon name="archive" size={13} /> Arquivar
                 </button>
               )}
               {editing.arquivadoEm && (
@@ -3055,7 +3034,7 @@ function FooterFoot({
                   className="w-full text-left px-3 py-2 hover:bg-[color:var(--surface-3)] flex items-center gap-2"
                   onClick={() => { setMenuOpen(false); onDesarquivar(); }}
                 >
-                  <Icon name="refresh" size={13} /> desarquivar
+                  <Icon name="refresh" size={13} /> Desarquivar
                 </button>
               )}
               {isAdmin && (
@@ -3065,7 +3044,7 @@ function FooterFoot({
                   style={{ color: 'var(--p0)' }}
                   onClick={() => setConfirmDel(true)}
                 >
-                  <Icon name="trash" size={13} /> excluir…
+                  <Icon name="trash" size={13} /> Excluir
                 </button>
               )}
             </div>
@@ -3084,7 +3063,7 @@ function FooterFoot({
                   className="btn text-xs"
                   onClick={() => { setConfirmDel(false); }}
                 >
-                  cancelar
+                  Cancelar
                 </button>
                 <button
                   type="button"
@@ -3092,7 +3071,7 @@ function FooterFoot({
                   style={{ background: 'var(--p0)', color: '#fff', borderColor: 'var(--p0)' }}
                   onClick={() => { setMenuOpen(false); setConfirmDel(false); onExcluir(); }}
                 >
-                  sim, excluir
+                  Sim, excluir
                 </button>
               </div>
             </div>
@@ -3104,9 +3083,9 @@ function FooterFoot({
 
       <div className="spacer" />
 
-      <button className="btn" onClick={onClose}>fechar</button>
+      <button className="btn" onClick={onClose}>Fechar</button>
       <button className="btn btn-primary" onClick={onSave}>
-        {editing.id ? 'salvar' : 'criar'}
+        {editing.id ? 'Salvar' : 'Criar'}
       </button>
     </div>
   );

@@ -1110,30 +1110,32 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
   flex-shrink: 0; flex-wrap: wrap;
 }
 .tmodal-subhdr-pill {
-  display: inline-flex; align-items: center; gap: 6px;
+  appearance: none; -webkit-appearance: none;
   background: #fff; color: var(--ink);
   border: 1px solid var(--line-strong); border-radius: var(--r-pill);
   font-size: 12.5px; font-weight: 600;
-  padding: 4px 10px 4px 10px; cursor: pointer;
+  padding: 6px 28px 6px 28px; cursor: pointer;
   transition: border-color 150ms cubic-bezier(.2,.7,.2,1), box-shadow 150ms cubic-bezier(.2,.7,.2,1);
-  /* dot vira pseudo-elemento à esquerda; cor muda por data-macro */
-}
-.tmodal-subhdr-pill::before {
-  content: ""; width: 8px; height: 8px; border-radius: 50%;
-  background: var(--muted); margin-right: 2px; flex-shrink: 0;
+  /* dot à esquerda · chevron à direita · ambos via background-image */
+  background-image:
+    radial-gradient(circle at 14px center, var(--macro-dot, var(--muted)) 3.5px, transparent 4.5px),
+    linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+    linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position: 0 0, calc(100% - 14px) 50%, calc(100% - 9px) 50%;
+  background-size: 100% 100%, 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  font-family: inherit; line-height: 1.3;
 }
 .tmodal-subhdr-pill:hover { border-color: currentColor; }
+.tmodal-subhdr-pill::-ms-expand { display: none; }
 .tmodal-subhdr-pill::-webkit-calendar-picker-indicator { display: none; }
 /* Macro · alinhado com headers do Kanban (.kcol-op[data-m]):
-   andamento → --brand · bloqueado → --p0 · concluido → --brand-soft · backlog → muted */
-.tmodal-subhdr-pill[data-macro="backlog"]    { border-color: var(--line-strong); color: var(--ink-soft); }
-.tmodal-subhdr-pill[data-macro="backlog"]::before    { background: var(--muted); }
-.tmodal-subhdr-pill[data-macro="andamento"]  { border-color: var(--brand); color: var(--brand-dark, var(--brand)); box-shadow: inset 0 0 0 1px var(--brand-soft); }
-.tmodal-subhdr-pill[data-macro="andamento"]::before  { background: var(--brand); }
-.tmodal-subhdr-pill[data-macro="bloqueado"]  { border-color: var(--p0); color: var(--p0); box-shadow: inset 0 0 0 1px var(--p0-soft); }
-.tmodal-subhdr-pill[data-macro="bloqueado"]::before  { background: var(--p0); }
-.tmodal-subhdr-pill[data-macro="concluido"]  { border-color: var(--brand-soft); color: var(--ink-soft); }
-.tmodal-subhdr-pill[data-macro="concluido"]::before  { background: var(--brand-soft); }
+   andamento → --brand · bloqueado → --p0 · concluido → --brand-soft · backlog → muted.
+   --macro-dot é usado pelo background-image radial-gradient da pill. */
+.tmodal-subhdr-pill[data-macro="backlog"]    { --macro-dot: var(--muted); border-color: var(--line-strong); color: var(--ink-soft); }
+.tmodal-subhdr-pill[data-macro="andamento"]  { --macro-dot: var(--brand); border-color: var(--brand); color: var(--brand-dark, var(--brand)); box-shadow: inset 0 0 0 1px var(--brand-soft); }
+.tmodal-subhdr-pill[data-macro="bloqueado"]  { --macro-dot: var(--p0); border-color: var(--p0); color: var(--p0); box-shadow: inset 0 0 0 1px var(--p0-soft); }
+.tmodal-subhdr-pill[data-macro="concluido"]  { --macro-dot: var(--brand-soft); border-color: var(--brand-soft); color: var(--ink-soft); }
 .tmodal-subhdr-chip {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 12px; color: var(--ink-soft);
@@ -1262,35 +1264,27 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .cmsg-body h1 { font-size: 1.15em; } .cmsg-body h2 { font-size: 1.08em; } .cmsg-body h3 { font-size: 1.02em; }
 .tmodal-composer { border-top: 1px solid var(--line); background: var(--surface-1); padding: var(--sp-3) var(--sp-5); }
 /* Bucket V · M.5 · composer em pill (input + send circular) */
+/* Pill linha única · textarea centralizada · send vertical-center à direita */
 .tmodal-composer-pill {
-  display: flex; align-items: flex-end; gap: 8px;
+  display: flex; align-items: center; gap: 6px;
   background: #fff; border: 1px solid var(--line-strong); border-radius: var(--r-pill);
-  padding: 6px 6px 6px 14px; transition: border-color 150ms cubic-bezier(.2,.7,.2,1), box-shadow 150ms cubic-bezier(.2,.7,.2,1);
+  padding: 4px 4px 4px 14px; min-height: 40px;
+  transition: border-color 150ms cubic-bezier(.2,.7,.2,1), box-shadow 150ms cubic-bezier(.2,.7,.2,1);
 }
 .tmodal-composer-pill:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px var(--brand-soft); }
 .tmodal-composer-pill textarea {
-  flex: 1 1 auto; min-height: 28px; max-height: 200px; resize: none;
-  border: 0; padding: 6px 0; font-size: var(--fs-sm); font-family: inherit;
-  color: var(--ink); background: transparent; outline: none;
+  flex: 1 1 auto; min-height: 22px; max-height: 120px; resize: none; overflow: auto;
+  border: 0; padding: 4px 0; font-size: var(--fs-sm); font-family: inherit;
+  color: var(--ink); background: transparent; outline: none; line-height: 1.4;
 }
 .tmodal-composer-send {
   flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
   background: var(--green); color: #fff; border: 0; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
-  transition: background 150ms cubic-bezier(.2,.7,.2,1), transform 150ms cubic-bezier(.2,.7,.2,1);
+  transition: background 150ms cubic-bezier(.2,.7,.2,1);
 }
-.tmodal-composer-send:hover:not(:disabled) { background: var(--green-hover); transform: translateY(-1px); }
+.tmodal-composer-send:hover:not(:disabled) { background: var(--green-hover); }
 .tmodal-composer-send:disabled { background: var(--line-strong); cursor: not-allowed; }
-
-.tmodal-composer-toggle {
-  display: flex; align-items: center; gap: 6px;
-  margin-top: 8px; padding: 0 4px;
-  font-size: 11px; color: var(--muted); cursor: pointer; user-select: none;
-}
-.tmodal-composer-toggle input { accent-color: var(--green); }
-.tmodal-composer-toggle.on { color: var(--brand-dark); }
-.tmodal-composer-hint { margin-left: auto; font-size: 10.5px; color: var(--muted); font-family: var(--font-sans); }
-.tmodal-composer-hint kbd { display: inline-block; padding: 1px 5px; margin: 0 1px; font-family: var(--font-mono); font-size: 10px; background: var(--surface-3); color: var(--ink-soft); border: 1px solid var(--line); border-radius: 3px; line-height: 1.4; }
 .tmodal-foot { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--line); background: var(--surface-1); }
 .tmodal-foot .hint { font-size: var(--fs-xs); color: var(--muted); font-family: var(--font-mono); }
 .tmodal-foot .spacer { flex: 1; }

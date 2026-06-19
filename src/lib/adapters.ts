@@ -31,8 +31,11 @@ export function taskFromDb(r: Row): Task {
     prioridadeSolicitadaCliente: (r.prioridade_solicitada_cliente as 'alta' | 'media' | 'baixa' | null) ?? null,
     motivoReabertura: r.motivo_reabertura === undefined ? undefined : (r.motivo_reabertura as string | null) ?? undefined,
     bloqueadaPorTasks: arr<string>(r.bloqueada_por_tasks),
-    homologacaoEm: dateMs(r.homologacao_em),
-    aprovadoEm: dateMs(r.aprovado_em),
+    // Diferente dos timestamps legados, estes ficam null quando ausentes
+    // (não 0) — o front usa truthy-check direto e 0 vazaria como "render
+    // 0" em JSX (`{aprovadoEm && ...}` rendia "0" antes desse fix).
+    homologacaoEm: r.homologacao_em ? new Date(r.homologacao_em as string).getTime() : null,
+    aprovadoEm: r.aprovado_em ? new Date(r.aprovado_em as string).getTime() : null,
     clienteId: str(r.cliente_id),
     projetoId: str(r.projeto_id),
     pessoaId: str(r.pessoa_id),
