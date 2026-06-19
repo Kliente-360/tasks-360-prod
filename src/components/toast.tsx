@@ -101,8 +101,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <div
         className="fixed z-[60] flex flex-col gap-2 pointer-events-none
-                   top-3 left-3 right-3 md:top-auto md:left-auto
+                   bottom-3 left-3 right-3 md:top-auto md:left-auto
                    md:bottom-4 md:right-4 md:w-[360px] md:max-w-[calc(100vw-32px)]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
         aria-live="polite"
       >
         {items.map((t) => (
