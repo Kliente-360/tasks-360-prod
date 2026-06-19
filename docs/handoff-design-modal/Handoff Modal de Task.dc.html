@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--green:#007A3D;--green-hover:#00692F;--green-soft:#E7F1EA;--green-tint:#F2F8F4;--fg:#0E1116;--fg-soft:#3A3F46;--fg-muted:#6B7178;--line:#E7E6E1;--line-soft:#F0EFEA;--line-strong:#D6D4CC;--bg:#fff;--bg-alt:#F5F5F2;--bg-app:#F7F7F4;--bg-dark:#0E1320;--p0:#C0392B;--p1:#B7791F;--p2:#2C72B8;--p3:#7D8185;--danger:#C0392B;--warn:#B7791F;--ok:#1E8A4C;--sans:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;}
+*{box-sizing:border-box;}
+body{margin:0;font-family:var(--sans);color:var(--fg);background:var(--bg-app);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+h1,h2,h3,p,ul,ol{margin:0;}
+li{margin:5px 0;}
+code{font-family:var(--mono);font-size:.85em;background:var(--bg-alt);border:1px solid var(--line);padding:1px 5px;border-radius:4px;color:var(--green-hover);}
+@media print{body{background:#fff;}.k-page{box-shadow:none !important;margin:0 !important;}.k-noprint{display:none !important;}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:40px 20px;">
+  <div class="k-page" style="max-width:880px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(16,19,22,.06);overflow:hidden;">
+
+    <!-- COVER -->
+    <div style="background:var(--bg-dark);color:#fff;padding:40px 48px;">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:26px;">
+        <div style="position:relative;width:26px;height:26px;flex:none;">
+          <span style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:#009900;opacity:.45;"></span>
+          <span style="position:absolute;top:50%;right:0;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:#009900;opacity:.65;"></span>
+          <span style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:#009900;opacity:.85;"></span>
+          <span style="position:absolute;top:50%;left:0;transform:translateY(-50%);width:8px;height:8px;border-radius:50%;background:#009900;"></span>
+        </div>
+        <span style="font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.6);">kliente 360 · handoff de design</span>
+      </div>
+      <h1 style="font-size:34px;font-weight:700;letter-spacing:-.03em;line-height:1.1;">Redesign do Modal de Task</h1>
+      <p style="font-size:16px;color:rgba(255,255,255,.72);margin-top:12px;line-height:1.5;max-width:560px;">Reorganização visual dos 25 campos pós-Bucket D. <em style="color:#6FCF97;font-style:normal;">Opção A híbrido</em> — abas no formulário, resumo fixo e footer com salvaguardas.</p>
+      <div style="display:flex;gap:26px;margin-top:24px;font-family:var(--mono);font-size:11.5px;color:rgba(255,255,255,.55);">
+        <span>DIREÇÃO · Editorial</span>
+        <span>MOCKUP · <code style="background:rgba(255,255,255,.08);border-color:transparent;color:#9FE0B8;">Modal de Task.dc.html</code></span>
+        <span>SCROLL · ~1700px → &lt; 850px</span>
+      </div>
+    </div>
+
+    <div style="padding:40px 48px 52px;">
+
+      <!-- 1 · DECISÃO -->
+      <div style="margin-bottom:38px;">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:600;margin-bottom:8px;">01 · Decisão de layout</div>
+        <h2 style="font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px;">Opção A híbrido — abas no formulário</h2>
+        <p style="font-size:14.5px;line-height:1.65;color:var(--fg-soft);">O modal acumulava duas naturezas num só scroll: um <strong>formulário gated</strong> (25 campos, obrigatoriedade por subetapa) e uma <strong>superfície de colaboração</strong> (Conversa). A solução separa os dois eixos — Conversa permanente no painel direito; formulário em abas curtas que cabem em &lt; 850px sem scroll. Roubamos o <strong>resumo fixo</strong> da Opção D e a <strong>lógica de progressive disclosure</strong> da Opção B (badge de pendências por aba).</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:18px;">
+          <div style="border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--bg-app);">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">Hick-Hyman</div>
+            <div style="font-size:12.5px;color:var(--fg-muted);line-height:1.5;">25 campos simultâneos = pior caso. Abas reduzem o conjunto visível por vez sem esconder o pendente (badge).</div>
+          </div>
+          <div style="border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--bg-app);">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">Fitts</div>
+            <div style="font-size:12.5px;color:var(--fg-muted);line-height:1.5;">Destrutivos (arquivar/excluir) afastados do Salvar, num menu <code>···</code> — distância + atrito por desenho.</div>
+          </div>
+          <div style="border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--bg-app);">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">Gestalt</div>
+            <div style="font-size:12.5px;color:var(--fg-muted);line-height:1.5;">Regiões nítidas (header · resumo · abas · conversa · footer) resolvem o layout inconsistente 2-col/full do atual.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 · ORDEM DAS SEÇÕES -->
+      <div style="margin-bottom:38px;">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:600;margin-bottom:8px;">02 · Ordem final das seções</div>
+        <h2 style="font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px;">Anatomia do modal</h2>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="border:1px solid var(--line);border-radius:10px;padding:13px 16px;border-left:3px solid var(--bg-dark);">
+            <div style="font-weight:700;font-size:13.5px;">Header (preto)</div>
+            <div style="font-size:13px;color:var(--fg-soft);margin-top:2px;">Título da task · indicador de autosave · botão fechar <code>×</code>. Nada mais — chips desceram pro resumo.</div>
+          </div>
+          <div style="border:1px solid var(--line);border-radius:10px;padding:13px 16px;border-left:3px solid var(--green);">
+            <div style="font-weight:700;font-size:13.5px;">Subheader · resumo fixo</div>
+            <div style="font-size:13px;color:var(--fg-soft);margin-top:2px;"><strong>Status</strong> (único editável, <code>select</code> das 11 subetapas) · <strong>cliente</strong> (bolinha) + <strong>projeto</strong> · <strong>responsável</strong> · <strong>prioridade</strong> (só <code>P1</code>) · <strong>prazo</strong> · <strong>alerta de prontidão</strong> à direita.</div>
+          </div>
+          <div style="border:1px solid var(--line);border-radius:10px;padding:13px 16px;border-left:3px solid var(--p2);">
+            <div style="font-weight:700;font-size:13.5px;">Abas do formulário <span style="font-weight:500;color:var(--fg-muted);font-size:12px;">(badge de pendências por aba)</span></div>
+            <ul style="font-size:13px;color:var(--fg-soft);margin-top:6px;padding-left:18px;">
+              <li><strong>Detalhes</strong> — Atribuição (cliente · projeto · responsável · prioridade · solicitada pelo cliente) → Descrição (solicitação · valor esperado) → <em>[divisor]</em> Bloqueada por · Checklist · Visível ao cliente · Privada · Integração Salesforce.</li>
+              <li><strong>Escopo &amp; Esforço</strong> — Complexidade · Prazo · Estimado(h) · Realizado(h) → Escopo técnico (chips densos, sempre visível) → Critério de aceite.</li>
+              <li><strong>Entrega</strong> <span style="color:var(--fg-muted);font-size:12px;">(condicional, ≥ <code>em_homologacao</code>)</span> — Solução implementada · Valor entregue. Banner de reabertura quando aplicável.</li>
+            </ul>
+          </div>
+          <div style="border:1px solid var(--line);border-radius:10px;padding:13px 16px;border-left:3px solid var(--green);">
+            <div style="font-weight:700;font-size:13.5px;">Painel direito · Conversa (primária)</div>
+            <div style="font-size:13px;color:var(--fg-soft);margin-top:2px;">Conversa em destaque + Anexos · Histórico · Tempo secundários. Composer em <strong>linha única</strong> (input pill + botão enviar) com o toggle "Visível ao cliente" numa linha fina abaixo — mais respiro pra thread.</div>
+          </div>
+          <div style="border:1px solid var(--line);border-radius:10px;padding:13px 16px;border-left:3px solid var(--danger);">
+            <div style="font-weight:700;font-size:13.5px;">Footer · 2 zonas</div>
+            <div style="font-size:13px;color:var(--fg-soft);margin-top:2px;">Esquerda: menu <code>···</code> com <strong>arquivar</strong> + <strong>excluir</strong> (confirmação dupla). Direita: <strong>Fechar</strong> + <strong>Salvar</strong>. Alerta de prontidão vive só no resumo.</div>
+          </div>
+          <div style="border:1px solid var(--line);border-radius:10px;padding:13px 16px;border-left:3px solid var(--warn);">
+            <div style="font-weight:700;font-size:13.5px;">Banners contextuais (topo do formulário)</div>
+            <div style="font-size:13px;color:var(--fg-soft);margin-top:2px;">Erro de autosave (pulse · fechar bloqueado) · Bloqueado · Reabertura · Entrega aprovada. Sempre visíveis, independem da aba ativa.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 · HIERARQUIA -->
+      <div style="margin-bottom:38px;">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:600;margin-bottom:8px;">03 · Hierarquia visual</div>
+        <h2 style="font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:14px;">Tamanhos · pesos · cores</h2>
+        <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;">
+          <div style="display:grid;grid-template-columns:1.1fr 1fr 1.4fr;background:var(--bg-app);border-bottom:1px solid var(--line);font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-muted);font-weight:600;">
+            <div style="padding:9px 14px;">Elemento</div><div style="padding:9px 14px;">Type</div><div style="padding:9px 14px;">Cor / peso</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1.1fr 1fr 1.4fr;border-bottom:1px solid var(--line-soft);font-size:13px;"><div style="padding:9px 14px;font-weight:600;">Título (header)</div><div style="padding:9px 14px;font-family:var(--mono);color:var(--fg-soft);">15.5px / 600</div><div style="padding:9px 14px;color:var(--fg-soft);">#fff sobre <code>--bg-dark</code></div></div>
+          <div style="display:grid;grid-template-columns:1.1fr 1fr 1.4fr;border-bottom:1px solid var(--line-soft);font-size:13px;"><div style="padding:9px 14px;font-weight:600;">Status (resumo)</div><div style="padding:9px 14px;font-family:var(--mono);color:var(--fg-soft);">12.5px / 600</div><div style="padding:9px 14px;color:var(--fg-soft);">pill branca · bolinha <code>--green</code></div></div>
+          <div style="display:grid;grid-template-columns:1.1fr 1fr 1.4fr;border-bottom:1px solid var(--line-soft);font-size:13px;"><div style="padding:9px 14px;font-weight:600;">Label de campo</div><div style="padding:9px 14px;font-family:var(--mono);color:var(--fg-soft);">11px / 600 · UPPER · .07em</div><div style="padding:9px 14px;color:var(--fg-soft);"><code>--fg-muted</code></div></div>
+          <div style="display:grid;grid-template-columns:1.1fr 1fr 1.4fr;border-bottom:1px solid var(--line-soft);font-size:13px;"><div style="padding:9px 14px;font-weight:600;">Valor / input</div><div style="padding:9px 14px;font-family:var(--mono);color:var(--fg-soft);">13.5px / 400</div><div style="padding:9px 14px;color:var(--fg-soft);"><code>--fg</code> · borda <code>--line-strong</code></div></div>
+          <div style="display:grid;grid-template-columns:1.1fr 1fr 1.4fr;border-bottom:1px solid var(--line-soft);font-size:13px;"><div style="padding:9px 14px;font-weight:600;">Metadata (prazo, h, IDs)</div><div style="padding:9px 14px;font-family:var(--mono);color:var(--fg-soft);">11–12px · <code>--mono</code></div><div style="padding:9px 14px;color:var(--fg-soft);"><code>--fg-muted</code></div></div>
+          <div style="display:grid;grid-template-columns:1.1fr 1fr 1.4fr;font-size:13px;"><div style="padding:9px 14px;font-weight:600;">Campo pendente</div><div style="padding:9px 14px;font-family:var(--mono);color:var(--fg-soft);">borda + asterisco</div><div style="padding:9px 14px;color:var(--fg-soft);">borda <code>--danger</code> + <code>box-shadow 0 0 0 1px</code></div></div>
+        </div>
+        <p style="font-size:13px;color:var(--fg-muted);margin-top:10px;line-height:1.5;"><strong>Espaçamento:</strong> seções do formulário separadas por <code>18–22px</code>; grid de 2 colunas com <code>gap 14px</code>; padding do painel <code>18px 22px</code>; raio dos campos <code>--r-sm (6px)</code>, dos cards/pills <code>--r-pill</code>.</p>
+      </div>
+
+      <!-- 4 · MICRO-INTERAÇÕES -->
+      <div style="margin-bottom:38px;">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:600;margin-bottom:8px;">04 · Micro-interações</div>
+        <h2 style="font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px;">Estados &amp; transições</h2>
+        <p style="font-size:13px;color:var(--fg-muted);margin-bottom:12px;">Easing global <code>cubic-bezier(.2,.7,.2,1)</code> · duração <code>.15s</code> (hover) / <code>.24s</code> (transição). Nunca bounce, nunca scale.</p>
+        <ul style="font-size:13.5px;line-height:1.55;color:var(--fg-soft);padding-left:18px;">
+          <li><strong>Abas:</strong> transição de cor + borda 150ms; ativa = sublinhado <code>--green</code> 2px. Badge de pendência (pill <code>--danger</code>) só quando há campo faltando naquela aba.</li>
+          <li><strong>Alerta de prontidão:</strong> verde + check (<code>--ok</code>) quando 0 pendências ↔ âmbar + triângulo (<code>--warn</code>) com a contagem ("N campos faltam").</li>
+          <li><strong>Autosave:</strong> <code>salvo</code> (dot verde) · <code>salvando…</code> (pulse) · <code>erro</code> (chip vermelho cheio + pulse, e <strong>fechar bloqueado</strong> até corrigir).</li>
+          <li><strong>Campo obrigatório vazio:</strong> borda vermelha em tempo real (via <code>missingFieldsForCurrentSubetapa</code>), mais asterisco no label.</li>
+          <li><strong>Hover:</strong> Salvar → <code>--green-hover</code>; Fechar → <code>--bg-alt</code>; campos/cards → borda <code>--line-strong</code>. Translação sutil de <code>-1px</code> em botões.</li>
+          <li><strong>Footer destrutivo:</strong> <code>···</code> abre popover; "excluir" troca o popover por confirmação ("Sim, excluir" / "Cancelar").</li>
+          <li><strong>Conversa:</strong> botão enviar = círculo verde (paper-plane); hover <code>--green-hover</code>. Atalho sugerido <code>⌘↵</code>.</li>
+          <li><strong>Transição entre subetapas:</strong> <code>validateSubetapaAdvance</code> roda antes de avançar; se faltar campo, toast bloqueia e a aba/badge aponta o pendente.</li>
+        </ul>
+      </div>
+
+      <!-- 5 · RESPONSIVE -->
+      <div style="margin-bottom:38px;">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:600;margin-bottom:8px;">05 · Responsive</div>
+        <h2 style="font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px;">Breakpoint &amp; mobile</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div style="border:1px solid var(--line);border-radius:10px;padding:15px;">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">≥ 1024px · Desktop</div>
+            <div style="font-size:12.5px;color:var(--fg-soft);line-height:1.55;">Modal centralizado <code>1140px</code> · grid 2 colunas (formulário <code>1.42fr</code> / conversa <code>1fr</code>) · resumo fixo + abas.</div>
+          </div>
+          <div style="border:1px solid var(--line);border-radius:10px;padding:15px;">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px;">&lt; 1024px · Mobile</div>
+            <div style="font-size:12.5px;color:var(--fg-soft);line-height:1.55;"><strong>Full-screen</strong> com as 2 abas <strong>Detalhes / Conversa</strong> já entregues (v1.03.104-115). O resumo colapsa; abas internas viram acordeão dentro de Detalhes. <em>Sem regressão.</em></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6 · TOKENS -->
+      <div style="margin-bottom:38px;">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:600;margin-bottom:8px;">06 · Tokens do DS usados</div>
+        <h2 style="font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px;">Referência · <code>src/app/globals.css</code></h2>
+        <p style="font-size:13px;color:var(--danger);font-weight:600;margin-bottom:14px;">Zero tokens novos. Tudo abaixo já existe no DS.</p>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div><div style="font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-muted);margin-bottom:6px;">Marca / acento</div><div style="display:flex;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;"><code>--green</code><code>--green-hover</code><code>--green-soft</code><code>--green-tint</code></div></div>
+          <div><div style="font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-muted);margin-bottom:6px;">Texto / linhas / superfícies</div><div style="display:flex;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;"><code>--fg</code><code>--fg-soft</code><code>--fg-muted</code><code>--line</code><code>--line-soft</code><code>--line-strong</code><code>--bg</code><code>--bg-alt</code><code>--bg-app</code><code>--bg-dark</code></div></div>
+          <div><div style="font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-muted);margin-bottom:6px;">Status / prioridade</div><div style="display:flex;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;"><code>--p0/1/2/3 (+ -soft)</code><code>--danger (+ -soft)</code><code>--warn (+ -soft)</code><code>--ok (+ -soft)</code></div></div>
+          <div><div style="font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-muted);margin-bottom:6px;">Tipo · raio · sombra</div><div style="display:flex;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;"><code>--sans (Inter)</code><code>--mono (JetBrains Mono)</code><code>--r-sm/md/lg/pill</code><code>--sh-xs/sm/md/lg</code></div></div>
+        </div>
+      </div>
+
+      <!-- 7 · NÃO MUDA -->
+      <div style="margin-bottom:38px;">
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:600;margin-bottom:8px;">07 · O que NÃO muda</div>
+        <h2 style="font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:12px;">Para não retrabalhar</h2>
+        <div style="border:1px solid color-mix(in srgb,var(--ok) 30%,var(--line));background:color-mix(in srgb,var(--ok) 5%,#fff);border-radius:10px;padding:16px 18px;">
+          <ul style="font-size:13.5px;line-height:1.6;color:var(--fg-soft);padding-left:18px;margin:0;">
+            <li><strong>Schema do banco</strong> — os 25 campos, nomes e tipos. Redesign é 100% reorganização visual.</li>
+            <li><strong>Validators</strong> — <code>validateSubetapaAdvance</code>, <code>missingFieldsForCurrentSubetapa</code>, <code>triageFailures</code> (em <code>task-utils.ts</code>) intactos.</li>
+            <li><strong>Mobile</strong> — modal full-screen 2 abas (Detalhes/Conversa) entregue em v1.03.104-115. Este redesign é desktop.</li>
+            <li><strong>Realtime</strong> — UI não tranca inputs durante edição alheia; sem mudança no channel.</li>
+            <li><strong>Autosave + Salvar manual</strong> e os <strong>gates por subetapa</strong> seguem idênticos.</li>
+            <li><strong>Dark mode</strong> — usa os mesmos <code>var(--*)</code>; nenhum valor hardcoded novo.</li>
+            <li><strong>Conversa / Anexos / Histórico / Tempo</strong> — mesma funcionalidade, só reorganizados.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 8 · FUTURO -->
+      <div>
+        <div style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--green);font-weight:600;margin-bottom:8px;">08 · Melhorias futuras</div>
+        <h2 style="font-size:22px;font-weight:700;letter-spacing:-.02em;margin-bottom:6px;">Fora do escopo deste redesign</h2>
+        <p style="font-size:13px;color:var(--fg-muted);margin-bottom:12px;">Apareceram no processo — registradas para priorização, não implementar agora.</p>
+        <ul style="font-size:13.5px;line-height:1.6;color:var(--fg-soft);padding-left:18px;">
+          <li>Status no resumo dispara o gate de avanço inline (avançar subetapa direto do <code>select</code>, com validação).</li>
+          <li>Persistir a aba ativa por subetapa (abrir já na aba mais relevante ao estado).</li>
+          <li>Escopo técnico colapsável com resumo ("4 skills · editar") como alternativa à densidade, se virar ruído.</li>
+          <li>Rótulos amigáveis de subetapa no Histórico em modo cliente (pendência V.4 do AUDIT_RLS).</li>
+          <li>Preview inline de anexos + atalho <code>⌘↵</code> e picker de <code>@menção</code> no composer.</li>
+          <li>Surfacing do botão "Aprovar entrega" também no modal interno (hoje só no Portal cliente).</li>
+        </ul>
+      </div>
+
+      <div style="margin-top:40px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--fg-muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <span>Mockup interativo: <code>Modal de Task.dc.html</code> · ligue "Mostrar barra" nos Tweaks p/ percorrer estados.</span>
+        <span>kliente 360 · conhecimento aplicado</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:920,&quot;height&quot;:1400}}"></script>
+</body>
+</html>

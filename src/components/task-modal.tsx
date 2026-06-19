@@ -44,7 +44,7 @@ import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
 import { fmtDate, fmtDateShort, lblStatus, missingFieldsForCurrentSubetapa, sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
-import { SUB_TO_MACRO, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK } from '@/lib/task-constants';
+import { SUB_TO_MACRO, SUB_LABELS, SUBS_FLAT, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK } from '@/lib/task-constants';
 import { timeEntryFromDb } from '@/lib/adapters';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { Icon } from '@/components/icons';
@@ -1650,7 +1650,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       onPaste={onModalPaste}
     >
       <div className="tmodal" role="dialog" aria-label="Editar tarefa" data-tab={modalTab}>
-        {/* Header */}
+        {/* Header · só título + chips icônicos read-only + autosave + ×.
+            Bucket V · M.1: chips P2/prazo/cliente/copy-link desceram pro
+            subheader. "Copiar link" foi movido pro footer ··· menu (M.4). */}
         <div className="tmodal-head">
           <input
             className="tmodal-title"
@@ -1665,62 +1667,34 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               <Icon name="bot" size={10} /> IA
             </span>
           )}
-          {editing.prioridade && (
-            <span className={`pri pri-${editing.prioridade}`}>
-              <span className="pri-dot" />
-              {editing.prioridade}
+          {editing.criadoPorCliente && (
+            <span
+              className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0 inline-flex items-center gap-1"
+              style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.9)' }}
+              title="Criada pelo cliente via Portal"
+            >
+              <Icon name="user-plus" size={10} /> cliente
             </span>
-          )}
-          {editing.prazo && (
-            <span className="head-chip" title={`Prazo: ${fmtDate(editing.prazo)}`}>
-              <span className="head-chip-ico">⏱</span>
-              {fmtDateShort(editing.prazo)}
-            </span>
-          )}
-          {editing.clienteId && (
-            <span className="head-chip head-chip-cliente">
-              {clientesById.get(editing.clienteId)?.nome ?? ''}
-            </span>
-          )}
-          {!editing.id && !editing.clienteId && (
-            <span className="head-chip head-chip-muted">Nova tarefa</span>
           )}
           {editing.id && (editing.reopenCount || 0) > 0 && (
             <span
-              className="reopen-chip text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
+              className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0 inline-flex items-center gap-1"
               style={{ background: 'var(--p1-soft)', color: 'var(--p1)' }}
+              title={`Reaberta ${editing.reopenCount}x`}
             >
-              reaberta {editing.reopenCount}x
+              <Icon name="refresh" size={10} /> {editing.reopenCount}x
             </span>
           )}
           {editing.id && editing.arquivadoEm && (
             <span
-              className="arquivada-chip text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
+              className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0 inline-flex items-center gap-1"
               style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}
               title="Tarefa arquivada"
             >
-              arquivada
+              <Icon name="archive" size={10} /> arquivada
             </span>
           )}
           <div className="tmodal-head-right">
-            {editing.id && clienteWebhookEnabled && editing.webhookSyncStatus === 'error' && (
-              <span
-                className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
-                style={{ background: 'var(--p0-soft)', color: 'var(--p0)' }}
-                title={editing.webhookSyncError || 'Falha ao sincronizar com Salesforce'}
-              >
-                sync · erro
-              </span>
-            )}
-            {editing.id && clienteWebhookEnabled && editing.webhookSyncStatus === 'synced' && (
-              <span
-                className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"
-                style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}
-                title="Último update sincronizado com Salesforce"
-              >
-                sync · ok
-              </span>
-            )}
             {editing.id && (
               <span
                 className="autosave"
@@ -1737,31 +1711,106 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 {autosaveLabel()}
               </span>
             )}
-            {editing.id && (
-              <button
-                className="icon-btn"
-                aria-label="Copiar link desta tarefa"
-                title="Copiar link desta tarefa"
-                onClick={() => {
-                  const sp = new URLSearchParams(window.location.search);
-                  sp.set('task', editing.id);
-                  const url =
-                    window.location.origin +
-                    window.location.pathname +
-                    '?' +
-                    sp.toString();
-                  navigator.clipboard.writeText(url).then(
-                    () => toast.success('Link copiado!', 2000),
-                    () => toast.error('Não foi possível copiar.'),
-                  );
-                }}
-              >
-                <CopyIcon />
-              </button>
-            )}
             <button className="icon-btn" aria-label="Fechar" onClick={() => close({ force: true })}>
-              ×
+              <Icon name="x" size={16} />
             </button>
+          </div>
+        </div>
+
+        {/* Subheader fixo · DESKTOP ONLY · Bucket V · M.1
+            Status select + cliente/projeto + responsável + prioridade + prazo
+            + toggle visivel_cliente + indicador agregado de prontidão. */}
+        <div className="tmodal-subhdr hidden md:flex">
+          {/* Status select (única editável aqui) */}
+          <select
+            className="tmodal-subhdr-pill"
+            value={editing.subetapa}
+            onChange={(e) => set('subetapa', e.target.value)}
+            aria-label="Mudar subetapa"
+            title="Mudar subetapa"
+          >
+            {SUBS_FLAT.map((s) => (
+              <option key={s} value={s}>{SUB_LABELS[s]}</option>
+            ))}
+          </select>
+
+          {/* Cliente · Projeto (read-only) */}
+          {editing.clienteId && (
+            <span className="tmodal-subhdr-chip" title={clientesById.get(editing.clienteId)?.nome ?? ''}>
+              <span className="dot" />
+              {clientesById.get(editing.clienteId)?.nome ?? ''}
+              {editing.projetoId && (
+                <>
+                  <span className="tmodal-subhdr-sep">·</span>
+                  <span>{projetosById.get(editing.projetoId)?.nome ?? ''}</span>
+                </>
+              )}
+            </span>
+          )}
+          {!editing.clienteId && (
+            <span className="tmodal-subhdr-chip text-muted italic">sem cliente</span>
+          )}
+
+          {/* Responsável (avatar + nome) */}
+          {editing.pessoaId && pessoasById.get(editing.pessoaId) && (
+            <span className="tmodal-subhdr-chip" title={pessoasById.get(editing.pessoaId)!.nome}>
+              <span className="tmodal-subhdr-avatar">
+                {pessoasById.get(editing.pessoaId)!.nome.split(' ').slice(0, 2).map((p) => p[0]?.toUpperCase()).join('')}
+              </span>
+              {pessoasById.get(editing.pessoaId)!.nome.split(' ')[0]}
+            </span>
+          )}
+
+          {/* Prioridade chip soft */}
+          {editing.prioridade && (
+            <span
+              className="text-[10.5px] uppercase tracking-wider font-mono font-semibold px-2 py-0.5 rounded"
+              style={{
+                background: `var(--${editing.prioridade.toLowerCase()}-soft)`,
+                color: `var(--${editing.prioridade.toLowerCase()})`,
+              }}
+            >
+              {editing.prioridade}
+            </span>
+          )}
+
+          {/* Prazo */}
+          {editing.prazo && (
+            <span className="tmodal-subhdr-mono" title={`Prazo: ${fmtDate(editing.prazo)}`}>
+              {fmtDateShort(editing.prazo)}
+            </span>
+          )}
+
+          <div className="tmodal-subhdr-right">
+            {/* Toggle visível ao cliente */}
+            {editing.id && (
+              <label className="tmodal-subhdr-toggle" title="Visível pro cliente no Portal">
+                <input
+                  type="checkbox"
+                  checked={editing.visivelCliente !== false}
+                  onChange={(e) => set('visivelCliente', e.target.checked)}
+                />
+                <Icon name={editing.visivelCliente !== false ? 'eye' : 'eye-off'} size={13} />
+                {editing.visivelCliente !== false ? 'visível ao cliente' : 'só time'}
+              </label>
+            )}
+
+            {/* Readiness · agregado */}
+            {editing.id && (() => {
+              const total = missingFields.size;
+              if (total === 0) {
+                return (
+                  <span className="tmodal-readiness ok" title="Nenhum campo pendente">
+                    <Icon name="check-circle" size={13} /> pronto pra avançar
+                  </span>
+                );
+              }
+              return (
+                <span className="tmodal-readiness warn" title={`Campos pendentes: ${[...missingFields].join(', ')}`}>
+                  <Icon name="alert-triangle" size={13} /> {total} {total === 1 ? 'campo' : 'campos'} {total === 1 ? 'falta' : 'faltam'}
+                </span>
+              );
+            })()}
           </div>
         </div>
 

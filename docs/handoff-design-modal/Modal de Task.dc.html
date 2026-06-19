@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--green:#007A3D;--green-hover:#00692F;--green-soft:#E7F1EA;--green-tint:#F2F8F4;--fg:#0E1116;--fg-soft:#3A3F46;--fg-muted:#6B7178;--line:#E7E6E1;--line-soft:#F0EFEA;--line-strong:#D6D4CC;--bg:#fff;--bg-alt:#F5F5F2;--bg-app:#F7F7F4;--bg-dark:#0E1320;--p0:#C0392B;--p0-soft:#FBECEA;--p1:#B7791F;--p1-soft:#FAF1E0;--p2:#2C72B8;--p2-soft:#EAF2FA;--p3:#7D8185;--p3-soft:#F1F1EE;--danger:#C0392B;--danger-soft:#FBECEA;--warn:#B7791F;--warn-soft:#FAF1E0;--ok:#1E8A4C;--ok-soft:#E7F1EA;--sans:'Inter',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;--sh-xs:0 1px 2px rgba(16,19,22,.05);--sh-sm:0 2px 8px rgba(16,19,22,.06);--sh-md:0 8px 24px rgba(16,19,22,.08);--sh-lg:0 24px 56px rgba(16,19,22,.14);}
+*{box-sizing:border-box;}
+body{margin:0;font-family:var(--sans);color:var(--fg);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+input,textarea,button{font-family:inherit;}
+::placeholder{color:var(--fg-muted);}
+.k-title::placeholder{color:rgba(255,255,255,.5);}
+.k-thread::-webkit-scrollbar,.k-content::-webkit-scrollbar{width:9px;}
+.k-thread::-webkit-scrollbar-thumb,.k-content::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:9px;}
+@keyframes asPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(1.4);}}
+@keyframes errPulse{0%,100%{box-shadow:0 0 0 2px rgba(192,57,43,.40);}50%{box-shadow:0 0 0 5px rgba(192,57,43,.12);}}
+</style>
+</helmet>
+
+<div ref="{{ rootRef }}" style="min-height:100vh;background:var(--bg-app);font-family:var(--sans);">
+
+  <!-- ============ PROTOTYPE TOOLBAR (scaffolding) ============ -->
+  <sc-if value="{{ showToolbar }}" hint-placeholder-val="{{ true }}">
+  <div style="position:sticky;top:0;z-index:20;background:rgba(255,255,255,.86);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line);padding:12px 24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="position:relative;width:22px;height:22px;flex:none;">
+        <span style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;background:#009900;opacity:.45;"></span>
+        <span style="position:absolute;top:50%;right:0;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:#009900;opacity:.65;"></span>
+        <span style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;background:#009900;opacity:.85;"></span>
+        <span style="position:absolute;top:50%;left:0;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:#009900;"></span>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:700;letter-spacing:-.01em;">Modal de Task · redesign</div>
+        <div style="font-size:10.5px;font-family:var(--mono);color:var(--fg-muted);letter-spacing:.02em;">{{ dirName }} — {{ dirDesc }}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;">
+      <sc-for list="{{ dirs }}" as="d" hint-placeholder-count="2">
+        <button style="{{ d.style }}" onClick="{{ d.onClick }}">
+          <span style="display:block;font-size:12.5px;font-weight:700;letter-spacing:-.01em;line-height:1.3;color:var(--fg);white-space:nowrap;">{{ d.name }}</span>
+          <span style="display:block;font-size:10px;font-family:var(--mono);line-height:1.3;color:var(--fg-muted);white-space:nowrap;">{{ d.desc }}</span>
+        </button>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap;">
+      <span style="font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--fg-muted);margin-right:2px;">Estado</span>
+      <sc-for list="{{ states }}" as="st" hint-placeholder-count="8">
+        <button style="{{ st.style }}" onClick="{{ st.onClick }}">{{ st.label }}</button>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <!-- ============ STAGE ============ -->
+  <div style="position:relative;display:flex;align-items:center;justify-content:center;padding:40px 24px;min-height:calc(100vh - 60px);">
+    <sc-if value="{{ backdropDim }}" hint-placeholder-val="{{ true }}">
+      <div style="position:absolute;inset:0;background:rgba(14,19,32,.32);"></div>
+    </sc-if>
+
+    <!-- ============ MODAL ============ -->
+    <div data-screen-label="{{ summarySubetapa }}" style="position:relative;width:1140px;max-width:96vw;height:760px;max-height:84vh;background:#fff;border-radius:16px;box-shadow:var(--sh-lg);overflow:hidden;display:flex;flex-direction:column;">
+
+      <!-- HEADER (dark) -->
+      <div style="background:var(--bg-dark);color:#fff;padding:13px 18px;display:flex;align-items:center;gap:10px;flex:none;">
+        <input class="k-title" readonly value="{{ titulo }}" placeholder="O que precisa ser feito?" style="flex:1;min-width:0;background:transparent;border:1px solid transparent;border-radius:6px;color:#fff;font-size:15.5px;font-weight:600;letter-spacing:-.01em;padding:6px 8px;outline:none;"/>
+        <div style="margin-left:auto;display:inline-flex;align-items:center;gap:8px;flex:none;">
+          <span style="{{ autosaveStyle }}"><span style="{{ autosaveDotStyle }}"></span>{{ autosaveLabel }}</span>
+          <button style="width:30px;height:30px;border-radius:8px;border:none;background:rgba(255,255,255,.06);color:rgba(255,255,255,.75);cursor:pointer;font-size:19px;line-height:1;display:flex;align-items:center;justify-content:center;" title="Fechar">×</button>
+        </div>
+      </div>
+
+      <!-- SUMMARY BAR (fixed) -->
+      <div style="display:flex;align-items:center;gap:13px;padding:10px 18px;background:var(--bg-app);border-bottom:1px solid var(--line);flex:none;">
+        <label style="display:inline-flex;align-items:center;gap:8px;padding:5px 10px 5px 13px;border-radius:999px;background:#fff;border:1px solid var(--line-strong);box-shadow:var(--sh-xs);cursor:pointer;flex:none;">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--green);flex:none;"></span>
+          <select value="{{ summarySubetapa }}" onChange="{{ onSubChange }}" style="border:none;background:transparent;font-size:12.5px;font-weight:600;color:var(--fg);font-family:var(--sans);cursor:pointer;outline:none;-webkit-appearance:none;appearance:none;padding:0 2px;">
+            <option>Backlog</option>
+            <option>Priorizado</option>
+            <option>Em definição</option>
+            <option>Escopo definido</option>
+            <option>Em desenvolvimento</option>
+            <option>Em homologação</option>
+            <option>Em revisão</option>
+            <option>Pronto p/ produção</option>
+            <option>Em implantação</option>
+            <option>Bloqueado</option>
+            <option>Concluído</option>
+          </select>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M6 9l6 6 6-6"></path></svg>
+        </label>
+        <span style="width:1px;height:26px;background:var(--line);flex:none;"></span>
+        <div style="display:flex;align-items:center;gap:7px;min-width:0;max-width:280px;">
+          <span style="width:9px;height:9px;border-radius:50%;background:var(--p2);flex:none;"></span>
+          <span style="font-size:12.5px;font-weight:600;color:var(--fg);white-space:nowrap;">{{ clienteDisp }}</span>
+          <span style="color:var(--line-strong);">·</span>
+          <span style="font-size:12px;font-family:var(--mono);color:var(--fg-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ projetoDisp }}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex:none;">
+          <span style="width:26px;height:26px;border-radius:50%;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;font-family:var(--mono);flex:none;">{{ respIni }}</span>
+          <span style="font-size:12.5px;color:var(--fg-soft);font-weight:500;white-space:nowrap;">{{ respSummary }}</span>
+        </div>
+        <sc-if value="{{ priShow }}" hint-placeholder-val="{{ true }}">
+          <span style="{{ priLightStyle }}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;"></span>{{ priLabel }}</span>
+        </sc-if>
+        <span style="font-size:12px;font-family:var(--mono);color:var(--fg-muted);white-space:nowrap;">{{ prazoSummary }}</span>
+
+        <div style="margin-left:auto;">
+          <span style="{{ readyBarStyle }}">
+            <sc-if value="{{ readyOk }}" hint-placeholder-val="{{ false }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+            </sc-if>
+            <sc-if value="{{ readyWarn }}" hint-placeholder-val="{{ true }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"></path><path d="M12 17h.01"></path><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path></svg>
+            </sc-if>
+            {{ readyLabel }}
+          </span>
+        </div>
+      </div>
+
+      <!-- LIFECYCLE STEPPER (dir 2) -->
+      <sc-if value="{{ showStepper }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 18px;background:#fff;border-bottom:1px solid var(--line);flex:none;">
+          <sc-for list="{{ steps }}" as="s" hint-placeholder-count="5">
+            <sc-if value="{{ s.connShow }}" hint-placeholder-val="{{ true }}"><span style="{{ s.connStyle }}"></span></sc-if>
+            <span style="display:inline-flex;align-items:center;gap:6px;">
+              <span style="{{ s.dotStyle }}"></span>
+              <span style="{{ s.labelStyle }}">{{ s.label }}</span>
+            </span>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <!-- BODY GRID -->
+      <div style="flex:1;display:grid;grid-template-columns:1.42fr 1fr;min-height:0;">
+
+        <!-- LEFT: form column -->
+        <div style="display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);">
+
+          <!-- contextual banners -->
+          <sc-if value="{{ showErro }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:flex-start;gap:10px;margin:14px 18px 0;padding:11px 13px;border-radius:10px;background:var(--danger-soft);border:1px solid var(--danger);animation:errPulse 2s ease-in-out infinite;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px;"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+              <div><div style="font-size:13px;font-weight:700;color:var(--danger);">Autosave falhou</div><div style="font-size:12px;color:#8E2A20;margin-top:1px;">Suas últimas alterações não foram salvas. Corrija os campos pendentes e salve manualmente. Fechar está bloqueado até resolver.</div></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showBloq }}" hint-placeholder-val="{{ false }}">
+            <div style="margin:14px 18px 0;padding:11px 13px;border-radius:10px;background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);">
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none;"></span><span style="font-size:13px;font-weight:700;color:#8C5A14;white-space:nowrap;">Tarefa bloqueada</span></div>
+              <div style="font-size:12px;color:#8C5A14;margin:3px 0 9px 16px;">Informe a origem do bloqueio e registre um comentário explicando.</div>
+              <div style="margin-left:16px;"><div style="{{ sBloq }}"><span style="color:var(--fg-muted);">— selecione: nós / cliente / terceiro</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M6 9l6 6 6-6"></path></svg></div></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ showAprov }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:9px;margin:14px 18px 0;padding:10px 13px;border-radius:10px;background:var(--ok-soft);border:1px solid color-mix(in srgb,var(--ok) 30%,transparent);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M20 6L9 17l-5-5"></path></svg>
+              <span style="font-size:12.5px;font-weight:600;color:var(--ok);">Entrega aprovada pelo cliente em 28/05/2026</span>
+            </div>
+          </sc-if>
+
+          <!-- tab strip -->
+          <div style="{{ tabContainerStyle }}">
+            <div style="{{ tabs.detalhes.style }}" onClick="{{ onDet }}">{{ tabs.detalhes.label }}<sc-if value="{{ tabs.detalhes.badgeShow }}" hint-placeholder-val="{{ false }}"><span style="{{ tabs.detalhes.badgeStyle }}">{{ tabs.detalhes.badgeN }}</span></sc-if></div>
+            <div style="{{ tabs.escopo.style }}" onClick="{{ onEsc }}">{{ tabs.escopo.label }}<sc-if value="{{ tabs.escopo.badgeShow }}" hint-placeholder-val="{{ true }}"><span style="{{ tabs.escopo.badgeStyle }}">{{ tabs.escopo.badgeN }}</span></sc-if></div>
+            <sc-if value="{{ showEntregaTab }}" hint-placeholder-val="{{ false }}">
+              <div style="{{ tabs.entrega.style }}" onClick="{{ onEnt }}">{{ tabs.entrega.label }}<sc-if value="{{ tabs.entrega.badgeShow }}" hint-placeholder-val="{{ false }}"><span style="{{ tabs.entrega.badgeStyle }}">{{ tabs.entrega.badgeN }}</span></sc-if></div>
+            </sc-if>
+          </div>
+
+          <!-- tab content -->
+          <div class="k-content" style="flex:1;overflow-y:auto;padding:18px 22px 24px;">
+
+            <!-- DETALHES -->
+            <sc-if value="{{ showDetalhes }}" hint-placeholder-val="{{ true }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Cliente<sc-if value="{{ reqCliente }}" hint-placeholder-val="{{ true }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                  <div style="{{ sCliente }}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ clienteDisp }}</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                </div>
+                <div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Projeto<sc-if value="{{ reqProjeto }}" hint-placeholder-val="{{ true }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                  <div style="{{ sProjeto }}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ projetoDisp }}</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                </div>
+                <div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Responsável<sc-if value="{{ reqResp }}" hint-placeholder-val="{{ true }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                  <div style="{{ sResp }}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ respDisp }}</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                </div>
+                <div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Prioridade<sc-if value="{{ reqPrio }}" hint-placeholder-val="{{ true }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                  <div style="{{ sPrio }}"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ prioDisp }}</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                </div>
+                <div style="grid-column:1 / -1;">
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Solicitada pelo cliente</span>
+                  <div style="{{ inpDispStyle }}"><span>{{ solicDisp }}</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                </div>
+              </div>
+              <div style="margin-top:18px;">
+                <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Solicitação</span>
+                <div style="{{ descStyle }}">{{ descVal }}</div>
+              </div>
+              <div style="margin-top:14px;">
+                <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Valor esperado</span>
+                <div style="{{ veStyle }}">{{ veVal }}</div>
+              </div>
+
+              <!-- moved from Avançado -->
+              <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--line);">
+                <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:7px;display:block;">Bloqueada por (pré-requisitos)</span>
+                <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;">
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;background:var(--bg-alt);border:1px solid var(--line);font-size:12px;color:var(--fg-soft);">#341 · Migrar custom metadata<span style="color:var(--fg-muted);cursor:pointer;">×</span></span>
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:8px;border:1px dashed var(--line-strong);font-size:12px;color:var(--fg-muted);cursor:pointer;">+ adicionar pré-requisito</span>
+                </div>
+              </div>
+              <div style="margin-top:18px;">
+                <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:7px;display:block;">Checklist</span>
+                <div style="display:flex;flex-direction:column;gap:7px;">
+                  <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--fg-soft);"><span style="width:16px;height:16px;border-radius:4px;background:var(--green);display:flex;align-items:center;justify-content:center;flex:none;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></span><span style="text-decoration:line-through;color:var(--fg-muted);">Mapear campos do formulário</span></label>
+                  <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--fg-soft);"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--line-strong);flex:none;"></span>Publicar Flow no sandbox</label>
+                  <label style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--fg-soft);"><span style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--line-strong);flex:none;"></span>Teste end-to-end com lead real</label>
+                </div>
+              </div>
+              <div style="margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:6px;display:block;">Visível ao cliente</span>
+                  <label style="display:flex;align-items:center;gap:9px;padding:8px 12px;border:1px solid var(--line-strong);border-radius:6px;background:#fff;font-size:13px;color:var(--fg-soft);cursor:pointer;"><span style="width:34px;height:20px;border-radius:999px;background:var(--green);position:relative;flex:none;"><span style="position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;background:#fff;"></span></span>Sim, no Portal</label>
+                </div>
+                <div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:6px;display:block;">Privada (CEO)</span>
+                  <label style="display:flex;align-items:center;gap:9px;padding:8px 12px;border:1px solid var(--line-strong);border-radius:6px;background:#fff;font-size:13px;color:var(--fg-muted);cursor:pointer;"><span style="width:34px;height:20px;border-radius:999px;background:var(--line-strong);position:relative;flex:none;"><span style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;"></span></span>Pública</label>
+                </div>
+              </div>
+              <div style="margin-top:18px;">
+                <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:6px;display:block;">Integração Salesforce</span>
+                <div style="display:flex;align-items:center;gap:10px;"><div style="{{ inpDispStyle }}"><span style="font-family:var(--mono);font-size:13px;">00Q5g00000ABCdE</span></div><span style="font-size:10px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;background:var(--green-soft);color:var(--green);padding:3px 8px;border-radius:999px;white-space:nowrap;">sync · ok</span></div>
+              </div>
+            </sc-if>
+
+            <!-- ESCOPO & ESFORÇO -->
+            <sc-if value="{{ showEscopo }}" hint-placeholder-val="{{ false }}">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Complexidade</span>
+                  <div style="{{ inpDispStyle }}"><span>{{ complexDisp }}</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                </div>
+                <div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Prazo<sc-if value="{{ reqPrazo }}" hint-placeholder-val="{{ false }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                  <div style="{{ sPrazo }}"><span>{{ prazoFieldDisp }}</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg></div>
+                </div>
+                <div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Estimado (h)<sc-if value="{{ reqEsforco }}" hint-placeholder-val="{{ false }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                  <div style="{{ sEsforco }}"><span>{{ esforcoDisp }}</span></div>
+                </div>
+                <div>
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Realizado (h)<sc-if value="{{ reqRealizado }}" hint-placeholder-val="{{ false }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                  <div style="{{ sRealizado }}"><span>{{ realizadoDisp }}</span></div>
+                </div>
+              </div>
+
+              <div style="margin-top:18px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;">
+                  <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);">Escopo técnico<sc-if value="{{ reqEscopo }}" hint-placeholder-val="{{ false }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                  <span style="font-size:11px;font-family:var(--mono);color:var(--fg-muted);">{{ escopoCount }}</span>
+                </div>
+                <div style="{{ escopoWrap }}">
+                  <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><span style="font-size:9.5px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--fg-muted);min-width:64px;">Salesforce</span><sc-for list="{{ chipsSF }}" as="c" hint-placeholder-count="7"><span style="{{ c.style }}">{{ c.label }}</span></sc-for></div>
+                  <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px;"><span style="font-size:9.5px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--fg-muted);min-width:64px;">Clouds</span><sc-for list="{{ chipsCloud }}" as="c" hint-placeholder-count="3"><span style="{{ c.style }}">{{ c.label }}</span></sc-for></div>
+                  <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;"><span style="font-size:9.5px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--fg-muted);min-width:64px;">Digital / IA</span><sc-for list="{{ chipsIA }}" as="c" hint-placeholder-count="3"><span style="{{ c.style }}">{{ c.label }}</span></sc-for></div>
+                </div>
+              </div>
+
+              <div style="margin-top:16px;">
+                <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Critério de aceite<sc-if value="{{ reqCriterio }}" hint-placeholder-val="{{ false }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                <div style="{{ critStyle }}">{{ critVal }}</div>
+              </div>
+            </sc-if>
+
+            <!-- ENTREGA -->
+            <sc-if value="{{ showEntrega }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ showReab }}" hint-placeholder-val="{{ false }}">
+                <div style="margin-bottom:18px;padding:11px 13px;border-radius:10px;background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--warn);flex:none;"></span><span style="font-size:13px;font-weight:700;color:#8C5A14;white-space:nowrap;">Tarefa reaberta · informe o motivo<span style="color:var(--danger);margin-left:3px;">*</span></span></div>
+                  <div style="{{ sMotivo }}"><span style="color:var(--fg-muted);">— selecione um motivo de reabertura</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M6 9l6 6 6-6"></path></svg></div>
+                </div>
+              </sc-if>
+              <div>
+                <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Solução implementada<sc-if value="{{ reqSolucao }}" hint-placeholder-val="{{ false }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                <div style="{{ solStyle }}">{{ solVal }}</div>
+              </div>
+              <div style="margin-top:14px;">
+                <span style="font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-muted);margin-bottom:5px;display:block;">Valor entregue<sc-if value="{{ reqValorEntregue }}" hint-placeholder-val="{{ false }}"><span style="color:var(--danger);margin-left:3px;">*</span></sc-if></span>
+                <div style="{{ veEntStyle }}">{{ veEntVal }}</div>
+              </div>
+            </sc-if>
+
+          </div>
+        </div>
+
+        <!-- RIGHT: conversa -->
+        <div style="display:flex;flex-direction:column;min-height:0;background:var(--bg-app);">
+          <div style="display:flex;gap:18px;padding:13px 18px 0;border-bottom:1px solid var(--line-strong);flex:none;">
+            <div style="padding:7px 0 11px;font-size:13.5px;font-weight:700;color:var(--fg);border-bottom:2px solid var(--green);margin-bottom:-1px;display:inline-flex;align-items:center;gap:6px;">Conversa<span style="font-family:var(--mono);font-size:11px;background:var(--green-soft);color:var(--green);padding:1px 7px;border-radius:999px;">{{ conversaCount }}</span></div>
+            <div style="padding:7px 0 11px;font-size:13px;font-weight:500;color:var(--fg-muted);display:inline-flex;align-items:center;gap:5px;cursor:pointer;">Anexos<span style="font-family:var(--mono);font-size:11px;color:var(--fg-muted);">{{ anexosCount }}</span></div>
+            <div style="padding:7px 0 11px;font-size:13px;font-weight:500;color:var(--fg-muted);display:inline-flex;align-items:center;gap:5px;cursor:pointer;">Histórico<span style="font-family:var(--mono);font-size:11px;color:var(--fg-muted);">{{ historicoCount }}</span></div>
+            <div style="padding:7px 0 11px;font-size:13px;font-weight:500;color:var(--fg-muted);display:inline-flex;align-items:center;gap:5px;cursor:pointer;">Tempo<span style="font-family:var(--mono);font-size:11px;color:var(--fg-muted);">{{ tempoCount }}</span></div>
+          </div>
+
+          <div class="k-thread" style="flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:15px;">
+            <sc-if value="{{ conversaEmpty }}" hint-placeholder-val="{{ true }}">
+              <div style="margin:auto;text-align:center;color:var(--fg-muted);padding:30px 10px;">
+                <div style="width:38px;height:38px;border-radius:50%;background:var(--bg-alt);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--fg-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+                <div style="font-size:13px;font-weight:600;color:var(--fg-soft);">Nenhum comentário ainda</div>
+                <div style="font-size:12px;margin-top:2px;">A conversa fica disponível depois de salvar.</div>
+              </div>
+            </sc-if>
+            <sc-for list="{{ comments }}" as="c" hint-placeholder-count="3">
+              <div style="display:flex;gap:10px;">
+                <span style="{{ c.avatarStyle }}">{{ c.ini }}</span>
+                <div style="min-width:0;flex:1;">
+                  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:3px;"><span style="font-size:12.5px;font-weight:600;color:var(--fg);">{{ c.author }}</span><span style="font-size:10.5px;font-family:var(--mono);color:var(--fg-muted);">{{ c.time }}</span><span style="{{ c.visStyle }}">{{ c.visLabel }}</span></div>
+                  <div style="font-size:13px;line-height:1.5;color:var(--fg-soft);background:#fff;border:1px solid var(--line);border-radius:10px;border-top-left-radius:3px;padding:8px 11px;">{{ c.body }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="border-top:1px solid var(--line);background:#fff;padding:10px 14px;flex:none;">
+            <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--line-strong);border-radius:999px;background:#fff;padding:4px 4px 4px 14px;">
+              <input class="k-comment" readonly placeholder="Escrever comentário…  @menção" style="flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:13px;color:var(--fg);"/>
+              <button title="Enviar comentário (Enter)" style="width:32px;height:32px;border-radius:50%;background:var(--green);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
+              </button>
+            </div>
+            <label style="display:inline-flex;align-items:center;gap:7px;margin-top:7px;font-size:11px;color:var(--fg-muted);cursor:pointer;"><span style="width:14px;height:14px;border-radius:4px;border:1.5px solid var(--line-strong);flex:none;"></span>Visível ao cliente no Portal</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div style="display:flex;align-items:center;gap:12px;padding:11px 18px;border-top:1px solid var(--line);background:#fff;flex:none;position:relative;">
+        <button onClick="{{ onToggleFoot }}" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--line-strong);background:#fff;color:var(--fg-soft);cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;" title="Mais ações">⋯</button>
+
+        <sc-if value="{{ footMenu }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;bottom:54px;left:18px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh-lg);padding:6px;min-width:240px;z-index:8;">
+            <sc-if value="{{ confirmDel }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:10px 11px;">
+                <div style="font-size:13px;font-weight:700;color:var(--danger);margin-bottom:3px;">Excluir permanentemente?</div>
+                <div style="font-size:12px;color:var(--fg-soft);line-height:1.45;margin-bottom:11px;">Esta ação não pode ser desfeita. A tarefa e seu histórico serão apagados.</div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                  <button onClick="{{ onCancelDel }}" style="padding:7px 13px;border-radius:8px;border:1px solid var(--line-strong);background:#fff;font-size:12.5px;color:var(--fg-soft);cursor:pointer;">Cancelar</button>
+                  <button style="padding:7px 13px;border-radius:8px;border:none;background:var(--danger);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;">Sim, excluir</button>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ menuList }}" hint-placeholder-val="{{ true }}">
+              <button style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 11px;border:none;background:transparent;border-radius:8px;font-size:13px;color:var(--fg-soft);cursor:pointer;text-align:left;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><rect x="3" y="3" width="18" height="6" rx="1"></rect><path d="M19 9v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V9M10 13h4"></path></svg>
+                Arquivar <span style="margin-left:auto;font-size:10.5px;color:var(--fg-muted);">reversível</span>
+              </button>
+              <div style="height:1px;background:var(--line);margin:4px 6px;"></div>
+              <button onClick="{{ onAskDel }}" style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 11px;border:none;background:transparent;border-radius:8px;font-size:13px;color:var(--danger);cursor:pointer;text-align:left;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"></path></svg>
+                Excluir <span style="margin-left:auto;font-size:10.5px;color:var(--danger);opacity:.7;">permanente</span>
+              </button>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
+          <button style="padding:9px 17px;border-radius:999px;background:transparent;color:var(--fg-soft);border:1px solid var(--line-strong);font-size:13.5px;font-weight:500;cursor:pointer;" style-hover="background:var(--bg-alt);">Fechar</button>
+          <button style="padding:9px 22px;border-radius:999px;background:var(--green);color:#fff;font-size:13.5px;font-weight:600;border:none;cursor:pointer;" style-hover="background:var(--green-hover);">{{ saveLabel }}</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:960},&quot;accent&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;default&quot;:&quot;#007A3D&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;backdrop&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;plain&quot;,&quot;options&quot;:[&quot;dim&quot;,&quot;plain&quot;],&quot;tsType&quot;:&quot;string&quot;},&quot;showToolbar&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  rootRef = React.createRef();
+  state = { dir: 1, scenario: 'novo', tab: 'detalhes', footMenu: false, confirmDel: false };
+
+  componentDidMount() { this.applyAccent(); }
+  componentDidUpdate() { this.applyAccent(); }
+  applyAccent() {
+    const el = this.rootRef && this.rootRef.current;
+    const a = this.props.accent;
+    if (el && a) { el.style.setProperty('--green', a); el.style.setProperty('--green-hover', a); }
+  }
+
+  pick(scenario) { const sc = this.SCEN()[scenario]; this.setState({ scenario, tab: sc.tab, footMenu: false, confirmDel: false }); }
+  setDir(dir) { this.setState({ dir, footMenu: false, confirmDel: false }); }
+  setTab(tab) { this.setState({ tab, footMenu: false }); }
+
+  SCEN() {
+    const BASE = {
+      titulo: '[Bodytech] Sincronizar leads do formulário no Sales Cloud',
+      cliente: 'Bodytech', projeto: 'Sales Cloud · Captação', responsavel: 'Marina Costa',
+      prioridade: 'P1', prioridadeLabel: 'P1 · Alta', solicitada: 'Alta',
+      prazo: '02/06/2026', complexidade: 'Média', esforco: '8', realizado: '',
+      escopo: ['Admin', 'Flow', 'Integração', 'Sales Cloud'],
+      descricao: 'Leads que entram pelo formulário do site não estão criando registros no Sales Cloud. Precisamos de integração via webhook + um Flow de qualificação e roteamento por região.',
+      valorEsperado: 'Reduzir perda de leads e o tempo de resposta comercial de ~2 dias para menos de 2 horas.',
+      criterioAceite: 'Todo lead do formulário cria um Lead no SF em < 5min, com origem rastreada e roteado ao vendedor da região.',
+      solucao: '', valorEntregue: '', reopenCount: 0, showEntrega: false,
+      aprovado: false, reaberta: false,
+    };
+    const C = [
+      { ini: 'MC', author: 'Marina Costa', time: 'há 2 dias', body: 'Validei o payload do webhook com o time do site — os campos batem com o objeto Lead.', vis: false },
+      { ini: 'FB', author: 'Felipe · você', time: 'ontem', body: '@Marina dá pra subir o Flow de roteamento até quinta?', vis: false },
+      { ini: 'AN', author: 'Bodytech · Ana', time: 'há 4h', body: 'Pra gente é prioridade alta — quanto antes, melhor.', vis: true },
+    ];
+    const mk = (o) => Object.assign({}, BASE, o);
+    return {
+      novo: mk({ subetapa: 'Backlog', titulo: '', cliente: '', projeto: '', responsavel: '', prioridade: '', prioridadeLabel: '', solicitada: '', prazo: '', escopo: [], descricao: '', valorEsperado: '', criterioAceite: '', missing: ['clienteId', 'projetoId', 'pessoaId', 'prioridade'], tab: 'detalhes', autosave: 'novo', comments: [] }),
+      em_definicao: mk({ subetapa: 'Em definição', escopo: [], criterioAceite: '', missing: ['escopo'], tab: 'escopo', autosave: 'saved', comments: C.slice(0, 2) }),
+      escopo_definido: mk({ subetapa: 'Escopo definido', criterioAceite: '', missing: ['criterioAceite'], tab: 'escopo', autosave: 'saved', comments: C.slice(0, 2) }),
+      em_homologacao: mk({ subetapa: 'Em homologação', showEntrega: true, realizado: '', solucao: 'Webhook publicado e Flow "Lead Intake" em homologação no sandbox.', missing: ['tempoRealHoras'], tab: 'entrega', autosave: 'saved', comments: C }),
+      concluido: mk({ subetapa: 'Concluído', showEntrega: true, realizado: '12', solucao: 'Webhook + Flow "Lead Intake" publicados em produção. Roteamento por CEP via custom metadata; origem gravada em Lead Source.', valorEntregue: 'Tempo de resposta caiu de ~2 dias para 35min. Zero leads perdidos nas 3 primeiras semanas.', missing: [], tab: 'entrega', autosave: 'saved', aprovado: true, comments: C }),
+      reabertura: mk({ subetapa: 'Em desenvolvimento', showEntrega: true, reopenCount: 1, realizado: '12', solucao: 'Webhook + Flow publicados em produção.', valorEntregue: 'Tempo de resposta caiu de ~2 dias para 35min.', missing: ['motivoReabertura'], tab: 'entrega', autosave: 'saved', reaberta: true, comments: C }),
+      bloqueado: mk({ subetapa: 'Bloqueado', missing: ['bloqueadoPor'], tab: 'detalhes', autosave: 'saved', bloqueado: true, comments: C.slice(0, 1) }),
+      erro: mk({ subetapa: 'Escopo definido', prazo: '', esforco: '', criterioAceite: '', missing: ['prazo', 'esforco', 'criterioAceite'], tab: 'escopo', autosave: 'error', comments: C.slice(0, 2) }),
+    };
+  }
+
+  renderVals() {
+    const S = this.state;
+    const dir = S.dir;
+    const scKey = S.scenario;
+    const sc = this.SCEN()[scKey];
+    const miss = new Set(sc.missing || []);
+
+    // ---- field styles ----
+    const inpBase = 'display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:8px 12px;font-size:13.5px;border:1px solid var(--line-strong);border-radius:6px;background:#fff;color:var(--fg);min-height:38px;line-height:1.3;';
+    const missAdd = 'border-color:var(--danger);box-shadow:0 0 0 1px var(--danger);';
+    const fs = (k) => inpBase + (miss.has(k) ? missAdd : '');
+    const taBase = 'width:100%;padding:9px 12px;font-size:13px;line-height:1.55;border:1px solid var(--line-strong);border-radius:6px;background:#fff;color:var(--fg);min-height:60px;white-space:pre-wrap;';
+    const ta = (val, ph, k) => {
+      let s = taBase;
+      if (k && miss.has(k)) s += missAdd;
+      if (!val) s += 'color:var(--fg-muted);font-style:italic;';
+      return { style: s, val: val || ph };
+    };
+
+    // ---- direction-driven tab styles ----
+    const d1c = 'display:flex;gap:22px;padding:0 22px;border-bottom:1px solid var(--line-strong);background:#fff;flex:none;';
+    const d2c = 'display:flex;gap:4px;padding:5px;margin:13px 18px 2px;background:var(--bg-alt);border-radius:10px;flex:none;';
+    const d1t = 'padding:12px 2px;font-size:13.5px;font-weight:500;color:var(--fg-muted);border-bottom:2px solid transparent;cursor:pointer;display:inline-flex;align-items:center;gap:7px;margin-bottom:-1px;white-space:nowrap;';
+    const d1a = 'padding:12px 2px;font-size:13.5px;font-weight:600;color:var(--fg);border-bottom:2px solid var(--green);cursor:pointer;display:inline-flex;align-items:center;gap:7px;margin-bottom:-1px;white-space:nowrap;';
+    const d2t = 'flex:1;justify-content:center;padding:8px 8px;font-size:12.5px;font-weight:600;color:var(--fg-muted);border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;';
+    const d2a = 'flex:1;justify-content:center;padding:8px 8px;font-size:12.5px;font-weight:600;color:var(--fg);background:#fff;box-shadow:var(--sh-xs);border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;';
+    const tStyle = (k) => { const act = S.tab === k; return dir === 1 ? (act ? d1a : d1t) : (act ? d2a : d2t); };
+    const badgeStyle = 'display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:999px;font-size:10px;font-weight:700;font-family:var(--mono);background:var(--danger);color:#fff;';
+    const TABF = { detalhes: ['clienteId', 'projetoId', 'pessoaId', 'prioridade'], escopo: ['escopo', 'prazo', 'esforco', 'tempoRealHoras', 'criterioAceite'], entrega: ['solucaoImplementada', 'valorEntregue', 'motivoReabertura'], avancado: [] };
+    const bn = (k) => TABF[k].filter((f) => miss.has(f)).length;
+    const labels = { detalhes: 'Detalhes', escopo: 'Escopo & Esforço', entrega: 'Entrega', avancado: 'Avançado' };
+    const tabs = {};
+    ['detalhes', 'escopo', 'entrega', 'avancado'].forEach((k) => {
+      const n = bn(k);
+      tabs[k] = { style: tStyle(k), label: labels[k], badgeShow: n > 0, badgeN: String(n), badgeStyle };
+    });
+
+    // ---- readiness ----
+    const cnt = (sc.missing || []).length;
+    const ok = cnt === 0;
+    const okBar = 'display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:var(--ok-soft);color:var(--ok);font-size:12.5px;font-weight:600;border:1px solid color-mix(in srgb,var(--ok) 25%,transparent);white-space:nowrap;';
+    const warnBar = 'display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:var(--warn-soft);color:#8C5A14;font-size:12.5px;font-weight:600;border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);white-space:nowrap;';
+    const readyLabel = ok ? 'Pronto pra avançar' : (cnt === 1 ? '1 campo falta' : cnt + ' campos faltam');
+
+    // ---- autosave ----
+    const AS = {
+      novo: { l: 'tarefa nova', s: 'color:rgba(255,255,255,.5);background:rgba(255,255,255,.04);', d: 'background:var(--fg-muted);' },
+      saved: { l: 'salvo', s: 'color:rgba(255,255,255,.6);background:rgba(255,255,255,.04);', d: 'background:#34C759;' },
+      error: { l: 'falha ao salvar', s: 'color:#fff;background:var(--danger);font-weight:600;box-shadow:0 0 0 2px rgba(192,57,43,.4);', d: 'background:#fff;' },
+    };
+    const as = AS[sc.autosave] || AS.saved;
+    const asWrap = 'display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;padding:4px 9px;border-radius:999px;white-space:nowrap;';
+    const asDot = 'width:6px;height:6px;border-radius:50%;';
+
+    // ---- header chips ----
+    const PRI = { P0: 'var(--p0)|var(--p0-soft)', P1: '#E3B774|rgba(183,121,31,.22)', P2: '#9DC2EA|rgba(44,114,184,.22)', P3: '#B9BCC0|rgba(125,129,133,.22)' };
+    const PRIL = { P0: 'var(--p0)|var(--p0-soft)', P1: '#8C5A14|var(--p1-soft)', P2: 'var(--p2)|var(--p2-soft)', P3: 'var(--p3)|var(--p3-soft)' };
+    let priStyle = '', priLightStyle = '';
+    if (sc.prioridade) {
+      const parts = (PRI[sc.prioridade] || PRI.P2).split('|');
+      priStyle = 'display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;font-family:var(--mono);padding:3px 8px;border-radius:999px;white-space:nowrap;color:' + parts[0] + ';background:' + parts[1] + ';';
+      const pl = (PRIL[sc.prioridade] || PRIL.P2).split('|');
+      priLightStyle = 'display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;font-family:var(--mono);padding:4px 10px;border-radius:999px;white-space:nowrap;color:' + pl[0] + ';background:' + pl[1] + ';';
+    }
+
+    // ---- escopo chips ----
+    const SEL = new Set(sc.escopo || []);
+    const chip = (label) => ({ label, style: 'display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:600;font-family:var(--mono);' + (SEL.has(label) ? 'background:var(--green);color:#fff;border:1px solid var(--green);' : 'background:#fff;color:var(--fg-muted);border:1px solid var(--line-strong);') });
+    const chipsSF = ['Admin', 'Flow', 'Apex', 'LWC', 'Integração', 'Arquitetura', 'Consultoria'].map(chip);
+    const chipsCloud = ['Sales Cloud', 'Service Cloud', 'Marketing Cloud'].map(chip);
+    const chipsIA = ['WhatsApp', 'Bot', 'Agentforce'].map(chip);
+    const escopoWrap = 'padding:12px;border-radius:10px;background:var(--bg-app);border:1px solid ' + (miss.has('escopo') ? 'var(--danger)' : 'var(--line)') + ';' + (miss.has('escopo') ? 'box-shadow:0 0 0 1px var(--danger);' : '');
+
+    // ---- stepper (dir 2) ----
+    const STAGE = { 'Backlog': 0, 'Em definição': 1, 'Escopo definido': 1, 'Em desenvolvimento': 2, 'Em homologação': 3, 'Em revisão': 3, 'Bloqueado': 2, 'Concluído': 4 };
+    const curStage = STAGE[sc.subetapa] != null ? STAGE[sc.subetapa] : 0;
+    const STEPS = ['Triagem', 'Definição', 'Execução', 'Homologação', 'Concluído'];
+    const steps = STEPS.map((label, i) => {
+      const done = i < curStage, cur = i === curStage;
+      const dot = done ? 'background:var(--green);border-color:var(--green);' : cur ? 'background:#fff;border-color:var(--green);box-shadow:0 0 0 3px var(--green-tint);' : 'background:var(--line-soft);border-color:var(--line-strong);';
+      return {
+        label,
+        dotStyle: 'width:10px;height:10px;border-radius:50%;border:2px solid;flex:none;' + dot,
+        labelStyle: 'font-size:10px;font-weight:' + (cur ? '700' : '500') + ';color:' + (done || cur ? 'var(--fg)' : 'var(--fg-muted)') + ';white-space:nowrap;',
+        connShow: i > 0,
+        connStyle: 'width:16px;height:2px;border-radius:2px;background:' + (i <= curStage ? 'var(--green)' : 'var(--line-strong)') + ';flex:none;',
+      };
+    });
+
+    // ---- comments ----
+    const comments = (sc.comments || []).map((c) => ({
+      ini: c.ini, author: c.author, time: c.time, body: c.body,
+      avatarStyle: 'width:30px;height:30px;border-radius:50%;background:var(--bg-alt);color:var(--fg-soft);display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;font-family:var(--mono);flex:none;border:1px solid var(--line);',
+      visLabel: c.vis ? 'visível ao cliente' : 'nota interna',
+      visStyle: 'font-size:9px;font-weight:600;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em;padding:1px 6px;border-radius:999px;white-space:nowrap;' + (c.vis ? 'background:var(--green-soft);color:var(--green);' : 'background:var(--bg-alt);color:var(--fg-muted);'),
+    }));
+
+    // ---- responsável summary ----
+    const initials = (n) => { if (!n) return '?'; const p = n.replace(/·.*/, '').trim().split(/\s+/); return ((p[0] || '')[0] || '' + (p[1] ? p[1][0] : '')).toUpperCase() + (p[1] ? p[1][0].toUpperCase() : ''); };
+
+    // ---- states + dirs toolbar ----
+    const stOrder = [['novo', 'Novo'], ['em_definicao', 'Em definição'], ['escopo_definido', 'Escopo definido'], ['em_homologacao', 'Homologação'], ['concluido', 'Concluído'], ['reabertura', 'Reabertura'], ['bloqueado', 'Bloqueado'], ['erro', 'Erro · autosave']];
+    const stBase = 'padding:6px 11px;font-size:12px;font-weight:600;font-family:var(--mono);border-radius:6px;cursor:pointer;border:1px solid var(--line-strong);background:#fff;color:var(--fg-soft);white-space:nowrap;';
+    const stAct = 'padding:6px 11px;font-size:12px;font-weight:600;font-family:var(--mono);border-radius:6px;cursor:pointer;border:1px solid var(--bg-dark);background:var(--bg-dark);color:#fff;white-space:nowrap;';
+    const states = stOrder.map(([k, lbl]) => ({ label: lbl, style: scKey === k ? stAct : stBase, onClick: () => this.pick(k) }));
+    const dInfo = [{ k: 1, name: 'Direção 1 · Editorial', desc: 'Tabs sublinhadas · respiro' }, { k: 2, name: 'Direção 2 · Cockpit', desc: 'Segmented · stepper de ciclo' }];
+    const dBase = 'flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:0;padding:6px 13px;border-radius:9px;cursor:pointer;border:1px solid var(--line-strong);background:#fff;text-align:left;white-space:nowrap;';
+    const dAct = 'flex:none;display:flex;flex-direction:column;align-items:flex-start;gap:0;padding:6px 13px;border-radius:9px;cursor:pointer;border:1px solid var(--green);background:var(--green-tint);box-shadow:inset 0 0 0 1px var(--green);text-align:left;white-space:nowrap;';
+    const dirs = dInfo.map((d) => ({ name: d.name, desc: d.desc, style: dir === d.k ? dAct : dBase, onClick: () => this.setDir(d.k) }));
+
+    const descO = ta(sc.descricao, 'Contexto, links, o problema e o porquê…', null);
+    const veO = ta(sc.valorEsperado, 'Que impacto positivo essa entrega gera pro cliente?', null);
+    const critO = ta(sc.criterioAceite, 'Como sabemos que está pronto? (Definition of Done)', 'criterioAceite');
+    const solO = ta(sc.solucao, 'O que foi feito de fato (vai pro histórico e resumos)…', 'solucaoImplementada');
+    const veEntO = ta(sc.valorEntregue, 'Impacto realizado — como isso ajudou o cliente?', 'valorEntregue');
+
+    return {
+      showToolbar: this.props.showToolbar !== false,
+      backdropDim: (this.props.backdrop || 'dim') === 'dim',
+      rootRef: this.rootRef,
+      dirs, states,
+      dirName: dInfo[dir - 1].name, dirDesc: dInfo[dir - 1].desc,
+
+      // header
+      titulo: sc.titulo,
+      priShow: !!sc.prioridade, priLabel: sc.prioridade, priStyle, priLightStyle,
+      onSubChange: () => {},
+      prazoChipShow: !!sc.prazo, prazoChipLabel: sc.prazo ? sc.prazo.slice(0, 5) : '',
+      clienteChipShow: !!sc.cliente, clienteChipLabel: sc.cliente,
+      reopenShow: (sc.reopenCount || 0) > 0, reopenLabel: 'reaberta ' + sc.reopenCount + 'x',
+      autosaveLabel: as.l, autosaveStyle: asWrap + as.s, autosaveDotStyle: asDot + as.d + (sc.autosave === 'saved' ? '' : ''),
+
+      // summary
+      summarySubetapa: sc.subetapa,
+      respIni: initials(sc.responsavel),
+      respSummary: sc.responsavel || 'Sem responsável',
+      prazoSummary: sc.prazo ? 'vence ' + sc.prazo : 'sem prazo',
+      showStepper: dir === 2, steps,
+      readyOk: ok, readyWarn: !ok, readyLabel, readyBarStyle: ok ? okBar : warnBar,
+
+      // tabs
+      tabContainerStyle: dir === 1 ? d1c : d2c,
+      tabs, showEntregaTab: !!sc.showEntrega,
+      onDet: () => this.setTab('detalhes'), onEsc: () => this.setTab('escopo'), onEnt: () => this.setTab('entrega'), onAva: () => this.setTab('avancado'),
+
+      // banners
+      showErro: scKey === 'erro', showBloq: !!sc.bloqueado, showReab: !!sc.reaberta, showAprov: !!sc.aprovado,
+      sBloq: fs('bloqueadoPor'), sMotivo: fs('motivoReabertura'),
+
+      // panels
+      showDetalhes: S.tab === 'detalhes', showEscopo: S.tab === 'escopo', showEntrega: S.tab === 'entrega', showAvancado: S.tab === 'avancado',
+
+      // detalhes
+      reqCliente: miss.has('clienteId'), reqProjeto: miss.has('projetoId'), reqResp: miss.has('pessoaId'), reqPrio: miss.has('prioridade'),
+      sCliente: fs('clienteId'), clienteDisp: sc.cliente || '—',
+      sProjeto: fs('projetoId'), projetoDisp: sc.projeto || '—',
+      sResp: fs('pessoaId'), respDisp: sc.responsavel || '—',
+      sPrio: fs('prioridade'), prioDisp: sc.prioridadeLabel || '— revisar',
+      inpDispStyle: inpBase, solicDisp: sc.solicitada || '— não informado',
+      descStyle: descO.style, descVal: descO.val, veStyle: veO.style, veVal: veO.val,
+
+      // escopo
+      complexDisp: sc.complexidade || 'Média',
+      reqPrazo: miss.has('prazo'), sPrazo: fs('prazo'), prazoFieldDisp: sc.prazo || '—',
+      reqEsforco: miss.has('esforco'), sEsforco: fs('esforco'), esforcoDisp: sc.esforco ? sc.esforco + ' h' : '—',
+      reqRealizado: miss.has('tempoRealHoras'), sRealizado: fs('tempoRealHoras'), realizadoDisp: sc.realizado ? sc.realizado + ' h' : '—',
+      reqEscopo: miss.has('escopo'), escopoWrap, escopoCount: (sc.escopo || []).length + ' selecionados', chipsSF, chipsCloud, chipsIA,
+      reqCriterio: miss.has('criterioAceite'), critStyle: critO.style, critVal: critO.val,
+
+      // entrega
+      reqSolucao: miss.has('solucaoImplementada'), solStyle: solO.style, solVal: solO.val,
+      reqValorEntregue: miss.has('valorEntregue'), veEntStyle: veEntO.style, veEntVal: veEntO.val,
+
+      // conversa
+      comments, conversaCount: String(comments.length), conversaEmpty: comments.length === 0,
+      anexosCount: scKey === 'concluido' || scKey === 'em_homologacao' ? '2' : '0', historicoCount: scKey === 'novo' ? '0' : '14', tempoCount: sc.realizado ? '5' : '0',
+
+      // footer
+      footMenu: S.footMenu, confirmDel: S.confirmDel, menuList: !S.confirmDel,
+      onToggleFoot: () => this.setState((s) => ({ footMenu: !s.footMenu, confirmDel: false })),
+      onAskDel: () => this.setState({ confirmDel: true }),
+      onCancelDel: () => this.setState({ confirmDel: false, footMenu: false }),
+      saveLabel: scKey === 'novo' ? 'Criar' : 'Salvar',
+    };
+  }
+}
+</script>
+</body>
+</html>

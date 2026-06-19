@@ -1076,6 +1076,97 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .tmodal-head .head-chip-cliente { text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.85); font-size: 11px; font-weight: 500; }
 .tmodal-head .head-chip-muted { color: rgba(255,255,255,0.5); font-style: italic; }
 .tmodal-foot .btn { text-transform: none; }
+
+/* ── Subheader fixo (entre head e body) ────────────────────────────
+   Status select + cliente/projeto + responsável + prioridade +
+   prazo + visivel_cliente + indicador de prontidão.
+   Bucket V · M.1 (handoff Modal de Task · opção A híbrido).        */
+.tmodal-subhdr {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: 10px var(--sp-5);
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--line-strong);
+  flex-shrink: 0; flex-wrap: wrap;
+}
+.tmodal-subhdr-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: #fff; color: var(--ink);
+  border: 1px solid var(--line-strong); border-radius: var(--r-pill);
+  font-size: 12.5px; font-weight: 600;
+  padding: 4px 10px 4px 8px; cursor: pointer;
+  transition: border-color 150ms cubic-bezier(.2,.7,.2,1);
+}
+.tmodal-subhdr-pill:hover { border-color: var(--ink); }
+.tmodal-subhdr-pill::-webkit-calendar-picker-indicator { display: none; }
+.tmodal-subhdr-pill .dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0;
+}
+.tmodal-subhdr-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--ink-soft);
+  background: transparent; padding: 4px 0;
+}
+.tmodal-subhdr-chip .dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--brand); flex-shrink: 0;
+}
+.tmodal-subhdr-sep { color: var(--muted); opacity: 0.5; }
+.tmodal-subhdr-mono { font-family: var(--font-mono); font-feature-settings: "tnum"; font-size: 11.5px; color: var(--ink-soft); }
+.tmodal-subhdr-avatar {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--brand-soft); color: var(--brand-dark);
+  font-size: 10.5px; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.tmodal-subhdr-right {
+  margin-left: auto; display: inline-flex; align-items: center; gap: var(--sp-3);
+  flex-shrink: 0;
+}
+.tmodal-subhdr-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--muted); cursor: pointer; user-select: none;
+}
+.tmodal-subhdr-toggle input { accent-color: var(--green); }
+
+/* Readiness · pronto pra avançar vs N pendentes */
+.tmodal-readiness {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 600;
+  padding: 4px 10px; border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+.tmodal-readiness.ok    { background: var(--ok-soft, var(--brand-soft)); color: var(--ok, var(--brand-dark)); }
+.tmodal-readiness.warn  { background: var(--warn-soft, var(--p1-soft)); color: var(--warn, var(--p1)); }
+
+/* ── Tabs do formulário (coluna esquerda) ──────────────────────────
+   Espelho da .tmodal-tabs (que vive no pane direito · Conversa/Anexos)
+   mas com identidade própria pra não confundir.                     */
+.tmodal-formtabs {
+  display: flex; gap: var(--sp-4);
+  padding: 0 var(--sp-6);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
+  flex-shrink: 0;
+}
+.tmodal-formtab {
+  font-size: var(--fs-sm); font-weight: 500; color: var(--muted);
+  padding: 10px 0 10px; border-bottom: 2px solid transparent;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  transition: color 150ms cubic-bezier(.2,.7,.2,1), border-color 150ms cubic-bezier(.2,.7,.2,1);
+}
+.tmodal-formtab:hover { color: var(--ink-soft); }
+.tmodal-formtab.active { color: var(--ink); border-bottom-color: var(--green); font-weight: 600; }
+.tmodal-formtab.completed { color: var(--ink-soft); }
+.tmodal-formtab .ftab-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; font-size: 10px; font-weight: 700;
+  font-family: var(--font-mono); font-feature-settings: "tnum";
+  background: var(--p0, var(--danger)); color: #fff;
+}
+.tmodal-formtab.completed .ftab-check {
+  width: 14px; height: 14px; color: var(--green);
+}
+
 .tmodal-body { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); flex: 1 1 auto; min-height: 0; }
 .tmodal-left  { padding: var(--sp-5) var(--sp-6); overflow-y: auto; min-height: 0; }
 .tmodal-right { background: var(--surface-3); border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }

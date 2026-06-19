@@ -23,7 +23,7 @@ import {
   ArrowDownUp, RefreshCw, Trash2, Edit3, Eye, EyeOff, Filter, ChevronsUpDown,
   ListFilter, MessageSquare, Paperclip, History, Pause, AtSign, Archive,
   Lock, AlertCircle, CheckCircle2, Info, ArrowRight, LogOut, Settings,
-  Activity, BarChart2, Flag, Clock, Hourglass, Bot,
+  Activity, BarChart2, Flag, Clock, Hourglass, Bot, Send, AlertTriangle, UserPlus,
   type LucideIcon, type LucideProps,
 } from 'lucide-react';
 
@@ -37,7 +37,7 @@ type IconName =
   | 'list-filter' | 'comment' | 'paperclip' | 'history' | 'pause' | 'mention'
   | 'archive' | 'lock' | 'alert' | 'check-circle' | 'info' | 'arrow-right'
   | 'logout' | 'settings' | 'activity' | 'bar-chart-2' | 'flag' | 'clock'
-  | 'hourglass' | 'bot';
+  | 'hourglass' | 'bot' | 'send' | 'alert-triangle' | 'user-plus';
 
 const MAP: Record<IconName, LucideIcon> = {
   plus: Plus,
@@ -98,6 +98,9 @@ const MAP: Record<IconName, LucideIcon> = {
   clock: Clock,
   hourglass: Hourglass,
   bot: Bot,
+  send: Send,
+  'alert-triangle': AlertTriangle,
+  'user-plus': UserPlus,
 };
 
 interface IconProps extends Omit<LucideProps, 'size'> {
