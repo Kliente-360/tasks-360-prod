@@ -1144,6 +1144,47 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .tmodal-subhdr-pill[data-macro="andamento"]  { --macro-dot: var(--brand); border-color: var(--brand); color: var(--brand-dark, var(--brand)); box-shadow: inset 0 0 0 1px var(--brand-soft); }
 .tmodal-subhdr-pill[data-macro="bloqueado"]  { --macro-dot: var(--p0); border-color: var(--p0); color: var(--p0); box-shadow: inset 0 0 0 1px var(--p0-soft); }
 .tmodal-subhdr-pill[data-macro="concluido"]  { --macro-dot: var(--brand-soft); border-color: var(--brand-soft); color: var(--ink-soft); }
+
+/* Prioridade select estilizado como chip soft P0/P1/P2/P3 · v1.03.179 */
+.tmodal-subhdr-prio {
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid var(--line-strong); border-radius: var(--r-pill);
+  font-family: var(--font-mono); font-feature-settings: "tnum";
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 4px 22px 4px 10px; cursor: pointer;
+  background-color: var(--surface-3); color: var(--muted);
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 11px) 50%, calc(100% - 7px) 50%;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  transition: border-color 150ms cubic-bezier(.2,.7,.2,1);
+}
+.tmodal-subhdr-prio:hover { border-color: currentColor; }
+.tmodal-subhdr-prio[data-prio="P0"] { background-color: var(--p0-soft); color: var(--p0); border-color: var(--p0-soft); }
+.tmodal-subhdr-prio[data-prio="P1"] { background-color: var(--p1-soft); color: var(--p1); border-color: var(--p1-soft); }
+.tmodal-subhdr-prio[data-prio="P2"] { background-color: var(--p2-soft); color: var(--p2); border-color: var(--p2-soft); }
+.tmodal-subhdr-prio[data-prio="P3"] { background-color: var(--p3-soft); color: var(--p3); border-color: var(--p3-soft); }
+.tmodal-subhdr-prio[data-prio=""]   { border-style: dashed; }
+
+/* Date input compacto pra prazo · dd/mm/aaaa display sobre input nativo */
+.tmodal-subhdr-date {
+  position: relative; display: inline-flex; align-items: center;
+  border: 1px solid var(--line-strong); border-radius: var(--r-pill);
+  padding: 4px 10px; font-family: var(--font-mono); font-feature-settings: "tnum";
+  font-size: 11.5px; color: var(--ink-soft); cursor: pointer;
+  background: #fff;
+  transition: border-color 150ms cubic-bezier(.2,.7,.2,1);
+}
+.tmodal-subhdr-date:hover { border-color: var(--ink-soft); }
+.tmodal-subhdr-date input[type="date"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  width: 100%; height: 100%; padding: 0; border: 0;
+}
+.tmodal-subhdr-date span.has-val { color: var(--ink); }
+.tmodal-subhdr-date.is-missing { border-color: var(--danger); color: var(--danger); }
+.tmodal-subhdr-date.is-missing span { color: var(--danger); }
 .tmodal-subhdr-chip {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 12px; color: var(--ink-soft);

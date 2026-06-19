@@ -1807,7 +1807,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             Status select + cliente/projeto + responsável + prioridade + prazo
             + toggle visivel_cliente + indicador agregado de prontidão. */}
         <div className="tmodal-subhdr hidden md:flex">
-          {/* Status select · pill colorida por macro (backlog/andamento/bloqueado/concluido) */}
+          {/* Ordem (v1.03.179): editáveis primeiro · subetapa · prioridade
+              · prazo · depois contexto read-only · cliente-projeto · responsável. */}
+
+          {/* Status select · pill colorida por macro */}
           <select
             className="tmodal-subhdr-pill"
             data-macro={SUB_TO_MACRO[editing.subetapa] ?? 'backlog'}
@@ -1820,6 +1823,40 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               <option key={s} value={s}>{SUB_LABELS[s]}</option>
             ))}
           </select>
+
+          {/* Prioridade select · pill colorida por P0/P1/P2/P3 */}
+          <select
+            className="tmodal-subhdr-prio"
+            data-prio={editing.prioridade || ''}
+            value={editing.prioridade}
+            onChange={(e) => set('prioridade', e.target.value as Task['prioridade'])}
+            aria-label="Mudar prioridade"
+            title="Mudar prioridade"
+          >
+            <option value="">— revisar</option>
+            <option value="P0">P0</option>
+            <option value="P1">P1</option>
+            <option value="P2">P2</option>
+            <option value="P3">P3</option>
+          </select>
+
+          {/* Prazo · date input inline com display dd/mm/aaaa */}
+          <label
+            className={cn('tmodal-subhdr-date', isMissing('prazo') && 'is-missing')}
+            title={editing.prazo ? `Prazo: ${fmtDate(editing.prazo)}` : 'Definir prazo'}
+          >
+            <input
+              type="date"
+              value={editing.prazo || ''}
+              onChange={(e) => set('prazo', e.target.value)}
+              aria-label="Mudar prazo"
+            />
+            <span className={editing.prazo ? 'has-val' : ''}>
+              {editing.prazo
+                ? editing.prazo.split('-').reverse().join('/')
+                : 'dd/mm/aaaa'}
+            </span>
+          </label>
 
           {/* Cliente · Projeto (read-only) */}
           {editing.clienteId && (
@@ -1838,33 +1875,13 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             <span className="tmodal-subhdr-chip text-muted italic">sem cliente</span>
           )}
 
-          {/* Responsável (avatar + nome) */}
+          {/* Responsável (avatar + nome · read-only · edit via Triagem) */}
           {editing.pessoaId && pessoasById.get(editing.pessoaId) && (
             <span className="tmodal-subhdr-chip" title={pessoasById.get(editing.pessoaId)!.nome}>
               <span className="tmodal-subhdr-avatar">
                 {pessoasById.get(editing.pessoaId)!.nome.split(' ').slice(0, 2).map((p) => p[0]?.toUpperCase()).join('')}
               </span>
               {pessoasById.get(editing.pessoaId)!.nome.split(' ')[0]}
-            </span>
-          )}
-
-          {/* Prioridade chip soft */}
-          {editing.prioridade && (
-            <span
-              className="text-[10.5px] uppercase tracking-wider font-mono font-semibold px-2 py-0.5 rounded"
-              style={{
-                background: `var(--${editing.prioridade.toLowerCase()}-soft)`,
-                color: `var(--${editing.prioridade.toLowerCase()})`,
-              }}
-            >
-              {editing.prioridade}
-            </span>
-          )}
-
-          {/* Prazo */}
-          {editing.prazo && (
-            <span className="tmodal-subhdr-mono" title={`Prazo: ${fmtDate(editing.prazo)}`}>
-              {fmtDateShort(editing.prazo)}
             </span>
           )}
 
