@@ -1094,10 +1094,10 @@ function BacklogMobilePanel({
               type="button"
               onClick={() => setShowMine((v) => !v)}
               className={cn(
-                'text-xs font-medium px-3 py-1 rounded-full transition-colors',
+                'text-xs font-medium px-3 py-1 rounded-full transition-colors border',
                 showMine
-                  ? 'bg-[color:var(--brand)] text-white'
-                  : 'border border-[color:var(--line)] text-[color:var(--ink-soft)]',
+                  ? 'bg-[color:var(--brand)] text-white border-[color:var(--brand)]'
+                  : 'border-[color:var(--line)] text-[color:var(--ink-soft)]',
               )}
             >
               minhas
