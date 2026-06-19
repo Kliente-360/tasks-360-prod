@@ -326,20 +326,21 @@ export function DashboardClient() {
       {/* ── 2. Entregas + Calendário ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
 
-        {/* Entregas semana atual + 4 · métrica = quantidade de tasks */}
+        {/* Entregas previstas por semana · métrica = quantidade de tasks
+            Chart de barras com baseline (border-bottom) no eixo X. */}
         <div className="bg-elev border border-line rounded-xl">
-          <SectionHeader title="Entregas — semana atual + 4" sub="tarefas abertas por semana do prazo (atrasadas em vermelho)" />
-          <div className="p-3 md:p-4">
-            <div className="flex items-end gap-1.5 h-36">
+          <SectionHeader title="Entregas previstas por semana" sub="tarefas abertas por semana do prazo (atrasadas em vermelho)" />
+          <div className="px-3 md:px-4 pt-4 pb-6">
+            <div className="flex items-end gap-1.5 h-44 border-b border-line">
               {entregasSemanas.map((sem, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                  <div className="text-[9px] text-muted tabular-nums">
+                <div key={i} className="flex-1 flex flex-col items-center gap-0.5 h-full justify-end">
+                  <div className="text-[10px] text-muted font-mono tabular-nums">
                     {sem.count > 0 ? sem.count : ''}
                   </div>
                   <div
-                    className="w-full rounded-t-sm min-h-[3px]"
+                    className="w-full rounded-t-sm"
                     style={{
-                      height: `${Math.max(3, (sem.count / maxEntregasN) * 110)}px`,
+                      height: `${Math.max(2, (sem.count / maxEntregasN) * 150)}px`,
                       background: sem.isAtrasada
                         ? (sem.count > 0 ? '#ef4444' : '#fecaca')
                         : sem.isCurrent
@@ -350,9 +351,9 @@ export function DashboardClient() {
                 </div>
               ))}
             </div>
-            <div className="flex gap-1.5 mt-1.5">
+            <div className="flex gap-1.5 mt-2">
               {entregasSemanas.map((sem, i) => (
-                <div key={i} className="flex-1 text-center text-[9px] truncate"
+                <div key={i} className="flex-1 text-center text-[10px] truncate"
                   style={{ color: sem.isAtrasada ? 'var(--danger)' : 'var(--muted)' }}>
                   {sem.label}
                 </div>
@@ -418,7 +419,7 @@ export function DashboardClient() {
 
         {/* Volume por cliente */}
         <div className="bg-elev border border-line rounded-xl">
-          <SectionHeader title="Volume por cliente" sub="tasks abertas · vermelho = atrasadas" />
+          <SectionHeader title="Tarefas abertas por cliente" sub="vermelho = atrasadas" />
           <div className="p-3 md:p-4 flex flex-col gap-1.5">
             {volumeCliente.length === 0 && <p className="text-xs text-muted">Sem dados</p>}
             {volumeCliente.map((v) => (
@@ -451,7 +452,7 @@ export function DashboardClient() {
         {/* Volume por pessoa · simétrico ao "Volume por cliente". Alocação
             em horas vs capacidade fica no Briefing (Weekly Capacity). */}
         <div className="bg-elev border border-line rounded-xl">
-          <SectionHeader title="Volume por pessoa" sub="tasks abertas · vermelho = atrasadas · exclui PMs e clientes" />
+          <SectionHeader title="Tarefas abertas por pessoa" sub="vermelho = atrasadas · exclui PMs e clientes" />
           <div className="p-3 md:p-4 flex flex-col gap-1.5">
             {cargaPessoa.length === 0 && <p className="text-xs text-muted">Sem dados</p>}
             {cargaPessoa.map((p) => (
@@ -491,7 +492,7 @@ export function DashboardClient() {
 
         {/* Capacidade · sustentação */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden h-full flex flex-col">
-          <SectionHeader title="Capacidade semanal · sustentação" sub="% de uso vs orçamento semanal · vermelho = estouro · âmbar = pressão" />
+          <SectionHeader title="Capacidade dos contratos de sustentação" sub="% de uso vs orçamento semanal · vermelho = estouro · âmbar = pressão" />
           <div className="overflow-x-auto flex-1">
             {wca.sustentacoes.length === 0 ? (
               <div className="px-4 py-5 text-sm text-muted">Sem dados</div>
@@ -533,13 +534,13 @@ export function DashboardClient() {
 
         {/* Capacidade · do time */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden h-full flex flex-col">
-          <SectionHeader title="Capacidade do time" sub="% de capacidade ocupada por pessoa nas próximas 4 semanas · exclui PMs e clientes" />
+          <SectionHeader title="Capacidade do time por pessoa" sub="% de capacidade ocupada nas próximas 4 semanas · exclui PMs e clientes" />
           <div className="overflow-x-auto flex-1">
             {pessoasCap.length === 0 ? (
               <div className="px-4 py-5 text-sm text-muted">Sem dados</div>
             ) : (
-              <div className="px-3 md:px-4 py-3" style={{ minWidth: 280 }}>
-                <div className="grid gap-1 mb-1.5" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
+              <div className="px-3 md:px-4 py-3" style={{ minWidth: 360 }}>
+                <div className="grid gap-1 mb-1.5" style={{ gridTemplateColumns: '150px repeat(4, 1fr)' }}>
                   <div />
                   {WEEK_LABELS_SHORT.map((l, i) => (
                     <div key={l} className="text-center text-[10px] text-muted font-medium uppercase tracking-wide">
@@ -550,8 +551,8 @@ export function DashboardClient() {
                 </div>
                 <div className="space-y-1">
                   {pessoasCap.map((p) => (
-                    <div key={p.pessoaId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '72px repeat(4, 1fr)' }}>
-                      <div className="text-xs text-ink truncate pr-1" title={p.nome}>{p.nome.split(' ')[0]}</div>
+                    <div key={p.pessoaId} className="grid gap-1 items-center" style={{ gridTemplateColumns: '150px repeat(4, 1fr)' }}>
+                      <div className="text-xs text-ink truncate pr-1" title={p.nome}>{p.nome}</div>
                       {p.weeks.map((wk, i) => (
                         <div key={i} className={cn('text-center text-[11px] py-1.5 rounded font-mono', heatmapColor(wk.nivel))}
                           title={`${wk.hours}h`}>
@@ -572,7 +573,7 @@ export function DashboardClient() {
 
         {/* P0/P1 atrasadas */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden flex flex-col">
-          <SectionHeader title="P0 e P1 atrasadas" sub="prazo vencido e ainda abertas" />
+          <SectionHeader title="Prioridades atrasadas" sub="P0/P1 com prazo vencido e ainda abertas" />
           <div className="flex-1 overflow-y-auto divide-y divide-line" style={{ maxHeight: 320 }}>
             {p0p1Atrasadas.length === 0 && (
               <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Nenhuma P0/P1 atrasada</div>
@@ -604,7 +605,7 @@ export function DashboardClient() {
 
         {/* Semana atual */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden flex flex-col">
-          <SectionHeader title="Semana atual · P0/P1" sub={`prazo ${mondayStr} – ${sundayStr.slice(5).replace('-', '/')}`} />
+          <SectionHeader title="Prioridades para semana atual" sub={`P0/P1 com prazo ${mondayStr} – ${sundayStr.slice(5).replace('-', '/')}`} />
           <div className="flex-1 overflow-y-auto divide-y divide-line" style={{ maxHeight: 320 }}>
             {semanaAtualTasks.length === 0 && (
               <div className="px-4 py-5 text-sm text-muted italic">Nenhuma tarefa com prazo nesta semana</div>
@@ -638,7 +639,7 @@ export function DashboardClient() {
 
         {/* Bloqueadas */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden flex flex-col">
-          <SectionHeader title="Bloqueadas · P0/P1" sub="aguardando alguma ação externa" />
+          <SectionHeader title="Prioridades bloqueadas" sub="P0/P1 aguardando alguma ação externa" />
           <div className="flex-1 overflow-y-auto divide-y divide-line" style={{ maxHeight: 320 }}>
             {bloqueadasList.length === 0 && (
               <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Nenhuma task bloqueada</div>
@@ -657,7 +658,12 @@ export function DashboardClient() {
                   </div>
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-1">
-                  <span className="text-[10px] text-muted tabular-nums">{effEsforco(t)}h</span>
+                  <span className="text-[10px] text-muted">
+                    {t.bloqueadoPor === 'cliente' ? 'Cliente'
+                      : t.bloqueadoPor === 'nos' ? 'Nós'
+                      : t.bloqueadoPor === 'terceiro' ? 'Terceiro'
+                      : '—'}
+                  </span>
                   <span className={cn('text-[9px] px-1 py-0.5 rounded font-mono',
                     t.prioridade === 'P0' ? 'bg-[var(--p0-soft)] text-[var(--danger)]' :
                     t.prioridade === 'P1' ? 'bg-[var(--p1-soft)] text-[var(--warn)]' :

@@ -2287,18 +2287,19 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                       <option value="terceiro">Terceiro</option>
                     </select>
                   </div>
-                  {isTransitionToBloqueado && (
-                    <div>
-                      <label className="lbl">Motivo do bloqueio</label>
-                      <textarea
-                        className="inp"
-                        rows={3}
-                        placeholder="Descreva o motivo (vira comentário interno)…"
-                        value={bloqueioMotivo}
-                        onChange={(e) => setBloqueioMotivo(e.target.value)}
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <label className="lbl">
+                      Motivo do bloqueio
+                      {isTransitionToBloqueado && <span className="text-danger"> *</span>}
+                    </label>
+                    <textarea
+                      className={cn('inp', isTransitionToBloqueado && !bloqueioMotivo.trim() && 'is-missing')}
+                      rows={3}
+                      placeholder="Descreva o motivo (vira comentário interno ao salvar)…"
+                      value={bloqueioMotivo}
+                      onChange={(e) => setBloqueioMotivo(e.target.value)}
+                    />
+                  </div>
                 </>
               )}
 
@@ -2780,18 +2781,20 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   <option value="nos">Nós (interno)</option>
                   <option value="terceiro">Terceiro</option>
                 </select>
-                {isTransitionToBloqueado && (
-                  <>
-                    <label className="lbl mt-3">Motivo do bloqueio</label>
-                    <textarea
-                      className="inp resize-none"
-                      rows={3}
-                      placeholder="Descreva o motivo (vira comentário interno)…"
-                      value={bloqueioMotivo}
-                      onChange={(e) => setBloqueioMotivo(e.target.value)}
-                    />
-                  </>
-                )}
+                <label className="lbl mt-3">
+                  Motivo do bloqueio
+                  {isTransitionToBloqueado && <span className="text-danger"> *</span>}
+                </label>
+                <textarea
+                  className={cn('inp resize-none', isTransitionToBloqueado && !bloqueioMotivo.trim() && 'is-missing')}
+                  rows={3}
+                  placeholder="Descreva o motivo (vira comentário interno ao salvar)…"
+                  value={bloqueioMotivo}
+                  onChange={(e) => setBloqueioMotivo(e.target.value)}
+                />
+                <div className="text-[10px] text-muted mt-1">
+                  Cada motivo vira um comentário interno. Histórico de motivos fica na aba Conversa.
+                </div>
               </div>
             )}
 
