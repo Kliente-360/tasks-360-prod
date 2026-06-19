@@ -1186,8 +1186,8 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
   padding: 4px 10px; border-radius: var(--r-pill);
   white-space: nowrap;
 }
-.tmodal-readiness.ok    { background: var(--ok-soft, var(--brand-soft)); color: var(--ok, var(--brand-dark)); }
-.tmodal-readiness.warn  { background: var(--warn-soft, var(--p1-soft)); color: var(--warn, var(--p1)); }
+.tmodal-readiness.ok    { background: var(--ok-soft); color: var(--ok); }
+.tmodal-readiness.warn  { background: var(--warn-soft); color: var(--warn); }
 
 /* ── Tabs do formulário (coluna esquerda) ──────────────────────────
    Espelho da .tmodal-tabs (que vive no pane direito · Conversa/Anexos)
