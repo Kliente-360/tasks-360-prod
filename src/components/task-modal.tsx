@@ -551,16 +551,29 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     return counts;
   }, [missingFields, FIELD_TO_TAB, editing.subetapa, editing.bloqueadoPor]);
 
+  // Mapping explícito subetapa → aba default (revisado v1.03.178).
+  // Pendências por aba ainda sobrescrevem (vai pra primeira com falha).
+  const DEFAULT_TAB_BY_SUBETAPA: Record<string, FormTab> = {
+    backlog: 'triagem',
+    priorizado: 'triagem',
+    em_definicao: 'definicao',
+    escopo_definido: 'definicao',
+    em_desenvolvimento: 'execucao',
+    em_homologacao: 'execucao',
+    em_revisao: 'execucao',
+    pronto_producao: 'execucao',
+    em_implantacao: 'execucao',
+    bloqueado: 'bloqueio',
+    concluido: 'execucao',
+  };
+
   function pickInitialFormTab(): FormTab {
     if (wasConcluido && missingFields.has('motivoReabertura')) return 'reabertura';
     if (editing.subetapa === 'bloqueado') return 'bloqueio';
     if (tabPendency.triagem > 0) return 'triagem';
     if (tabPendency.definicao > 0) return 'definicao';
     if (tabPendency.execucao > 0) return 'execucao';
-    const rank = STAGE_RANK[editing.subetapa] ?? 0;
-    if (rank >= 5) return 'execucao';
-    if (rank >= 1) return 'definicao';
-    return 'triagem';
+    return DEFAULT_TAB_BY_SUBETAPA[editing.subetapa] ?? 'triagem';
   }
 
   const [activeFormTab, setActiveFormTab] = useState<FormTab>(() => pickInitialFormTab());
