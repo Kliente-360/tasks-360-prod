@@ -34,6 +34,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     andamentoEm: 0,
     ordem: null,
     bloqueadaPorTasks: [],
+    tipoTrabalho: null,
     homologacaoEm: null,
     aprovadoEm: null,
     checklist: [],

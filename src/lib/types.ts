@@ -43,6 +43,10 @@ export interface Task {
   motivoReabertura?: string;
   /** UUIDs de tasks que precisam estar concluídas antes desta poder concluir. */
   bloqueadaPorTasks: string[];
+  /** Categoria do trabalho · usado em analytics (mix-of-work · churn).
+   *  Cliente externo escolhe via PortalNewTaskForm; admin pode reclassificar
+   *  na aba Triagem do modal. CHECK constraint no DB. */
+  tipoTrabalho: 'bug' | 'feature' | 'discovery' | 'manutencao' | 'admin' | null;
   /** Timestamp da PRIMEIRA entrada em em_homologacao (set por trigger DB).
    *  Usado pra métrica "tempo até aprovação cliente". */
   homologacaoEm: number | null;

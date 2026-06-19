@@ -127,6 +127,7 @@ function blankEditing(): Task {
     prioridadeSolicitadaCliente: null,
     motivoReabertura: '',
     bloqueadaPorTasks: [],
+    tipoTrabalho: null,
     homologacaoEm: null,
     aprovadoEm: null,
     clienteId: '',
@@ -175,6 +176,7 @@ function editingToDbPayload(e: Task): Record<string, unknown> {
     prioridade_solicitada_cliente: e.prioridadeSolicitadaCliente || null,
     motivo_reabertura: e.motivoReabertura || null,
     bloqueada_por_tasks: e.bloqueadaPorTasks ?? [],
+    tipo_trabalho: e.tipoTrabalho || null,
     cliente_id: e.clienteId || null,
     projeto_id: e.projetoId || null,
     pessoa_id: e.pessoaId || null,
@@ -1988,7 +1990,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               { key: 'execucao',   label: 'Execução',   show: true },
               { key: 'bloqueio',   label: 'Bloqueio',   show: editing.subetapa === 'bloqueado' },
               { key: 'reabertura', label: 'Reabertura', show: wasConcluido },
-              { key: 'admin',      label: 'Admin',      show: !!editing.id },
+              { key: 'admin',      label: 'Admin',      show: !!editing.id && isAdmin },
             ] as Array<{ key: FormTab; label: string; show: boolean }>).filter((t) => t.show).map((t) => {
               const n = tabPendency[t.key];
               const active = activeFormTab === t.key;
@@ -2482,6 +2484,23 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     <option value="P3">P3 · Baixa</option>
                   </select>
                 </div>
+                {/* Tipo de trabalho · cliente classifica via Portal; admin
+                    pode reclassificar aqui. Usado em analytics (mix-of-work). */}
+                <div>
+                  <label className="lbl">Tipo de trabalho</label>
+                  <select
+                    className="inp"
+                    value={editing.tipoTrabalho ?? ''}
+                    onChange={(e) => set('tipoTrabalho', (e.target.value || null) as Task['tipoTrabalho'])}
+                  >
+                    <option value="">—</option>
+                    <option value="bug">Bug</option>
+                    <option value="feature">Feature</option>
+                    <option value="discovery">Discovery</option>
+                    <option value="manutencao">Manutenção</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
                 {/* Prazo · movido da seção Esforço pra aba Triagem (M.2) */}
                 <div>
                   <label className="lbl">Prazo {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</label>
@@ -2611,16 +2630,30 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 (a partir de em_homologacao) */}
             {activeFormTab === 'execucao' && (
             <div className="tmodal-section hidden md:block">
-              <label className="lbl">Tempo realizado (h) {(['em_homologacao','em_revisao','pronto_producao','em_implantacao','concluido'].includes(editing.subetapa)) && <span className="text-danger">*</span>}</label>
-              <input
-                type="number"
-                min={0}
-                step={0.5}
-                className={cn('inp', isMissing('tempoRealHoras'))}
-                value={editing.tempoRealHoras ?? ''}
-                onChange={(e) => set('tempoRealHoras', e.target.value === '' ? null : Number(e.target.value))}
-                placeholder="—"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="lbl">Tempo realizado (h) {(['em_homologacao','em_revisao','pronto_producao','em_implantacao','concluido'].includes(editing.subetapa)) && <span className="text-danger">*</span>}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    className={cn('inp', isMissing('tempoRealHoras'))}
+                    value={editing.tempoRealHoras ?? ''}
+                    onChange={(e) => set('tempoRealHoras', e.target.value === '' ? null : Number(e.target.value))}
+                    placeholder="—"
+                  />
+                </div>
+                <div>
+                  <label className="lbl">Homologado em</label>
+                  <input
+                    type="text"
+                    className="inp"
+                    value={editing.aprovadoEm ? new Date(editing.aprovadoEm).toLocaleDateString('pt-BR') : '—'}
+                    readOnly
+                    title="Data em que o cliente aprovou a entrega no Portal (aprovado_em)"
+                  />
+                </div>
+              </div>
             </div>
             )}
 
@@ -2798,46 +2831,56 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               </div>
             )}
 
-            {/* ========== Aba Admin · metadados read-only + Privacidade (CEO) ========== */}
-            {activeFormTab === 'admin' && editing.id && (
+            {/* ========== Aba Admin · metadados read-only + Privacidade (CEO)
+                Restrita a admin (gate no tab-strip · também aqui por segurança).
+                Sempre renderiza TODOS os campos com "—" quando vazios. ========== */}
+            {activeFormTab === 'admin' && editing.id && isAdmin && (
               <>
                 {/* Integração Salesforce */}
-                {(editing.externalId || editing.webhookSyncStatus || clienteWebhookEnabled) && (
-                  <div className="tmodal-section hidden md:block">
-                    <div className="tmodal-section-title">Integração Salesforce</div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="lbl">External ID</label>
-                        <div className="text-xs font-mono text-ink-soft break-all">
-                          {editing.externalId || <span className="text-muted">—</span>}
-                        </div>
+                <div className="tmodal-section hidden md:block">
+                  <div className="tmodal-section-title">Integração Salesforce</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="lbl">External ID</label>
+                      <div className="text-xs font-mono text-ink-soft break-all">
+                        {editing.externalId || <span className="text-muted">—</span>}
                       </div>
-                      <div>
-                        <label className="lbl">Status sync</label>
-                        {editing.webhookSyncStatus === 'error' && (
-                          <span
-                            className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono inline-flex"
-                            style={{ background: 'var(--p0-soft)', color: 'var(--p0)' }}
-                            title={editing.webhookSyncError || ''}
-                          >
-                            erro
-                          </span>
-                        )}
-                        {editing.webhookSyncStatus === 'synced' && (
-                          <span
-                            className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono inline-flex"
-                            style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}
-                          >
-                            ok
-                          </span>
-                        )}
-                        {!editing.webhookSyncStatus && (
-                          <span className="text-xs text-muted">—</span>
-                        )}
+                    </div>
+                    <div>
+                      <label className="lbl">Status sync</label>
+                      {editing.webhookSyncStatus === 'error' ? (
+                        <span
+                          className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono inline-flex"
+                          style={{ background: 'var(--p0-soft)', color: 'var(--p0)' }}
+                          title={editing.webhookSyncError || ''}
+                        >
+                          erro
+                        </span>
+                      ) : editing.webhookSyncStatus === 'synced' ? (
+                        <span
+                          className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono inline-flex"
+                          style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}
+                        >
+                          ok
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted">—</span>
+                      )}
+                    </div>
+                    <div>
+                      <label className="lbl">Origem (source)</label>
+                      <div className="text-xs font-mono text-ink-soft">
+                        {editing.externalSource || <span className="text-muted">—</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="lbl">Webhook erro</label>
+                      <div className="text-xs font-mono text-ink-soft break-all">
+                        {editing.webhookSyncError || <span className="text-muted">—</span>}
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
 
                 {/* Origem da task */}
                 <div className="tmodal-section hidden md:block">
@@ -2862,7 +2905,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   </div>
                 </div>
 
-                {/* Auditoria (timestamps) */}
+                {/* Auditoria (timestamps) · sempre exibe tudo, "—" quando null */}
                 <div className="tmodal-section hidden md:block">
                   <div className="tmodal-section-title">Auditoria</div>
                   <div className="grid grid-cols-2 gap-3 text-xs">
@@ -2878,25 +2921,49 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                         {editing.reopenCount || 0}x
                       </div>
                     </div>
-                    {editing.triadaEm && (
-                      <div>
-                        <label className="lbl">Triada em</label>
-                        <div className="font-mono text-ink-soft">
-                          {fmtDate(editing.triadaEm.slice(0, 10))}
-                          {editing.triadaPor && (
-                            <span className="text-muted"> · {pessoasById.get(editing.triadaPor)?.nome ?? ''}</span>
-                          )}
-                        </div>
+                    <div>
+                      <label className="lbl">Triada em</label>
+                      <div className="font-mono text-ink-soft">
+                        {editing.triadaEm ? (
+                          <>
+                            {fmtDate(editing.triadaEm.slice(0, 10))}
+                            {editing.triadaPor && (
+                              <span className="text-muted"> · {pessoasById.get(editing.triadaPor)?.nome ?? ''}</span>
+                            )}
+                          </>
+                        ) : <span className="text-muted">—</span>}
                       </div>
-                    )}
-                    {editing.arquivadoEm && (
-                      <div>
-                        <label className="lbl">Arquivada em</label>
-                        <div className="font-mono text-ink-soft">
-                          {fmtDate(new Date(editing.arquivadoEm).toISOString().slice(0, 10))}
-                        </div>
+                    </div>
+                    <div>
+                      <label className="lbl">Andamento em</label>
+                      <div className="font-mono text-ink-soft">
+                        {editing.andamentoEm ? fmtDate(new Date(editing.andamentoEm).toISOString().slice(0, 10)) : <span className="text-muted">—</span>}
                       </div>
-                    )}
+                    </div>
+                    <div>
+                      <label className="lbl">Homologação em (interno)</label>
+                      <div className="font-mono text-ink-soft" title="Quando o time pôs em homologação (subetapa em_homologacao)">
+                        {editing.homologacaoEm ? fmtDate(new Date(editing.homologacaoEm).toISOString().slice(0, 10)) : <span className="text-muted">—</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="lbl">Aprovado em (cliente)</label>
+                      <div className="font-mono text-ink-soft" title="Quando o cliente aprovou via Portal (RPC app_aprovar_entrega)">
+                        {editing.aprovadoEm ? fmtDate(new Date(editing.aprovadoEm).toISOString().slice(0, 10)) : <span className="text-muted">—</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="lbl">Arquivada em</label>
+                      <div className="font-mono text-ink-soft">
+                        {editing.arquivadoEm ? fmtDate(new Date(editing.arquivadoEm).toISOString().slice(0, 10)) : <span className="text-muted">—</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="lbl">Motivo arquivamento</label>
+                      <div className="font-mono text-ink-soft break-all">
+                        {editing.motivoArquivamento || <span className="text-muted">—</span>}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
