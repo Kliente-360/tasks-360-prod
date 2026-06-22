@@ -460,6 +460,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     timeEntries,
   } = useData();
   const isAdmin = viewerRole === 'admin';
+  const { activeEntry, startTimer, stopTimer, starting, stopping } = useTimer();
   const projetosByCliente = useProjetosByCliente();
   const clientesById = useClientesById();
   const projetosById = useProjetosById();
@@ -1976,6 +1977,41 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 <span className="tmodal-readiness warn" title={`Campos pendentes: ${[...missingFields].join(', ')}`}>
                   <Icon name="alert-triangle" size={13} /> {total} {total === 1 ? 'campo' : 'campos'} {total === 1 ? 'falta' : 'faltam'}
                 </span>
+              );
+            })()}
+
+            {/* Cronômetro · T.1
+                - sem entry ativa: ícone neutro · clique inicia nesta task
+                - entry ativa NESTA task: vermelho · clique para
+                - entry ativa em OUTRA task: vermelho + tooltip · clique para
+                  a outra (depois usuário clica de novo pra iniciar nesta) */}
+            {editing.id && currentPessoa && (() => {
+              const runningHere = activeEntry?.taskId === editing.id;
+              const runningOther = !!activeEntry && !runningHere;
+              const otherTask = runningOther ? tasksById.get(activeEntry!.taskId) : null;
+              const title = runningHere
+                ? 'Parar cronômetro nesta task'
+                : runningOther
+                  ? `Parar cronômetro ativo em "${otherTask?.titulo ?? 'outra task'}"`
+                  : 'Iniciar cronômetro nesta task';
+              const disabled = starting || stopping;
+              const onClick = () => {
+                if (disabled) return;
+                if (activeEntry) stopTimer();
+                else startTimer(editing.id);
+              };
+              return (
+                <button
+                  type="button"
+                  onClick={onClick}
+                  disabled={disabled}
+                  title={title}
+                  aria-label={title}
+                  className="tmodal-timer-btn"
+                  data-active={activeEntry ? 'true' : 'false'}
+                >
+                  <Icon name="timer" size={14} />
+                </button>
               );
             })()}
           </div>

@@ -1244,6 +1244,32 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .tmodal-readiness.ok    { background: var(--ok-soft); color: var(--ok); }
 .tmodal-readiness.warn  { background: var(--warn-soft); color: var(--warn); }
 
+/* Cronômetro no subheader · T.1 */
+.tmodal-timer-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background-color .12s, color .12s, border-color .12s;
+}
+.tmodal-timer-btn:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+.tmodal-timer-btn[data-active="true"] {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+.tmodal-timer-btn[data-active="true"]:hover:not(:disabled) {
+  background: var(--danger);
+  filter: brightness(0.92);
+}
+.tmodal-timer-btn:disabled { opacity: .5; cursor: not-allowed; }
+
 /* ── Tabs strip unificada · DESKTOP ONLY (form à esquerda + Conversa/Anexos/etc à direita)
    alinhada com as 2 colunas do body (1.35fr / 1fr) com divisor discreto. */
 .tmodal-tabstrip {
