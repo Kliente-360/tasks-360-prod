@@ -48,6 +48,7 @@ import { fmtDate, fmtDateShort, lblStatus, missingFieldsForCurrentSubetapa, sumT
 import { SUB_TO_MACRO, SUB_LABELS, SUBS_FLAT, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK } from '@/lib/task-constants';
 import { timeEntryFromDb } from '@/lib/adapters';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
+import { NotePopover } from '@/components/timer-button';
 import { Icon } from '@/components/icons';
 import type { ChecklistItem, Task, TimeEntry } from '@/lib/types';
 
@@ -498,6 +499,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const [checklistOpen, setChecklistOpen] = useState<boolean>(
     (source?.checklist?.length ?? 0) > 0,
   );
+
+  // T.1 · popover de nota ao parar cronômetro pelo botão do subheader
+  const [showStopNote, setShowStopNote] = useState(false);
 
   // ===== Async data (comments, history, attachments) =====
   const [comments, setComments] = useState<Comment[]>([]);
@@ -1997,21 +2001,32 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               const disabled = starting || stopping;
               const onClick = () => {
                 if (disabled) return;
-                if (activeEntry) stopTimer();
+                if (activeEntry) setShowStopNote(true);
                 else startTimer(editing.id);
               };
               return (
-                <button
-                  type="button"
-                  onClick={onClick}
-                  disabled={disabled}
-                  title={title}
-                  aria-label={title}
-                  className="tmodal-timer-btn"
-                  data-active={activeEntry ? 'true' : 'false'}
-                >
-                  <Icon name="timer" size={14} />
-                </button>
+                <span className="relative inline-flex">
+                  <button
+                    type="button"
+                    onClick={onClick}
+                    disabled={disabled}
+                    title={title}
+                    aria-label={title}
+                    className="tmodal-timer-btn"
+                    data-active={activeEntry ? 'true' : 'false'}
+                  >
+                    <Icon name="timer" size={14} />
+                  </button>
+                  {showStopNote && activeEntry && (
+                    <NotePopover
+                      onConfirm={async (note) => {
+                        setShowStopNote(false);
+                        await stopTimer(note || undefined);
+                      }}
+                      onCancel={() => setShowStopNote(false)}
+                    />
+                  )}
+                </span>
               );
             })()}
           </div>
@@ -3430,6 +3445,15 @@ function TimesheetTab({ taskId, onLoaded }: { taskId: string; onLoaded?: (n: num
   const { activeEntry } = useTimer();
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [loadingTime, setLoadingTime] = useState(true);
+  // Per-row pending delete · clica X uma vez vira "Confirmar?" inline,
+  // segundo clique deleta. ESC ou click fora limpa via window listener.
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pendingDelete) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPendingDelete(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pendingDelete]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -3522,14 +3546,38 @@ function TimesheetTab({ taskId, onLoaded }: { taskId: string; onLoaded?: (n: num
                 {fmtDuration(durMs)}
               </span>
               {canDelete(e) && !isRunning && (
-                <button
-                  type="button"
-                  className="text-muted hover:text-danger ml-1 shrink-0"
-                  onClick={() => deleteEntry(e.id)}
-                  title="Excluir registro"
-                >
-                  ×
-                </button>
+                pendingDelete === e.id ? (
+                  <span className="ml-1 shrink-0 inline-flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="text-[10px] uppercase font-bold text-[color:var(--danger)] hover:underline"
+                      onClick={async () => {
+                        setPendingDelete(null);
+                        await deleteEntry(e.id);
+                      }}
+                      title="Confirmar exclusão"
+                    >
+                      excluir
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[10px] uppercase font-bold text-muted hover:text-ink"
+                      onClick={() => setPendingDelete(null)}
+                      title="Cancelar"
+                    >
+                      cancelar
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className="text-muted hover:text-danger ml-1 shrink-0"
+                    onClick={() => setPendingDelete(e.id)}
+                    title="Excluir registro"
+                  >
+                    ×
+                  </button>
+                )
               )}
             </div>
             {e.note && (

@@ -10,8 +10,9 @@ import { STAGE_RANK } from '@/lib/task-constants';
 
 const MAX_NOTE = 120;
 
-/** Popover de nota ao parar o cronômetro (comportamento existente). */
-function NotePopover({
+/** Popover de nota ao parar o cronômetro (comportamento existente).
+ *  Exportado pra reuso no botão de cronômetro do modal de task (T.1). */
+export function NotePopover({
   onConfirm,
   onCancel,
 }: {
