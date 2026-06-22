@@ -1037,11 +1037,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             });
           }
 
-          // Motivo de bloqueio: se é uma transição para 'bloqueado' nesta sessão
-          // e o usuário digitou um motivo, insere como comment interno.
+          // Motivo de bloqueio: sempre que houver motivo digitado E a task
+          // estiver atualmente em 'bloqueado' (transição OU já estava),
+          // insere como comment interno e limpa o campo. Permite empilhar
+          // múltiplos motivos numa mesma task ao longo do bloqueio.
           const motivo = bloqueioMotivoRef.current.trim();
-          const wasBloqueado = prev?.subetapa === 'bloqueado';
-          if (e.subetapa === 'bloqueado' && !wasBloqueado && motivo) {
+          if (e.subetapa === 'bloqueado' && motivo) {
             const commentPayload = {
               task_id: e.id,
               body: motivo,
@@ -1187,6 +1188,23 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     // muda de referência após patchTask (evita loop dirty→save→dirty).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, clienteWebhookEnabled]);
+
+  // Motivo de bloqueio · state separado de `editing`, então autosave não
+  // dispara naturalmente quando o usuário digita. Esse effect agenda um
+  // autosave debounceado (1.5s pra dar tempo de terminar) sempre que
+  // bloqueioMotivo vira não-vazio numa task já em bloqueado. O save
+  // pega bloqueioMotivoRef.current na hora, insere o comment, e o
+  // callback chama setBloqueioMotivo('') pra limpar o textarea.
+  useEffect(() => {
+    if (!editing.id) return;
+    if (editing.subetapa !== 'bloqueado') return;
+    if (!bloqueioMotivo.trim()) return;
+    if (clienteWebhookEnabled) return; // webhook-mode: salva no botão
+    const id = setTimeout(() => {
+      autosaveNowRef.current();
+    }, 1500);
+    return () => clearTimeout(id);
+  }, [bloqueioMotivo, editing.id, editing.subetapa, clienteWebhookEnabled]);
 
   // Quando muda cliente (Sem→Com webhook ou vice-versa) sem que o user
   // tenha tocado em outro campo, o useEffect acima já trata. Mas o
