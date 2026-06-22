@@ -131,6 +131,15 @@ export function TimesheetClient() {
   // Edição de registro · admin edita qualquer · interno só self (gate
   // espelha RLS time_entries_self_update / time_entries_admin_all).
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Confirmação inline de exclusão · clica X → "excluir/cancelar" inline,
+  // segundo clique deleta. ESC limpa o pending.
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pendingDelete) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPendingDelete(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pendingDelete]);
   async function saveEntry(id: string, startedAt: Date, endedAt: Date, note?: string) {
     const supabase = createClient();
     const startedIso = startedAt.toISOString();
@@ -320,14 +329,38 @@ export function TimesheetClient() {
                               >
                                 <Icon name="edit" size={13} />
                               </button>
-                              <button
-                                type="button"
-                                className="text-muted hover:text-danger text-base leading-none"
-                                onClick={() => deleteEntry(e.id)}
-                                title="Excluir registro"
-                              >
-                                ×
-                              </button>
+                              {pendingDelete === e.id ? (
+                                <span className="inline-flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    className="text-[10px] uppercase font-bold text-[color:var(--danger)] hover:underline"
+                                    onClick={async () => {
+                                      setPendingDelete(null);
+                                      await deleteEntry(e.id);
+                                    }}
+                                    title="Confirmar exclusão"
+                                  >
+                                    excluir
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="text-[10px] uppercase font-bold text-muted hover:text-ink"
+                                    onClick={() => setPendingDelete(null)}
+                                    title="Cancelar"
+                                  >
+                                    cancelar
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="text-muted hover:text-danger text-base leading-none"
+                                  onClick={() => setPendingDelete(e.id)}
+                                  title="Excluir registro"
+                                >
+                                  ×
+                                </button>
+                              )}
                               {editingId === e.id && (
                                 <ManualEntryPopover
                                   taskTitulo={task?.titulo ?? e.taskId.slice(0, 8)}
