@@ -3,20 +3,19 @@
 /**
  * StandupCard · primeiro card do Briefing
  *
- * - Default carrega o standup MAIS RECENTE (GET /get-standups?limit=1)
- * - Date picker permite navegar dias anteriores (GET ?data=YYYY-MM-DD)
- * - Copy to clipboard preferindo `texto_whatsapp`, fallback `conteudo_md`
- * - Markdown renderizado via `marked` (mesmo lib usado em outros lugares)
+ * - Default mostra o standup MAIS RECENTE
+ * - Nav: [← prev] [hoje] [next →] (estilo calendário · navega entre standups existentes)
+ * - Copy: ícone + tooltip flutuante "Copiado!" (1.5s)
+ * - Markdown renderizado via `marked`
  *
- * Fonte de verdade: tabela `standups` (RLS staff-only). Lê via
- * supabase-js direto — não passa pelo DataProvider (1 fetch on mount).
+ * Pré-fetch de todas as datas existentes no mount (lightweight · só a coluna
+ * `data`) pra permitir navegação por índice sem query extra a cada click.
  */
 
 import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 import { createClient } from '@/lib/supabase/client';
 import { Icon } from '@/components/icons';
-import { cn } from '@/lib/utils';
 
 interface Standup {
   id: string;
@@ -27,11 +26,9 @@ interface Standup {
   atualizado_em: string;
 }
 
-// Marked com defaults razoáveis pra conteúdo confiável (origem = admin via MCP).
 marked.setOptions({ gfm: true, breaks: true });
 
 function fmtDateLong(iso: string): string {
-  // "quarta-feira, 25 de junho" — sem ano (mostra o ano só se diferente do atual)
   const d = new Date(iso + 'T12:00:00');
   const thisYear = new Date().getFullYear();
   const opts: Intl.DateTimeFormatOptions = {
@@ -43,57 +40,97 @@ function fmtDateLong(iso: string): string {
   return d.toLocaleDateString('pt-BR', opts);
 }
 
+const todayIso = () => new Date().toISOString().slice(0, 10);
+
 export function StandupCard() {
   const sb = useMemo(() => createClient(), []);
+
+  // Lista ordenada DESC de todas as datas existentes (só strings).
+  const [dates, setDates] = useState<string[] | null>(null);
+  // Data atualmente exibida (null = ainda carregando · usa dates[0] como default).
+  const [currentDate, setCurrentDate] = useState<string | null>(null);
+  // Conteúdo do standup atual.
   const [standup, setStandup] = useState<Standup | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<string>(''); // '' = mais recente
   const [copied, setCopied] = useState(false);
-  const [notFound, setNotFound] = useState(false);
 
+  // Mount · prefetch de todas as datas
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setNotFound(false);
-
-    let q = sb
-      .from('standups')
-      .select('id, data, conteudo_md, texto_whatsapp, resumo, atualizado_em')
+    sb.from('standups')
+      .select('data')
       .order('data', { ascending: false })
-      .limit(1);
-
-    if (selectedDate) q = q.eq('data', selectedDate);
-
-    q.maybeSingle().then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) {
-        console.warn('[standup-card] fetch error', error);
-        setStandup(null);
-        setNotFound(true);
-      } else if (!data) {
-        setStandup(null);
-        setNotFound(true);
-      } else {
-        setStandup(data as Standup);
-        setNotFound(false);
-      }
-      setLoading(false);
-    });
-
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data || data.length === 0) {
+          setDates([]);
+          setCurrentDate(null);
+          setLoading(false);
+          return;
+        }
+        const arr = (data as { data: string }[]).map((r) => r.data);
+        setDates(arr);
+        setCurrentDate(arr[0]); // mais recente
+      });
     return () => { cancelled = true; };
-  }, [sb, selectedDate]);
+  }, [sb]);
+
+  // Fetch do conteúdo quando currentDate muda
+  useEffect(() => {
+    if (!currentDate) {
+      setStandup(null);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    sb.from('standups')
+      .select('id, data, conteudo_md, texto_whatsapp, resumo, atualizado_em')
+      .eq('data', currentDate)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error || !data) setStandup(null);
+        else setStandup(data as Standup);
+        setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [sb, currentDate]);
 
   const html = useMemo(() => {
     if (!standup?.conteudo_md) return '';
     return marked.parse(standup.conteudo_md) as string;
   }, [standup?.conteudo_md]);
 
+  // Navegação
+  const currentIdx = dates && currentDate ? dates.indexOf(currentDate) : -1;
+  const hasPrev = dates && currentIdx >= 0 && currentIdx < dates.length - 1;
+  const hasNext = dates && currentIdx > 0;
+  const today = todayIso();
+  // "Hoje" desabilita quando já estamos exibindo o standup de hoje
+  // (existe E está sendo mostrado).
+  const isToday = currentDate === today;
+
+  function goPrev() {
+    if (!dates || !hasPrev) return;
+    setCurrentDate(dates[currentIdx + 1]);
+  }
+  function goNext() {
+    if (!dates || !hasNext) return;
+    setCurrentDate(dates[currentIdx - 1]);
+  }
+  function goToday() {
+    // Se hoje tem standup, vai pra ele. Caso contrário, fica no mais recente.
+    if (dates?.includes(today)) setCurrentDate(today);
+    else if (dates && dates.length > 0) setCurrentDate(dates[0]);
+  }
+
   function copy() {
     if (!standup) return;
     const text = standup.texto_whatsapp || standup.conteudo_md;
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      setTimeout(() => setCopied(false), 1500);
     }).catch(() => {/* silencioso */});
   }
 
@@ -112,37 +149,53 @@ export function StandupCard() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <input
-            type="date"
-            className="text-xs border border-line rounded px-2 py-1 bg-elev text-ink focus:outline-none focus:ring-1 focus:ring-[var(--brand)]"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            max={new Date().toISOString().slice(0, 10)}
-            title="Escolher data"
-          />
-          {selectedDate && (
+          {/* Nav prev / hoje / next · estilo calendário */}
+          <div className="view-toggle" role="group" aria-label="Navegação de standup">
             <button
               type="button"
-              onClick={() => setSelectedDate('')}
-              className="text-[11px] text-muted hover:text-ink"
-              title="Voltar pra mais recente"
+              onClick={goPrev}
+              disabled={!hasPrev}
+              title="Standup anterior"
+              aria-label="Standup anterior"
             >
-              recente
+              <Icon name="chevron-left" size={15} />
             </button>
-          )}
+            <button
+              type="button"
+              onClick={goToday}
+              disabled={isToday}
+              title="Ir pro standup de hoje"
+              aria-label="Ir pro standup de hoje"
+            >
+              hoje
+            </button>
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={!hasNext}
+              title="Standup seguinte"
+              aria-label="Standup seguinte"
+            >
+              <Icon name="chevron-right" size={15} />
+            </button>
+          </div>
+
+          {/* Copy com tooltip flutuante */}
           {standup && (
-            <button
-              type="button"
-              onClick={copy}
-              className={cn(
-                'iconbtn bordered text-xs px-2 inline-flex items-center gap-1.5 transition-colors',
-                copied && 'text-[var(--brand-dark)] border-[var(--brand)]',
+            <span className="relative inline-flex">
+              <button
+                type="button"
+                onClick={copy}
+                className="iconbtn bordered w-8 h-8 inline-flex items-center justify-center"
+                title={standup.texto_whatsapp ? 'Copiar versão WhatsApp' : 'Copiar markdown'}
+                aria-label="Copiar standup"
+              >
+                <Icon name="copy" size={14} />
+              </button>
+              {copied && (
+                <span className="copied-bubble" role="status">Copiado!</span>
               )}
-              title={standup.texto_whatsapp ? 'Copiar versão WhatsApp' : 'Copiar markdown'}
-            >
-              <Icon name={copied ? 'check' : 'copy'} size={13} />
-              {copied ? 'copiado' : 'copiar'}
-            </button>
+            </span>
           )}
         </div>
       </div>
@@ -150,13 +203,15 @@ export function StandupCard() {
       {/* Body */}
       {loading ? (
         <div className="px-4 py-6 text-sm text-muted">Carregando…</div>
-      ) : notFound ? (
+      ) : !standup ? (
         <div className="px-4 py-6 text-sm text-muted">
-          {selectedDate
-            ? `Sem standup publicado em ${fmtDateLong(selectedDate)}.`
-            : 'Nenhum standup publicado ainda.'}
+          {dates && dates.length === 0
+            ? 'Nenhum standup publicado ainda.'
+            : currentDate
+              ? `Sem standup publicado em ${fmtDateLong(currentDate)}.`
+              : 'Nenhum standup publicado ainda.'}
         </div>
-      ) : standup ? (
+      ) : (
         <div className="px-4 py-4">
           {standup.resumo && (
             <div className="text-sm text-ink font-medium mb-3 pb-3 border-b border-line">
@@ -168,7 +223,7 @@ export function StandupCard() {
             dangerouslySetInnerHTML={{ __html: html }}
           />
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

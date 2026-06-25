@@ -1297,6 +1297,43 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .standup-md strong { color: var(--ink); font-weight: 600; }
 .standup-md em { color: var(--ink-soft); }
 
+/* Tooltip flutuante "Copiado!" pra ações de clipboard (StandupCard, futuros) */
+.copied-bubble {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: var(--bg-elev);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 20;
+  animation: copied-bubble-in .14s ease-out, copied-bubble-out .25s ease-in 1.25s forwards;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+}
+.copied-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  transform: translateX(-50%) rotate(45deg);
+  width: 6px;
+  height: 6px;
+  background: var(--ink);
+}
+@keyframes copied-bubble-in {
+  from { opacity: 0; transform: translate(-50%, 4px); }
+  to   { opacity: 1; transform: translate(-50%, 0);   }
+}
+@keyframes copied-bubble-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
 /* Cronômetro no subheader · T.1 */
 .tmodal-timer-btn {
   display: inline-flex; align-items: center; justify-content: center;
