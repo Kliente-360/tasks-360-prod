@@ -24,6 +24,7 @@ import {
   ListFilter, MessageSquare, Paperclip, History, Pause, AtSign, Archive,
   Lock, AlertCircle, CheckCircle2, Info, ArrowRight, LogOut, Settings,
   Activity, BarChart2, Flag, Clock, Hourglass, Bot, Send, AlertTriangle, UserPlus,
+  Megaphone, Copy,
   type LucideIcon, type LucideProps,
 } from 'lucide-react';
 
@@ -37,7 +38,8 @@ type IconName =
   | 'list-filter' | 'comment' | 'paperclip' | 'history' | 'pause' | 'mention'
   | 'archive' | 'lock' | 'alert' | 'check-circle' | 'info' | 'arrow-right'
   | 'logout' | 'settings' | 'activity' | 'bar-chart-2' | 'flag' | 'clock'
-  | 'hourglass' | 'bot' | 'send' | 'alert-triangle' | 'user-plus';
+  | 'hourglass' | 'bot' | 'send' | 'alert-triangle' | 'user-plus'
+  | 'megaphone' | 'copy';
 
 const MAP: Record<IconName, LucideIcon> = {
   plus: Plus,
@@ -101,6 +103,8 @@ const MAP: Record<IconName, LucideIcon> = {
   send: Send,
   'alert-triangle': AlertTriangle,
   'user-plus': UserPlus,
+  megaphone: Megaphone,
+  copy: Copy,
 };
 
 interface IconProps extends Omit<LucideProps, 'size'> {

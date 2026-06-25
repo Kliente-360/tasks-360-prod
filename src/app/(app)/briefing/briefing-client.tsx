@@ -5,6 +5,7 @@ import { useData } from '@/lib/data-store';
 import { useTaskModal } from '@/components/task-modal';
 import { PageHeader } from '@/components/page-header';
 import { Icon } from '@/components/icons';
+import { StandupCard } from '@/components/standup-card';
 import { cn } from '@/lib/utils';
 import { atrasada, isPreTriagem } from '@/lib/task-utils';
 import { SUB_LABELS } from '@/lib/task-constants';
@@ -330,6 +331,9 @@ export function BriefingClient() {
       </div>
 
       <div className="space-y-4 md:space-y-6">
+      {/* ── Standup do dia · primeiro card · jun/2026 ── */}
+      <StandupCard />
+
       {/* ── Bloco 3 · Clientes em atenção ── */}
       <div className="bg-elev border border-line rounded-xl overflow-hidden">
         <SectionHeader
