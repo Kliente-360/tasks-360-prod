@@ -1,68 +1,69 @@
 # Standup diário · operação
 
-Rotina que gera o standup do time todo dia útil às **08:00 BRT** via cloud agent agendado do Claude Code (`/schedule` skill).
+Rotina **cloud-hosted** que gera o standup do time todo dia útil às **08:00 BRT** via trigger do claude.ai/code (não precisa do app aberto).
 
 ## Arquivos
 
-- **`prompt.md`** · instruções que o agent executa a cada run. Editar aqui muda o comportamento da próxima execução automaticamente (re-lido do path absoluto).
+- **`prompt.md`** · instruções que o agent executa em cada run. Editar aqui muda o comportamento da próxima execução.
 - **`README.md`** · este arquivo.
 
-## Backend (já em prod desde v1.03.198)
+## Como funciona
 
-- Tabela `public.standups` (`data` UNIQUE · UPSERT idempotente)
-- Edge functions `post-standup` + `get-standups` (auth via `x-api-key` · `INGEST_API_KEYS`)
-- Renderização: `StandupCard` no `/briefing` (desktop) e `/resumo` (mobile)
-- MCP tools: `mcp__tasks360__post_standup`, `get_standups`, `get_tasks`, `get_pessoas`, `get_task_comments`
+1. Trigger remoto registrado via API `https://api.claude.ai/v1/code/triggers` (cron `0 11 * * 1-5` UTC = 08:00 BRT seg-sex).
+2. Cada fire: claude.ai sobe um agent na cloud, clona o repo `Kliente-360/tasks-360-prod`, lê `docs/standup/prompt.md` e executa.
+3. Agent chama 4 edge functions via curl (auth `x-api-key`):
+   - `get-tasks` (atrasadas + curto prazo)
+   - `get-pessoas` (carga)
+   - `get-task-comments` (críticas)
+   - `post-standup` (UPSERT idempotente)
+4. Renderização: `StandupCard` no `/briefing` (desktop) e `/resumo` (mobile) — auto-refresh ao reabrir.
 
-## Rodar manual (smoke test)
+## Smoke manual
 
-Antes de agendar pela primeira vez OU depois de editar o `prompt.md` significativamente:
+Pra testar o prompt sem agendar (ou após editar):
 
 ```bash
-claude -p "Execute o standup diário seguindo as instruções em $(pwd)/docs/standup/prompt.md" \
-  --allowedTools "mcp__tasks360__get_tasks,mcp__tasks360__get_pessoas,mcp__tasks360__get_task_comments,mcp__tasks360__post_standup"
+# Defina a key uma vez na sessão
+export TASKS360_API_KEY="<sua key INGEST_API_KEYS>"
+
+# Rode o que o agent rodaria
+claude -p "Execute o standup diário seguindo as instruções em $(pwd)/docs/standup/prompt.md"
 ```
 
-Esperado:
-- Stdout com bloco `[standup ok]` + métricas (atrasadas, pedem ajuda, top carga, id)
-- Standup novo aparece no `/briefing` (desktop) e `/resumo` (mobile)
+Esperado: bloco `[standup ok]` no stdout + card novo no `/briefing`.
 
-## Agendar (uma vez)
+## Gerenciar o trigger remoto
 
-Use a skill `/schedule` do Claude Code com:
+Via Claude Code (esta sessão), usando o tool `RemoteTrigger`:
+- **Listar**: `RemoteTrigger(action: "list")`
+- **Pausar/editar**: `RemoteTrigger(action: "update", trigger_id: "trig_...", body: { enabled: false })`
+- **Rodar agora**: `RemoteTrigger(action: "run", trigger_id: "trig_...")`
 
-- **Cron**: `0 11 * * 1-5` (UTC → 08:00 BRT seg-sex)
-- **Timezone**: UTC
-- **Prompt**: `Execute o standup diário seguindo as instruções em /Users/felipegonzaga/Documents/Code/tasks-360-prod/docs/standup/prompt.md`
-- **Allowed tools**:
-  - `mcp__tasks360__get_tasks`
-  - `mcp__tasks360__get_pessoas`
-  - `mcp__tasks360__get_task_comments`
-  - `mcp__tasks360__post_standup`
-
-## Gerenciar
-
-- **Listar**: `/schedule list`
-- **Pausar/remover**: `/schedule remove <id>` (procurar a routine cujo prompt aponta pra este path)
-- **Rodar agora** (one-off, sem mexer na rotina): comando manual da seção acima
+Via web: dashboard do claude.ai/code mostra as routines com last_fire + next_fire + logs.
 
 ## Iterar o prompt
 
-1. Editar `docs/standup/prompt.md`
+1. Edita `docs/standup/prompt.md`
 2. `git commit + git push`
-3. Próxima execução pega a versão nova automaticamente (o cloud agent lê o file system na execução)
+3. Próxima execução pega a versão nova (o agent clona main a cada run)
 
-Sem rebuild, sem redeploy, sem mexer no schedule. É o motivo de manter o prompt como arquivo separado em vez de embutido no schedule.
+Sem rebuild, sem re-criar trigger. Versionamento via git.
 
 ## Verificar saúde
 
-- Dashboard Supabase → Table editor → `standups` → conferir que o row do dia anterior existe
-- Dashboard Supabase → Edge Functions → `post-standup` → logs (200 OK na execução)
+- `RemoteTrigger(action: "get", trigger_id: "trig_...")` → mostra last_fired_at + next_run_at
+- Supabase Dashboard → Table editor → `standups` → conferir row do dia anterior
+- Supabase Dashboard → Edge Functions → logs (200 OK em cada execução)
 - Briefing/Resumo no app → card do dia exibido
+
+## Auth & secrets
+
+- `TASKS360_API_KEY` (valor do `INGEST_API_KEYS` no Supabase) embutida no prompt do trigger
+- Pra rotacionar: atualizar `INGEST_API_KEYS` no Supabase + `RemoteTrigger(action: "update", body: { ... prompt com nova key ... })`
 
 ## Riscos conhecidos
 
 - **DST no Brasil** (improvável retornar) · revisar cron 1x/ano em out-mar
-- **Custo de tokens**: ~$0.70/mês em Sonnet · `/schedule list` mostra consumo se quiser monitorar
-- **MCP server offline** → execução falha · fallback do prompt publica standup mínimo
+- **Custo**: rodando no plano claude.ai do Felipe · usa tokens dele a cada run
 - **Idempotência**: re-execução no mesmo dia substitui (UPSERT por `data`) · seguro
+- **Visibilidade**: trigger usa Bash + WebFetch · zero MCP (mais fácil de debugar)
