@@ -12,6 +12,7 @@ import {
   computeWeeklyCapacityAnalysis,
 } from '@/lib/analytics';
 import { VelocidadeOperacao } from '@/components/velocidade-operacao';
+import { StandupCard } from '@/components/standup-card';
 
 // ─────────────────────────────────────────────────────────
 //  Helpers visuais
@@ -112,6 +113,9 @@ export function ResumoClient() {
         </div>
       </div>
       <div className="space-y-4">
+
+        {/* ── Standup do dia · primeiro card (mesmo do Briefing desktop) ── */}
+        <StandupCard />
 
         {/* ── 1 · Alertas ── */}
         <div className="bg-elev border border-line rounded-xl p-3">

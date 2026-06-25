@@ -1300,9 +1300,8 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 /* Tooltip flutuante "Copiado!" pra ações de clipboard (StandupCard, futuros) */
 .copied-bubble {
   position: absolute;
-  top: -28px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: calc(100% + 6px);
+  right: 0;
   background: var(--ink);
   color: var(--bg-elev);
   font-size: 11px;
@@ -1318,21 +1317,30 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 .copied-bubble::after {
   content: '';
   position: absolute;
-  left: 50%;
-  bottom: -4px;
-  transform: translateX(-50%) rotate(45deg);
+  right: 10px;
+  top: -3px;
+  transform: rotate(45deg);
   width: 6px;
   height: 6px;
   background: var(--ink);
 }
 @keyframes copied-bubble-in {
-  from { opacity: 0; transform: translate(-50%, 4px); }
-  to   { opacity: 1; transform: translate(-50%, 0);   }
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0);    }
 }
 @keyframes copied-bubble-out {
   from { opacity: 1; }
   to   { opacity: 0; }
 }
+
+/* Disabled state pro .view-toggle (estava faltando · botões de nav
+   no StandupCard ficavam idênticos aos ativos). */
+.view-toggle button:disabled {
+  color: var(--ink-soft);
+  opacity: .35;
+  cursor: not-allowed;
+}
+.view-toggle button:disabled:hover { color: var(--ink-soft); }
 
 /* Cronômetro no subheader · T.1 */
 .tmodal-timer-btn {
