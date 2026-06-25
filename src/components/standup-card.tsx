@@ -40,6 +40,12 @@ function fmtDateLong(iso: string): string {
   return d.toLocaleDateString('pt-BR', opts);
 }
 
+function fmtUpdatedAt(iso: string): string {
+  // "atualizado 14:32" · local time (browser timezone)
+  const d = new Date(iso);
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
 export function StandupCard() {
@@ -148,6 +154,7 @@ export function StandupCard() {
             <span className="text-xs text-muted truncate mt-0.5 md:mt-0">
               <span className="hidden md:inline">· </span>
               {fmtDateLong(standup.data)}
+              <span className="opacity-70"> · atualizado {fmtUpdatedAt(standup.atualizado_em)}</span>
             </span>
           )}
         </div>
