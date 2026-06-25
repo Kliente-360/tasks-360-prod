@@ -27,3 +27,5 @@ next-env.d.ts
 
 # Supabase CLI local state (project ref, versions, etc — vivo em .temp)
 /supabase/.temp
+.vercel
+.env*
