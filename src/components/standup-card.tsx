@@ -136,19 +136,23 @@ export function StandupCard() {
 
   return (
     <div className="bg-elev border border-line rounded-xl overflow-hidden">
-      {/* Header */}
-      <div className="px-3 md:px-4 py-3 border-b border-line flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2 min-w-0">
-          <Icon name="megaphone" size={16} className="text-[var(--brand-dark)]" />
-          <h2 className="text-sm font-semibold text-ink">Standup</h2>
+      {/* Header · mobile: 2 linhas (title+data stack vertical · botões à direita).
+            desktop: tudo inline. */}
+      <div className="px-3 md:px-4 py-3 border-b border-line flex items-start md:items-center gap-3">
+        <div className="flex-1 min-w-0 flex flex-col md:flex-row md:items-center md:gap-2">
+          <div className="flex items-center gap-2">
+            <Icon name="megaphone" size={16} className="text-[var(--brand-dark)]" />
+            <h2 className="text-sm font-semibold text-ink">Standup</h2>
+          </div>
           {standup && (
-            <span className="text-xs text-muted truncate">
-              · {fmtDateLong(standup.data)}
+            <span className="text-xs text-muted truncate mt-0.5 md:mt-0">
+              <span className="hidden md:inline">· </span>
+              {fmtDateLong(standup.data)}
             </span>
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="shrink-0 flex items-center gap-2">
           {/* Nav prev / hoje / next · estilo calendário */}
           <div className="view-toggle" role="group" aria-label="Navegação de standup">
             <button
