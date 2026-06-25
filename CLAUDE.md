@@ -6,15 +6,24 @@ Convenções do projeto que valem pra qualquer sessão.
 
 > **Roadmap vivo**: ler **`docs/gestao/STATUS.md`** no início de toda sessão relevante — é a fonte de verdade do estado atual (NOW/NEXT/LATER/done). `docs/gestao/ROADMAP.md` é arquivo histórico imutável; não editar para refletir estado corrente.
 
+## CLIs disponíveis (jun/2026)
+
+Felipe instalou e mantém atualizado:
+- **Supabase CLI** (`brew install supabase/tap/supabase`) — login uma vez via `supabase login`, projeto linkado em `supabase/.temp/project-ref`
+- **Vercel CLI** (`npm i -g vercel`)
+- **Netlify CLI** (`brew install netlify-cli`)
+- **GitHub CLI** (`gh`)
+
+Pode usar qualquer um sem perguntar — substitui as instruções antigas de "fazer pelo Dashboard" para Supabase.
+
 ## Supabase
 
-- **Nunca instruir Supabase CLI.** O usuário não usa CLI — tudo é feito pelo Dashboard (SQL Editor, Edge Functions UI, Database > Extensions, Database > Cron).
-- Migrations: cola o SQL no **SQL Editor** e roda.
-- Edge functions: cria/edita no **Edge Functions** do dashboard (copy-paste do `supabase/functions/<nome>/index.ts`) e clica em Deploy.
-- Secrets (envs de function): **Edge Functions > Settings > Secrets** no dashboard.
-- Cron: **Database > Extensions** (habilitar `pg_cron` e `pg_net` pelo toggle) + SQL Editor pra rodar `cron.schedule(...)`.
-- Storage bucket: dá pra criar pelo SQL ou pela UI **Storage > New bucket**, ambos servem.
-- Testar edge function: curl manual com a URL `https://<project-ref>.supabase.co/functions/v1/<nome>` e `x-api-key` apropriado.
+- **Migrations**: SQL ad-hoc cola no **SQL Editor** do Dashboard (mais ágil pra one-off). Mudanças versionadas usam `supabase db push` com arquivo em `supabase/migrations/`.
+- **Edge functions**: deploy via `supabase functions deploy <nome>` (Felipe já login + link feitos).
+- **Secrets**: `supabase secrets set KEY=value` ou Dashboard → Edge Functions → Settings → Secrets.
+- **Cron**: Dashboard → Database → Extensions (toggle `pg_cron`/`pg_net`) + SQL Editor pra `cron.schedule(...)`.
+- **Storage bucket**: SQL ou Storage → New bucket no Dashboard.
+- **Testar edge function**: curl com URL `https://<project-ref>.supabase.co/functions/v1/<nome>` + `x-api-key` apropriado, ou `supabase functions invoke <nome>`.
 
 ## Versionamento
 
