@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
      pessoa_id, cliente_id, projeto_id,
      clientes ( nome ),
      projetos ( nome ),
-     pessoas  ( nome )`,
+     pessoas:pessoa_id ( nome )`,
   ).is('arquivado_em', null);
 
   // Filtro por status.

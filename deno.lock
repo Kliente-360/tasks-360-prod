@@ -1,0 +1,39 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.108.2"
+  },
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.108.2": "7fbe17c4ef67b80d388cef1f0a0c7ecb28b2b1c3c4110875925a4bc82ff28e13"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@playwright/test@^1.60.0",
+        "npm:@serwist/next@^9.5.11",
+        "npm:@supabase/ssr@~0.5.2",
+        "npm:@supabase/supabase-js@^2.48.1",
+        "npm:@types/node@^22.10.7",
+        "npm:@types/react-dom@^19.0.3",
+        "npm:@types/react@^19.0.7",
+        "npm:@vitest/coverage-v8@^4.1.7",
+        "npm:autoprefixer@^10.4.20",
+        "npm:clsx@^2.1.1",
+        "npm:eslint-config-next@^15.1.6",
+        "npm:eslint@^9.18.0",
+        "npm:lucide-react@^1.17.0",
+        "npm:marked@^18.0.4",
+        "npm:next@^15.1.6",
+        "npm:postcss-load-config@^6.0.1",
+        "npm:postcss@^8.5.1",
+        "npm:react-dom@19",
+        "npm:react@19",
+        "npm:serwist@^9.5.11",
+        "npm:tailwind-merge@^2.6.0",
+        "npm:tailwindcss@^3.4.17",
+        "npm:typescript@^5.7.3",
+        "npm:vitest@^4.1.7"
+      ]
+    }
+  }
+}
