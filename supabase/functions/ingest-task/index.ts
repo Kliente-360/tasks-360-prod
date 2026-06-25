@@ -27,7 +27,7 @@
 //     "status":       "andamento",                  // opcional (legacy: backlog|andamento|bloqueado|concluido)
 //     "complexidade": "media",                      // opcional: alta|media|baixa
 //     "tipo_trabalho":"feature",                    // opcional: bug|feature|discovery|manutencao|admin
-//     "tags":         ["frontend","auth"],          // opcional, array de strings
+//     // "tags": [...]  — REMOVIDO (coluna dropada v1.03.159 · ingest aceita silenciosamente, sem inserir)
 //     "criado_por_ia":true,                         // opcional, default false. Marca task como originada de automação IA (Cowork etc).
 //     "external_status":"Cancelado"                 // opcional. Quando "Cancelado" (case-insensitive):
 //                                                   //   - arquiva a task aqui (arquivado_em=now)
@@ -260,13 +260,9 @@ Deno.serve(async (req) => {
       return err(422, 'invalid_tipo_trabalho', `tipo_trabalho deve ser: ${TIPO_VALID.join('|')}`);
     }
   }
-  let tags: string[] | null = null;
-  if (body.tags != null) {
-    if (!Array.isArray(body.tags)) return err(422, 'invalid_tags', 'tags deve ser array de strings');
-    tags = body.tags
-      .map((x: unknown) => String(x || '').trim().toLowerCase().replace(/\s+/g, '-').slice(0, 24))
-      .filter((x: string) => x.length > 0);
-  }
+  // tags · coluna foi dropada na v1.03.159 (Onda 2.D). Mantemos compat
+  // silenciosa: clientes que ainda mandam o campo recebem 200 sem erro,
+  // só descartamos. Sem retornar 422 pra não quebrar Cowork/SF/AppScript.
   // criado_por_ia: aceita true/false (boolean ou strings "true"/"false"/"1"/"0").
   // Default = null (não toca o campo no update; insert usa default false).
   let criadoPorIa: boolean | null = null;
@@ -320,7 +316,6 @@ Deno.serve(async (req) => {
   if (prazo)                        payload.prazo        = prazo;
   if (complexidade)                 payload.complexidade = complexidade;
   if (tipoTrabalho)                 payload.tipo_trabalho = tipoTrabalho;
-  if (tags)                         payload.tags         = tags;
   if (criadoPorIa != null)          payload.criado_por_ia = criadoPorIa;
   if (subetapa) {
     payload.subetapa = subetapa;

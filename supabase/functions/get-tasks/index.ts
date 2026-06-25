@@ -29,7 +29,7 @@
 //         "prazo": "2026-05-30",         // null se não definido
 //         "esforco": 4,                  // null se não definido
 //         "prioridade": "P1",            // null se não definida
-//         "tags": ["frontend"],          // [] se vazio
+//         "tipo_trabalho": "feature",    // null se não classificada (bug/feature/discovery/manutencao/admin)
 //         "atrasada": false,             // true se prazo < hoje e não concluída
 //         "criado_por_ia": false,
 //         "criado_em": "2026-05-01T10:00:00Z",
@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
   // --- Query principal ---
   // Join via chave estrangeira: clientes, projetos, pessoas.
   let q = sb.from('tasks').select(
-    `id, titulo, status, subetapa, prazo, esforco, prioridade, tags, criado_por_ia, criado_em,
+    `id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, criado_por_ia, criado_em,
      pessoa_id, cliente_id, projeto_id,
      clientes ( nome ),
      projetos ( nome ),
@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
   type Raw = {
     id: string; titulo: string; status: string; subetapa: string | null;
     prazo: string | null; esforco: number | null; prioridade: string | null;
-    tags: string[] | null; criado_por_ia: boolean; criado_em: string;
+    tipo_trabalho: string | null; criado_por_ia: boolean; criado_em: string;
     pessoa_id: string | null; cliente_id: string | null; projeto_id: string | null;
     clientes: { nome: string } | null;
     projetos: { nome: string } | null;
@@ -202,7 +202,7 @@ Deno.serve(async (req) => {
     prazo:        t.prazo,
     esforco:      t.esforco,
     prioridade:   t.prioridade,
-    tags:         t.tags || [],
+    tipo_trabalho: t.tipo_trabalho,
     atrasada:     !!(t.prazo && t.status !== 'concluido' && t.prazo < today),
     criado_por_ia: t.criado_por_ia,
     criado_em:    t.criado_em,
