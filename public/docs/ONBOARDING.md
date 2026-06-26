@@ -290,3 +290,93 @@ A regra de ouro: **se mexer, atualize**. O status desatualizado prejudica todo m
 ---
 
 > Dúvidas? Pingue o gerente de projetos no canal #ops. Esse guia evolui — sugestões de melhoria também viram task.
+
+---
+
+# Conduta · expectativas e responsabilidades
+
+> "O app é a fonte de verdade. A operação acontece aqui — se não está no app, não está acontecendo."
+
+## Qualidade da escrita é nossa
+
+Descrição e valor esperado chegam via cliente, mas **a qualidade do texto é nossa responsabilidade**. Um campo mal escrito gera dúvida, retrabalho e cliente insatisfeito. Antes de salvar, releia: está claro para qualquer pessoa do time sem precisar perguntar?
+
+Campos de qualidade que o time preenche (não o cliente):
+
+| Campo | Quando preencher | Quem preenche |
+|---|---|---|
+| **Descrição** | Ao criar / triar a task | Quem triou |
+| **Valor esperado** | Ao criar / triar a task | Quem triou |
+| **Solução implementada** | A partir de `em_homologação` | Quem desenvolveu |
+| **Valor entregue** | Ao concluir | Quem desenvolveu |
+
+`Solução implementada` e `Valor entregue` são de inteira responsabilidade do time — o cliente não preenche isso por nós.
+
+## Gestão ao dia — sem exceção
+
+Status, prazo e comentários devem estar **sempre atualizados**. Não existe "atualizo amanhã".
+
+- Task em `andamento` sem comentário +24h aparece no **Meu Foco** de quem for responsável — e na tela da Jessica
+- Prazo que mudou sem comentário explicando o motivo vai mudar de novo, sem rastro
+- Status desatualizado = KPIs errados no Briefing e no Dashboard, o que prejudica as decisões do Felipe
+
+Regra prática: **se mexeu na task, atualizou o status e deixou um comentário**.
+
+## Papel de cada líder
+
+### Felipe · CEO
+Disponível pra discutir escopo, prioridade e decisões de produto a qualquer momento. Se você está travado em uma definição — técnica ou de negócio — não espere a próxima reunião. A agenda de refinamento semanal existe pra isso, mas entre duas agendas o canal direto está sempre aberto.
+
+### Jessica · PM e guardiã da satisfação do cliente
+A Jessica vai cobrar atualização de prazo, resposta a comment e homologação pendente — é o papel dela e é o que deve acontecer. Quando ela cobrar, priorize. Não é microgestão, é o cliente esperando.
+
+Ao mesmo tempo, ela resguarda o time: quando o cliente pede além do escopo, atrasa homologação ou desrespeita o processo, a Jessica renegocia, redefine prioridade e cobra de volta. Bloqueio por espera do cliente? Ela vai atrás. Prazo que precisa ser renegociado? Ela fala com o cliente — não você diretamente.
+
+### Henrique · Arquiteto
+Disponível pra discutir escopo técnico, dependências entre tasks e decisões de arquitetura. Se uma task está mal definida tecnicamente, aciona o Henrique **antes** de começar o desenvolvimento — não durante. Retrabalho técnico é o mais caro.
+
+## Alocação e capacidade
+
+Nenhum cliente paga por mais de um recurso, e ninguém está alocado sozinho. Isso significa que **todos têm folga no mês** — há banda disponível pra contribuir em outros clientes quando necessário.
+
+Como está hoje (jun/2026):
+
+| Cliente | Alocação principal | Apoio cross |
+|---|---|---|
+| BT | Karen | Felipe · Jessica · Henrique |
+| Pão e Talho | Drieli | Felipe · Jessica · Henrique |
+| VB / CTF | Fernando · João | Henrique (mais presente) |
+| Projetos internos | Felipe · Jessica · Henrique | — |
+
+Consequência direta: ninguém deveria estar sobrecarregado em um dado mês. Se você está, comunica. É dado de gestão, não fraqueza — e o **Briefing → Capacidade** mostra exatamente isso.
+
+## Timesheet é obrigatório
+
+O registro de horas passou a ser obrigatório. Motivo: **respaldo nas negociações com clientes**. Sem dados reais de horas, discutir escopo, prazo e reajuste é achismo. Com dados, é argumento.
+
+Como registrar (em ordem de preferência):
+1. **Cronômetro** — ícone ⏱ no header ou no subheader do modal. Inicia ao começar, para ao encerrar. Mais preciso.
+2. **Lançar horas** — retroativo. Click no cronômetro → selecionar task → **Lançar horas** → Data + Início + Duração.
+3. O sistema não deixa concluir uma task sem horas registradas.
+
+## Refinamento semanal
+
+Temos agenda semanal de refinamento. A **lição de casa é obrigatória**: chegar com suas tasks entendidas, dúvidas levantadas e estimativas pensadas. Agenda sem preparo vira perda de tempo de todo mundo.
+
+- Tasks sem descrição ou valor esperado claros → resolve antes de entrar na agenda
+- Dúvidas técnicas de escopo → levanta antes, discute durante
+- Tasks em `priorizado` sem prazo/esforço → são exatamente o que o refinamento existe pra resolver
+
+## Standup diário assíncrono
+
+Fazemos standup diário assíncrono no WhatsApp:
+
+1. **Jessica manda o resumo de manhã** — o que está em movimento, o que precisa de atenção no dia
+2. **Todos respondem, sem exceção** — "ok" não conta. Diga o que você vai tocar hoje e se tem bloqueio
+3. **Formato**: 1–2 linhas por pessoa. Não é relatório, é sinal de vida + contexto
+
+O standup do dia também aparece no app em **Briefing → primeiro card** — consultável por qualquer pessoa do time.
+
+---
+
+> Este documento é a referência da conduta do time. Evoluiu a partir de decisões reais — sugestões de mudança passam pelo Felipe antes de virar regra.

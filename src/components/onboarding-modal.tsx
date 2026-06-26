@@ -23,7 +23,7 @@ async function getMarked() {
   return markedModule.marked;
 }
 
-type Persona = 'ceo' | 'gerente' | 'analista';
+type Persona = 'ceo' | 'gerente' | 'analista' | 'conduta';
 type Personas = Record<Persona, string>;
 
 // Cache module-level
@@ -37,15 +37,19 @@ async function loadOnboarding(): Promise<Personas> {
   const md = await r.text();
   // Remove preâmbulo (título + blockquote inicial) até a 1ª H1 de persona.
   const cleaned = md.replace(/^[\s\S]*?(?=^# CEO)/m, '').trim();
-  // Splita em 3 blocos por '# CEO', '# Gerente', '# Analista' separados
-  // por linhas '---'.
-  const parts = cleaned.split(/^---\s*$\s*(?=^# (?:CEO|Gerente|Analista))/m);
-  const map: Personas = { ceo: '', gerente: '', analista: '' };
+  // Splita em 4 blocos por '# CEO', '# Gerente', '# Analista', '# Conduta'
+  // separados por linhas '---'.
+  const parts = cleaned.split(/^---\s*$\s*(?=^# (?:CEO|Gerente|Analista|Conduta))/m);
+  const map: Personas = { ceo: '', gerente: '', analista: '', conduta: '' };
   for (const part of parts) {
-    const head = part.match(/^# (CEO|Gerente|Analista)/m);
+    const head = part.match(/^# (CEO|Gerente|Analista|Conduta)/m);
     if (!head) continue;
-    const first = head[1].toLowerCase()[0];
-    const key: Persona = first === 'c' ? 'ceo' : first === 'g' ? 'gerente' : 'analista';
+    const label = head[1];
+    const key: Persona =
+      label === 'CEO' ? 'ceo'
+      : label === 'Gerente' ? 'gerente'
+      : label === 'Analista' ? 'analista'
+      : 'conduta';
     // Tira trailer de outras personas se grudou
     const block = part.split(/^---\s*$/m)[0];
     map[key] = await marked.parse(block, { gfm: true });
@@ -127,13 +131,13 @@ function OnboardingModal({ onClose }: { onClose: () => void }) {
           <div className="flex items-center gap-3 min-w-0">
             <div className="font-brand font-semibold text-base md:text-lg text-ink">Onboarding · tasks 360</div>
             <span className="text-[10px] uppercase tracking-wider text-muted font-mono hidden md:inline">
-              3 perspectivas
+              4 abas
             </span>
           </div>
           <div className="flex items-center gap-2">
             {/* Toggle persona */}
             <div className="flex rounded-md border border-line overflow-hidden text-sm">
-              {(['ceo', 'gerente', 'analista'] as const).map((p) => (
+              {(['ceo', 'gerente', 'analista', 'conduta'] as const).map((p) => (
                 <button
                   key={p}
                   type="button"
@@ -207,7 +211,7 @@ export function OnboardingMenuItem({ onClick }: { onClick?: () => void }) {
         <Icon name="info" size={14} />
         Onboarding
       </span>
-      <span className="text-muted text-xs whitespace-nowrap">3 perfis</span>
+      <span className="text-muted text-xs whitespace-nowrap">4 abas</span>
     </button>
   );
 }
