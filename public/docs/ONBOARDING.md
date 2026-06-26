@@ -301,12 +301,12 @@ A regra de ouro: **se mexer, atualize**. O status desatualizado prejudica todo m
 
 Descrição e valor esperado chegam via cliente, mas **a qualidade do texto é nossa responsabilidade**. Um campo mal escrito gera dúvida, retrabalho e cliente insatisfeito. Antes de salvar, releia: está claro para qualquer pessoa do time sem precisar perguntar?
 
-Campos de qualidade que o time preenche (não o cliente):
+Campos que o time preenche (não o cliente):
 
 | Campo | Quando preencher | Quem preenche |
 |---|---|---|
-| **Descrição** | Ao criar / triar a task | Quem triou |
-| **Valor esperado** | Ao criar / triar a task | Quem triou |
+| **Responsável** | Ao criar / triar a task | Quem triou |
+| **Complexidade / Esforço** | Ao refinar e definir escopo | Quem validou |
 | **Solução implementada** | A partir de `em_homologação` | Quem desenvolveu |
 | **Valor entregue** | Ao concluir | Quem desenvolveu |
 
@@ -345,10 +345,10 @@ Como está hoje (jun/2026):
 |---|---|---|
 | BT | Karen | Felipe · Jessica · Henrique |
 | Pão e Talho | Drieli | Felipe · Jessica · Henrique |
-| VB / CTF | Fernando · João | Henrique (mais presente) |
-| Projetos internos | Felipe · Jessica · Henrique | — |
+| VB / CTF | Fernando · João | Felipe · Jessica · Henrique |
+| Demais Projetos | Felipe · Jessica · Henrique | apoio solicitado / alocado sob demanda |
 
-Consequência direta: ninguém deveria estar sobrecarregado em um dado mês. Se você está, comunica. É dado de gestão, não fraqueza — e o **Briefing → Capacidade** mostra exatamente isso.
+Consequência direta: ninguém deveria estar sobrecarregado em um dado mês. Se você está, comunica. É dado de gestão, não fraqueza — e o **Dashboard → Capacidade** mostra exatamente isso.
 
 ## Timesheet é obrigatório
 
@@ -374,8 +374,6 @@ Fazemos standup diário assíncrono no WhatsApp:
 1. **Jessica manda o resumo de manhã** — o que está em movimento, o que precisa de atenção no dia
 2. **Todos respondem, sem exceção** — "ok" não conta. Diga o que você vai tocar hoje e se tem bloqueio
 3. **Formato**: 1–2 linhas por pessoa. Não é relatório, é sinal de vida + contexto
-
-O standup do dia também aparece no app em **Briefing → primeiro card** — consultável por qualquer pessoa do time.
 
 ---
 
