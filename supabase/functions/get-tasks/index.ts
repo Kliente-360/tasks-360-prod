@@ -146,15 +146,21 @@ Deno.serve(async (req) => {
     limit = Math.min(n, MAX_LIMIT);
   }
 
+  // --- Filtros de "ruído" pra consumidores tipo standup automation ---
+  const excludePrivadas = p.get('exclude_privadas') === 'true';
+  const excludeInternos = p.get('exclude_internos') === 'true';
+
   // --- Query principal ---
   // Join via chave estrangeira: clientes, projetos, pessoas.
   let q = sb.from('tasks').select(
-    `id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, criado_por_ia, criado_em,
+    `id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, criado_por_ia, criado_em, privada,
      pessoa_id, cliente_id, projeto_id,
-     clientes ( nome ),
+     clientes ( nome, eh_interno ),
      projetos ( nome ),
      pessoas:pessoa_id ( nome )`,
   ).is('arquivado_em', null);
+
+  if (excludePrivadas) q = q.eq('privada', false);
 
   // Filtro por status.
   // Se ?status explícito → usa exatamente esses.
@@ -188,13 +194,21 @@ Deno.serve(async (req) => {
     id: string; titulo: string; status: string; subetapa: string | null;
     prazo: string | null; esforco: number | null; prioridade: string | null;
     tipo_trabalho: string | null; criado_por_ia: boolean; criado_em: string;
+    privada: boolean;
     pessoa_id: string | null; cliente_id: string | null; projeto_id: string | null;
-    clientes: { nome: string } | null;
+    clientes: { nome: string; eh_interno: boolean } | null;
     projetos: { nome: string } | null;
     pessoas:  { nome: string } | null;
   };
 
-  const out = (tasks as Raw[]).map(t => ({
+  // Filtro server-side por eh_interno (PostgREST não suporta where em
+  // tabela joined de forma trivial · filtramos client-side aqui).
+  const filtered = (tasks as Raw[]).filter(t => {
+    if (excludeInternos && t.clientes?.eh_interno === true) return false;
+    return true;
+  });
+
+  const out = filtered.map(t => ({
     id:           t.id,
     titulo:       t.titulo,
     status:       t.status,
@@ -203,6 +217,7 @@ Deno.serve(async (req) => {
     esforco:      t.esforco,
     prioridade:   t.prioridade,
     tipo_trabalho: t.tipo_trabalho,
+    privada:      t.privada === true,
     atrasada:     !!(t.prazo && t.status !== 'concluido' && t.prazo < today),
     criado_por_ia: t.criado_por_ia,
     criado_em:    t.criado_em,

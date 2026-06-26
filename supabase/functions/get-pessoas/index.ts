@@ -74,6 +74,11 @@ Deno.serve(async (req) => {
   const rolesParam      = url.searchParams.get('role');
   const clienteId       = url.searchParams.get('cliente_id');
   const withLoad        = url.searchParams.get('with_load') === 'true';
+  // Exclui tasks de clientes internos (eh_interno=true) e/ou privadas do
+  // cálculo de carga · usado por standup automation pra não inflar números
+  // com Kliente 360 / privadas do CEO.
+  const excludeInternos = url.searchParams.get('exclude_internos') === 'true';
+  const excludePrivadas = url.searchParams.get('exclude_privadas') === 'true';
 
   // Validação de roles param
   let rolesFilter: string[] | null = null;
@@ -124,15 +129,28 @@ Deno.serve(async (req) => {
   // (mesma heurística do app — effEsforco em lib/helpers.js).
   if (withLoad && out.length) {
     const ids = out.map(p => p.id);
-    const { data: tasks, error: tErr } = await sb
+    let tq = sb
       .from('tasks')
-      .select('pessoa_id, esforco, tempo_real_horas')
+      .select('pessoa_id, esforco, tempo_real_horas, privada, clientes(eh_interno)')
       .in('pessoa_id', ids)
       .neq('status', 'concluido')
       .is('arquivado_em', null);
+    if (excludePrivadas) tq = tq.eq('privada', false);
+    const { data: tasks, error: tErr } = await tq;
     if (tErr) return err(500, 'db_error', tErr.message);
+    type TaskLoad = {
+      pessoa_id: string;
+      esforco: number | null;
+      tempo_real_horas: number | null;
+      privada: boolean | null;
+      clientes: { eh_interno: boolean } | null;
+    };
+    const filtered = (tasks as TaskLoad[]).filter(t => {
+      if (excludeInternos && t.clientes?.eh_interno === true) return false;
+      return true;
+    });
     const loadByPessoa = new Map<string, { count: number; horas: number }>();
-    for (const t of (tasks as { pessoa_id: string; esforco: number | null; tempo_real_horas: number | null }[])) {
+    for (const t of filtered) {
       const cur = loadByPessoa.get(t.pessoa_id) || { count: 0, horas: 0 };
       cur.count += 1;
       const eff = Number(t.esforco) > 0 ? Number(t.esforco) : 4;
