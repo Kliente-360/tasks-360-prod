@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.174 · **Atualizado**: 18/06/2026 · branch `main`
+> **Versão**: v1.03.202 · **Atualizado**: 26/06/2026 · branch `main`
 
 ---
 
@@ -118,6 +118,17 @@ Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout es
 - ✅ **V.3 · RLS audit · fixes críticos pré-launch Pão e Talho** (v1.03.152) · `docs/gestao/AUDIT_RLS.md` com matriz role×tabela×CRUD + 6 gaps identificados. Migration `2026-06-15_rls_audit_v3` aplicada: (a) `task_field_history` ganhou whitelist de `field` pro cliente (`subetapa`,`prazo`,`titulo`,`descricao`,`solucao_implementada`) — antes vazava `esforco`, `tempo_real_horas`, `pessoa`, `bloqueado_por`, `prioridade`, `complexidade`, `escopo`, `tipo_trabalho`; (b) `task_attachments` ganhou coluna `visivel_cliente` (default true) + policy filtra; (c) `notifications` consolidada — `staff_all` virou `admin_all` (interno deixa de ver notif de outro interno), policy `select_self` duplicada removida, cliente self habilitado (pré-req V.8). Pendente em V.4: mapear labels de subetapa pra rótulos amigáveis no modo cliente (timeline mostra `em_definicao` etc).
 - ✅ **Capacidade · Sustentação alinha com Pessoa** (v1.03.151) · `computeWeeklyCapacityAnalysis` agora usa `effRemaining` no bucket de sustentação (era `effEsforco` bruto). Resolve inconsistência: pessoa descontava horas já realizadas, sustentação não — clientes com tasks abertas e muito `tempoRealHoras` declarado mostravam capacidade fantasma. Ganho imediato e cirúrgico (1 linha). Cálculo de "realizado-na-semana via time_entries" fica gated em Bucket T (adoção timesheet)
 
+### Modal fase 2 + Analytics Briefing + Standup (jun/2026 · v1.03.175 → v1.03.202)
+
+- ✅ **Modal desktop · fase 2 · subheader editável + polish** (v1.03.175-194) · iteração pós-M.6 com 10 ajustes (v1.03.175); tabs unificadas + composer herdado (v1.03.176); altura fixa (v1.03.177); mapping explícito subetapa → aba default (v1.03.178); **subheader editável** — prioridade vira `<select>` com pill colorida `data-prio`, prazo vira `input[type=date]` invisível sobre span `dd/mm/aaaa`, nova ordem status→prio→prazo→cliente-projeto→responsável (v1.03.179); prio compacta + prazo abre picker no click (v1.03.180); banner de erro simplificado + quebra de URL longa em comment (v1.03.191); `tipo_trabalho` na aba Triagem + "Homologado em" na Execução + seção Admin sempre renderiza (v1.03.192); motivo de bloqueio persiste como comment mesmo sem transição de subetapa (v1.03.194)
+- ✅ **Modal mobile · tela única + campos dinâmicos por subetapa** (v1.03.181-187) · sem sub-tabs, scroll vertical único, footer fixo (Fechar/Salvar) · header: título + prio pill · campos condicionais por subetapa (escopo em `em_definicao+`, critério de aceite em `escopo_definido+`, solução implementada em `em_homologacao+`, valor entregue em `concluido`, motivo bloqueio quando `bloqueado`, motivo reabertura quando `wasConcluido`) · composer single line + placeholder curto (v1.03.184); toast mobile vai pra base (v1.03.183); pill "minhas" no Backlog mobile não desloca layout (v1.03.185); composer pill polish: texto vertical-center + bordas menos arredondadas (v1.03.186-187)
+- ✅ **Dashboard · capacidade no lugar de saúde** (v1.03.188-189) · cards "Saúde por projeto/pessoa" substituídos por "Capacidade semanal · sustentação" e "Capacidade do time" (mesmos layouts do Briefing). Entregas agora mostra count de tasks (era horas). Polish de titles, capacidades e chart (v1.03.189)
+- ✅ **C.10 (parcial) · heurísticas publicadas no Briefing** (v1.03.190-193) · 5 cards analíticos: C.5 Churn risk · C.3 Skill mismatch · C.4 Senioridade malalocada · C.7 Bottlenecks · C.8 SLA breach (v1.03.190). 15 cards H (computeHeuristicAlerts) + 18 cards N novos em `analytics.ts` (N.1 reaberturas crônicas · N.2 aging backlog · N.3 mix-of-work · N.4 gap estimativa/realizado · N.5 velocidade individual · N.6 concentração throughput · N.7 bloqueios recorrentes · N.8 tempo aprovação cliente · N.9 tasks privadas CEO · N.10 cobertura critério aceite · N.11 cobertura valor entregue · N.12 WIP excessivo · N.13 prazo vencido · N.14 sem responsável · N.15 sem projeto · N.16 sem update >7d · N.17 triagem atrasada · N.18 origem demanda). ~38 cards colapsáveis uniformes no Briefing (v1.03.193). **Pendente**: versão Dashboard + filtro/refino UX ao vivo
+- ✅ **T.1 · botão de cronômetro no subheader do modal** (v1.03.195) · ícone timer no subheader abre task picker do cronômetro diretamente da task aberta. Primeira entrega do Bucket T
+- ✅ **Modal · stop com nota + confirmar exclusão de time entry** (v1.03.196) · parar cronômetro abre popover pra adicionar nota antes de confirmar; exclusão de time entry no modal pede confirmação (antes era imediata)
+- ✅ **Timesheet · confirmar exclusão** (v1.03.197) · botão × na tabela da página Timesheet também pede confirmação (espelho do comportamento do modal)
+- ✅ **Standup diário · tabela + edge functions + StandupCard** (v1.03.198-202) · **backend**: tabela `standups` (data UNIQUE, conteudo_md, texto_whatsapp, resumo, trigger `atualizado_em`), RLS staff_read/service_write, edge functions `post-standup` (UPSERT idempotente) e `get-standups` (paginado ou por data exata), auth via `x-api-key`. **Frontend**: `StandupCard` como primeiro card do Briefing — markdown via `marked.parse()` com CSS `.standup-md` (h1 15px/h2 14px/h3 13px/spacing 6px), date picker pra navegar dias, botão copy (preferência `texto_whatsapp`, fallback `conteudo_md`), "recente" pill quando navegando histórico, nav [← hoje →] + tooltip "Copiado!", hora do last update no header. Mobile: data por extenso abaixo do título, botões alinhados à direita. **Docs**: prompt padronizado + README pra rotina diária agendada, preparado pra HTTP trigger via MCP
+
 ---
 
 ## 🎯 Roadmap ativo
@@ -207,7 +218,7 @@ Todas as funções puras abaixo estão prontas, testadas (64 testes) e disponív
 
 | # | Item | Esforço | Impacto |
 |---|---|---|---|
-| C.10 | **Publicar heurísticas na UI** · decidir onde cada função aparece (Dashboard? Briefing? nova aba Analytics?), desenhar cards/widgets por heurística, ligar aos dados do DataProvider | 1-2 semanas | Alto — transforma os KPIs em valor percebido |
+| C.10 🟡 | **Publicar heurísticas na UI** · **Parcialmente entregue** (v1.03.190-193): 5 cards analíticos C.3-C.8 + 15 cards H + 18 cards N publicados no Briefing como cards colapsáveis. **Pendente**: versão Dashboard com widgets refinados por heurística (capacidade/churn como highlights visuais, não só lista), filtro/busca nos cards, agrupamento por severidade, integração nos KPIs do Dashboard principal | ~1 semana | Alto — polir a visualização existente + levar ao Dashboard |
 | C.11 | **Capacidade · realizado + previsto via timesheet** · evolução do `computeWeeklyCapacityAnalysis` pra somar horas realmente registradas em `time_entries` na semana (independente do prazo da task) + remaining das tasks abertas. Hoje só conta forward (effRemaining bucketed by prazo). Permite ver "carga real consumida vs prevista" alinhada à `capacidade_horas_semana`/`orcamento_horas`. **Gated em adoção do timesheet ≥ 60%** (medido em jun/2026: <10% · bloqueado). Atacar após Bucket T. | 3-5 dias (depois de adoção OK) | Alto — métrica honesta de carga |
 
 ### Bucket T · Adoção do Timesheet (pré-req do C.11)
@@ -216,7 +227,7 @@ Cobertura atual: **<10% das tasks concluídas têm time_entries** (medido jun/20
 
 | # | Item | Esforço | Impacto adoção |
 |---|---|---|---|
-| T.1 | **Auto-iniciar cronômetro ao abrir task no modal** · com prompt opcional ("você está trabalhando agora? Iniciar timer"). Default ativado pra interno/admin. | 1d | ⭐⭐⭐ |
+| ~~T.1~~ | ~~**Auto-iniciar cronômetro ao abrir task no modal**~~ | ✅ Entregue v1.03.195 — botão timer no subheader abre task picker direto da task aberta |
 | T.6 | **Trava no concluir** · task não conclui sem `tempoRealHoras > 0` (campo OU sum de time_entries). Hoje conclui em branco. Pode irritar mas é o gate mais forte. | 0.5d | ⭐⭐⭐ |
 | T.4 | **Bulk-fill timesheet retroativo** · tela "lançar horas da semana passada" com grid pessoa × dia × task pra preenchimento rápido (1 sessão de 10 min/semana). | 2-3d | ⭐⭐⭐ retroativo |
 | T.2 | **Card "Suas horas hoje" no header/Foco** · contador rolando · gamifica · vê na hora se esqueceu. | 1d | ⭐⭐ |
@@ -253,17 +264,19 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 ## 🎯 NEXT · ordem definida (jun/2026)
 
 **Em andamento · Visão cliente (sessão local)**
-→ **Bucket V** completo — Portal cliente + hardening pré-launch Pão e Talho. Sendo trabalhado em sessão local separada.
-→ Ordem: V.3 (RLS audit) → V.1 (Portal UX) → V.2 (KPIs) → V.4 (modal cliente) → V.5 (login) → V.6 (identidade) → V.7 (onboarding) → V.8 (notif) → V.9 (walkthrough final)
+→ **Bucket V** em curso. V.3 (RLS audit) ✅ já entregue. Restam: V.1 (Portal UX) → V.2 (KPIs) → V.4 (modal modo cliente) → V.5 (login UX) → V.6 (identidade) → V.7 (onboarding) → V.8 (notif cliente) → V.9 (walkthrough final)
 
-**Após Bucket V · Insight para o usuário** (~1-2 semanas)
-1. **C.10** Publicar heurísticas analytics na UI (Capacidade · Skill mismatch · Senioridade · Churn risk · Bottleneck · SLA breach)
+**Adoção timesheet (paralelo baixo custo)**
+→ **Bucket T** · T.1 ✅ entregue. Próximos: T.6 (trava no concluir) → T.4 (bulk retroativo) → T.2 (card "horas hoje")
 
-Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA — paralela).
+**Analytics na UI · polir o que foi publicado**
+→ **C.10 parcial** já publicado no Briefing (~38 cards). Pendente: versão Dashboard com widgets visuais refinados + integração nos KPIs
+
+Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA) · C.11 (gated em adoção timesheet ≥60%).
 
 ---
 
 ## Próximo passo imediato
 
-**Bucket V · Visão cliente (Pão e Talho)** — em andamento em sessão local (jun/2026).
-Quando concluído: marcar V.1–V.9 como ✅ e avançar pra **C.10** (heurísticas na UI).
+**Bucket V · Visão cliente (Pão e Talho)** — em andamento (sessão local, jun/2026).
+Quando concluído: marcar V.1–V.9 como ✅ e finalizar **C.10** (Dashboard widgets) + atacar **T.6** (trava timesheet).
