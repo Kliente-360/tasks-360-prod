@@ -48,7 +48,7 @@ function fmtUpdatedAt(iso: string): string {
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
-export function StandupCard() {
+export function StandupCard({ collapsible = false }: { collapsible?: boolean }) {
   const sb = useMemo(() => createClient(), []);
 
   // Lista ordenada DESC de todas as datas existentes (só strings).
@@ -59,6 +59,8 @@ export function StandupCard() {
   const [standup, setStandup] = useState<Standup | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  // Collapsible: começa fechado quando prop ativada.
+  const [expanded, setExpanded] = useState(!collapsible);
 
   // Mount · prefetch de todas as datas
   useEffect(() => {
@@ -142,13 +144,24 @@ export function StandupCard() {
 
   return (
     <div className="bg-elev border border-line rounded-xl overflow-hidden">
-      {/* Header · mobile: 2 linhas (title+data stack vertical · botões à direita).
-            desktop: tudo inline. */}
+      {/* Header */}
       <div className="px-3 md:px-4 py-3 border-b border-line flex items-start md:items-center gap-3">
-        <div className="flex-1 min-w-0 flex flex-col md:flex-row md:items-center md:gap-2">
+        {/* Título + data · clicável quando collapsible */}
+        <div
+          className={`flex-1 min-w-0 flex flex-col md:flex-row md:items-center md:gap-2 ${collapsible ? 'cursor-pointer select-none' : ''}`}
+          onClick={collapsible ? () => setExpanded((v) => !v) : undefined}
+        >
           <div className="flex items-center gap-2">
             <Icon name="megaphone" size={16} className="text-[var(--brand-dark)]" />
             <h2 className="text-sm font-semibold text-ink">Standup</h2>
+            {collapsible && (
+              <Icon
+                name="chevron-down"
+                size={14}
+                className="text-muted transition-transform duration-200"
+                style={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              />
+            )}
           </div>
           {standup && (
             <span className="text-xs text-muted truncate mt-0.5 md:mt-0">
@@ -160,39 +173,41 @@ export function StandupCard() {
         </div>
 
         <div className="shrink-0 flex items-center gap-2">
-          {/* Nav prev / hoje / next · estilo calendário */}
-          <div className="view-toggle" role="group" aria-label="Navegação de standup">
-            <button
-              type="button"
-              onClick={goPrev}
-              disabled={!hasPrev}
-              title="Standup anterior"
-              aria-label="Standup anterior"
-            >
-              <Icon name="chevron-left" size={15} />
-            </button>
-            <button
-              type="button"
-              onClick={goToday}
-              disabled={isToday}
-              title="Ir pro standup de hoje"
-              aria-label="Ir pro standup de hoje"
-            >
-              hoje
-            </button>
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={!hasNext}
-              title="Standup seguinte"
-              aria-label="Standup seguinte"
-            >
-              <Icon name="chevron-right" size={15} />
-            </button>
-          </div>
+          {/* Nav prev / hoje / next · esconde quando colapsado */}
+          {(!collapsible || expanded) && (
+            <div className="view-toggle" role="group" aria-label="Navegação de standup">
+              <button
+                type="button"
+                onClick={goPrev}
+                disabled={!hasPrev}
+                title="Standup anterior"
+                aria-label="Standup anterior"
+              >
+                <Icon name="chevron-left" size={15} />
+              </button>
+              <button
+                type="button"
+                onClick={goToday}
+                disabled={isToday}
+                title="Ir pro standup de hoje"
+                aria-label="Ir pro standup de hoje"
+              >
+                hoje
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                disabled={!hasNext}
+                title="Standup seguinte"
+                aria-label="Standup seguinte"
+              >
+                <Icon name="chevron-right" size={15} />
+              </button>
+            </div>
+          )}
 
-          {/* Copy com tooltip flutuante */}
-          {standup && (
+          {/* Copy com tooltip flutuante · esconde quando colapsado */}
+          {standup && (!collapsible || expanded) && (
             <span className="relative inline-flex">
               <button
                 type="button"
@@ -211,29 +226,31 @@ export function StandupCard() {
         </div>
       </div>
 
-      {/* Body */}
-      {loading ? (
-        <div className="px-4 py-6 text-sm text-muted">Carregando…</div>
-      ) : !standup ? (
-        <div className="px-4 py-6 text-sm text-muted">
-          {dates && dates.length === 0
-            ? 'Nenhum standup publicado ainda.'
-            : currentDate
-              ? `Sem standup publicado em ${fmtDateLong(currentDate)}.`
-              : 'Nenhum standup publicado ainda.'}
-        </div>
-      ) : (
-        <div className="px-4 py-4">
-          {standup.resumo && (
-            <div className="text-sm text-ink font-medium mb-3 pb-3 border-b border-line">
-              {standup.resumo}
-            </div>
-          )}
-          <div
-            className="standup-md text-sm text-ink"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-        </div>
+      {/* Body · oculto quando colapsado */}
+      {(!collapsible || expanded) && (
+        loading ? (
+          <div className="px-4 py-6 text-sm text-muted">Carregando…</div>
+        ) : !standup ? (
+          <div className="px-4 py-6 text-sm text-muted">
+            {dates && dates.length === 0
+              ? 'Nenhum standup publicado ainda.'
+              : currentDate
+                ? `Sem standup publicado em ${fmtDateLong(currentDate)}.`
+                : 'Nenhum standup publicado ainda.'}
+          </div>
+        ) : (
+          <div className="px-4 py-4">
+            {standup.resumo && (
+              <div className="text-sm text-ink font-medium mb-3 pb-3 border-b border-line">
+                {standup.resumo}
+              </div>
+            )}
+            <div
+              className="standup-md text-sm text-ink"
+              dangerouslySetInnerHTML={{ __html: html }}
+            />
+          </div>
+        )
       )}
     </div>
   );

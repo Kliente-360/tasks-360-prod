@@ -8,7 +8,6 @@ import { atrasada, isPreTriagem } from '@/lib/task-utils';
 import {
   computeVelocidade,
   computeCalendario,
-  computeHeuristicAlerts,
   computeWeeklyCapacityAnalysis,
 } from '@/lib/analytics';
 import { VelocidadeOperacao } from '@/components/velocidade-operacao';
@@ -23,12 +22,6 @@ function heatmapColor(nivel: string) {
   if (nivel === 'pressao') return 'bg-[var(--p1-soft)] text-[var(--warn)] font-semibold';
   if (nivel === 'ok') return 'bg-[var(--brand-tint)] text-[var(--brand-dark)]';
   return 'bg-[var(--surface-3)] text-[var(--muted)]';
-}
-
-function severityColor(s: string) {
-  if (s === 'alta') return 'text-[var(--danger)] bg-[var(--p0-soft)] border-[var(--p0)]';
-  if (s === 'media') return 'text-[var(--warn)] bg-[var(--p1-soft)] border-[var(--p1)]';
-  return 'text-[var(--muted)] bg-[var(--surface-3)] border-[var(--line)]';
 }
 
 function calDayBg(dia: { count: number; isPast: boolean }) {
@@ -60,15 +53,7 @@ export function ResumoClient() {
 
   const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm && !isPreTriagem(t)), [tasks]);
 
-  // ── 1 · Alertas
-  const heuristicAlerts = useMemo(
-    () => computeHeuristicAlerts(baseTasks, clientes, projetos, pessoas),
-    [baseTasks, clientes, projetos, pessoas],
-  );
-  const countAlta = heuristicAlerts.filter((a) => a.severity === 'alta').length;
-  const countMedia = heuristicAlerts.filter((a) => a.severity === 'media').length;
-
-  // ── 2 · Velocidade
+  // ── 1 · Velocidade
   const vel = useMemo(() => computeVelocidade(baseTasks), [baseTasks]);
 
   // ── 3 · Capacidade do time
@@ -108,57 +93,14 @@ export function ResumoClient() {
     <div>
       <div className="m-pagetitle">
         <h1>Resumo executivo</h1>
-        <div className="narr">
-          {heuristicAlerts.length} {heuristicAlerts.length === 1 ? 'alerta' : 'alertas'} em {dateLabel}
-        </div>
+        <div className="narr">{dateLabel}</div>
       </div>
       <div className="space-y-4">
 
-        {/* ── Standup do dia · primeiro card (mesmo do Briefing desktop) ── */}
-        <StandupCard />
+        {/* ── Standup do dia · colapsado por default no mobile ── */}
+        <StandupCard collapsible />
 
-        {/* ── 1 · Alertas ── */}
-        <div className="bg-elev border border-line rounded-xl p-3">
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-sm font-semibold text-ink">Alertas</h2>
-            {countAlta > 0 && (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[var(--p0-soft)] text-[var(--danger)]">
-                {countAlta} crítico{countAlta > 1 ? 's' : ''}
-              </span>
-            )}
-            {countMedia > 0 && (
-              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-[var(--p1-soft)] text-[var(--warn)]">
-                {countMedia} atenção
-              </span>
-            )}
-            {heuristicAlerts.length === 0 && (
-              <span className="text-[11px] text-[var(--brand)]">✓ tudo certo</span>
-            )}
-          </div>
-          {heuristicAlerts.length === 0 ? (
-            <div className="text-sm text-muted">✓ Nenhum alerta no momento</div>
-          ) : (
-            <div className="grid gap-2">
-              {heuristicAlerts.map((a, i) => (
-                <div key={i} className={cn('border rounded-lg px-3 py-2 text-sm', severityColor(a.severity))}>
-                  <div className="flex items-start gap-2">
-                    <span className="shrink-0 text-xs font-bold mt-0.5 opacity-60">
-                      {a.severity === 'alta' ? '●' : '○'}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-medium leading-snug text-[13px]">{a.titulo}</div>
-                      {a.detalhe && (
-                        <div className="text-xs opacity-75 mt-1 leading-snug">{a.detalhe}</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ── 2 · Velocidade da operação ── */}
+        {/* ── 1 · Velocidade da operação ── */}
         <VelocidadeOperacao vel={vel} />
 
         {/* ── 3 · Capacidade do time ── */}
