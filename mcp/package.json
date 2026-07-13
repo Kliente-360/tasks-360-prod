@@ -1,0 +1,21 @@
+{
+  "name": "tasks360-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server que expõe a API Tasks 360 (Supabase Edge Functions) como ferramentas para o Claude/Cowork",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "agents": "^0.0.67",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.92.0"
+  }
+}

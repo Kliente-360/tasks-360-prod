@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "tasks360": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://tasks360-mcp.felipe-kliente360.workers.dev/mcp",
+        "--header",
+        "Authorization: Bearer <MCP_AUTH_TOKEN · pegar com Felipe>"
+      ]
+    }
+  }
+}

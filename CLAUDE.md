@@ -3,6 +3,16 @@
 Convenções do projeto que valem pra qualquer sessão.
 
 > **Sobre este repo**: `tasks-360-prod` é o repo produtivo do app Next — único ambiente de produção desde jun/2026. Foi separado de `Kliente-360/tasks-360-mvp` (Alpine desativado com o cutover em jun/2026). Trabalho diário acontece aqui.
+>
+> **Estrutura de pastas de alto nível** (jun/2026):
+> - `src/`, `public/`, `supabase/` — app Next.js + Edge Functions (deploy Vercel + Supabase CLI)
+> - `mcp/` — Cloudflare Worker que expõe as tools MCP (`mcp__tasks360__*`). Deploy independente via `cd mcp && wrangler deploy`. Consome as edge functions do Supabase.
+> - `apps-script/` — Google Apps Script (Code.gs) que ingere emails do Gemini a cada 10 min. Espelho local; a instalação de verdade fica no Google Cloud da conta de cada interno.
+> - `docs/gestao/` — STATUS.md · ROADMAP.md · KPIS.md · AUDIT_RLS.md
+> - `docs/integrations/` — docs históricos do MCP/AppScript (README, ROADMAP, MIGRATION, prompts diversos)
+> - `docs/standup/` — prompt + README da rotina agendada do standup diário
+>
+> Deploy targets são **independentes por pasta**: `src/*` → Vercel, `supabase/functions/*` → Supabase, `mcp/*` → Cloudflare, `apps-script/*` → cópia manual pro Apps Script Editor.
 
 > **Roadmap vivo**: ler **`docs/gestao/STATUS.md`** no início de toda sessão relevante — é a fonte de verdade do estado atual (NOW/NEXT/LATER/done). `docs/gestao/ROADMAP.md` é arquivo histórico imutável; não editar para refletir estado corrente.
 

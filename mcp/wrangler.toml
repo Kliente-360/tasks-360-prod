@@ -1,0 +1,26 @@
+# Configuração do Cloudflare Worker.
+# Após criar conta em cloudflare.com, rode:
+#   npx wrangler login
+#   npx wrangler deploy
+#
+# Os "secrets" (TASKS360_API_KEY e MCP_AUTH_TOKEN) NÃO ficam aqui.
+# Você define depois com `npx wrangler secret put TASKS360_API_KEY`.
+
+name = "tasks360-mcp"
+main = "src/index.ts"
+compatibility_date = "2025-01-09"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Variáveis públicas (não-secretas). Pode editar à vontade.
+TASKS360_BASE_URL = "https://nxtlipldmsopscpshrfd.supabase.co"
+
+# Durable Object usado pelo `agents` para manter estado da sessão MCP por cliente.
+[durable_objects]
+bindings = [
+  { name = "MCP_OBJECT", class_name = "MyMCP" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MyMCP"]
