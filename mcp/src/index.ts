@@ -144,9 +144,9 @@ const getTasksSchema = {
     .number()
     .int()
     .min(1)
-    .max(200)
+    .max(1000)
     .optional()
-    .describe("Máximo de tasks retornadas. Default 100, máximo 200."),
+    .describe("Máximo de tasks retornadas. Default 100, máximo 1000. Use valores altos (500-1000) só pra análises históricas completas — a tabela tem ~700 tasks acumuladas."),
 };
 
 const getTaskCommentsSchema = {
@@ -277,7 +277,7 @@ export class MyMCP extends McpAgent<Env> {
     // ───── get_tasks ───────────────────────────────────────────────────
     this.server.tool(
       "get_tasks",
-      "Lista tasks do Tasks 360 com filtros (responsável, cliente, status, prazo). Por padrão retorna só tasks ATIVAS (exclui status 'concluido'). Use pra responder perguntas tipo 'quais tasks P0 abertas do cliente X', 'o que a Jéssica tem pra essa semana', 'quantas tasks vencendo até sexta'. Retorna `{ tasks: [...], total }`; cada task traz cliente/projeto/responsavel já resolvidos por nome, mais flag `atrasada`. Para resumos agregue no lado do consumidor (a API não agrupa).",
+      "Lista tasks do Tasks 360 com filtros (responsável, cliente, status, prazo). Por padrão retorna só tasks ATIVAS (exclui status 'concluido'). Use pra responder perguntas tipo 'quais tasks P0 abertas do cliente X', 'o que a Jéssica tem pra essa semana', 'quantas tasks vencendo até sexta'. Retorna `{ tasks: [...], total }`; cada task traz cliente/projeto/responsavel já resolvidos por nome, flag `atrasada`, e os campos de conteúdo `escopo` (skills), `valor_esperado`, `solucao_implementada`, `valor_entregue`, `tempo_real_horas` — úteis pra análises de qualidade/entrega. Para resumos agregue no lado do consumidor (a API não agrupa).",
       getTasksSchema,
       async ({ pessoa, status, include_concluido, prazo_de, prazo_ate, cliente_id, cliente, projeto_id, limit }) => {
         const result = await callTasks360(this.env, "GET", "get-tasks", {

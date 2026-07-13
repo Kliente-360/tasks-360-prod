@@ -30,6 +30,11 @@
 //         "esforco": 4,                  // null se não definido
 //         "prioridade": "P1",            // null se não definida
 //         "tipo_trabalho": "feature",    // null se não classificada (bug/feature/discovery/manutencao/admin)
+//         "escopo": ["frontend","react"],// array de skills · [] se vazio
+//         "valor_esperado": "...",       // impacto esperado da entrega · null se vazio
+//         "solucao_implementada": "...", // narrativa do que foi entregue · null se vazio
+//         "valor_entregue": "...",       // impacto realizado · null se vazio
+//         "tempo_real_horas": 5.5,       // horas realmente gastas · null se não registrado
 //         "atrasada": false,             // true se prazo < hoje e não concluída
 //         "criado_por_ia": false,
 //         "criado_em": "2026-05-01T10:00:00Z",
@@ -59,7 +64,7 @@ const API_KEYS     = (Deno.env.get('INGEST_API_KEYS') || '')
 const STATUS_VALID  = ['backlog', 'andamento', 'bloqueado', 'concluido'];
 const UUID_RE       = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE       = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_LIMIT     = 200;
+const MAX_LIMIT     = 1000;
 const DEFAULT_LIMIT = 100;
 
 const sb = createClient(SUPABASE_URL, SERVICE_KEY, {
@@ -154,6 +159,7 @@ Deno.serve(async (req) => {
   // Join via chave estrangeira: clientes, projetos, pessoas.
   let q = sb.from('tasks').select(
     `id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, criado_por_ia, criado_em, privada,
+     escopo, valor_esperado, solucao_implementada, valor_entregue, tempo_real_horas,
      pessoa_id, cliente_id, projeto_id,
      clientes ( nome, eh_interno ),
      projetos ( nome ),
@@ -195,6 +201,11 @@ Deno.serve(async (req) => {
     prazo: string | null; esforco: number | null; prioridade: string | null;
     tipo_trabalho: string | null; criado_por_ia: boolean; criado_em: string;
     privada: boolean;
+    escopo: string[] | null;
+    valor_esperado: string | null;
+    solucao_implementada: string | null;
+    valor_entregue: string | null;
+    tempo_real_horas: number | null;
     pessoa_id: string | null; cliente_id: string | null; projeto_id: string | null;
     clientes: { nome: string; eh_interno: boolean } | null;
     projetos: { nome: string } | null;
@@ -218,6 +229,11 @@ Deno.serve(async (req) => {
     prioridade:   t.prioridade,
     tipo_trabalho: t.tipo_trabalho,
     privada:      t.privada === true,
+    escopo:       t.escopo ?? [],
+    valor_esperado:       t.valor_esperado,
+    solucao_implementada: t.solucao_implementada,
+    valor_entregue:       t.valor_entregue,
+    tempo_real_horas:     t.tempo_real_horas,
     atrasada:     !!(t.prazo && t.status !== 'concluido' && t.prazo < today),
     criado_por_ia: t.criado_por_ia,
     criado_em:    t.criado_em,
