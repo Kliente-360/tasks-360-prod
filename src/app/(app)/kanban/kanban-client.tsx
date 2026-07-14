@@ -211,9 +211,36 @@ export function KanbanClient() {
   const setTaskSubetapa = useCallback(
     async (t: Task, newSub: string) => {
       if (!t || t.subetapa === newSub) return;
+      // Hidrata campos lazy antes de validar. Boot pula descricao/
+      // criterio_aceite/solucao_implementada/valor_esperado/valor_entregue
+      // (TASK_LIGHT_COLS) pra reduzir payload · o modal puxa quando abre.
+      // No Kanban a task cai aqui sem esses campos, e o validator marca
+      // "critério de aceite faltando" mesmo quando ele existe no banco.
+      let taskForGate: Task = t;
+      const needsHydration =
+        t.criterioAceite === undefined ||
+        t.valorEntregue === undefined ||
+        t.solucaoImplementada === undefined;
+      if (needsHydration) {
+        const { data: lazy } = await sb
+          .from('tasks')
+          .select('criterio_aceite, valor_entregue, solucao_implementada')
+          .eq('id', t.id)
+          .maybeSingle();
+        if (lazy) {
+          const patch = {
+            criterioAceite: (lazy as { criterio_aceite: string | null }).criterio_aceite ?? '',
+            valorEntregue: (lazy as { valor_entregue: string | null }).valor_entregue ?? '',
+            solucaoImplementada: (lazy as { solucao_implementada: string | null }).solucao_implementada ?? '',
+          };
+          // Atualiza store pra próximas validações (e pro modal se abrir)
+          patchTask(t.id, patch);
+          taskForGate = { ...t, ...patch };
+        }
+      }
       // Gates Ondas 2.A + 2.B · escopo/esforco/tempo_real
       const sumHoursForTask = sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === t.id));
-      const gate = validateSubetapaAdvance(t, newSub, { timeEntriesHours: sumHoursForTask });
+      const gate = validateSubetapaAdvance(taskForGate, newSub, { timeEntriesHours: sumHoursForTask });
       if (!gate.ok) {
         toast.error(gate.error);
         return;
