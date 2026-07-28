@@ -263,7 +263,10 @@ export function KanbanClient() {
       if (!prev) return;
 
       const payload: Record<string, unknown> = { subetapa: newSub, subetapa_em: nowIso };
-      if (macroChanged) payload.status_em = nowIso;
+      if (macroChanged) {
+        payload.status = newMacro;       // ← bug B fix (v1.03.207): sem isso, banco
+        payload.status_em = nowIso;      //    ficava com status stale e refresh revertia
+      }
       if (gate.autoFillTempo !== undefined && gate.autoFillTempo > 0) {
         payload.tempo_real_horas = gate.autoFillTempo;
       }
