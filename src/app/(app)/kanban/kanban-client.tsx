@@ -210,10 +210,7 @@ export function KanbanClient() {
   // ===== Move task entre colunas (op view) =====
   const setTaskSubetapa = useCallback(
     async (t: Task, newSub: string) => {
-      // eslint-disable-next-line no-console
-      const dbg = (m: string, extra?: unknown) => console.log('[kanban.setTaskSubetapa]', m, extra ?? '');
-      dbg('called', { taskId: t?.id, newSub, currentSub: t?.subetapa });
-      if (!t || t.subetapa === newSub) { dbg('early return · same subetapa or no task'); return; }
+      if (!t || t.subetapa === newSub) return;
       // Hidrata campos lazy antes de validar. Boot pula descricao/
       // criterio_aceite/solucao_implementada/valor_esperado/valor_entregue
       // (TASK_LIGHT_COLS) pra reduzir payload · o modal puxa quando abre.
@@ -244,7 +241,6 @@ export function KanbanClient() {
       // Gates Ondas 2.A + 2.B · escopo/esforco/tempo_real
       const sumHoursForTask = sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === t.id));
       const gate = validateSubetapaAdvance(taskForGate, newSub, { timeEntriesHours: sumHoursForTask });
-      dbg('gate result', gate);
       if (!gate.ok) {
         toast.error(gate.error);
         return;
@@ -254,7 +250,15 @@ export function KanbanClient() {
       const nowMs = Date.now();
       const nowIso = new Date(nowMs).toISOString();
 
-      const prev = patchTask(t.id, {
+      // prev = o task ANTES do patch (usado pra rollback em erro). Antes
+      // eu usava o return de patchTask, mas ele deriva do updater do
+      // useState — que em React 18 roda DIFERIDO em contexto async (pós
+      // `await`). Resultado: retornava null MESMO com a task presente,
+      // e o UPDATE nunca chegava ao banco. Bug B reproduzido em v1.03.206
+      // quando adicionei o await pra hidratação lazy. Fix: guardar o
+      // task original manualmente, não depender do return.
+      const prev = { ...t };
+      patchTask(t.id, {
         subetapa: newSub,
         status: newMacro as Task['status'],
         subetapaEm: nowMs,
@@ -264,8 +268,6 @@ export function KanbanClient() {
           ? { tempoRealHoras: gate.autoFillTempo }
           : {}),
       });
-      dbg('patchTask returned prev', { prev: prev ? { id: prev.id, subetapa: prev.subetapa } : null });
-      if (!prev) { dbg('early return · prev null'); return; }
 
       const payload: Record<string, unknown> = { subetapa: newSub, subetapa_em: nowIso };
       if (macroChanged) {
@@ -275,9 +277,7 @@ export function KanbanClient() {
       if (gate.autoFillTempo !== undefined && gate.autoFillTempo > 0) {
         payload.tempo_real_horas = gate.autoFillTempo;
       }
-      dbg('about to send UPDATE', { payload, taskId: t.id });
       const { error } = await sb.from('tasks').update(payload).eq('id', t.id);
-      dbg('UPDATE returned', { error });
       if (error) {
         replaceTask(t.id, prev);
         toast.error('Erro ao mover: ' + error.message);

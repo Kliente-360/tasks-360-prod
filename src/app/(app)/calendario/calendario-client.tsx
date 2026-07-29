@@ -297,13 +297,15 @@ export function CalendarioClient() {
       const macroChanged = t.status !== newMacro;
       const nowMs = Date.now();
       const nowIso = new Date(nowMs).toISOString();
-      const prev = patchTask(t.id, {
+      // prev original (não do return do patchTask · React 18 pode
+      // diferir o updater em contexto async · v1.03.211 fix).
+      const prev = { ...t };
+      patchTask(t.id, {
         subetapa: newSub,
         status: newMacro as Task['status'],
         subetapaEm: nowMs,
         statusEm: macroChanged ? nowMs : t.statusEm,
       });
-      if (!prev) return;
       const payload: Record<string, unknown> = { subetapa: newSub, subetapa_em: nowIso };
       if (macroChanged) {
         payload.status = newMacro;    // defense-in-depth (trigger DB tb sincroniza)

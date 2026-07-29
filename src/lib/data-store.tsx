@@ -557,14 +557,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   // Mutações locais (optimistic). Mesma semântica dos helpers Alpine.
   const patchTask = useCallback<DataActions['patchTask']>((id, changes) => {
+    // NOTA: retorna null se a task ainda não caiu no store OU se o React
+    // ainda não flushou o updater (contexto async após await). Callers
+    // que precisam do prev pra rollback devem guardar o task original
+    // ANTES de chamar patchTask (não depender deste retorno em fluxos
+    // async · ver kanban-client.tsx setTaskSubetapa).
     let prev: Task | null = null;
     setTasks((cur) => {
       const i = cur.findIndex((t) => t.id === id);
-      if (i < 0) {
-        // eslint-disable-next-line no-console
-        console.log('[patchTask] TASK NOT FOUND', { id, curLength: cur.length, first3ids: cur.slice(0, 3).map(t => t.id), keys: Object.keys(changes) });
-        return cur;
-      }
+      if (i < 0) return cur;
       prev = cur[i];
       const out = cur.slice();
       out[i] = { ...prev, ...changes };
