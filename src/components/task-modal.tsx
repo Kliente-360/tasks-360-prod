@@ -712,6 +712,52 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [live?.webhookSyncStatus, live?.webhookSyncError, editing.id]);
 
+  // ===== Sync de campos "externamente editáveis" (v1.03.209) =====
+  // Kanban drop, Foco actions, Calendário select e realtime de outros
+  // users mudam source (tasksById) mas NÃO o editing local do modal.
+  // Se autosave disparar depois (por qualquer motivo), editingToDbPayload
+  // manda TODOS os campos e sobrescreve as mudanças externas com valores
+  // stale — bug B clássico.
+  //
+  // Solução: quando source mudar E o modal NÃO estiver dirty (usuário
+  // sem edições pendentes locais), sincroniza os campos que outras
+  // telas costumam mexer. Se estiver dirty/saving/error, respeita edição
+  // do usuário e NÃO sobrescreve.
+  useEffect(() => {
+    if (!editing.id || !live) return;
+    const s = saveStateRef.current;
+    if (s === 'dirty' || s === 'saving' || s === 'error') return;
+    const needsSync =
+      editing.subetapa !== live.subetapa ||
+      editing.status !== live.status ||
+      editing.subetapaEm !== live.subetapaEm ||
+      editing.statusEm !== live.statusEm ||
+      editing.andamentoEm !== live.andamentoEm ||
+      editing.pessoaId !== live.pessoaId ||
+      editing.prazo !== live.prazo ||
+      editing.prioridade !== live.prioridade ||
+      editing.bloqueadoPor !== live.bloqueadoPor;
+    if (!needsSync) return;
+    skipNextDirty.current = true;
+    setEditing((e) => ({
+      ...e,
+      subetapa: live.subetapa,
+      status: live.status,
+      subetapaEm: live.subetapaEm,
+      statusEm: live.statusEm,
+      andamentoEm: live.andamentoEm,
+      pessoaId: live.pessoaId,
+      prazo: live.prazo,
+      prioridade: live.prioridade,
+      bloqueadoPor: live.bloqueadoPor,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    live?.subetapa, live?.status, live?.subetapaEm, live?.statusEm, live?.andamentoEm,
+    live?.pessoaId, live?.prazo, live?.prioridade, live?.bloqueadoPor,
+    editing.id,
+  ]);
+
   // ============ Helpers para resolver entidades ============
   const clientesAtivos = useMemo(() => clientes.filter((c) => !c.arquivadoEm), [clientes]);
   const projetosDoCliente = useMemo(() => {
