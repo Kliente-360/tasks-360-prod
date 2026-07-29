@@ -129,7 +129,6 @@ export function AppNav() {
               Tarefa
             </button>
             <ThemeIconButton className="md:hidden" />
-            <RealtimeIndicator />
             <NotifBell />
             <ProfileMenu />
           </div>
