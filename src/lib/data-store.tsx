@@ -560,7 +560,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     let prev: Task | null = null;
     setTasks((cur) => {
       const i = cur.findIndex((t) => t.id === id);
-      if (i < 0) return cur;
+      if (i < 0) {
+        // eslint-disable-next-line no-console
+        console.log('[patchTask] TASK NOT FOUND', { id, curLength: cur.length, first3ids: cur.slice(0, 3).map(t => t.id), keys: Object.keys(changes) });
+        return cur;
+      }
       prev = cur[i];
       const out = cur.slice();
       out[i] = { ...prev, ...changes };
