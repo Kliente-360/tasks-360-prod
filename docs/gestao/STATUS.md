@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.202 · **Atualizado**: 26/06/2026 · branch `main`
+> **Versão**: v1.03.212 · **Atualizado**: 29/07/2026 · branch `main`
 
 ---
 
@@ -129,6 +129,19 @@ Decisão de arquitetura consolidada — **não é bottom-tab-bar**, é layout es
 - ✅ **Timesheet · confirmar exclusão** (v1.03.197) · botão × na tabela da página Timesheet também pede confirmação (espelho do comportamento do modal)
 - ✅ **Standup diário · tabela + edge functions + StandupCard** (v1.03.198-202) · **backend**: tabela `standups` (data UNIQUE, conteudo_md, texto_whatsapp, resumo, trigger `atualizado_em`), RLS staff_read/service_write, edge functions `post-standup` (UPSERT idempotente) e `get-standups` (paginado ou por data exata), auth via `x-api-key`. **Frontend**: `StandupCard` como primeiro card do Briefing — markdown via `marked.parse()` com CSS `.standup-md` (h1 15px/h2 14px/h3 13px/spacing 6px), date picker pra navegar dias, botão copy (preferência `texto_whatsapp`, fallback `conteudo_md`), "recente" pill quando navegando histórico, nav [← hoje →] + tooltip "Copiado!", hora do last update no header. Mobile: data por extenso abaixo do título, botões alinhados à direita. **Docs**: prompt padronizado + README pra rotina diária agendada, preparado pra HTTP trigger via MCP
 
+### Onda persistência + realtime hardening (jul/2026 · v1.03.203 → v1.03.212)
+
+- ✅ **Onboarding · aba Conduta** (v1.03.203) · expectativas e responsabilidades do time · nova aba no modal Onboarding, ligada ao `public/docs/ONBOARDING.md` §Conduta
+- ✅ **Mobile /resumo · standup card colapsável + remove card Alertas** (v1.03.204) · Standup vem colapsado por default no mobile pra economizar espaço; card antigo "Alertas" removido do resumo (já vive nos cards H individuais do briefing desktop)
+- ✅ **Monorepo · MCP + Apps Script + docs integrations** (jul/2026, sem bump) · trazido do repo separado. `mcp/` (Cloudflare Worker que expõe `mcp__tasks360__*`), `apps-script/Code.gs` (Gemini ingestor), `docs/integrations/` (README/ROADMAP/MIGRATION). Deploy targets independentes (`src/`→Vercel, `mcp/`→Cloudflare via `wrangler deploy`, `apps-script/`→cópia manual). 3 arquivos com secrets em plain text sanitizados antes de commit. CLAUDE.md atualizado com política CLI (Supabase/Vercel/Netlify/gh disponíveis localmente).
+- ✅ **MCP get-tasks · +5 colunas + limit 1000** (jul/2026) · adiciona `escopo`, `valor_esperado`, `solucao_implementada`, `valor_entregue`, `tempo_real_horas` ao SELECT + response da edge function `get-tasks`. Sobe `MAX_LIMIT` de 200 → 1000 pra análises históricas cobrindo tabela inteira (~700 tasks acumuladas). Zod schema do MCP atualizado.
+- ✅ **tsconfig excludes mcp/ + apps-script/** (jul/2026) · Vercel typecheck do Next quebrava por importar `agents/mcp` do worker (deps não instaladas no root). Exclui as duas pastas do include do Next; cada projeto usa seu próprio tsconfig quando builda.
+- ✅ **Kanban · hidratação lazy antes de validar gate** (v1.03.206) · TASK_LIGHT_COLS pula `criterio_aceite/valor_entregue/solucao_implementada` no boot, então o `validateSubetapaAdvance` marcava "critério faltando" mesmo com valor preenchido no banco. Handler agora faz 1 SELECT ad-hoc pra hidratar antes de validar o drop, e atualiza store via patchTask.
+- ✅ **Auditoria de persistência + realtime hardening** (v1.03.207-212) · investigação sistemática dos bugs A (sync entre users) e B (Kanban F5 reverte). Mapeou 6 achados e corrigiu em 4 fases:
+  - **v1.03.207-208**: (a) `payload.status` explícito no Kanban/Calendário/Foco quando cruza macro (defense-in-depth, trigger DB `sync_task_status_from_subetapa` já sincronizava mas mandar explícito elimina drift silencioso); (b) modal usa `updated` retornado do `.update().select()` pra reconciliar store com valores derivados por trigger (evita drift de `tempo_real_horas`/`status_em` até próximo boot); (c) **auto-reconnect com backoff exponencial** no realtime channel (1s→30s + jitter 20%) + **refetch on visibility change** (aba volta do background >60s → refreshAll silencioso) + escuta `time_entries` no realtime (nova migration `2026-07-29_realtime_time_entries.sql` publica + replica identity full) + listener de `task_comments` INSERTs em `useLastCommentByTask` (Foco "sem comentário" recalcula sem F5); (d) `<RealtimeIndicator>` no header (dot verde/âmbar/cinza pulsando conforme status do socket — antes era 100% silencioso).
+  - **v1.03.209**: modal sincroniza `editing` ↔ `live` quando source muda externamente (Kanban drop, Foco, realtime de outro user). Antes o modal aberto capturava `editing.subetapa` no open; se user movesse no Kanban, `source` atualizava mas `editing` ficava stale; autosave podia disparar depois e sobrescrever tudo com valores antigos. Fix: novo useEffect que sincroniza `subetapa/status/subetapaEm/statusEm/andamentoEm/pessoaId/prazo/prioridade/bloqueadoPor` do live quando saveState = idle/saved (respeita dirty do user).
+  - **v1.03.212 · CAUSA RAIZ do Bug B**: `patchTask` retorna `prev` derivado do updater `setState((cur) => new)`. Em React 18 dentro de contexto async (após `await`), o updater roda **diferido** e `prev` volta null — mas patchTask retorna síncrono. Fix v1.03.206 (lazy hydration) introduziu o `await` que quebrou o timing. Handler tinha `if (!prev) return;` → nunca chegava no UPDATE server, banco não persistia, F5 revertia. Fix: guardar `prev = {...t}` antes de patchTask (não depender do return em fluxos async). Aplicado em Kanban + Calendário. Comentário no `data-store.tsx patchTask` alerta próximos callers.
+
 ---
 
 ## 🎯 Roadmap ativo
@@ -251,7 +264,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 | Promessa | Status |
 |---|---|
 | Visibilidade gerencial (Dashboard + Briefing) | ✅ Entregue mai/2026 |
-| Colaboração viva (realtime) | ✅ Ativo desde cutover jun/2026 |
+| Colaboração viva (realtime) | ✅ Ativo desde cutover jun/2026 · hardening completo em jul/2026 (auto-reconnect + visibility refetch + indicator + coverage `task_comments`/`time_entries`) |
 | Portal cliente | ✅ Entregue jun/2026 |
 | Time tracking (cronômetro) | ✅ Entregue jun/2026 |
 | Stack homogêneo e enxuto | ✅ Auditado e limpo (v1.02.226–229) |
@@ -261,16 +274,22 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ---
 
-## 🎯 NEXT · ordem definida (jun/2026)
+## 🎯 NEXT · ordem definida (jul/2026)
 
-**Em andamento · Visão cliente (sessão local)**
-→ **Bucket V** em curso. V.3 (RLS audit) ✅ já entregue. Restam: V.1 (Portal UX) → V.2 (KPIs) → V.4 (modal modo cliente) → V.5 (login UX) → V.6 (identidade) → V.7 (onboarding) → V.8 (notif cliente) → V.9 (walkthrough final)
+**Persistência estabilizada · reabrir buckets pausados**
 
-**Adoção timesheet (paralelo baixo custo)**
-→ **Bucket T** · T.1 ✅ entregue. Próximos: T.6 (trava no concluir) → T.4 (bulk retroativo) → T.2 (card "horas hoje")
+O sprint de jul/2026 foi consumido pela investigação profunda de dessincronização e persistência (v1.03.207-212). Bugs resolvidos + realtime hardening + observabilidade completa. Nenhum item de bucket avançou nesse período. Voltar ao roadmap ativo agora.
 
-**Analytics na UI · polir o que foi publicado**
-→ **C.10 parcial** já publicado no Briefing (~38 cards). Pendente: versão Dashboard com widgets visuais refinados + integração nos KPIs
+**Bucket V · Visão cliente (Pão e Talho)** — prioridade máxima
+→ V.3 (RLS audit) ✅. Restam: V.1 (Portal UX) → V.2 (KPIs) → V.4 (modal modo cliente) → V.5 (login UX) → V.6 (identidade) → V.7 (onboarding) → V.8 (notif cliente) → V.9 (walkthrough final)
+
+**Bucket T · Adoção timesheet (paralelo baixo custo)**
+→ T.1 ✅. Próximos: T.6 (trava no concluir · 0.5d · quick win) → T.4 (bulk retroativo) → T.2 (card "horas hoje")
+
+**C.10 · analytics na UI · polir o que foi publicado**
+→ Parcial já publicado no Briefing (~38 cards). Pendente: versão Dashboard com widgets visuais refinados + integração nos KPIs · ~1 semana
+
+**Nova ideia registrada** (não iniciada): página `/perfil` (nome + avatar) + calendário de férias do time + fluxo de aprovação via task pro CEO. Escopo detalhado + design existem em `~/.claude/plans/nested-churning-octopus.md`. ~4-5 dias quando destravar.
 
 Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA) · C.11 (gated em adoção timesheet ≥60%).
 
@@ -278,5 +297,5 @@ Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA
 
 ## Próximo passo imediato
 
-**Bucket V · Visão cliente (Pão e Talho)** — em andamento (sessão local, jun/2026).
-Quando concluído: marcar V.1–V.9 como ✅ e finalizar **C.10** (Dashboard widgets) + atacar **T.6** (trava timesheet).
+**Bucket V · Visão cliente (Pão e Talho)** ou **T.6 quick win** — decisão do Felipe conforme quando o Pão e Talho for lançar.
+Quando V concluído: marcar V.1–V.9 como ✅ e finalizar **C.10** (Dashboard widgets) + atacar **T.6** (trava timesheet).
