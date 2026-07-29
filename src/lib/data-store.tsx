@@ -324,7 +324,129 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     // helper do supabase-js faz por baixo dos panos.
     let channel: ReturnType<typeof sb.channel> | null = null;
     let cancelled = false;
+    let reconnectAttempts = 0;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let lastRefreshAt = Date.now();
     setRealtimeStatus('connecting');
+
+    // Auto-reconnect com backoff exponencial (1s→2s→4s→…30s) + jitter 20%.
+    // Após reconectar, refetch pra pegar o que perdeu durante a queda.
+    const scheduleReconnect = () => {
+      if (cancelled) return;
+      if (reconnectTimeout) return; // já agendado
+      const base = Math.min(30000, 1000 * 2 ** reconnectAttempts);
+      const jitter = base * (0.8 + Math.random() * 0.4);
+      reconnectAttempts += 1;
+      reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
+        if (cancelled) return;
+        if (channel) {
+          try { sb.removeChannel(channel); } catch { /* ok */ }
+          channel = null;
+        }
+        setRealtimeStatus('connecting');
+        setupChannel();
+      }, jitter);
+    };
+
+    const setupChannel = () => {
+      channel = sb
+        .channel('kliente360-changes-' + Date.now())
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'tasks' },
+          (payload) => {
+            const ev = (payload as { eventType: string }).eventType;
+            if (ev === 'DELETE') {
+              const id = (payload as { old?: { id?: string } }).old?.id;
+              if (id) {
+                setTasks((cur) => cur.filter((t) => t.id !== id));
+              }
+              return;
+            }
+            const row = (payload as { new?: Record<string, unknown> }).new;
+            if (!row || !row.id) {
+              scheduleRefetch('tasks');
+              return;
+            }
+            const next = taskFromDb(row);
+            setTasks((cur) => {
+              const i = cur.findIndex((t) => t.id === next.id);
+              if (i >= 0) {
+                const out = cur.slice();
+                const existing = cur[i];
+                const present = new Set(Object.keys(row));
+                const filtered: Partial<Task> = {};
+                for (const [k, v] of Object.entries(COL_TO_FIELD)) {
+                  if (present.has(k)) {
+                    (filtered as Record<string, unknown>)[v] =
+                      (next as unknown as Record<string, unknown>)[v];
+                  }
+                }
+                out[i] = { ...existing, ...filtered };
+                return out;
+              }
+              return [next, ...cur];
+            });
+          },
+        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => scheduleRefetch('clientes'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'projetos' }, () => scheduleRefetch('projetos'))
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'pessoas' }, () => scheduleRefetch('pessoas'))
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'time_entries' },
+          (payload) => {
+            const ev = (payload as { eventType: string }).eventType;
+            if (ev === 'DELETE') {
+              const id = (payload as { old?: { id?: string } }).old?.id;
+              if (id) setTimeEntries((cur) => cur.filter((e) => e.id !== id));
+              return;
+            }
+            const row = (payload as { new?: Record<string, unknown> }).new;
+            if (!row || !row.id) return;
+            const next = timeEntryFromDb(row);
+            setTimeEntries((cur) => {
+              const i = cur.findIndex((e) => e.id === next.id);
+              if (i >= 0) {
+                const out = cur.slice();
+                out[i] = next;
+                return out;
+              }
+              return [next, ...cur];
+            });
+          },
+        )
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            setRealtimeStatus('subscribed');
+            const wasReconnecting = reconnectAttempts > 0;
+            reconnectAttempts = 0;
+            // Refetch pra pegar o que perdeu enquanto o channel estava down
+            if (wasReconnecting) {
+              lastRefreshAt = Date.now();
+              refreshAll();
+            }
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            setRealtimeStatus(status === 'CLOSED' ? 'closed' : 'error');
+            scheduleReconnect();
+          }
+        });
+    };
+
+    // Refetch quando a aba volta do background (>60s). Cobre "deixei a
+    // aba aberta a noite toda e voltei com dados stale".
+    const onVisibility = () => {
+      if (cancelled) return;
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastRefreshAt < 60_000) return;
+      lastRefreshAt = now;
+      refreshAll();
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibility);
+    }
     const resolveCurrentPessoa = async (
       session: Awaited<ReturnType<typeof sb.auth.getSession>>['data']['session'],
     ) => {
@@ -392,75 +514,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       // já hidratou o state no useState inicial, então não pisca.
       resolveCurrentPessoa(session);
 
-      // Realtime fica conectado mas em "dormente". A publication
-      // supabase_realtime no projeto inclui só `tasks` — `clientes`,
-      // `projetos` e `pessoas` ficaram de fora porque o time hoje dá
-      // refresh manual clicando na logo, e o custo (latência + write
-      // amplification por replica identity full) não compensou.
-      //
-      // Dívida explícita: pra ativar realtime real nessas 3 tabelas,
-      // rodar supabase/realtime.sql (cria publication completa) +
-      // `alter table <t> replica identity full` em cada uma. O código
-      // abaixo já reage a eventos delas (scheduleRefetch faz um pull
-      // novo) — não precisa mudar nada quando ligar.
-      //
-      // Tasks é a única que aplica delta in-place (payload.new direto
-      // no array). As outras passam por refetch porque a lista
-      // ordenada/agrupada justifica a query.
-      channel = sb
-        .channel('kliente360-changes')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'tasks' },
-          (payload) => {
-            const ev = (payload as { eventType: string }).eventType;
-            if (ev === 'DELETE') {
-              const id = (payload as { old?: { id?: string } }).old?.id;
-              if (id) {
-                setTasks((cur) => cur.filter((t) => t.id !== id));
-              }
-              return;
-            }
-            const row = (payload as { new?: Record<string, unknown> }).new;
-            if (!row || !row.id) {
-              scheduleRefetch('tasks');
-              return;
-            }
-            const next = taskFromDb(row);
-            setTasks((cur) => {
-              const i = cur.findIndex((t) => t.id === next.id);
-              if (i >= 0) {
-                // MERGE em vez de replace · proteção contra payload
-                // parcial caso `replica identity full` não esteja
-                // aplicado em tasks. taskFromDb preenche defaults nas
-                // colunas ausentes (titulo='', prazo='', etc), o que
-                // gutava a task local. Aqui sobrescrevemos só os
-                // campos cuja coluna snake_case existia no payload.
-                const out = cur.slice();
-                const existing = cur[i];
-                const present = new Set(Object.keys(row));
-                const filtered: Partial<Task> = {};
-                for (const [k, v] of Object.entries(COL_TO_FIELD)) {
-                  if (present.has(k)) {
-                    (filtered as Record<string, unknown>)[v] =
-                      (next as unknown as Record<string, unknown>)[v];
-                  }
-                }
-                out[i] = { ...existing, ...filtered };
-                return out;
-              }
-              return [next, ...cur];
-            });
-          },
-        )
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => scheduleRefetch('clientes'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'projetos' }, () => scheduleRefetch('projetos'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'pessoas' }, () => scheduleRefetch('pessoas'))
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') setRealtimeStatus('subscribed');
-          else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setRealtimeStatus('error');
-          else if (status === 'CLOSED') setRealtimeStatus('closed');
-        });
+      // Realtime channel setup — extraído pra função reutilizável em
+      // reconnect. Escuta tasks (delta in-place), clientes/projetos/
+      // pessoas (refetch coalescido), time_entries (delta). NotifBell
+      // gerencia notifications separadamente. task_comments é ouvido
+      // por useLastCommentByTask no Foco.
+      setupChannel();
     })();
 
     // Escuta SIGNED_IN/SIGNED_OUT pra atualizar currentPessoa fora do boot
@@ -487,6 +546,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibility);
+      }
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (channel) sb.removeChannel(channel);
       Object.keys(timers).forEach((k) => timers[k] && clearTimeout(timers[k]!));
     };

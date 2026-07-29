@@ -46,7 +46,7 @@ import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
 import { fmtDate, fmtDateShort, lblStatus, missingFieldsForCurrentSubetapa, sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
 import { SUB_TO_MACRO, SUB_LABELS, SUBS_FLAT, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK } from '@/lib/task-constants';
-import { timeEntryFromDb } from '@/lib/adapters';
+import { taskFromDb, timeEntryFromDb } from '@/lib/adapters';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { NotePopover } from '@/components/timer-button';
 import { Icon } from '@/components/icons';
@@ -939,6 +939,18 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           if (prev) replaceTask(e.id, prev);
           return { ok: false, error: 'Sem permissão pra salvar ou tarefa foi removida.' };
         }
+
+        // Reconcile local com valores derivados pelo trigger DB (ex:
+        // status via sync_task_status, timestamps via defaults). Sem isso
+        // o store fica com valores otimistas até o próximo boot. Filtra
+        // undefined pra não sobrescrever campos lazy (descricao, etc)
+        // que não vieram no TASK_LIGHT_COLS.
+        const fresh = taskFromDb(updated as Record<string, unknown>);
+        const reconciled: Partial<Task> = {};
+        for (const [k, v] of Object.entries(fresh)) {
+          if (v !== undefined) (reconciled as Record<string, unknown>)[k] = v;
+        }
+        patchTask(e.id, reconciled);
 
         // Log de mudanças no histórico (status + field changes)
         if (prev) {

@@ -305,7 +305,10 @@ export function CalendarioClient() {
       });
       if (!prev) return;
       const payload: Record<string, unknown> = { subetapa: newSub, subetapa_em: nowIso };
-      if (macroChanged) payload.status_em = nowIso;
+      if (macroChanged) {
+        payload.status = newMacro;    // defense-in-depth (trigger DB tb sincroniza)
+        payload.status_em = nowIso;
+      }
       const { error } = await sb.from('tasks').update(payload).eq('id', t.id);
       if (error) {
         replaceTask(t.id, prev);

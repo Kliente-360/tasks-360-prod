@@ -515,13 +515,17 @@ function FocoTaskRow({
     }
     if (draft.subetapa !== task.subetapa) {
       dbPatch.subetapa = draft.subetapa;
+      dbPatch.subetapa_em = new Date().toISOString();
       localPatch.subetapa = draft.subetapa;
-      // Status macro deriva da subetapa via trigger no DB; replicamos
-      // localmente pra que `bloqueadas` / `sem_horas` re-avaliem
-      // imediatamente sem esperar refetch.
+      localPatch.subetapaEm = Date.now();
+      // Status macro derivado da subetapa. Trigger DB sincroniza mas
+      // enviamos explícito pra evitar drift e pra debug ficar óbvio.
       const newStatus = SUB_TO_MACRO[draft.subetapa] || task.status;
       if (newStatus !== task.status) {
+        dbPatch.status = newStatus;
+        dbPatch.status_em = new Date().toISOString();
         localPatch.status = newStatus as Task['status'];
+        localPatch.statusEm = Date.now();
       }
     }
     if (draft.esforco !== (Number(task.esforco) || 0)) {

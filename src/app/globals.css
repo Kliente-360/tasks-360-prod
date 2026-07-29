@@ -1333,6 +1333,12 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
   to   { opacity: 0; }
 }
 
+/* Realtime indicator pulse (v1.03.208) */
+@keyframes realtime-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
 /* Disabled state pro .view-toggle (estava faltando · botões de nav
    no StandupCard ficavam idênticos aos ativos). */
 .view-toggle button:disabled {

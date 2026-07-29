@@ -45,6 +45,7 @@ export function useLastCommentByTask(
     }
     let cancelled = false;
     setLoading(true);
+    const idSet = new Set(ids);
     (async () => {
       let q = sb
         .from('task_comments')
@@ -62,8 +63,35 @@ export function useLastCommentByTask(
       setLastCommentMap(map);
       setLoading(false);
     })();
+
+    // Realtime · escuta INSERTs em task_comments pra recalcular
+    // "sem comentário" no Foco sem F5. Filtra pelo set de task_ids
+    // do hook + pelo author se aplicável.
+    const channel = sb
+      .channel('use-last-comment-' + Date.now())
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'task_comments' },
+        (payload) => {
+          const row = (payload as { new?: { task_id?: string; criado_em?: string; author_pessoa_id?: string | null } }).new;
+          if (!row?.task_id || !row.criado_em) return;
+          if (!idSet.has(row.task_id)) return;
+          if (author && row.author_pessoa_id !== author) return;
+          const when = new Date(row.criado_em);
+          setLastCommentMap((prev) => {
+            const cur = prev.get(row.task_id!);
+            if (cur && cur >= when) return prev;
+            const next = new Map(prev);
+            next.set(row.task_id!, when);
+            return next;
+          });
+        },
+      )
+      .subscribe();
+
     return () => {
       cancelled = true;
+      sb.removeChannel(channel);
     };
   }, [key, sb]);
 
