@@ -11,7 +11,6 @@ import { HelpIconButton } from '@/components/help-modal';
 import { ThemeIconButton } from '@/components/theme-toggle';
 import { ExportIconButton } from '@/components/export';
 import { NotifBell } from '@/components/notif-bell';
-import { RealtimeIndicator } from '@/components/realtime-indicator';
 import { TimerButton } from '@/components/timer-button';
 import { Icon, type IconName } from '@/components/icons';
 import { isPreTriagem, triageFailures } from '@/lib/task-utils';
@@ -20,7 +19,7 @@ import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.212';
+export const APP_VERSION = 'v1.03.213';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -101,9 +100,8 @@ export function AppNav() {
 
           {/* Actions */}
           <div className="hdr-actions">
-            {/* Cluster 1: Cronômetro · desktop only · realtime indicator à esquerda */}
-            <div className="hidden md:flex items-center gap-2">
-              <RealtimeIndicator />
+            {/* Cluster 1: Cronômetro · desktop only */}
+            <div className="hidden md:flex items-center gap-1">
               <TimerButton />
             </div>
             <span className="hdr-sep hidden md:block" />

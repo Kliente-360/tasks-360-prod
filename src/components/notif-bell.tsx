@@ -145,30 +145,11 @@ export function NotifBell() {
       setItems((data as Notif[]) ?? []);
     })();
 
-    // Realtime — dormente se publication não tiver `notifications`;
-    // quando ligar, dispara toast leve e adiciona no topo.
-    const channel = sb
-      .channel('notif-' + pessoaId)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `recipient_pessoa_id=eq.${pessoaId}`,
-        },
-        (payload) => {
-          const n = (payload as unknown as { new?: Notif }).new;
-          if (!n) return;
-          setItems((cur) => [n, ...cur].slice(0, 50));
-          toast.info(notifSummary(n), 6000);
-        },
-      )
-      .subscribe();
-
+    // Realtime desligado em jul/2026 (egress). Sino atualiza no boot
+    // + click no logo do header (refreshAll). Sem toast automático de
+    // novas notifs — usuário verá ao abrir o sino / próximo refresh.
     return () => {
       cancelled = true;
-      sb.removeChannel(channel);
     };
   }, [pessoaId, sb, toast]);
 

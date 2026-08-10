@@ -72,6 +72,8 @@ const COL_TO_FIELD: Record<string, keyof Task> = {
   webhook_sync_error: 'webhookSyncError',
 };
 
+// Realtime foi desligado em jul/2026 (egress excedendo free tier).
+// Tipo mantido pra API compat mas sempre retorna 'idle' agora.
 export type RealtimeStatus = 'idle' | 'connecting' | 'subscribed' | 'error' | 'closed';
 
 interface DataState {
@@ -154,7 +156,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>('idle');
+  // realtimeStatus é constante 'idle' desde jul/2026 (realtime desligado).
+  // Mantido pra API compat com componentes que ainda leem (RealtimeIndicator
+  // foi removido mas outros podem ter uso residual).
+  const realtimeStatus: RealtimeStatus = 'idle';
   // currentPessoa hidrata do cache pra não piscar enquanto a query resolve.
   const [currentPessoa, setCurrentPessoa] = useState<Pessoa | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -296,157 +301,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [refreshClientes, refreshProjetos, refreshPessoas, refreshTasks, refreshTimeEntries]);
 
-  const scheduleRefetch = useCallback(
-    (which: 'tasks' | 'clientes' | 'projetos' | 'pessoas') => {
-      const t = refetchTimers.current;
-      if (t[which]) clearTimeout(t[which]!);
-      const fn = {
-        tasks: refreshTasks,
-        clientes: refreshClientes,
-        projetos: refreshProjetos,
-        pessoas: refreshPessoas,
-      }[which];
-      t[which] = setTimeout(() => {
-        fn();
-      }, 1200);
-    },
-    [refreshTasks, refreshClientes, refreshProjetos, refreshPessoas],
-  );
-
   // Boot inicial.
   useEffect(() => {
     const timers = refetchTimers.current;
     refreshAll();
 
-    // Realtime precisa de auth válido — sem isso o servidor recusa o
-    // postgres_changes silenciosamente (subscribe vira CHANNEL_ERROR ou
-    // TIMED_OUT). Pegamos a sessão e empurramos o access_token, igual o
-    // helper do supabase-js faz por baixo dos panos.
-    let channel: ReturnType<typeof sb.channel> | null = null;
+    // Realtime foi desligado em jul/2026 pra reduzir egress do Supabase
+    // (14.61 GB de 5.5 GB free). `replica identity full` mandava a row
+    // inteira em cada UPDATE — muito caro pra tabelas com colunas
+    // grandes tipo tasks.descricao e task_comments.body. Todas as
+    // tabelas foram removidas da publication e reset pra replica
+    // identity default. Ver migration
+    // supabase/migrations/applied/2026-07-29_disable_realtime_reduce_egress.sql.
+    //
+    // Sync entre users agora depende de refresh manual (click no logo
+    // do header dispara refreshAll). Boot inicial pega estado fresco.
+    // CRUD via HTTP continua funcionando 100%.
     let cancelled = false;
-    let reconnectAttempts = 0;
-    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
-    let lastRefreshAt = Date.now();
-    setRealtimeStatus('connecting');
-
-    // Auto-reconnect com backoff exponencial (1s→2s→4s→…30s) + jitter 20%.
-    // Após reconectar, refetch pra pegar o que perdeu durante a queda.
-    const scheduleReconnect = () => {
-      if (cancelled) return;
-      if (reconnectTimeout) return; // já agendado
-      const base = Math.min(30000, 1000 * 2 ** reconnectAttempts);
-      const jitter = base * (0.8 + Math.random() * 0.4);
-      reconnectAttempts += 1;
-      reconnectTimeout = setTimeout(() => {
-        reconnectTimeout = null;
-        if (cancelled) return;
-        if (channel) {
-          try { sb.removeChannel(channel); } catch { /* ok */ }
-          channel = null;
-        }
-        setRealtimeStatus('connecting');
-        setupChannel();
-      }, jitter);
-    };
-
-    const setupChannel = () => {
-      channel = sb
-        .channel('kliente360-changes-' + Date.now())
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'tasks' },
-          (payload) => {
-            const ev = (payload as { eventType: string }).eventType;
-            if (ev === 'DELETE') {
-              const id = (payload as { old?: { id?: string } }).old?.id;
-              if (id) {
-                setTasks((cur) => cur.filter((t) => t.id !== id));
-              }
-              return;
-            }
-            const row = (payload as { new?: Record<string, unknown> }).new;
-            if (!row || !row.id) {
-              scheduleRefetch('tasks');
-              return;
-            }
-            const next = taskFromDb(row);
-            setTasks((cur) => {
-              const i = cur.findIndex((t) => t.id === next.id);
-              if (i >= 0) {
-                const out = cur.slice();
-                const existing = cur[i];
-                const present = new Set(Object.keys(row));
-                const filtered: Partial<Task> = {};
-                for (const [k, v] of Object.entries(COL_TO_FIELD)) {
-                  if (present.has(k)) {
-                    (filtered as Record<string, unknown>)[v] =
-                      (next as unknown as Record<string, unknown>)[v];
-                  }
-                }
-                out[i] = { ...existing, ...filtered };
-                return out;
-              }
-              return [next, ...cur];
-            });
-          },
-        )
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => scheduleRefetch('clientes'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'projetos' }, () => scheduleRefetch('projetos'))
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'pessoas' }, () => scheduleRefetch('pessoas'))
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'time_entries' },
-          (payload) => {
-            const ev = (payload as { eventType: string }).eventType;
-            if (ev === 'DELETE') {
-              const id = (payload as { old?: { id?: string } }).old?.id;
-              if (id) setTimeEntries((cur) => cur.filter((e) => e.id !== id));
-              return;
-            }
-            const row = (payload as { new?: Record<string, unknown> }).new;
-            if (!row || !row.id) return;
-            const next = timeEntryFromDb(row);
-            setTimeEntries((cur) => {
-              const i = cur.findIndex((e) => e.id === next.id);
-              if (i >= 0) {
-                const out = cur.slice();
-                out[i] = next;
-                return out;
-              }
-              return [next, ...cur];
-            });
-          },
-        )
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') {
-            setRealtimeStatus('subscribed');
-            const wasReconnecting = reconnectAttempts > 0;
-            reconnectAttempts = 0;
-            // Refetch pra pegar o que perdeu enquanto o channel estava down
-            if (wasReconnecting) {
-              lastRefreshAt = Date.now();
-              refreshAll();
-            }
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            setRealtimeStatus(status === 'CLOSED' ? 'closed' : 'error');
-            scheduleReconnect();
-          }
-        });
-    };
-
-    // Refetch quando a aba volta do background (>60s). Cobre "deixei a
-    // aba aberta a noite toda e voltei com dados stale".
-    const onVisibility = () => {
-      if (cancelled) return;
-      if (document.visibilityState !== 'visible') return;
-      const now = Date.now();
-      if (now - lastRefreshAt < 60_000) return;
-      lastRefreshAt = now;
-      refreshAll();
-    };
-    if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', onVisibility);
-    }
     const resolveCurrentPessoa = async (
       session: Awaited<ReturnType<typeof sb.auth.getSession>>['data']['session'],
     ) => {
@@ -509,17 +380,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const { data: { session } } = await sb.auth.getSession();
       if (cancelled) return;
-      if (session?.access_token) sb.realtime.setAuth(session.access_token);
-      // Resolve pessoa logada em paralelo ao realtime; cache em localStorage
-      // já hidratou o state no useState inicial, então não pisca.
+      // Cache em localStorage já hidratou o state no useState inicial · não pisca.
       resolveCurrentPessoa(session);
-
-      // Realtime channel setup — extraído pra função reutilizável em
-      // reconnect. Escuta tasks (delta in-place), clientes/projetos/
-      // pessoas (refetch coalescido), time_entries (delta). NotifBell
-      // gerencia notifications separadamente. task_comments é ouvido
-      // por useLastCommentByTask no Foco.
-      setupChannel();
     })();
 
     // Escuta SIGNED_IN/SIGNED_OUT pra atualizar currentPessoa fora do boot
@@ -537,23 +399,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       }
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         resolveCurrentPessoa(session);
-        if (event === 'TOKEN_REFRESHED' && session?.access_token) {
-          sb.realtime.setAuth(session.access_token);
-        }
       }
     });
 
     return () => {
       cancelled = true;
       subscription.unsubscribe();
-      if (typeof document !== 'undefined') {
-        document.removeEventListener('visibilitychange', onVisibility);
-      }
-      if (reconnectTimeout) clearTimeout(reconnectTimeout);
-      if (channel) sb.removeChannel(channel);
       Object.keys(timers).forEach((k) => timers[k] && clearTimeout(timers[k]!));
     };
-  }, [sb, refreshAll, scheduleRefetch]);
+  }, [sb, refreshAll]);
 
   // Mutações locais (optimistic). Mesma semântica dos helpers Alpine.
   const patchTask = useCallback<DataActions['patchTask']>((id, changes) => {
