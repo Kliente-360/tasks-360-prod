@@ -1705,7 +1705,13 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
 
   /** Toggle do Radar do CEO · botão no subheader. Só CEO enxerga o
    *  botão · trigger DB `enforce_radar_ceo_only` reverte se caller
-   *  não é CEO (defesa em profundidade). */
+   *  não é CEO (defesa em profundidade).
+   *
+   *  Estratégia: optimistic patch + await UPDATE `.select().single()` +
+   *  reconciliar com a row retornada pelo DB (via `taskFromDb`). Se o
+   *  trigger reverteu radar (caller não-CEO), a row retornada já vem
+   *  com o valor correto e a store fica sincronizada. Sem risco de UI
+   *  divergir do banco. */
   const toggleRadar = useCallback(async () => {
     if (!editing.id || !isCEO) return;
     const next = !editing.radar;
@@ -1713,11 +1719,28 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     patchTask(editing.id, { radar: next });
     setEditing((cur) => ({ ...cur, radar: next }));
     skipNextDirty.current = true;
-    const { error } = await sb.from('tasks').update({ radar: next }).eq('id', editing.id);
+    const { data, error } = await sb
+      .from('tasks')
+      .update({ radar: next })
+      .eq('id', editing.id)
+      .select('*')
+      .single();
     if (error) {
       if (prevTask) replaceTask(editing.id, prevTask);
       setEditing((cur) => ({ ...cur, radar: !next }));
       toast.error('Erro ao ' + (next ? 'marcar' : 'desmarcar') + ' radar: ' + error.message);
+      return;
+    }
+    if (data) {
+      // Reconcilia store com o que o DB de fato persistiu (leva em conta
+      // o trigger enforce_radar_ceo_only, que reverte silenciosamente
+      // pra caller não-CEO). `taskFromDb` preserva descricao lazy se
+      // presente na row atual.
+      const fresh = taskFromDb(data as Record<string, unknown>);
+      // preserva campos lazy que a row `select('*')` já traz mas que
+      // não estavam no boot (descricao/solucao/etc) — passa direto.
+      replaceTask(editing.id, fresh);
+      setEditing((cur) => ({ ...cur, radar: fresh.radar }));
     }
   }, [editing.id, editing.radar, isCEO, patchTask, replaceTask, sb, toast, tasksById]);
 

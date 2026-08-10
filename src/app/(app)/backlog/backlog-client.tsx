@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Icon } from '@/components/icons';
-import { TagIA } from '@/components/task-card/primitives';
+import { TagIA, RadarBadge } from '@/components/task-card/primitives';
 import { TaskCard } from '@/components/task-card/task-card';
 import { cn } from '@/lib/utils';
 import { useSearchParams } from 'next/navigation';
@@ -616,18 +616,18 @@ export function BacklogClient() {
                 },
                 { key: 'div1', label: '---' },
                 {
-                  key: 'radar',
-                  label: 'Somente no Radar do CEO',
-                  kind: 'toggle',
-                  active: onlyRadar,
-                  onClick: () => setOnlyRadar((v) => !v),
-                },
-                {
                   key: 'arquivadas',
                   label: 'Mostrar arquivadas',
                   kind: 'toggle',
                   active: showArchived,
                   onClick: () => setShowArchived((v) => !v),
+                },
+                {
+                  key: 'radar',
+                  label: 'Somente no Radar do CEO',
+                  kind: 'toggle',
+                  active: onlyRadar,
+                  onClick: () => setOnlyRadar((v) => !v),
                 },
                 {
                   key: 'ia',
@@ -771,6 +771,7 @@ export function BacklogClient() {
                       <div className="tbl-title" title={t.titulo}>
                         {t.privada && <span className="priv-chip mr-1" title="Task privada"><Icon name="lock" size={9} /></span>}
                         {t.criadoPorIa && <TagIA className="mr-1" />}
+                        {t.radar && <RadarBadge className="mr-1" />}
                         {t.titulo}
                       </div>
                     </td>

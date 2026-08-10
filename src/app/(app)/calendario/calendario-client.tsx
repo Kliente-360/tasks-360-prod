@@ -112,6 +112,7 @@ export function CalendarioClient() {
   const [showArchived, setShowArchived] = useState(false);
   const [onlyIA, setOnlyIA] = useState(false);
   const [onlyHumano, setOnlyHumano] = useState(false);
+  const [onlyRadar, setOnlyRadar] = useState(false);
 
   // g+l global → limpa filtros (status volta pro default 'abertas').
   useEffect(() => {
@@ -185,7 +186,7 @@ export function CalendarioClient() {
     const start = new Date(y, m, 1 - offset);
     const today = isoLocal(new Date());
 
-    const hasFilter = !!(filters.cliente || filters.projeto || filters.pessoa || filters.prazo || qDraft || onlyIA || onlyHumano);
+    const hasFilter = !!(filters.cliente || filters.projeto || filters.pessoa || filters.prazo || qDraft || onlyIA || onlyHumano || onlyRadar);
     const q = qDraft.trim().toLowerCase();
     const todayIso = today;
     const in7d = new Date(); in7d.setDate(in7d.getDate() + 7);
@@ -202,6 +203,7 @@ export function CalendarioClient() {
         if (t.pessoaId) return false;
       } else if (filters.pessoa && t.pessoaId !== filters.pessoa) return false;
       if (onlyIA && !t.criadoPorIa) return false;
+      if (onlyRadar && !t.radar) return false;
       if (onlyHumano && t.criadoPorIa) return false;
       if (filters.prazo === 'atrasadas' && !atrasada(t)) return false;
       if (filters.prazo === 'hoje' && t.prazo !== todayIso) return false;
@@ -263,7 +265,7 @@ export function CalendarioClient() {
       });
     }
     return out;
-  }, [cursor, tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, clientesById, projetosById, pessoasById]);
+  }, [cursor, tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, onlyRadar, clientesById, projetosById, pessoasById]);
 
   // Versão mobile: tira fim de semana pra caber 5 colunas no viewport
   // estreito; matem a ordem segunda → sexta.
@@ -392,6 +394,7 @@ export function CalendarioClient() {
                 setShowArchived(false);
                 setOnlyIA(false);
                 setOnlyHumano(false);
+                setOnlyRadar(false);
                 clearSharedFilters();
               }}
               clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
@@ -403,6 +406,7 @@ export function CalendarioClient() {
                 { key: 'group-status', label: 'Agrupar: Status', enabled: false, kind: 'action', icon: 'list-filter' },
                 { key: 'div1', label: '---' },
                 { key: 'arquivadas', label: 'Mostrar arquivadas', kind: 'toggle', active: showArchived, onClick: () => setShowArchived((v) => !v) },
+                { key: 'radar', label: 'Somente no Radar do CEO', kind: 'toggle', active: onlyRadar, onClick: () => setOnlyRadar((v) => !v) },
                 { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
                 { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
               ] satisfies MoreMenuItem[]}
