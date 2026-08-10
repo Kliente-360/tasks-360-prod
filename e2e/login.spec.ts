@@ -20,8 +20,10 @@ test.describe('smoke · auth-less', () => {
 
   test('página de login renderiza', async ({ page }) => {
     await page.goto('/login');
-    // Brand visível (exact pra não casar com <title>).
-    await expect(page.getByText('tasks 360', { exact: true })).toBeVisible();
+    // Brand visível. `.first()` porque a página renderiza 2 marcas no
+    // DOM (aside ≥900px + inline <900px) — CSS esconde uma conforme
+    // viewport, mas ambas ficam no DOM.
+    await expect(page.getByText('tasks 360', { exact: true }).first()).toBeVisible();
     // Input de email do magic link (sem aria-label; localiza por placeholder).
     await expect(page.getByPlaceholder(/empresa\.com/i)).toBeVisible();
   });
