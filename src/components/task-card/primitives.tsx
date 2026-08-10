@@ -168,3 +168,25 @@ export function TagIA({ className }: { className?: string }) {
     </span>
   );
 }
+
+// ───────────────────────────────────────────────────────────────────
+// RadarBadge · Radar do CEO (v1.03.214)
+// ───────────────────────────────────────────────────────────────────
+
+/**
+ * Badge visual pra tasks no Radar do CEO. Ícone `target` âmbar
+ * discreto — indica que o CEO está de olho nesta task.
+ * Renderiza null quando `task.radar` é false pra caller não precisar
+ * de guard.
+ */
+export function RadarBadge({ className, size = 10 }: { className?: string; size?: number }) {
+  return (
+    <span
+      className={cn('tag-radar', className)}
+      aria-label="No Radar do CEO"
+      title="No Radar do CEO"
+    >
+      <Icon name="target" size={size} />
+    </span>
+  );
+}

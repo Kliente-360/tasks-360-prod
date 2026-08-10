@@ -154,11 +154,12 @@ Deno.serve(async (req) => {
   // --- Filtros de "ruído" pra consumidores tipo standup automation ---
   const excludePrivadas = p.get('exclude_privadas') === 'true';
   const excludeInternos = p.get('exclude_internos') === 'true';
+  const radarOnly       = p.get('radar') === 'true';
 
   // --- Query principal ---
   // Join via chave estrangeira: clientes, projetos, pessoas.
   let q = sb.from('tasks').select(
-    `id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, criado_por_ia, criado_em, privada,
+    `id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, criado_por_ia, criado_em, privada, radar,
      escopo, valor_esperado, solucao_implementada, valor_entregue, tempo_real_horas,
      pessoa_id, cliente_id, projeto_id,
      clientes ( nome, eh_interno ),
@@ -167,6 +168,7 @@ Deno.serve(async (req) => {
   ).is('arquivado_em', null);
 
   if (excludePrivadas) q = q.eq('privada', false);
+  if (radarOnly) q = q.eq('radar', true);
 
   // Filtro por status.
   // Se ?status explícito → usa exatamente esses.
@@ -201,6 +203,7 @@ Deno.serve(async (req) => {
     prazo: string | null; esforco: number | null; prioridade: string | null;
     tipo_trabalho: string | null; criado_por_ia: boolean; criado_em: string;
     privada: boolean;
+    radar: boolean;
     escopo: string[] | null;
     valor_esperado: string | null;
     solucao_implementada: string | null;
@@ -229,6 +232,7 @@ Deno.serve(async (req) => {
     prioridade:   t.prioridade,
     tipo_trabalho: t.tipo_trabalho,
     privada:      t.privada === true,
+    radar:        t.radar === true,
     escopo:       t.escopo ?? [],
     valor_esperado:       t.valor_esperado,
     solucao_implementada: t.solucao_implementada,

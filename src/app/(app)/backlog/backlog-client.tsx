@@ -147,6 +147,7 @@ export function BacklogClient() {
   const [groupBy, setGroupBy] = useState<string>('');
   const [collapsedGroups, setCollapsedGroups] = useState<string[]>([]);
   const [showArchived, setShowArchived] = useState(false);
+  const [onlyRadar, setOnlyRadar] = useState(false);
   const [listLimit, setListLimit] = useState(LIST_LIMIT_STEP);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -226,6 +227,7 @@ export function BacklogClient() {
       } else if (f.complexidade && (t.complexidade || 'media') !== f.complexidade) return false;
       if (f.origem === 'ia' && !t.criadoPorIa) return false;
       if (f.origem === 'humano' && t.criadoPorIa) return false;
+      if (onlyRadar && !t.radar) return false;
       if (f.prazo) {
         const todayIso = new Date().toISOString().slice(0, 10);
         if (f.prazo === 'atrasadas' && !atrasada(t)) return false;
@@ -275,7 +277,7 @@ export function BacklogClient() {
       return 0;
     });
     return arr;
-  }, [tasks, showArchived, f, sortKeys, clientesById, projetosById, pessoasById]);
+  }, [tasks, showArchived, onlyRadar, f, sortKeys, clientesById, projetosById, pessoasById]);
 
   // ============ Agrupamento + paginação ============
   type Group = {
@@ -382,6 +384,7 @@ export function BacklogClient() {
     setF(DEFAULT_FILTERS);
     setQDraft('');
     setShowArchived(false);
+    setOnlyRadar(false);
     setGroupBy('');
     setCollapsedGroups([]);
     setSortKeys([]);
@@ -612,6 +615,13 @@ export function BacklogClient() {
                   },
                 },
                 { key: 'div1', label: '---' },
+                {
+                  key: 'radar',
+                  label: 'Somente no Radar do CEO',
+                  kind: 'toggle',
+                  active: onlyRadar,
+                  onClick: () => setOnlyRadar((v) => !v),
+                },
                 {
                   key: 'arquivadas',
                   label: 'Mostrar arquivadas',

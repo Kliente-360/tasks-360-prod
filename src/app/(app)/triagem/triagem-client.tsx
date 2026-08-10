@@ -20,7 +20,7 @@ import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { PillsFilter } from '@/components/pills-filter';
-import { TagIA } from '@/components/task-card/primitives';
+import { TagIA, RadarBadge } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
 import { agingDays, isPreTriagem, triageFailures, TRIAGE_RANK_GATE } from '@/lib/task-utils';
 import { STATUS, SUB_LABELS, STAGE_RANK } from '@/lib/task-constants';
@@ -394,6 +394,7 @@ export function TriagemClient() {
                       </span>
                     )}
                     {t.criadoPorIa && <TagIA />}
+                    {t.radar && <RadarBadge />}
                     {t.criadoPorCliente && (
                       <span
                         className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-mono shrink-0"

@@ -31,7 +31,7 @@
 
 import { useMemo } from 'react';
 import { Icon } from '@/components/icons';
-import { PriChip, TaskAvatar, PrazoLabel, TagIA } from './primitives';
+import { PriChip, TaskAvatar, PrazoLabel, TagIA, RadarBadge } from './primitives';
 import { cn } from '@/lib/utils';
 import type { Task } from '@/lib/types';
 
@@ -107,6 +107,7 @@ export function TaskCard({
         )}
         <div className="sm-footer">
           <PriChip prio={task.prioridade} />
+          {task.radar && <RadarBadge />}
           {respNome && <TaskAvatar name={respNome} title={respNome} />}
         </div>
       </div>
@@ -147,7 +148,10 @@ export function TaskCard({
               <div className="sub">{cliente}{projeto ? ' · ' + projeto : ''}</div>
             )}
           </div>
-          <PriChip prio={task.prioridade} />
+          <div className="flex items-center gap-1.5">
+            {task.radar && <RadarBadge />}
+            <PriChip prio={task.prioridade} />
+          </div>
         </div>
 
         {size === 'lg' && descricaoPreview && (

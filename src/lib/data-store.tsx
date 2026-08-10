@@ -68,6 +68,7 @@ const COL_TO_FIELD: Record<string, keyof Task> = {
   triada_por: 'triadaPor',
   motivo_arquivamento: 'motivoArquivamento',
   privada: 'privada',
+  radar: 'radar',
   webhook_sync_status: 'webhookSyncStatus',
   webhook_sync_error: 'webhookSyncError',
 };

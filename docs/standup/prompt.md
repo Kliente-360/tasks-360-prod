@@ -53,11 +53,12 @@ F="exclude_privadas=true&exclude_internos=true"
 
 curl -s -H "$H" "$BASE/get-tasks?prazo_ate=$ONTEM&limit=200&$F"               > /tmp/atrasadas.json
 curl -s -H "$H" "$BASE/get-tasks?prazo_de=$HOJE&prazo_ate=$FIM&limit=200&$F"  > /tmp/curto.json
+curl -s -H "$H" "$BASE/get-tasks?radar=true&limit=50&$F"                       > /tmp/radar.json
 curl -s -H "$H" "$BASE/get-pessoas?with_load=true&$F"                          > /tmp/pessoas.json
 ```
 
 Schemas:
-- `get-tasks` retorna `{ tasks: [{id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, privada, atrasada, criado_por_ia, criado_em, cliente, cliente_id, projeto, projeto_id, responsavel, pessoa_id}], total }`
+- `get-tasks` retorna `{ tasks: [{id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, privada, radar, atrasada, criado_por_ia, criado_em, cliente, cliente_id, projeto, projeto_id, responsavel, pessoa_id}], total }`
 - `get-pessoas` retorna `{ pessoas: [{id, nome, ..., tasks_ativas, horas_pendentes}] }` — `horas_pendentes` já vem filtrada (sem KL360 e sem privadas)
 
 ### 3. Identificar críticas + buscar comments
@@ -96,6 +97,13 @@ Markdown **sem emoji** (vai pro app · superfície de marca). Tom direto, portug
 
 **Atenção:** <n_atrasadas> atrasadas · <n_bloqueadas> bloqueadas · <n_vencendo_ate_fim> vencendo até <DD/MM> · <n_pedem_ajuda> pedem ajuda.
 Maior carga pendente: <Nome1> (<h1>h) · <Nome2> (<h2>h) · <Nome3> (<h3>h).
+
+## Radar do CEO (<n_radar> tasks)
+
+*Só renderiza esta seção se `/tmp/radar.json` tiver ≥1 task. Ordenar por atrasada primeiro → prioridade asc → prazo asc.*
+
+- P? · **<Título>** (<Cliente>) — <status subetapa> · <responsável> · <prazo | "atrasada Nd" | "sem prazo">. <Status atual em 1 frase se conseguiu buscar comment recente.>
+- ...
 
 ## Pendências cruzadas (aguardando resposta)
 
@@ -155,6 +163,9 @@ Versão enxuta. Pode usar **negrito** (`*texto*`), bullets `•`, setas `→`, *
 
 📌 <n_atrasadas> atrasadas · <n_bloqueadas> bloqueadas · <n_vencendo> vencendo até <DD/MM> · <n_pedem_ajuda> pedem ajuda
 Maior carga: <Nome1> (<h>h) · <Nome2> (<h>h) · <Nome3> (<h>h)
+
+*Radar do CEO* (se houver)
+• P? <Título curto> (<Cliente>) — <responsável> · <status curto>
 
 *Pendências cruzadas*
 • <Externo>: <task / contexto>

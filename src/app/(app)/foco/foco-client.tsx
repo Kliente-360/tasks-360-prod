@@ -14,6 +14,7 @@ import { useTaskModal } from '@/components/task-modal';
 import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { Icon } from '@/components/icons';
+import { RadarBadge } from '@/components/task-card/primitives';
 import { cn } from '@/lib/utils';
 import {
   atrasada,
@@ -65,6 +66,7 @@ export function FocoClient() {
   const focusPessoaId = currentPessoa?.id ?? '';
 
   const [pillPrio, setPillPrio] = useState(false);
+  const [pillRadar, setPillRadar] = useState(false);
   const [activePills, setActivePills] = useState<Set<FocoContexto>>(new Set());
   const togglePill = useCallback((k: FocoContexto) => {
     setActivePills((cur) => {
@@ -199,8 +201,14 @@ export function FocoClient() {
     if (pillPrio) {
       result = result.filter(({ task }) => task.prioridade === 'P0' || task.prioridade === 'P1');
     }
+    if (pillRadar) {
+      result = result.filter(({ task }) => task.radar);
+    }
     return result;
-  }, [focoFlat, activePills, pillPrio, taskCtxMap]);
+  }, [focoFlat, activePills, pillPrio, pillRadar, taskCtxMap]);
+
+  // Contagem de tasks do usuário que estão no Radar do CEO
+  const radarCount = useMemo(() => mine.filter((t) => t.radar).length, [mine]);
 
   // Per-pill counts (raw, prio filter applied)
   const counts = useMemo(() => {
@@ -297,6 +305,16 @@ export function FocoClient() {
                 >
                   P0/P1
                 </button>
+                {radarCount > 0 && (
+                  <button
+                    type="button"
+                    className={cn('triage-filter-chip', pillRadar && 'is-on')}
+                    onClick={() => setPillRadar((v) => !v)}
+                    title="Filtrar só tasks no Radar do CEO"
+                  >
+                    <strong>{radarCount}</strong>&nbsp;Radar CEO
+                  </button>
+                )}
               </div>
             ) : null
           }
@@ -626,6 +644,7 @@ function FocoTaskRow({
               <span className="pri-dot" />
               {task.prioridade}
             </span>
+            {task.radar && <RadarBadge />}
             <span
               className={cn(
                 'font-medium text-ink break-words',

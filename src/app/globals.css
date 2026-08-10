@@ -1368,6 +1368,47 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 }
 .tmodal-timer-btn:disabled { opacity: .5; cursor: not-allowed; }
 
+/* Radar badge · aparece em cards de task (Kanban/Backlog/Foco/Triagem)
+   quando radar=true. Ícone discreto âmbar. (v1.03.214) */
+.tag-radar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px;
+  border-radius: 4px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  flex: none;
+}
+
+/* Radar do CEO · toggle no subheader (v1.03.214). Só CEO enxerga. */
+.tmodal-radar-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background-color .12s, color .12s, border-color .12s;
+}
+.tmodal-radar-btn:hover { background: var(--surface-3); color: var(--ink); }
+.tmodal-radar-btn[data-active="true"] {
+  background: var(--warn-soft);
+  border-color: var(--warn);
+  color: var(--warn);
+}
+.tmodal-radar-btn[data-active="true"]:hover { filter: brightness(0.95); }
+
+/* Chip Radar · não-CEO enxerga read-only quando task está no radar */
+.tmodal-radar-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 11px; font-weight: 500;
+  line-height: 1;
+}
+
 /* ── Tabs strip unificada · DESKTOP ONLY (form à esquerda + Conversa/Anexos/etc à direita)
    alinhada com as 2 colunas do body (1.35fr / 1fr) com divisor discreto. */
 .tmodal-tabstrip {

@@ -93,6 +93,11 @@ export interface Task {
    *  "fora de escopo" / "spam" / texto livre. */
   motivoArquivamento: string | null;
   privada: boolean;
+  /** Radar do CEO · flag pra marcar tasks importantes que o CEO quer
+   *  acompanhar. Só CEO pode ligar/desligar (enforçado por trigger DB
+   *  `enforce_radar_ceo_only`). Usado pra filtros, chip visual, e
+   *  seção dedicada no Briefing + Standup. */
+  radar: boolean;
   /** Status do dispatch pro Salesforce — 'synced' | 'error' | ''. Set por
    *  dispatch-webhook após cada update da task quando external_source=salesforce. */
   webhookSyncStatus: string;

@@ -22,7 +22,7 @@ import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
-import { PriChip, TaskAvatar, PrazoLabel, TagIA } from '@/components/task-card/primitives';
+import { PriChip, TaskAvatar, PrazoLabel, TagIA, RadarBadge } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
 import type { Filters as StdFilters } from '@/lib/filters';
 import {
@@ -608,7 +608,10 @@ export function CalendarioClient() {
                         {t.criadoPorIa && <TagIA />}
                         <span>{t.titulo}</span>
                       </div>
-                      <PriChip prio={t.prioridade} />
+                      <div className="flex items-center gap-1.5">
+                        {t.radar && <RadarBadge />}
+                        <PriChip prio={t.prioridade} />
+                      </div>
                     </div>
                     <div className="text-xs text-muted mb-2">
                       {(clientesById.get(t.clienteId)?.nome ?? '—') +

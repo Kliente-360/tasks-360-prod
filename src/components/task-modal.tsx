@@ -160,6 +160,7 @@ function blankEditing(): Task {
     triadaPor: null,
     motivoArquivamento: null,
     privada: false,
+    radar: false,
     webhookSyncStatus: '',
     webhookSyncError: '',
   };
@@ -1702,6 +1703,24 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     [attachments, lightboxAttachment, sb, toast],
   );
 
+  /** Toggle do Radar do CEO · botão no subheader. Só CEO enxerga o
+   *  botão · trigger DB `enforce_radar_ceo_only` reverte se caller
+   *  não é CEO (defesa em profundidade). */
+  const toggleRadar = useCallback(async () => {
+    if (!editing.id || !isCEO) return;
+    const next = !editing.radar;
+    const prevTask = tasksById.get(editing.id);
+    patchTask(editing.id, { radar: next });
+    setEditing((cur) => ({ ...cur, radar: next }));
+    skipNextDirty.current = true;
+    const { error } = await sb.from('tasks').update({ radar: next }).eq('id', editing.id);
+    if (error) {
+      if (prevTask) replaceTask(editing.id, prevTask);
+      setEditing((cur) => ({ ...cur, radar: !next }));
+      toast.error('Erro ao ' + (next ? 'marcar' : 'desmarcar') + ' radar: ' + error.message);
+    }
+  }, [editing.id, editing.radar, isCEO, patchTask, replaceTask, sb, toast, tasksById]);
+
   // ============ Footer actions ============
   const arquivarTask = useCallback(async () => {
     if (!editing.id) return;
@@ -2041,6 +2060,31 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                 </span>
               );
             })()}
+
+            {/* Radar do CEO · toggle · só CEO enxerga (trigger DB
+                também protege). Ícone target · âmbar quando ativo. */}
+            {editing.id && isCEO && (
+              <button
+                type="button"
+                onClick={toggleRadar}
+                title={editing.radar ? 'Remover do Radar do CEO' : 'Marcar no Radar do CEO'}
+                aria-label={editing.radar ? 'Remover do Radar do CEO' : 'Marcar no Radar do CEO'}
+                aria-pressed={editing.radar}
+                className="tmodal-radar-btn"
+                data-active={editing.radar ? 'true' : 'false'}
+              >
+                <Icon name="target" size={14} />
+              </button>
+            )}
+            {/* Chip Radar · read-only pra não-CEO qdo task tá no radar */}
+            {editing.id && !isCEO && editing.radar && (
+              <span
+                className="tmodal-radar-chip"
+                title="Esta task está no Radar do CEO"
+              >
+                <Icon name="target" size={13} /> radar
+              </span>
+            )}
 
             {/* Cronômetro · T.1
                 - sem entry ativa: ícone neutro · clique inicia nesta task

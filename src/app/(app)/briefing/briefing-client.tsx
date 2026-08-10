@@ -175,6 +175,22 @@ export function BriefingClient() {
   const n17 = useMemo(() => computeN17TriagemAtrasada(baseTasks), [baseTasks]);
   const n18 = useMemo(() => computeN18OrigemDemanda(baseTasks), [baseTasks]);
 
+  // Radar do CEO · tasks marcadas pelo CEO · ordenadas por atraso desc
+  // → prioridade → prazo asc. (v1.03.214)
+  const radarTasks = useMemo(() => {
+    return baseTasks
+      .filter((t) => t.radar && t.status !== 'concluido')
+      .sort((a, b) => {
+        const aAtraso = a.prazo && a.prazo < new Date().toISOString().slice(0, 10) ? 1 : 0;
+        const bAtraso = b.prazo && b.prazo < new Date().toISOString().slice(0, 10) ? 1 : 0;
+        if (aAtraso !== bAtraso) return bAtraso - aAtraso;
+        const pr: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3, '': 9 };
+        const pd = (pr[a.prioridade] ?? 9) - (pr[b.prioridade] ?? 9);
+        if (pd !== 0) return pd;
+        return (a.prazo || '9999') < (b.prazo || '9999') ? -1 : 1;
+      });
+  }, [baseTasks]);
+
   const projetosSaude = useMemo(
     () => computeProjetosSaude(baseTasks, projetos, clientes),
     [baseTasks, projetos, clientes],
@@ -333,6 +349,70 @@ export function BriefingClient() {
       <div className="space-y-4 md:space-y-6">
       {/* ── Standup do dia · primeiro card · jun/2026 ── */}
       <StandupCard />
+
+      {/* ── Radar do CEO · v1.03.214 · tasks que o CEO marcou pra
+             acompanhar de perto. Só renderiza quando há tasks. ── */}
+      {radarTasks.length > 0 && (
+        <div className="bg-elev border border-[color:var(--warn)] rounded-xl overflow-hidden">
+          <SectionHeader
+            title="🎯 Radar do CEO"
+            collapsed={collapsed.has('radar')}
+            onToggle={() => toggle('radar')}
+            right={
+              <span className="text-xs text-muted">
+                {radarTasks.length} task{radarTasks.length !== 1 ? 's' : ''}
+              </span>
+            }
+          />
+          {!collapsed.has('radar') && (
+            <div className="divide-y divide-line">
+              {radarTasks.map((t) => {
+                const cliente = clientesById.get(t.clienteId)?.nome ?? '—';
+                const projeto = projetosById.get(t.projetoId)?.nome ?? '—';
+                const pessoa = pessoasById.get(t.pessoaId)?.nome ?? '—';
+                const today = new Date().toISOString().slice(0, 10);
+                const atrasada = t.prazo && t.prazo < today;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => openEdit(t.id)}
+                    className="w-full text-left px-3 md:px-4 py-3 hover:bg-[var(--surface-3)] transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className={cn(
+                        'shrink-0 mt-1.5 w-2 h-2 rounded-full',
+                        atrasada ? 'bg-[var(--danger)]' : t.status === 'bloqueado' ? 'bg-[var(--warn)]' : 'bg-[var(--brand)]'
+                      )} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`pri pri-${t.prioridade}`}>
+                            <span className="pri-dot" />
+                            {t.prioridade || '—'}
+                          </span>
+                          <span className="text-sm font-medium text-ink break-words">{t.titulo}</span>
+                        </div>
+                        <div className="text-xs text-muted mt-1">
+                          {cliente} · {projeto} · <b>{pessoa.split(/\s+/)[0]}</b>
+                        </div>
+                        <div className="text-xs mt-1 font-mono text-ink-soft">
+                          {SUB_LABELS[t.subetapa] ?? t.subetapa}
+                          {t.prazo && (
+                            <span className={atrasada ? 'text-[var(--danger)] font-semibold' : ''}>
+                              {' · prazo '}{t.prazo}
+                              {atrasada && ' · atrasada'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Bloco 3 · Clientes em atenção ── */}
       <div className="bg-elev border border-line rounded-xl overflow-hidden">

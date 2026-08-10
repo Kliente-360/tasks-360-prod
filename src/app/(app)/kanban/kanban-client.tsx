@@ -30,7 +30,7 @@ import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
-import { PriChip, TaskAvatar, PrazoLabel } from '@/components/task-card/primitives';
+import { PriChip, TaskAvatar, PrazoLabel, RadarBadge } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
 import { atrasada, etapaTempoColor, etapaTempoDays, fmtDateShort, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, sumTimeEntriesHours, triageFailures, validateSubetapaAdvance, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
@@ -98,6 +98,7 @@ export function KanbanClient() {
   const [showArchived, setShowArchived] = useState(false);
   const [onlyIA, setOnlyIA] = useState(false);
   const [onlyHumano, setOnlyHumano] = useState(false);
+  const [onlyRadar, setOnlyRadar] = useState(false);
   const [kanbanView, setKanbanView] = useState<'op' | 'exec'>('op');
 
   // g+l global → limpa filtros.
@@ -159,6 +160,7 @@ export function KanbanClient() {
       if (filters.prazo && !matchesPrazoFilter(t, filters.prazo)) return false;
       if (onlyIA && !t.criadoPorIa) return false;
       if (onlyHumano && t.criadoPorIa) return false;
+      if (onlyRadar && !t.radar) return false;
       if (q) {
         const cli = clientesById.get(t.clienteId)?.nome ?? '';
         const proj = projetosById.get(t.projetoId)?.nome ?? '';
@@ -171,7 +173,7 @@ export function KanbanClient() {
       }
       return true;
     });
-  }, [tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, clientesById, projetosById, pessoasById]);
+  }, [tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, onlyRadar, clientesById, projetosById, pessoasById]);
 
   // ===== Buckets por coluna =====
   const tasksBySub = useMemo(() => {
@@ -393,6 +395,7 @@ export function KanbanClient() {
                 setShowArchived(false);
                 setOnlyIA(false);
                 setOnlyHumano(false);
+                setOnlyRadar(false);
                 clearSharedFilters();
               }}
               clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
@@ -404,6 +407,7 @@ export function KanbanClient() {
                 { key: 'group-status', label: 'Agrupar: Status', enabled: false, kind: 'action', icon: 'list-filter' },
                 { key: 'div1', label: '---' },
                 { key: 'arquivadas', label: 'Mostrar arquivadas', kind: 'toggle', active: showArchived, onClick: () => setShowArchived((v) => !v) },
+                { key: 'radar', label: 'Somente no Radar do CEO', kind: 'toggle', active: onlyRadar, onClick: () => setOnlyRadar((v) => !v) },
                 { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
                 { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
               ] satisfies MoreMenuItem[]}
@@ -557,7 +561,10 @@ function KCard({
       </div>
       <div className="flex items-center justify-between gap-2 mb-1">
         <div className="text-xs text-muted truncate">{clienteName + ' · ' + projetoName}</div>
-        <PriChip prio={t.prioridade} />
+        <div className="flex items-center gap-1.5">
+          {t.radar && <RadarBadge />}
+          <PriChip prio={t.prioridade} />
+        </div>
       </div>
       {showSubetapa && (
         <div className="text-[11px] text-ink-soft font-mono mb-2">{SUB_LABELS[t.subetapa] ?? t.subetapa}</div>
