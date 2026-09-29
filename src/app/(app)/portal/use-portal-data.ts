@@ -214,27 +214,8 @@ export function usePortalData(clienteId: string): PortalData {
         detalhe: 'Responder destrava o time pra seguir.',
       });
     }
-    if (diasAteProxima != null && diasAteProxima <= 3 && proximaEntrega) {
-      alerts.push({
-        severity: 'media',
-        icon: '📅',
-        titulo:
-          diasAteProxima === 0
-            ? 'Entrega prevista pra hoje'
-            : diasAteProxima === 1
-              ? 'Entrega prevista pra amanhã'
-              : `Entrega prevista em ${diasAteProxima} dias`,
-        detalhe: proximaEntrega.titulo,
-      });
-    }
-    if (mesAtual > 0 && mediaSemestre > 0 && mesAtual >= mediaSemestre * 1.3) {
-      alerts.push({
-        severity: 'positivo',
-        icon: '↑',
-        titulo: `Mês forte: ${mesAtual} entregas até agora`,
-        detalhe: `Acima da média dos últimos 6 meses (${mediaSemestre.toFixed(1)}).`,
-      });
-    }
+    // Alerts "Entrega prevista pra hoje/amanhã" e "Mês forte" removidos
+    // em v1.03.218 · info já vive nos KPIs + Kanban.
     if (mesAtual === 0 && mesAnterior > 0 && totalAtivas > 0 && new Date().getDate() >= 15) {
       alerts.push({
         severity: 'media',
