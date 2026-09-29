@@ -24,7 +24,7 @@ import { ROLE, STATUS, SUB_LABELS, SUB_TO_MACRO } from '@/lib/task-constants';
 import { atrasada as isAtrasada } from '@/lib/task-utils';
 import { fmtDate } from '@/lib/format';
 import type { Task } from '@/lib/types';
-import { usePortalData, type PortalCards } from './use-portal-data';
+import { usePortalData } from './use-portal-data';
 import { PortalTaskModal } from './portal-task-modal';
 import { PortalNewTaskForm } from './portal-new-task-form';
 
@@ -39,20 +39,6 @@ const KANBAN_MACROS = [
 const PRIO_OPTIONS = ['P0', 'P1', 'P2', 'P3'] as const;
 
 const LS_KEY = 'kliente360-portal-cliente';
-
-type CardKey = keyof PortalCards;
-interface CardConfig {
-  key: CardKey;
-  title: string;
-  empty: string;
-  tone: 'danger' | 'neutral' | 'success';
-}
-const CARDS: CardConfig[] = [
-  { key: 'aguardando', title: 'Aguardando você', empty: 'Nada esperando sua resposta. Tudo certo!', tone: 'danger' },
-  { key: 'emAndamento', title: 'Em andamento agora', empty: 'Nada em andamento no momento.', tone: 'neutral' },
-  { key: 'proximas', title: 'Próximas entregas (14d)', empty: 'Sem datas marcadas pros próximos 14 dias.', tone: 'neutral' },
-  { key: 'recentes', title: 'Entregues recentemente', empty: 'Sem entregas recentes.', tone: 'success' },
-];
 
 export function PortalClient() {
   const { clientes, projetos, pessoas, currentPessoa, viewerRole } = useData();
@@ -95,7 +81,7 @@ export function PortalClient() {
     [clientes, effectiveCid],
   );
 
-  const { portalTasks, cards, metrics, alerts, headline } = usePortalData(effectiveCid);
+  const { portalTasks, alerts, headline } = usePortalData(effectiveCid);
 
   // Modal state
   const [openTask, setOpenTask] = useState<Task | null>(null);
@@ -286,76 +272,8 @@ export function PortalClient() {
         kbPrio={kbPrio} toggleKbPrio={toggleKbPrio}
       />
 
-      {/* 5. LISTAS de prioridade */}
-      {CARDS.map((card) => {
-        const items = cards[card.key];
-        const isDanger = card.tone === 'danger' && items.length > 0;
-        return (
-          <div key={card.key} className="card overflow-hidden">
-            <div className="flex items-center justify-between border-b border-line px-4 py-3 md:px-5">
-              <div
-                className={`font-brand text-sm font-semibold ${
-                  isDanger ? 'text-[color:var(--p0)]' : ''
-                }`}
-              >
-                {card.title}
-              </div>
-              <span className="font-mono text-xs text-muted">{items.length} item(s)</span>
-            </div>
-            {items.map((t) => {
-              const proj = projetosById.get(t.projetoId)?.nome ?? '';
-              const pess = t.pessoaId
-                ? (pessoasById.get(t.pessoaId)?.nome ?? '').split(' ')[0]
-                : '';
-              const aguardandoCli =
-                t.subetapa === 'bloqueado' && t.bloqueadoPor === 'cliente';
-              return (
-                <div
-                  key={t.id}
-                  className="flex cursor-pointer items-center justify-between gap-3 border-b border-line px-4 py-3 transition-colors last:border-0 hover:bg-brand-tint md:px-5"
-                  onClick={() => openPortalTask(t)}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-ink">{t.titulo}</div>
-                    <div className="mt-1 text-xs text-muted">
-                      {proj}
-                      {pess && ` · ${pess}`}
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    {t.prazo && (
-                      <div className="font-mono text-xs text-ink-soft">
-                        {fmtDate(t.prazo)}
-                      </div>
-                    )}
-                    {t.status === STATUS.CONCLUIDO && (
-                      <div
-                        className="mt-0.5 font-mono text-[10px]"
-                        style={{ color: 'var(--brand-dark)' }}
-                      >
-                        ✓ entregue
-                      </div>
-                    )}
-                    {aguardandoCli && (
-                      <div
-                        className="mt-0.5 font-mono text-[10px]"
-                        style={{ color: 'var(--p0)' }}
-                      >
-                        ⚠ aguardando você
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            {items.length === 0 && (
-              <div className="px-4 py-6 text-center text-xs italic text-muted md:px-5">
-                {card.empty}
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {/* Listas de prioridade removidas (v1.03.217) · info agora vive
+          no Kanban 4 macros acima. */}
 
       {/* 6. Seções IA · placeholders (v1.03.216).
              Conteúdo virá de rotinas agendadas depois. */}
