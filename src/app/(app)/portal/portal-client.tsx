@@ -18,7 +18,7 @@
  * opção de simular. Admin/interno: cid livre, persistido em localStorage.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useData } from '@/lib/data-store';
 import { ROLE, STATUS, SUB_LABELS, SUB_TO_MACRO } from '@/lib/task-constants';
 import { atrasada as isAtrasada } from '@/lib/task-utils';
@@ -27,6 +27,8 @@ import type { Task } from '@/lib/types';
 import { usePortalData } from './use-portal-data';
 import { PortalTaskModal } from './portal-task-modal';
 import { PortalNewTaskForm } from './portal-new-task-form';
+import { Icon } from '@/components/icons';
+import { useClickAway } from '@/lib/use-click-away';
 
 /** 4 colunas macro do Kanban do Portal (jul/2026 · v1.03.216). */
 const KANBAN_MACROS = [
@@ -108,6 +110,11 @@ export function PortalClient() {
       return next;
     });
   };
+  const kbActive =
+    (kbProjeto ? 1 : 0) +
+    (kbSubetapa ? 1 : 0) +
+    (kbPrazo ? 1 : 0) +
+    (kbPrio.size > 0 ? 1 : 0);
 
   const openPortalTask = (t: Task) => {
     // Defesa em profundidade: garante que a task pertence ao cliente
@@ -165,10 +172,13 @@ export function PortalClient() {
   // ---- Conteúdo do portal ----
   return (
     <div className="fade-up space-y-5 md:space-y-6">
-      {/* 1. HEADER · cor + texto customizáveis por cliente (cadastro do cliente) */}
+      {/* 1. HEADER-BAR · nome do cliente (esquerda) + filtros do Kanban
+             (direita, mesmo estilo do FilterBar do Backlog). Fundo com
+             a cor do cliente (corPortal). Switcher de cliente (admin/
+             interno) fica no canto discreto quando aplicável. v1.03.219 */}
       <div
-        className={`portal-header relative${
-          portalCliente?.corPortalTexto === 'dark' ? ' theme-dark-text' : ''
+        className={`portal-headerbar ${
+          portalCliente?.corPortalTexto === 'dark' ? 'theme-dark-text' : ''
         }`}
         style={
           portalCliente?.corPortal
@@ -176,11 +186,74 @@ export function PortalClient() {
             : undefined
         }
       >
-        <div className="portal-header-eyebrow">Portal · Kliente 360</div>
-        <div className="portal-header-name">{portalCliente?.nome ?? ''}</div>
-        <div className="portal-header-sub">{headline}</div>
+        <div className="portal-headerbar-title">
+          <div className="portal-headerbar-eyebrow">Portal · Kliente 360</div>
+          <div className="portal-headerbar-name">{portalCliente?.nome ?? ''}</div>
+        </div>
+
+        <div className="portal-headerbar-filters">
+          <PortalFilterSelect
+            icon="folder"
+            label="Projeto"
+            value={kbProjeto}
+            options={projetos
+              .filter((p) => p.clienteId === effectiveCid && !p.arquivadoEm)
+              .map((p) => ({ v: p.id, label: p.nome }))}
+            onChange={setKbProjeto}
+          />
+          <PortalFilterSelect
+            icon="list-filter"
+            label="Subetapa"
+            value={kbSubetapa}
+            options={Object.entries(SUB_LABELS).map(([k, v]) => ({ v: k, label: v }))}
+            onChange={setKbSubetapa}
+          />
+          <PortalFilterSelect
+            icon="calendar"
+            label="Prazo"
+            value={kbPrazo}
+            options={[
+              { v: 'atrasadas', label: 'Atrasadas' },
+              { v: 'hoje', label: 'Hoje' },
+              { v: 'semana', label: 'Próximos 7d' },
+              { v: 'sem', label: 'Sem prazo' },
+            ]}
+            onChange={(v) => setKbPrazo(v as typeof kbPrazo)}
+          />
+          <PortalPriMultiSelect selected={kbPrio} onToggle={toggleKbPrio} />
+
+          <button
+            type="button"
+            className={`fselect clear ${kbActive === 0 ? 'is-empty' : ''}`}
+            onClick={
+              kbActive > 0
+                ? () => {
+                    setKbProjeto('');
+                    setKbSubetapa('');
+                    setKbPrazo('');
+                    PRIO_OPTIONS.forEach((p) => {
+                      if (kbPrio.has(p)) toggleKbPrio(p);
+                    });
+                  }
+                : undefined
+            }
+            disabled={kbActive === 0}
+            title={kbActive > 0 ? `Limpar ${kbActive} filtro${kbActive > 1 ? 's' : ''}` : 'Nenhum filtro aplicado'}
+            aria-label={kbActive > 0 ? `Limpar ${kbActive} filtros` : 'Sem filtros'}
+          >
+            <Icon name="x" size={14} className="ic" />
+            <span
+              className="font-mono"
+              style={{ visibility: kbActive > 0 ? 'visible' : 'hidden' }}
+              aria-hidden={kbActive === 0}
+            >
+              {kbActive > 0 ? kbActive : 0}
+            </span>
+          </button>
+        </div>
+
         {viewerRole !== ROLE.CLIENTE && (
-          <div className="portal-header-switch">
+          <div className="portal-headerbar-switch">
             <select
               className="portal-header-switch-sel"
               value={portalClienteId}
@@ -195,9 +268,12 @@ export function PortalClient() {
             </select>
           </div>
         )}
-        {/* Botão "+ Nova solicitação" foi movido pro header
-            (v1.03.216) · dispara o form via evento portal:new-task. */}
       </div>
+
+      {/* headline (sub-linha antiga) fica logo abaixo do header colorido */}
+      {headline && (
+        <div className="text-xs text-muted -mt-2">{headline}</div>
+      )}
 
       {showNewTask && effectiveCid && (
         <PortalNewTaskForm
@@ -262,14 +338,13 @@ export function PortalClient() {
           Filtros: projeto · subetapa · prazo · prioridade (multiselect). */}
       <PortalKanban
         tasks={portalTasks}
-        projetos={projetos.filter((p) => p.clienteId === effectiveCid && !p.arquivadoEm)}
         pessoasById={pessoasById}
         projetosById={projetosById}
         onOpenTask={openPortalTask}
-        kbProjeto={kbProjeto} setKbProjeto={setKbProjeto}
-        kbSubetapa={kbSubetapa} setKbSubetapa={setKbSubetapa}
-        kbPrazo={kbPrazo} setKbPrazo={setKbPrazo}
-        kbPrio={kbPrio} toggleKbPrio={toggleKbPrio}
+        kbProjeto={kbProjeto}
+        kbSubetapa={kbSubetapa}
+        kbPrazo={kbPrazo}
+        kbPrio={kbPrio}
       />
 
       {/* Listas de prioridade removidas (v1.03.217) · info agora vive
@@ -303,22 +378,18 @@ export function PortalClient() {
 
 interface PortalKanbanProps {
   tasks: Task[];
-  projetos: Array<{ id: string; nome: string }>;
   pessoasById: Map<string, { nome: string }>;
   projetosById: Map<string, { nome: string }>;
   onOpenTask: (t: Task) => void;
-  kbProjeto: string; setKbProjeto: (v: string) => void;
-  kbSubetapa: string; setKbSubetapa: (v: string) => void;
+  kbProjeto: string;
+  kbSubetapa: string;
   kbPrazo: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
-  setKbPrazo: (v: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem') => void;
   kbPrio: Set<string>;
-  toggleKbPrio: (p: string) => void;
 }
 
 function PortalKanban({
-  tasks, projetos, pessoasById, projetosById, onOpenTask,
-  kbProjeto, setKbProjeto, kbSubetapa, setKbSubetapa,
-  kbPrazo, setKbPrazo, kbPrio, toggleKbPrio,
+  tasks, pessoasById, projetosById, onOpenTask,
+  kbProjeto, kbSubetapa, kbPrazo, kbPrio,
 }: PortalKanbanProps) {
   const today = new Date().toISOString().slice(0, 10);
   const in7 = new Date();
@@ -359,74 +430,9 @@ function PortalKanban({
     return m;
   }, [filtered, today]);
 
-  const anyFilter = !!(kbProjeto || kbSubetapa || kbPrazo || kbPrio.size > 0);
-
   return (
     <div className="card overflow-hidden">
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2 md:px-4">
-        <select
-          className="inp text-xs"
-          value={kbProjeto}
-          onChange={(e) => setKbProjeto(e.target.value)}
-        >
-          <option value="">Projeto · todos</option>
-          {projetos.map((p) => (
-            <option key={p.id} value={p.id}>{p.nome}</option>
-          ))}
-        </select>
-        <select
-          className="inp text-xs"
-          value={kbSubetapa}
-          onChange={(e) => setKbSubetapa(e.target.value)}
-        >
-          <option value="">Subetapa · todas</option>
-          {Object.entries(SUB_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{v}</option>
-          ))}
-        </select>
-        <select
-          className="inp text-xs"
-          value={kbPrazo}
-          onChange={(e) => setKbPrazo(e.target.value as PortalKanbanProps['kbPrazo'])}
-        >
-          <option value="">Prazo · qualquer</option>
-          <option value="atrasadas">Atrasadas</option>
-          <option value="hoje">Hoje</option>
-          <option value="semana">Próximos 7d</option>
-          <option value="sem">Sem prazo</option>
-        </select>
-        <div className="flex items-center gap-1">
-          <span className="text-[11px] text-muted mr-1">Prioridade:</span>
-          {PRIO_OPTIONS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => toggleKbPrio(p)}
-              className={`pri pri-${p} ${kbPrio.has(p) ? '' : 'opacity-40'} cursor-pointer`}
-              aria-pressed={kbPrio.has(p)}
-              title={`Filtrar ${p}`}
-            >
-              <span className="pri-dot" />
-              {p}
-            </button>
-          ))}
-        </div>
-        {anyFilter && (
-          <button
-            type="button"
-            onClick={() => {
-              setKbProjeto(''); setKbSubetapa(''); setKbPrazo('');
-              PRIO_OPTIONS.forEach((p) => { if (kbPrio.has(p)) toggleKbPrio(p); });
-            }}
-            className="text-xs text-ink-soft hover:text-ink underline ml-auto"
-          >
-            Limpar
-          </button>
-        )}
-      </div>
-
-      {/* Colunas */}
+      {/* Filtros vivem no header colorido acima (v1.03.219) */}
       <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-line">
         {KANBAN_MACROS.map((col) => {
           const items = byMacro[col.key] ?? [];
@@ -490,6 +496,118 @@ function PortalKanban({
 // ─────────────────────────────────────────────────────────
 // PortalIaPlaceholder · seção com "em breve"
 // ─────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────
+// PortalFilterSelect · single-select droplist (reusa .fselect)
+// ─────────────────────────────────────────────────────────
+
+interface PortalFSProps {
+  icon?: Parameters<typeof Icon>[0]['name'];
+  label: string;
+  value: string;
+  options: ReadonlyArray<{ v: string; label: string }>;
+  onChange: (v: string) => void;
+}
+
+function PortalFilterSelect({ icon, label, value, options, onChange }: PortalFSProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useClickAway<HTMLSpanElement>(() => setOpen(false));
+  const cur = options.find((o) => o.v === value);
+  return (
+    <span className="fs-wrap" ref={ref}>
+      <button
+        type="button"
+        className={`fselect ${value ? 'on' : ''}`}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {icon && <Icon name={icon} size={14} className="ic" />}
+        <span>{value ? cur?.label ?? label : label}</span>
+        <Icon name="chevron-down" size={14} className="ic" />
+      </button>
+      {open && (
+        <div className="fmenu">
+          <button
+            type="button"
+            className={!value ? 'sel' : ''}
+            onClick={() => { onChange(''); setOpen(false); }}
+          >
+            <span className="grow">Todos</span>
+            {!value && <Icon name="check" size={14} />}
+          </button>
+          <div className="fmenu-div" />
+          {options.map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              className={value === o.v ? 'sel' : ''}
+              onClick={() => { onChange(o.v); setOpen(false); }}
+            >
+              <span className="grow">{o.label}</span>
+              {value === o.v && <Icon name="check" size={14} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// PortalPriMultiSelect · multiselect droplist pra P0-P3
+// ─────────────────────────────────────────────────────────
+
+function PortalPriMultiSelect({
+  selected,
+  onToggle,
+}: {
+  selected: Set<string>;
+  onToggle: (p: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useClickAway<HTMLSpanElement>(() => setOpen(false));
+  const count = selected.size;
+  const label =
+    count === 0
+      ? 'Prioridade'
+      : count === 1
+        ? Array.from(selected)[0]
+        : `Prioridade · ${count}`;
+  return (
+    <span className="fs-wrap" ref={ref}>
+      <button
+        type="button"
+        className={`fselect ${count > 0 ? 'on' : ''}`}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <Icon name="flag" size={14} className="ic" />
+        <span>{label}</span>
+        <Icon name="chevron-down" size={14} className="ic" />
+      </button>
+      {open && (
+        <div className="fmenu">
+          {PRIO_OPTIONS.map((p) => {
+            const on = selected.has(p);
+            return (
+              <button
+                key={p}
+                type="button"
+                className={on ? 'sel' : ''}
+                onClick={() => onToggle(p)}
+              >
+                <span className={`pri pri-${p} mr-2`} style={{ opacity: on ? 1 : 0.5 }}>
+                  <span className="pri-dot" />
+                  {p}
+                </span>
+                <span className="grow" />
+                {on && <Icon name="check" size={14} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </span>
+  );
+}
 
 function PortalIaPlaceholder({ title, hint }: { title: string; hint: string }) {
   return (

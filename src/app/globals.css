@@ -711,6 +711,54 @@ input[type="checkbox"] { accent-color: var(--brand); }
   font-size: 28px; line-height: 1.15; color: #fff; margin-top: var(--sp-2);
 }
 .portal-header-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: var(--sp-2); }
+
+/* Portal HeaderBar · v1.03.219
+   Layout: [ Nome cliente ] [filtros à direita] [switcher canto opcional]
+   Fundo da barra recebe cor do cliente inline (portalCliente.corPortal). */
+.portal-headerbar {
+  background: var(--header-portal); color: #fff;
+  border-radius: var(--r-lg); padding: var(--sp-4) var(--sp-5); border: 0;
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4);
+  position: relative;
+}
+.portal-headerbar-title { min-width: 0; flex: 1 1 auto; }
+.portal-headerbar-eyebrow {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.18em; text-transform: uppercase; color: rgba(255,255,255,0.55);
+}
+.portal-headerbar-name {
+  font-family: var(--font-sans); font-weight: 700;
+  font-size: 24px; line-height: 1.15; color: #fff; margin-top: 2px;
+}
+.portal-headerbar-filters {
+  display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  flex: 0 0 auto;
+}
+.portal-headerbar-switch { flex: 0 0 auto; }
+/* Fselect dentro do header colorido: garante fundo branco + texto ink
+   independente da cor de fundo do cliente. */
+.portal-headerbar .fselect {
+  background: #fff; color: var(--ink); border-color: rgba(0,0,0,0.08);
+}
+.portal-headerbar .fselect .ic { color: var(--ink-soft); }
+.portal-headerbar .fselect:hover:not(.is-disabled) { border-color: rgba(0,0,0,0.24); color: var(--ink); }
+.portal-headerbar .fselect.on {
+  background: var(--green-tint); color: var(--green); border-color: var(--green);
+}
+.portal-headerbar .fselect.on .ic { color: var(--green); }
+.portal-headerbar .fselect.clear { background: transparent; }
+.portal-headerbar .fselect.clear:not(.is-empty):not(:disabled) { color: #fff; }
+.portal-headerbar .fselect.clear:not(.is-empty):not(:disabled) .ic { color: #fff; }
+.portal-headerbar .fselect.clear.is-empty,
+.portal-headerbar .fselect.clear:disabled { color: rgba(255,255,255,0.4); }
+.portal-headerbar .fselect.clear.is-empty .ic,
+.portal-headerbar .fselect.clear:disabled .ic { color: rgba(255,255,255,0.4); }
+/* theme-dark-text: quando o header tem cor clara, texto do título vira
+   preto pra ter contraste (já herda; garante forte). */
+.portal-headerbar.theme-dark-text .portal-headerbar-eyebrow { color: rgba(0,0,0,0.55); }
+.portal-headerbar.theme-dark-text .portal-headerbar-name { color: #111; }
+.portal-headerbar.theme-dark-text .fselect.clear:not(.is-empty):not(:disabled) { color: #111; }
+.portal-headerbar.theme-dark-text .fselect.clear:not(.is-empty):not(:disabled) .ic { color: #111; }
 /* alertas portal */
 .portal-alert {
   display: flex; align-items: flex-start; gap: var(--sp-4);
