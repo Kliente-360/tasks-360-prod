@@ -20,12 +20,23 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '@/lib/data-store';
-import { ROLE, STATUS } from '@/lib/task-constants';
+import { ROLE, STATUS, SUB_LABELS, SUB_TO_MACRO } from '@/lib/task-constants';
+import { atrasada as isAtrasada } from '@/lib/task-utils';
 import { fmtDate } from '@/lib/format';
 import type { Task } from '@/lib/types';
 import { usePortalData, type PortalCards } from './use-portal-data';
 import { PortalTaskModal } from './portal-task-modal';
 import { PortalNewTaskForm } from './portal-new-task-form';
+
+/** 4 colunas macro do Kanban do Portal (jul/2026 · v1.03.216). */
+const KANBAN_MACROS = [
+  { key: 'backlog',   label: 'Backlog',    tone: 'muted' },
+  { key: 'andamento', label: 'Em andamento', tone: 'brand' },
+  { key: 'bloqueado', label: 'Bloqueado',  tone: 'warn' },
+  { key: 'concluido', label: 'Concluído',  tone: 'success' },
+] as const;
+
+const PRIO_OPTIONS = ['P0', 'P1', 'P2', 'P3'] as const;
 
 const LS_KEY = 'kliente360-portal-cliente';
 
@@ -84,13 +95,33 @@ export function PortalClient() {
     [clientes, effectiveCid],
   );
 
-  const { cards, metrics, alerts, headline } = usePortalData(effectiveCid);
+  const { portalTasks, cards, metrics, alerts, headline } = usePortalData(effectiveCid);
 
   // Modal state
   const [openTask, setOpenTask] = useState<Task | null>(null);
   const closeModal = () => setOpenTask(null);
-  // 3.D · estado do form "Nova solicitação"
+  // 3.D · estado do form "Nova solicitação" · abre via evento
+  // `portal:new-task` disparado pelo botão + Solicitação do header.
   const [showNewTask, setShowNewTask] = useState(false);
+  useEffect(() => {
+    const handler = () => setShowNewTask(true);
+    window.addEventListener('portal:new-task', handler);
+    return () => window.removeEventListener('portal:new-task', handler);
+  }, []);
+
+  // Filtros do Kanban do portal
+  const [kbProjeto, setKbProjeto] = useState('');
+  const [kbSubetapa, setKbSubetapa] = useState('');
+  const [kbPrazo, setKbPrazo] = useState<'' | 'atrasadas' | 'hoje' | 'semana' | 'sem'>('');
+  const [kbPrio, setKbPrio] = useState<Set<string>>(new Set());
+  const toggleKbPrio = (p: string) => {
+    setKbPrio((cur) => {
+      const next = new Set(cur);
+      if (next.has(p)) next.delete(p);
+      else next.add(p);
+      return next;
+    });
+  };
 
   const openPortalTask = (t: Task) => {
     // Defesa em profundidade: garante que a task pertence ao cliente
@@ -178,16 +209,8 @@ export function PortalClient() {
             </select>
           </div>
         )}
-        {/* 3.D · botão "Nova solicitação" — cliente abre task que cai
-            na Triagem do time (não direto no Backlog). */}
-        <button
-          type="button"
-          onClick={() => setShowNewTask(true)}
-          className="absolute right-3 bottom-3 md:right-5 md:bottom-5 px-3 py-2 rounded-md text-sm font-medium shadow-sm"
-          style={{ background: 'rgba(255,255,255,0.92)', color: 'var(--brand-dark)' }}
-        >
-          + Nova solicitação
-        </button>
+        {/* Botão "+ Nova solicitação" foi movido pro header
+            (v1.03.216) · dispara o form via evento portal:new-task. */}
       </div>
 
       {showNewTask && effectiveCid && (
@@ -212,168 +235,58 @@ export function PortalClient() {
         </div>
       )}
 
-      {/* 3. KPIs */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="portal-kpi">
-          <div className="portal-kpi-label">Entregues este mês</div>
-          <div className="portal-kpi-value">{metrics.mesAtual}</div>
-          {metrics.mesAnterior > 0 && (
-            <div className="portal-kpi-delta">
-              <span
-                className={
-                  metrics.mesAtual >= metrics.mesAnterior
-                    ? 'text-[color:var(--green)]'
-                    : 'text-ink-soft'
-                }
-              >
-                {(metrics.mesAtual >= metrics.mesAnterior ? '↑' : '↓') +
-                  ' vs ' +
-                  metrics.mesAnterior +
-                  ' no mês anterior'}
-              </span>
+      {/* 3. KPIs · alinhados com os do Backlog (v1.03.216).
+             Total · Backlog · Em andamento · Bloqueadas · Atrasadas */}
+      {(() => {
+        const openTasks = portalTasks.filter((t) => t.status !== STATUS.CONCLUIDO);
+        const kpi = {
+          total: openTasks.length,
+          backlog: openTasks.filter((t) => t.status === 'backlog').length,
+          andamento: openTasks.filter((t) => t.status === 'andamento').length,
+          bloqueadas: openTasks.filter((t) => t.status === 'bloqueado').length,
+          atrasadas: openTasks.filter((t) => isAtrasada(t)).length,
+        };
+        return (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div className="portal-kpi">
+              <div className="portal-kpi-label">Total ativas</div>
+              <div className="portal-kpi-value">{kpi.total}</div>
             </div>
-          )}
-          {metrics.mesAnterior === 0 && metrics.mesAtual === 0 && (
-            <div className="portal-kpi-delta text-muted">Sem histórico recente.</div>
-          )}
-        </div>
-        <div className="portal-kpi">
-          <div className="portal-kpi-label">Em andamento</div>
-          <div className="portal-kpi-value">{cards.emAndamento.length}</div>
-          <div className="portal-kpi-delta text-muted">
-            {metrics.totalAtivas} ativa(s) no total
+            <div className="portal-kpi">
+              <div className="portal-kpi-label">Backlog</div>
+              <div className="portal-kpi-value">{kpi.backlog}</div>
+            </div>
+            <div className="portal-kpi">
+              <div className="portal-kpi-label">Em andamento</div>
+              <div className="portal-kpi-value">{kpi.andamento}</div>
+            </div>
+            <div className={`portal-kpi ${kpi.bloqueadas > 0 ? 'portal-kpi-danger' : ''}`}>
+              <div className="portal-kpi-label">Bloqueadas</div>
+              <div className="portal-kpi-value">{kpi.bloqueadas}</div>
+            </div>
+            <div className={`portal-kpi ${kpi.atrasadas > 0 ? 'portal-kpi-danger' : ''}`}>
+              <div className="portal-kpi-label">Atrasadas</div>
+              <div className="portal-kpi-value">{kpi.atrasadas}</div>
+            </div>
           </div>
-        </div>
-        <div
-          className={`portal-kpi ${cards.aguardando.length > 0 ? 'portal-kpi-danger' : ''}`}
-        >
-          <div className="portal-kpi-label">Aguardando você</div>
-          <div className="portal-kpi-value">{cards.aguardando.length}</div>
-          {cards.aguardando.length === 0 && (
-            <div className="portal-kpi-delta">Nada pendente.</div>
-          )}
-          {cards.aguardando.length > 0 && metrics.aguardandoAgingMax > 0 && (
-            <div className="portal-kpi-delta">
-              +{metrics.aguardandoAgingMax}d na mais antiga
-            </div>
-          )}
-        </div>
-        <div className="portal-kpi">
-          <div className="portal-kpi-label">Próxima entrega</div>
-          {metrics.diasAteProxima != null ? (
-            <div className="portal-kpi-value">
-              {metrics.diasAteProxima === 0
-                ? 'hoje'
-                : metrics.diasAteProxima === 1
-                  ? 'amanhã'
-                  : `${metrics.diasAteProxima}d`}
-            </div>
-          ) : (
-            <div className="portal-kpi-value text-muted">—</div>
-          )}
-          {metrics.proximaEntrega && (
-            <div className="portal-kpi-delta truncate">{metrics.proximaEntrega.titulo}</div>
-          )}
-        </div>
-      </div>
+        );
+      })()}
 
-      {/* 4. STORYTELLING (desktop only — mobile foca em header + KPIs + alerts + lista) */}
-      <div className="hidden md:grid grid-cols-1 gap-3 md:grid-cols-12 md:gap-4">
-        {/* Sparkline 6 meses */}
-        <div className="card p-4 md:col-span-5 md:p-5">
-          <div className="mb-1 flex items-baseline justify-between">
-            <div className="font-brand text-sm font-semibold">Ritmo de entregas</div>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
-              últimos 6 meses
-            </span>
-          </div>
-          {metrics.mediaSemestre > 0 ? (
-            <div className="mb-3 text-xs text-muted">
-              média de {metrics.mediaSemestre.toFixed(1)} entregas/mês
-            </div>
-          ) : (
-            <div className="mb-3 text-xs italic text-muted">
-              Ainda construindo histórico de entregas.
-            </div>
-          )}
-          <div className="portal-bars">
-            {metrics.mesesCounts.map((count, i) => (
-              <div key={i} className="portal-bar-col">
-                <div className="portal-bar-value">{count}</div>
-                <div className="portal-bar-track">
-                  <div
-                    className={`portal-bar-fill ${
-                      i === metrics.mesesCounts.length - 1 ? 'portal-bar-fill-current' : ''
-                    }`}
-                    style={{ height: `${(count / metrics.entregasMaxMes) * 100}%` }}
-                  />
-                </div>
-                <div className="portal-bar-label">{metrics.mesesLabels[i]}</div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* 4. KANBAN 4 macros · substitui os gráficos antigos (v1.03.216).
+          Filtros: projeto · subetapa · prazo · prioridade (multiselect). */}
+      <PortalKanban
+        tasks={portalTasks}
+        projetos={projetos.filter((p) => p.clienteId === effectiveCid && !p.arquivadoEm)}
+        pessoasById={pessoasById}
+        projetosById={projetosById}
+        onOpenTask={openPortalTask}
+        kbProjeto={kbProjeto} setKbProjeto={setKbProjeto}
+        kbSubetapa={kbSubetapa} setKbSubetapa={setKbSubetapa}
+        kbPrazo={kbPrazo} setKbPrazo={setKbPrazo}
+        kbPrio={kbPrio} toggleKbPrio={toggleKbPrio}
+      />
 
-        {/* Distribuição por projeto */}
-        {metrics.distribuicao.length > 0 && (
-          <div className="card p-4 md:col-span-4 md:p-5">
-            <div className="mb-3 flex items-baseline justify-between">
-              <div className="font-brand text-sm font-semibold">Onde a energia está</div>
-              <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
-                ativas por projeto
-              </span>
-            </div>
-            <div className="space-y-2.5">
-              {metrics.distribuicao.map((d) => (
-                <div key={d.projetoId}>
-                  <div className="mb-1 flex items-baseline justify-between gap-2">
-                    <span className="truncate text-sm text-ink">{d.nome}</span>
-                    <span className="shrink-0 font-mono text-xs text-muted">{d.count}</span>
-                  </div>
-                  <div className="portal-dist-track">
-                    <div
-                      className="portal-dist-fill"
-                      style={{ width: `${(d.count / metrics.distribuicaoTotal) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Lead time + total concluídas */}
-        <div className="card flex flex-col p-4 md:col-span-3 md:p-5">
-          <div className="mb-1 flex items-baseline justify-between">
-            <div className="font-brand text-sm font-semibold">Tempo médio</div>
-            <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
-              90d
-            </span>
-          </div>
-          <div className="mb-3 text-xs text-muted">do início ao fim</div>
-          {metrics.leadTimeMedio != null ? (
-            <div>
-              <div className="font-brand text-3xl font-bold text-ink md:text-4xl">
-                <span>{metrics.leadTimeMedio}</span>
-                <span className="ml-1 text-base font-normal text-muted">dias</span>
-              </div>
-              <div className="mt-1 font-mono text-[11px] text-muted">
-                amostra: {metrics.leadTimeAmostra} tarefa(s)
-              </div>
-            </div>
-          ) : (
-            <div className="text-sm italic text-muted">
-              Sem entregas suficientes nos últimos 90 dias pra calcular.
-            </div>
-          )}
-          <div className="mt-auto border-t border-line pt-3 text-xs text-muted">
-            Total entregue ·{' '}
-            <span className="font-mono text-ink-soft">{metrics.totalConcluidas}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 5. LISTAS */}
+      {/* 5. LISTAS de prioridade */}
       {CARDS.map((card) => {
         const items = cards[card.key];
         const isDanger = card.tone === 'danger' && items.length > 0;
@@ -444,11 +357,232 @@ export function PortalClient() {
         );
       })}
 
+      {/* 6. Seções IA · placeholders (v1.03.216).
+             Conteúdo virá de rotinas agendadas depois. */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+        <PortalIaPlaceholder
+          title="Entregas de valor no mês anterior"
+          hint="Sumário narrativo do que foi entregue e do impacto gerado."
+        />
+        <PortalIaPlaceholder
+          title="Riscos no backlog atual"
+          hint="Análise de o que pode atrasar ou bloquear as próximas entregas."
+        />
+      </div>
+
       <PortalTaskModal
         task={openTask}
         clienteNome={portalCliente?.nome ?? 'cliente'}
         onClose={closeModal}
       />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// PortalKanban · 4 colunas macro + filtros
+// ─────────────────────────────────────────────────────────
+
+interface PortalKanbanProps {
+  tasks: Task[];
+  projetos: Array<{ id: string; nome: string }>;
+  pessoasById: Map<string, { nome: string }>;
+  projetosById: Map<string, { nome: string }>;
+  onOpenTask: (t: Task) => void;
+  kbProjeto: string; setKbProjeto: (v: string) => void;
+  kbSubetapa: string; setKbSubetapa: (v: string) => void;
+  kbPrazo: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
+  setKbPrazo: (v: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem') => void;
+  kbPrio: Set<string>;
+  toggleKbPrio: (p: string) => void;
+}
+
+function PortalKanban({
+  tasks, projetos, pessoasById, projetosById, onOpenTask,
+  kbProjeto, setKbProjeto, kbSubetapa, setKbSubetapa,
+  kbPrazo, setKbPrazo, kbPrio, toggleKbPrio,
+}: PortalKanbanProps) {
+  const today = new Date().toISOString().slice(0, 10);
+  const in7 = new Date();
+  in7.setDate(in7.getDate() + 7);
+  const in7Iso = in7.toISOString().slice(0, 10);
+
+  const filtered = useMemo(() => {
+    return tasks.filter((t) => {
+      if (kbProjeto && t.projetoId !== kbProjeto) return false;
+      if (kbSubetapa && t.subetapa !== kbSubetapa) return false;
+      if (kbPrio.size > 0 && !kbPrio.has(t.prioridade || '')) return false;
+      if (kbPrazo === 'atrasadas' && !(t.prazo && t.status !== STATUS.CONCLUIDO && t.prazo < today)) return false;
+      if (kbPrazo === 'hoje' && t.prazo !== today) return false;
+      if (kbPrazo === 'semana' && !(t.prazo && t.prazo >= today && t.prazo <= in7Iso)) return false;
+      if (kbPrazo === 'sem' && t.prazo) return false;
+      return true;
+    });
+  }, [tasks, kbProjeto, kbSubetapa, kbPrio, kbPrazo, today, in7Iso]);
+
+  const byMacro = useMemo(() => {
+    const m: Record<string, Task[]> = { backlog: [], andamento: [], bloqueado: [], concluido: [] };
+    for (const t of filtered) {
+      const macro = SUB_TO_MACRO[t.subetapa] ?? t.status;
+      if (m[macro]) m[macro].push(t);
+    }
+    // ordena cada coluna: atrasadas primeiro → prio → prazo asc
+    const pr: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3, '': 9 };
+    for (const k of Object.keys(m)) {
+      m[k].sort((a, b) => {
+        const aa = a.prazo && a.prazo < today && a.status !== STATUS.CONCLUIDO ? 0 : 1;
+        const bb = b.prazo && b.prazo < today && b.status !== STATUS.CONCLUIDO ? 0 : 1;
+        if (aa !== bb) return aa - bb;
+        const pd = (pr[a.prioridade] ?? 9) - (pr[b.prioridade] ?? 9);
+        if (pd !== 0) return pd;
+        return (a.prazo || '9999') < (b.prazo || '9999') ? -1 : 1;
+      });
+    }
+    return m;
+  }, [filtered, today]);
+
+  const anyFilter = !!(kbProjeto || kbSubetapa || kbPrazo || kbPrio.size > 0);
+
+  return (
+    <div className="card overflow-hidden">
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2 md:px-4">
+        <select
+          className="inp text-xs"
+          value={kbProjeto}
+          onChange={(e) => setKbProjeto(e.target.value)}
+        >
+          <option value="">Projeto · todos</option>
+          {projetos.map((p) => (
+            <option key={p.id} value={p.id}>{p.nome}</option>
+          ))}
+        </select>
+        <select
+          className="inp text-xs"
+          value={kbSubetapa}
+          onChange={(e) => setKbSubetapa(e.target.value)}
+        >
+          <option value="">Subetapa · todas</option>
+          {Object.entries(SUB_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+        <select
+          className="inp text-xs"
+          value={kbPrazo}
+          onChange={(e) => setKbPrazo(e.target.value as PortalKanbanProps['kbPrazo'])}
+        >
+          <option value="">Prazo · qualquer</option>
+          <option value="atrasadas">Atrasadas</option>
+          <option value="hoje">Hoje</option>
+          <option value="semana">Próximos 7d</option>
+          <option value="sem">Sem prazo</option>
+        </select>
+        <div className="flex items-center gap-1">
+          <span className="text-[11px] text-muted mr-1">Prioridade:</span>
+          {PRIO_OPTIONS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => toggleKbPrio(p)}
+              className={`pri pri-${p} ${kbPrio.has(p) ? '' : 'opacity-40'} cursor-pointer`}
+              aria-pressed={kbPrio.has(p)}
+              title={`Filtrar ${p}`}
+            >
+              <span className="pri-dot" />
+              {p}
+            </button>
+          ))}
+        </div>
+        {anyFilter && (
+          <button
+            type="button"
+            onClick={() => {
+              setKbProjeto(''); setKbSubetapa(''); setKbPrazo('');
+              PRIO_OPTIONS.forEach((p) => { if (kbPrio.has(p)) toggleKbPrio(p); });
+            }}
+            className="text-xs text-ink-soft hover:text-ink underline ml-auto"
+          >
+            Limpar
+          </button>
+        )}
+      </div>
+
+      {/* Colunas */}
+      <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-line">
+        {KANBAN_MACROS.map((col) => {
+          const items = byMacro[col.key] ?? [];
+          return (
+            <div key={col.key} className="min-w-0">
+              <div className="px-3 py-2 md:px-4 border-b border-line flex items-center justify-between bg-[var(--surface-3)]">
+                <span className="text-xs font-semibold text-ink">{col.label}</span>
+                <span className="font-mono text-[10px] text-muted">{items.length}</span>
+              </div>
+              <div className="p-2 space-y-1.5 min-h-[80px]">
+                {items.map((t) => {
+                  const proj = projetosById.get(t.projetoId)?.nome ?? '';
+                  const pess = t.pessoaId
+                    ? (pessoasById.get(t.pessoaId)?.nome ?? '').split(' ')[0]
+                    : '';
+                  const atras = !!(t.prazo && t.prazo < today && t.status !== STATUS.CONCLUIDO);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => onOpenTask(t)}
+                      className="w-full text-left rounded-md border border-line bg-elev hover:bg-brand-tint p-2 transition-colors"
+                    >
+                      <div className="flex items-start gap-2 mb-1">
+                        {t.prioridade && (
+                          <span className={`pri pri-${t.prioridade} shrink-0`}>
+                            <span className="pri-dot" />
+                            {t.prioridade}
+                          </span>
+                        )}
+                        <span className="text-xs font-medium text-ink break-words">
+                          {t.titulo}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-muted font-mono">
+                        {proj}
+                        {pess && ` · ${pess}`}
+                        {t.prazo && (
+                          <span className={atras ? ' text-[var(--p0)] font-semibold' : ''}>
+                            {' · '}{fmtDate(t.prazo)}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+                {items.length === 0 && (
+                  <div className="text-center py-4 text-[10px] italic text-muted">
+                    —
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// PortalIaPlaceholder · seção com "em breve"
+// ─────────────────────────────────────────────────────────
+
+function PortalIaPlaceholder({ title, hint }: { title: string; hint: string }) {
+  return (
+    <div className="card p-4 md:p-5 border-dashed">
+      <div className="flex items-baseline justify-between mb-2">
+        <div className="font-brand text-sm font-semibold text-ink">{title}</div>
+        <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
+          em breve
+        </span>
+      </div>
+      <div className="text-xs text-muted italic">{hint}</div>
     </div>
   );
 }

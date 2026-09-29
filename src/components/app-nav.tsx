@@ -19,7 +19,7 @@ import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.215';
+export const APP_VERSION = 'v1.03.216';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -100,11 +100,16 @@ export function AppNav() {
 
           {/* Actions */}
           <div className="hdr-actions">
-            {/* Cluster 1: Cronômetro · desktop only */}
-            <div className="hidden md:flex items-center gap-1">
-              <TimerButton />
-            </div>
-            <span className="hdr-sep hidden md:block" />
+            {/* Cluster 1: Cronômetro · desktop only · cliente NÃO tem
+                (portal-only role · sem timesheet). */}
+            {viewerRole !== 'cliente' && (
+              <>
+                <div className="hidden md:flex items-center gap-1">
+                  <TimerButton />
+                </div>
+                <span className="hdr-sep hidden md:block" />
+              </>
+            )}
 
             {/* Cluster 2: utilitários globais · desktop only */}
             <div className="hidden md:contents">
@@ -116,15 +121,23 @@ export function AppNav() {
             <span className="hdr-sep hidden md:block" />
 
             {/* Cluster 3: criar + notif + avatar */}
+            {/* + Tarefa (staff) / + Solicitação (cliente) · dispara
+                PortalNewTaskForm via CustomEvent quando cliente. */}
             <button
               type="button"
-              onClick={openNew}
+              onClick={() => {
+                if (viewerRole === 'cliente') {
+                  window.dispatchEvent(new CustomEvent('portal:new-task'));
+                } else {
+                  openNew();
+                }
+              }}
               className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[color:var(--green)] text-white text-xs font-medium hover:bg-[color:var(--green-hover)] transition-colors"
-              title="Nova tarefa"
-              aria-label="Nova tarefa"
+              title={viewerRole === 'cliente' ? 'Nova solicitação' : 'Nova tarefa'}
+              aria-label={viewerRole === 'cliente' ? 'Nova solicitação' : 'Nova tarefa'}
             >
               <Icon name="plus" size={14} />
-              Tarefa
+              {viewerRole === 'cliente' ? 'Solicitação' : 'Tarefa'}
             </button>
             <ThemeIconButton className="md:hidden" />
             <NotifBell />
