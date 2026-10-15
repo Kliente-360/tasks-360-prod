@@ -203,17 +203,8 @@ export function usePortalData(clienteId: string): PortalData {
 
     // ---- portalAlerts ----
     const alerts: PortalAlert[] = [];
-    if (aguardandoAgingMax >= 5) {
-      alerts.push({
-        severity: 'alta',
-        icon: '⏳',
-        titulo:
-          aguardando.length === 1
-            ? `Tem um item aguardando sua resposta há ${aguardandoAgingMax} dias`
-            : `${aguardando.length} itens aguardando sua resposta, o mais antigo há ${aguardandoAgingMax} dias`,
-        detalhe: 'Responder destrava o time pra seguir.',
-      });
-    }
+    // Alerta "N itens aguardando sua resposta" virou o PortalAcaoBanner
+    // (lista os itens). Removido daqui pra não duplicar.
     // Alerts "Entrega prevista pra hoje/amanhã" e "Mês forte" removidos
     // em v1.03.218 · info já vive nos KPIs + Kanban.
     if (mesAtual === 0 && mesAnterior > 0 && totalAtivas > 0 && new Date().getDate() >= 15) {

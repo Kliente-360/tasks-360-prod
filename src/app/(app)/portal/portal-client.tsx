@@ -2,25 +2,22 @@
 
 /**
  * Portal cliente · UI principal.
- * Portado de index.html (section x-show="tab==='portal'", linhas 1707-1890)
- * + lib/views/portal.js + lib/views/utilities.js (effectivePortalClienteId).
  *
- * Composição:
- * - Setup banner (admin/interno escolhem cliente · cliente não-vinculado vê aviso)
- * - Header verde Kliente com switch discreto (admin/interno)
- * - Alertas amigáveis
- * - 4 KPIs (entregues mês, andamento, aguardando você, próxima entrega)
- * - Storytelling: ritmo 6 meses + distribuição por projeto + lead time
- * - 4 listas (aguardando, andamento, próximas, recentes)
- * - Modal de task ao clicar num card
+ * Composição (out/2026):
+ * - Barra do cliente (cor do cliente): nome + visão Kanban/Lista + busca +
+ *   filtros (projeto, prazo, prioridade multiselect) + switcher (admin/interno)
+ * - Banner "aguardando você" (homologar entrega / responder pendência)
+ * - Alertas amigáveis · 5 KPIs (mesmos do Backlog)
+ * - Kanban 5 colunas ou Lista · concluídas só do mês anterior em diante
+ * - Caixas de IA (entregas de valor · riscos)
  *
  * Cliente externo (role='cliente'): cid vem de currentPessoa.cliente_id, sem
  * opção de simular. Admin/interno: cid livre, persistido em localStorage.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useData } from '@/lib/data-store';
-import { ROLE, STATUS, SUB_LABELS, SUB_TO_MACRO } from '@/lib/task-constants';
+import { ROLE, STATUS, SUB_LABELS } from '@/lib/task-constants';
 import { atrasada as isAtrasada } from '@/lib/task-utils';
 import { fmtDate } from '@/lib/format';
 import type { Task } from '@/lib/types';
@@ -30,15 +27,56 @@ import { PortalNewTaskForm } from './portal-new-task-form';
 import { Icon } from '@/components/icons';
 import { useClickAway } from '@/lib/use-click-away';
 
-/** 4 colunas macro do Kanban do Portal (jul/2026 · v1.03.216). */
-const KANBAN_MACROS = [
-  { key: 'backlog',   label: 'Backlog',    tone: 'muted' },
-  { key: 'andamento', label: 'Em andamento', tone: 'brand' },
-  { key: 'bloqueado', label: 'Bloqueado',  tone: 'warn' },
-  { key: 'concluido', label: 'Concluído',  tone: 'success' },
+/** 5 colunas do Kanban do Portal. Homologação e Bloqueado são onde o
+ *  cliente costuma ter ação pendente. Etapas pós-homologação (revisão,
+ *  pronto p/ produção, implantação) ficam em "Em desenvolvimento" — a
+ *  subetapa no card diz exatamente onde está. */
+const PORTAL_COLS = [
+  { key: 'backlog', label: 'Backlog', subs: ['backlog', 'priorizado', 'em_definicao', 'escopo_definido'] },
+  { key: 'desenvolvimento', label: 'Em desenvolvimento', subs: ['em_desenvolvimento', 'em_revisao', 'pronto_producao', 'em_implantacao'] },
+  { key: 'homologacao', label: 'Em homologação', subs: ['em_homologacao'] },
+  { key: 'bloqueado', label: 'Bloqueado', subs: ['bloqueado'] },
+  { key: 'concluido', label: 'Concluído', subs: ['concluido'] },
 ] as const;
+type PortalColKey = (typeof PORTAL_COLS)[number]['key'];
+const SUB_TO_COL: Record<string, PortalColKey> = Object.fromEntries(
+  PORTAL_COLS.flatMap((c) => c.subs.map((s) => [s, c.key])),
+);
 
 const PRIO_OPTIONS = ['P0', 'P1', 'P2', 'P3'] as const;
+const PRIO_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3, '': 9 };
+
+type PrazoFiltro = '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
+
+/** Cliente tem ação pendente: homologar entrega ou responder bloqueio. */
+function acaoDoCliente(t: Task): 'homologar' | 'responder' | null {
+  if (t.subetapa === 'em_homologacao' && t.aprovadoEm == null) return 'homologar';
+  if (t.subetapa === 'bloqueado' && t.bloqueadoPor === 'cliente') return 'responder';
+  return null;
+}
+
+/** Concluídas visíveis: só do mês anterior em diante. */
+function inicioMesAnteriorMs(): number {
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime();
+}
+function concluidaEmMs(t: Task): number {
+  return t.statusEm || t.aprovadoEm || t.subetapaEm || 0;
+}
+
+/** Ordem padrão: ação do cliente → atrasadas → prioridade → prazo. */
+function compararPortal(a: Task, b: Task, today: string): number {
+  const ac = (acaoDoCliente(a) ? 0 : 1) - (acaoDoCliente(b) ? 0 : 1);
+  if (ac !== 0) return ac;
+  const aa = a.prazo && a.prazo < today && a.status !== STATUS.CONCLUIDO ? 0 : 1;
+  const bb = b.prazo && b.prazo < today && b.status !== STATUS.CONCLUIDO ? 0 : 1;
+  if (aa !== bb) return aa - bb;
+  const pd = (PRIO_RANK[a.prioridade] ?? 9) - (PRIO_RANK[b.prioridade] ?? 9);
+  if (pd !== 0) return pd;
+  return (a.prazo || '9999') < (b.prazo || '9999') ? -1 : 1;
+}
+
+const VIEW_LS_KEY = 'kliente360-portal-view';
 
 const LS_KEY = 'kliente360-portal-cliente';
 
@@ -97,10 +135,34 @@ export function PortalClient() {
     return () => window.removeEventListener('portal:new-task', handler);
   }, []);
 
-  // Filtros do Kanban do portal
+  // Visão Kanban × Lista (preferência por navegador)
+  const [view, setViewState] = useState<'kanban' | 'lista'>('kanban');
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(VIEW_LS_KEY);
+      if (v === 'lista' || v === 'kanban') setViewState(v);
+    } catch {
+      /* noop */
+    }
+  }, []);
+  const setView = (v: 'kanban' | 'lista') => {
+    setViewState(v);
+    try {
+      localStorage.setItem(VIEW_LS_KEY, v);
+    } catch {
+      /* noop */
+    }
+  };
+
+  // Filtros (mesma busca do Backlog · debounce 150ms)
+  const [qDraft, setQDraft] = useState('');
+  const [q, setQ] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => setQ(qDraft), 150);
+    return () => clearTimeout(id);
+  }, [qDraft]);
   const [kbProjeto, setKbProjeto] = useState('');
-  const [kbSubetapa, setKbSubetapa] = useState('');
-  const [kbPrazo, setKbPrazo] = useState<'' | 'atrasadas' | 'hoje' | 'semana' | 'sem'>('');
+  const [kbPrazo, setKbPrazo] = useState<PrazoFiltro>('');
   const [kbPrio, setKbPrio] = useState<Set<string>>(new Set());
   const toggleKbPrio = (p: string) => {
     setKbPrio((cur) => {
@@ -111,10 +173,16 @@ export function PortalClient() {
     });
   };
   const kbActive =
+    (qDraft ? 1 : 0) +
     (kbProjeto ? 1 : 0) +
-    (kbSubetapa ? 1 : 0) +
     (kbPrazo ? 1 : 0) +
     (kbPrio.size > 0 ? 1 : 0);
+  const clearFilters = () => {
+    setQDraft('');
+    setKbProjeto('');
+    setKbPrazo('');
+    setKbPrio(new Set());
+  };
 
   const openPortalTask = (t: Task) => {
     // Defesa em profundidade: garante que a task pertence ao cliente
@@ -129,6 +197,55 @@ export function PortalClient() {
   // Lookups
   const projetosById = useMemo(() => new Map(projetos.map((p) => [p.id, p])), [projetos]);
   const pessoasById = useMemo(() => new Map(pessoas.map((p) => [p.id, p])), [pessoas]);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Tasks visíveis no Kanban/Lista: filtros + concluídas só do mês
+  // anterior em diante.
+  const visibleTasks = useMemo(() => {
+    const qq = q.trim().toLowerCase();
+    const in7 = new Date();
+    in7.setDate(in7.getDate() + 7);
+    const in7Iso = in7.toISOString().slice(0, 10);
+    const cutoff = inicioMesAnteriorMs();
+    return portalTasks
+      .filter((t) => {
+        if (t.status === STATUS.CONCLUIDO && concluidaEmMs(t) < cutoff) return false;
+        if (qq) {
+          const hay = [
+            t.titulo,
+            t.descricao ?? '',
+            projetosById.get(t.projetoId)?.nome ?? '',
+            pessoasById.get(t.pessoaId)?.nome ?? '',
+            t.prioridade,
+            SUB_LABELS[t.subetapa] ?? t.subetapa,
+          ].join(' ').toLowerCase();
+          if (!hay.includes(qq)) return false;
+        }
+        if (kbProjeto && t.projetoId !== kbProjeto) return false;
+        if (kbPrio.size > 0 && !kbPrio.has(t.prioridade || '')) return false;
+        if (kbPrazo === 'atrasadas' && !(t.prazo && t.status !== STATUS.CONCLUIDO && t.prazo < today)) return false;
+        if (kbPrazo === 'hoje' && t.prazo !== today) return false;
+        if (kbPrazo === 'semana' && !(t.prazo && t.prazo >= today && t.prazo <= in7Iso)) return false;
+        if (kbPrazo === 'sem' && t.prazo) return false;
+        return true;
+      })
+      .sort((a, b) => compararPortal(a, b, today));
+  }, [portalTasks, q, kbProjeto, kbPrio, kbPrazo, today, projetosById, pessoasById]);
+
+  // Itens com ação do cliente (independe dos filtros) · alimentam o banner
+  const acaoItems = useMemo(
+    () =>
+      portalTasks
+        .filter((t) => acaoDoCliente(t))
+        .sort((a, b) => (a.subetapaEm || 0) - (b.subetapaEm || 0)),
+    [portalTasks],
+  );
+
+  // Modal lê a versão viva da store (reflete aprovação na hora)
+  const liveOpenTask = openTask
+    ? portalTasks.find((t) => t.id === openTask.id) ?? openTask
+    : null;
 
   // ---- Setup banner (sem cliente selecionado) ----
   if (!effectiveCid) {
@@ -192,6 +309,35 @@ export function PortalClient() {
         </div>
 
         <div className="portal-headerbar-filters">
+          <div className="view-toggle view-toggle-icons" role="tablist" aria-label="Visão">
+            <button
+              type="button"
+              className={view === 'kanban' ? 'active' : ''}
+              onClick={() => setView('kanban')}
+              title="Visão Kanban"
+              aria-label="Visão Kanban"
+            >
+              <Icon name="columns" size={15} />
+            </button>
+            <button
+              type="button"
+              className={view === 'lista' ? 'active' : ''}
+              onClick={() => setView('lista')}
+              title="Visão lista"
+              aria-label="Visão lista"
+            >
+              <Icon name="list" size={15} />
+            </button>
+          </div>
+          <label className="search">
+            <Icon name="search" size={14} className="ic" />
+            <input
+              type="text"
+              value={qDraft}
+              placeholder="Buscar"
+              onChange={(e) => setQDraft(e.target.value)}
+            />
+          </label>
           <PortalFilterSelect
             icon="folder"
             label="Projeto"
@@ -200,13 +346,6 @@ export function PortalClient() {
               .filter((p) => p.clienteId === effectiveCid && !p.arquivadoEm)
               .map((p) => ({ v: p.id, label: p.nome }))}
             onChange={setKbProjeto}
-          />
-          <PortalFilterSelect
-            icon="list-filter"
-            label="Subetapa"
-            value={kbSubetapa}
-            options={Object.entries(SUB_LABELS).map(([k, v]) => ({ v: k, label: v }))}
-            onChange={setKbSubetapa}
           />
           <PortalFilterSelect
             icon="calendar"
@@ -218,25 +357,14 @@ export function PortalClient() {
               { v: 'semana', label: 'Próximos 7d' },
               { v: 'sem', label: 'Sem prazo' },
             ]}
-            onChange={(v) => setKbPrazo(v as typeof kbPrazo)}
+            onChange={(v) => setKbPrazo(v as PrazoFiltro)}
           />
           <PortalPriMultiSelect selected={kbPrio} onToggle={toggleKbPrio} />
 
           <button
             type="button"
             className={`fselect clear ${kbActive === 0 ? 'is-empty' : ''}`}
-            onClick={
-              kbActive > 0
-                ? () => {
-                    setKbProjeto('');
-                    setKbSubetapa('');
-                    setKbPrazo('');
-                    PRIO_OPTIONS.forEach((p) => {
-                      if (kbPrio.has(p)) toggleKbPrio(p);
-                    });
-                  }
-                : undefined
-            }
+            onClick={kbActive > 0 ? clearFilters : undefined}
             disabled={kbActive === 0}
             title={kbActive > 0 ? `Limpar ${kbActive} filtro${kbActive > 1 ? 's' : ''}` : 'Nenhum filtro aplicado'}
             aria-label={kbActive > 0 ? `Limpar ${kbActive} filtros` : 'Sem filtros'}
@@ -280,6 +408,11 @@ export function PortalClient() {
           clienteId={effectiveCid}
           onClose={() => setShowNewTask(false)}
         />
+      )}
+
+      {/* Ação do cliente · lista os itens (antes o alerta só dava a contagem) */}
+      {acaoItems.length > 0 && (
+        <PortalAcaoBanner items={acaoItems} onOpenTask={openPortalTask} />
       )}
 
       {/* 2. ALERTAS amigáveis */}
@@ -336,16 +469,23 @@ export function PortalClient() {
 
       {/* 4. KANBAN 4 macros · substitui os gráficos antigos (v1.03.216).
           Filtros: projeto · subetapa · prazo · prioridade (multiselect). */}
-      <PortalKanban
-        tasks={portalTasks}
-        pessoasById={pessoasById}
-        projetosById={projetosById}
-        onOpenTask={openPortalTask}
-        kbProjeto={kbProjeto}
-        kbSubetapa={kbSubetapa}
-        kbPrazo={kbPrazo}
-        kbPrio={kbPrio}
-      />
+      {view === 'kanban' ? (
+        <PortalKanban
+          tasks={visibleTasks}
+          pessoasById={pessoasById}
+          projetosById={projetosById}
+          onOpenTask={openPortalTask}
+          today={today}
+        />
+      ) : (
+        <PortalLista
+          tasks={visibleTasks}
+          pessoasById={pessoasById}
+          projetosById={projetosById}
+          onOpenTask={openPortalTask}
+          today={today}
+        />
+      )}
 
       {/* Listas de prioridade removidas (v1.03.217) · info agora vive
           no Kanban 4 macros acima. */}
@@ -364,7 +504,7 @@ export function PortalClient() {
       </div>
 
       <PortalTaskModal
-        task={openTask}
+        task={liveOpenTask}
         clienteNome={portalCliente?.nome ?? 'cliente'}
         onClose={closeModal}
       />
@@ -373,88 +513,75 @@ export function PortalClient() {
 }
 
 // ─────────────────────────────────────────────────────────
-// PortalKanban · 4 colunas macro + filtros
+// Views · props compartilhadas
 // ─────────────────────────────────────────────────────────
 
-interface PortalKanbanProps {
+interface PortalViewProps {
   tasks: Task[];
   pessoasById: Map<string, { nome: string }>;
   projetosById: Map<string, { nome: string }>;
   onOpenTask: (t: Task) => void;
-  kbProjeto: string;
-  kbSubetapa: string;
-  kbPrazo: '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
-  kbPrio: Set<string>;
+  today: string;
 }
 
-function PortalKanban({
-  tasks, pessoasById, projetosById, onOpenTask,
-  kbProjeto, kbSubetapa, kbPrazo, kbPrio,
-}: PortalKanbanProps) {
-  const today = new Date().toISOString().slice(0, 10);
-  const in7 = new Date();
-  in7.setDate(in7.getDate() + 7);
-  const in7Iso = in7.toISOString().slice(0, 10);
+const ACAO_LABEL = { homologar: 'Homologar entrega', responder: 'Responder pendência' } as const;
 
-  const filtered = useMemo(() => {
-    return tasks.filter((t) => {
-      if (kbProjeto && t.projetoId !== kbProjeto) return false;
-      if (kbSubetapa && t.subetapa !== kbSubetapa) return false;
-      if (kbPrio.size > 0 && !kbPrio.has(t.prioridade || '')) return false;
-      if (kbPrazo === 'atrasadas' && !(t.prazo && t.status !== STATUS.CONCLUIDO && t.prazo < today)) return false;
-      if (kbPrazo === 'hoje' && t.prazo !== today) return false;
-      if (kbPrazo === 'semana' && !(t.prazo && t.prazo >= today && t.prazo <= in7Iso)) return false;
-      if (kbPrazo === 'sem' && t.prazo) return false;
-      return true;
-    });
-  }, [tasks, kbProjeto, kbSubetapa, kbPrio, kbPrazo, today, in7Iso]);
+function primeiroNome(pessoasById: Map<string, { nome: string }>, id: string): string {
+  return id ? (pessoasById.get(id)?.nome ?? '').split(' ')[0] : '';
+}
 
-  const byMacro = useMemo(() => {
-    const m: Record<string, Task[]> = { backlog: [], andamento: [], bloqueado: [], concluido: [] };
-    for (const t of filtered) {
-      const macro = SUB_TO_MACRO[t.subetapa] ?? t.status;
-      if (m[macro]) m[macro].push(t);
-    }
-    // ordena cada coluna: atrasadas primeiro → prio → prazo asc
-    const pr: Record<string, number> = { P0: 0, P1: 1, P2: 2, P3: 3, '': 9 };
-    for (const k of Object.keys(m)) {
-      m[k].sort((a, b) => {
-        const aa = a.prazo && a.prazo < today && a.status !== STATUS.CONCLUIDO ? 0 : 1;
-        const bb = b.prazo && b.prazo < today && b.status !== STATUS.CONCLUIDO ? 0 : 1;
-        if (aa !== bb) return aa - bb;
-        const pd = (pr[a.prioridade] ?? 9) - (pr[b.prioridade] ?? 9);
-        if (pd !== 0) return pd;
-        return (a.prazo || '9999') < (b.prazo || '9999') ? -1 : 1;
-      });
+// ─────────────────────────────────────────────────────────
+// PortalKanban · 5 colunas (filtros já aplicados no parent)
+// ─────────────────────────────────────────────────────────
+
+function PortalKanban({ tasks, pessoasById, projetosById, onOpenTask, today }: PortalViewProps) {
+  const byCol = useMemo(() => {
+    const m = Object.fromEntries(PORTAL_COLS.map((c) => [c.key, [] as Task[]])) as Record<PortalColKey, Task[]>;
+    for (const t of tasks) {
+      const col = SUB_TO_COL[t.subetapa];
+      if (col) m[col].push(t);
     }
     return m;
-  }, [filtered, today]);
+  }, [tasks]);
+
+  const desde = fmtDate(new Date(inicioMesAnteriorMs()).toISOString().slice(0, 10));
 
   return (
     <div className="card overflow-hidden">
-      {/* Filtros vivem no header colorido acima (v1.03.219) */}
-      <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-line">
-        {KANBAN_MACROS.map((col) => {
-          const items = byMacro[col.key] ?? [];
+      <div className="grid grid-cols-1 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-line">
+        {PORTAL_COLS.map((col) => {
+          const items = byCol[col.key];
+          const pendentes = items.filter((t) => acaoDoCliente(t)).length;
           return (
             <div key={col.key} className="min-w-0">
-              <div className="px-3 py-2 md:px-4 border-b border-line flex items-center justify-between bg-[var(--surface-3)]">
-                <span className="text-xs font-semibold text-ink">{col.label}</span>
-                <span className="font-mono text-[10px] text-muted">{items.length}</span>
+              <div className="px-3 py-2 border-b border-line bg-[var(--surface-3)]">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-ink">{col.label}</span>
+                  <span className="font-mono text-[10px] text-muted">{items.length}</span>
+                </div>
+                {pendentes > 0 && (
+                  <div className="mt-0.5 text-[10px] font-semibold text-[color:var(--warn)]">
+                    {pendentes} com ação sua
+                  </div>
+                )}
+                {col.key === 'concluido' && (
+                  <div className="mt-0.5 text-[10px] text-muted">desde {desde}</div>
+                )}
               </div>
               <div className="p-2 space-y-1.5 min-h-[80px]">
                 {items.map((t) => {
+                  const acao = acaoDoCliente(t);
                   const proj = projetosById.get(t.projetoId)?.nome ?? '';
-                  const pess = t.pessoaId
-                    ? (pessoasById.get(t.pessoaId)?.nome ?? '').split(' ')[0]
-                    : '';
+                  const pess = primeiroNome(pessoasById, t.pessoaId);
                   const atras = !!(t.prazo && t.prazo < today && t.status !== STATUS.CONCLUIDO);
                   return (
                     <button
                       key={t.id}
                       type="button"
                       onClick={() => onOpenTask(t)}
-                      className="w-full text-left rounded-md border border-line bg-elev hover:bg-brand-tint p-2 transition-colors"
+                      className={`w-full text-left rounded-md border bg-elev hover:bg-brand-tint p-2 transition-colors ${
+                        acao ? 'border-[color:var(--warn)]' : 'border-line'
+                      }`}
                     >
                       <div className="flex items-start gap-2 mb-1">
                         {t.prioridade && (
@@ -463,9 +590,10 @@ function PortalKanban({
                             {t.prioridade}
                           </span>
                         )}
-                        <span className="text-xs font-medium text-ink break-words">
-                          {t.titulo}
-                        </span>
+                        <span className="text-xs font-medium text-ink break-words">{t.titulo}</span>
+                      </div>
+                      <div className="text-[10px] text-ink-soft font-mono mb-0.5">
+                        {SUB_LABELS[t.subetapa] ?? t.subetapa}
                       </div>
                       <div className="text-[10px] text-muted font-mono">
                         {proj}
@@ -476,18 +604,142 @@ function PortalKanban({
                           </span>
                         )}
                       </div>
+                      {acao && (
+                        <div className="mt-1 text-[10px] font-semibold text-[color:var(--warn)]">
+                          ⚠ {ACAO_LABEL[acao]}
+                        </div>
+                      )}
                     </button>
                   );
                 })}
                 {items.length === 0 && (
-                  <div className="text-center py-4 text-[10px] italic text-muted">
-                    —
-                  </div>
+                  <div className="text-center py-4 text-[10px] italic text-muted">—</div>
                 )}
               </div>
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// PortalLista · tabela no padrão do Backlog
+// ─────────────────────────────────────────────────────────
+
+function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: PortalViewProps) {
+  return (
+    <div className="card tbl-wrap overflow-x-auto">
+      <table className="tbl">
+        <colgroup>
+          <col />
+          <col style={{ width: 180 }} />
+          <col style={{ width: 170 }} />
+          <col style={{ width: 130 }} />
+          <col style={{ width: 70 }} />
+          <col style={{ width: 100 }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>Tarefa</th>
+            <th>Projeto</th>
+            <th>Subetapa</th>
+            <th>Responsável</th>
+            <th>Prio</th>
+            <th>Prazo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map((t) => {
+            const acao = acaoDoCliente(t);
+            const atras = !!(t.prazo && t.prazo < today && t.status !== STATUS.CONCLUIDO);
+            return (
+              <tr key={t.id} className="cursor-pointer hover:bg-brand-tint" onClick={() => onOpenTask(t)}>
+                <td>
+                  <div className="tbl-title" title={t.titulo}>{t.titulo}</div>
+                  {acao && (
+                    <div className="text-[10px] font-semibold text-[color:var(--warn)]">
+                      ⚠ {ACAO_LABEL[acao]}
+                    </div>
+                  )}
+                </td>
+                <td className="truncate text-ink-soft">{projetosById.get(t.projetoId)?.nome ?? '—'}</td>
+                <td className="truncate text-ink-soft">{SUB_LABELS[t.subetapa] ?? t.subetapa}</td>
+                <td className="truncate text-ink-soft">{primeiroNome(pessoasById, t.pessoaId) || '—'}</td>
+                <td>
+                  {t.prioridade ? (
+                    <span className={`pri pri-${t.prioridade}`}>
+                      <span className="pri-dot" />
+                      {t.prioridade}
+                    </span>
+                  ) : '—'}
+                </td>
+                <td className={`font-mono ${atras ? 'text-[var(--p0)] font-semibold' : 'text-ink-soft'}`}>
+                  {t.prazo ? fmtDate(t.prazo) : '—'}
+                </td>
+              </tr>
+            );
+          })}
+          {tasks.length === 0 && (
+            <tr>
+              <td colSpan={6} className="text-center text-xs italic text-muted py-6">
+                Nenhuma tarefa com esses filtros.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// PortalAcaoBanner · itens que esperam o cliente
+// ─────────────────────────────────────────────────────────
+
+function PortalAcaoBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t: Task) => void }) {
+  const [expandido, setExpandido] = useState(false);
+  const visiveis = expandido ? items : items.slice(0, 3);
+  const agora = Date.now();
+  return (
+    <div className="portal-alert portal-alert-alta">
+      <div className="portal-alert-icon">⏳</div>
+      <div className="min-w-0 flex-1">
+        <div className="portal-alert-title">
+          {items.length === 1 ? '1 item aguardando você' : `${items.length} itens aguardando você`}
+        </div>
+        <div className="mt-2 space-y-1">
+          {visiveis.map((t) => {
+            const acao = acaoDoCliente(t)!;
+            const dias = t.subetapaEm ? Math.max(0, Math.floor((agora - t.subetapaEm) / 86400000)) : null;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onOpenTask(t)}
+                className="flex w-full items-baseline gap-2 text-left text-sm hover:underline"
+              >
+                <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-muted">
+                  {ACAO_LABEL[acao]}
+                </span>
+                <span className="min-w-0 truncate font-medium text-ink">{t.titulo}</span>
+                {dias != null && dias > 0 && (
+                  <span className="shrink-0 font-mono text-[10px] text-muted">há {dias}d</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {items.length > 3 && (
+          <button
+            type="button"
+            onClick={() => setExpandido((v) => !v)}
+            className="mt-1 text-xs text-ink-soft underline"
+          >
+            {expandido ? 'Mostrar menos' : `Ver todos (${items.length})`}
+          </button>
+        )}
       </div>
     </div>
   );

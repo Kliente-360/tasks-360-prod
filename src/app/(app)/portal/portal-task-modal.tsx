@@ -59,13 +59,14 @@ function timelineFor(t: Task): { ts: number; label: string }[] {
 }
 
 export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalProps) {
-  const { projetos, pessoas } = useData();
+  const { projetos, pessoas, patchTask, viewerRole } = useData();
   const toast = useToastSafe();
 
   const [comments, setComments] = useState<PortalComment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [replyText, setReplyText] = useState('');
   const [sending, setSending] = useState(false);
+  const [aprovando, setAprovando] = useState(false);
 
   const sb = useMemo(() => createClient(), []);
 
@@ -101,7 +102,8 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
       return;
     }
     void loadComments(task.id);
-  }, [task, loadComments]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task?.id, loadComments]);
 
   // ESC fecha
   useEffect(() => {
@@ -214,21 +216,31 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
   const podeAprovar = APROVAR_SUBS.has(task.subetapa) && task.aprovadoEm == null;
   const jaAprovado = task.aprovadoEm != null && task.subetapa !== 'concluido';
 
+  // RPC só aceita role=cliente · admin/interno simulando o portal vê o
+  // botão desabilitado com explicação (antes o erro era engolido).
+  const podeClicarAprovar = viewerRole === 'cliente';
+
   async function aprovarEntrega() {
-    if (!task) return;
+    if (!task || aprovando) return;
+    setAprovando(true);
     const { data, error } = await sb.rpc('app_aprovar_entrega', { p_task_id: task.id });
+    setAprovando(false);
     if (error) {
-      console.warn('[aprovar_entrega]', error.message);
+      toast.error('Não foi possível aprovar: ' + error.message);
       return;
     }
-    // Optimistic — propaga aprovado_em pro modal local (lista do parent
-    // vai re-sync no próximo refetch ou via realtime).
-    if (data) {
-      (task as { aprovadoEm: number | null }).aprovadoEm = new Date(data as string).getTime();
-    }
-    // Notif fire-and-forget pro responsável
+    const nowMs = data ? new Date(data as string).getTime() : Date.now();
+    // Espelha o que a RPC fez: grava aprovação e, se estava em
+    // homologação, avança pra Pronto p/ produção.
+    patchTask(task.id, {
+      aprovadoEm: task.aprovadoEm ?? nowMs,
+      ...(task.subetapa === 'em_homologacao'
+        ? { subetapa: 'pronto_producao', status: 'andamento', subetapaEm: nowMs }
+        : {}),
+    });
+    toast.success('Entrega aprovada. O time foi avisado.');
     if (task.pessoaId) {
-      sb.from('notifications').insert({
+      void sb.from('notifications').insert({
         recipient_pessoa_id: task.pessoaId,
         kind: 'cliente_respondeu',
         payload: { author: clienteNome || 'cliente', task_id: task.id, preview: 'Aprovou a entrega' },
@@ -368,9 +380,10 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
               <button
                 className="btn btn-primary text-sm"
                 onClick={aprovarEntrega}
-                disabled={sending}
+                disabled={sending || aprovando || !podeClicarAprovar}
+                title={podeClicarAprovar ? undefined : 'Só o cliente aprova · você está simulando o portal'}
               >
-                ✓ Aprovo a entrega
+                {aprovando ? 'Aprovando…' : '✓ Aprovo a entrega'}
               </button>
             </div>
           )}
