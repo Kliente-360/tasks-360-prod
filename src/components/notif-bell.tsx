@@ -37,7 +37,7 @@ type Notif = {
   id: string;
   recipient_pessoa_id: string;
   kind: NotifKind | string;
-  payload: { author?: string; task_id?: string; comment_id?: string; preview?: string; from?: string; to?: string } | null;
+  payload: { author?: string; task_id?: string; comment_id?: string; preview?: string; from?: string; to?: string; titulo?: string } | null;
   source_task_id: string | null;
   source_comment_id: string | null;
   criado_em: string;
@@ -66,9 +66,21 @@ function notifKindGroup(n: Notif): KindFilter | 'other' {
     case 'cliente_respondeu_pendencia':
     case 'cliente_pediu_prioridade':
       return 'cliente';
+    case 'portal_comentario':
+    case 'portal_pendencia':
+    case 'portal_resposta_prioridade':
+    case 'portal_homologar':
+    case 'portal_concluida':
+    case 'portal_aceita':
+    case 'portal_recusada':
+      return 'task';
     default:
       return 'other';
   }
+}
+
+function tituloNotif(n: Notif): string {
+  return n.payload?.titulo ? `"${n.payload.titulo}"` : 'uma tarefa';
 }
 
 function notifSummary(n: Notif): string {
@@ -92,6 +104,21 @@ function notifSummary(n: Notif): string {
       return `${who} respondeu uma pendência`;
     case 'cliente_pediu_prioridade':
       return `${who} pediu prioridade numa tarefa`;
+    // Avisos do portal (destinatário: usuário do cliente)
+    case 'portal_comentario':
+      return `${who} escreveu em ${tituloNotif(n)}`;
+    case 'portal_pendencia':
+      return `O time precisa de uma resposta sua em ${tituloNotif(n)}`;
+    case 'portal_resposta_prioridade':
+      return `Seu pedido de prioridade foi respondido em ${tituloNotif(n)}`;
+    case 'portal_homologar':
+      return `Entrega pronta para homologar: ${tituloNotif(n)}`;
+    case 'portal_concluida':
+      return `Tarefa concluída: ${tituloNotif(n)}`;
+    case 'portal_aceita':
+      return `Sua solicitação foi aceita: ${tituloNotif(n)}`;
+    case 'portal_recusada':
+      return `Sua solicitação foi recusada: ${tituloNotif(n)}`;
     case 'status_change':
       return `${who} mudou status de uma tarefa sua` + (n.payload?.to ? ` → ${n.payload.to}` : '');
     default:
@@ -110,6 +137,13 @@ const KIND_ICON: Record<string, IconName> = {
   cliente_pediu_ajuste: 'refresh',
   cliente_respondeu_pendencia: 'inbox',
   cliente_pediu_prioridade: 'arrow-up',
+  portal_comentario: 'comment',
+  portal_pendencia: 'alert-triangle',
+  portal_resposta_prioridade: 'arrow-up',
+  portal_homologar: 'check-circle',
+  portal_concluida: 'check',
+  portal_aceita: 'inbox',
+  portal_recusada: 'archive',
   status_change: 'refresh',
 };
 
@@ -120,7 +154,7 @@ function NotifKindIcon({ kind }: { kind: Notif['kind'] }) {
 }
 
 export function NotifBell() {
-  const { currentPessoa } = useData();
+  const { currentPessoa, viewerRole } = useData();
   const { openEdit } = useTaskModal();
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -235,9 +269,15 @@ export function NotifBell() {
     async (n: Notif) => {
       await markRead(n.id);
       setOpen(false);
-      if (n.source_task_id) openEdit(n.source_task_id);
+      if (!n.source_task_id) return;
+      // Cliente só usa o portal · abre o modal do portal, não o interno
+      if (viewerRole === 'cliente') {
+        window.dispatchEvent(new CustomEvent('portal:open-task', { detail: n.source_task_id }));
+      } else {
+        openEdit(n.source_task_id);
+      }
     },
-    [markRead, openEdit],
+    [markRead, openEdit, viewerRole],
   );
 
   // Click fora fecha · mesmo padrão do ProfileMenu (overlay z-30 não
@@ -285,7 +325,7 @@ export function NotifBell() {
                 </button>
               )}
             </div>
-            {items.length > 0 && (
+            {items.length > 0 && viewerRole !== 'cliente' && (
               <div className="px-2 py-1.5 border-b border-line grid grid-cols-4 gap-1">
                 {(['all', 'mention', 'task', 'cliente'] as const).map((k) => (
                   <button

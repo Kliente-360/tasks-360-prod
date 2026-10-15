@@ -136,6 +136,18 @@ export function PortalClient() {
     return () => window.removeEventListener('portal:new-task', handler);
   }, []);
 
+  // Clique numa notificação do sino (cliente) abre o modal da task aqui
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      const t = portalTasks.find((x) => x.id === id);
+      if (t) openPortalTask(t);
+    };
+    window.addEventListener('portal:open-task', handler);
+    return () => window.removeEventListener('portal:open-task', handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portalTasks]);
+
   // Visão Kanban × Lista (preferência por navegador)
   const [view, setViewState] = useState<'kanban' | 'lista'>('kanban');
   useEffect(() => {
