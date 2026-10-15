@@ -12,11 +12,20 @@
  * só permite enviar OTP se o email existe em `pessoas` com `invited_at`.
  */
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const CODE_RE = /^\d{6}$/;
+const REENVIO_S = 60;
+
+/** Mensagens do Supabase Auth chegam em inglês · traduz as comuns. */
+function traduzErroAuth(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes('expired') || m.includes('invalid')) return 'Código inválido ou expirado. Confira os números ou peça um novo código.';
+  if (m.includes('rate limit') || m.includes('security purposes') || m.includes('too many')) return 'Muitas tentativas em pouco tempo. Aguarde um minuto e tente de novo.';
+  return 'Não foi possível concluir agora. Tente de novo em instantes.';
+}
 
 export function LoginForm() {
   const router = useRouter();
@@ -29,6 +38,13 @@ export function LoginForm() {
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  // Contagem regressiva até poder reenviar o código
+  const [espera, setEspera] = useState(0);
+  useEffect(() => {
+    if (espera <= 0) return;
+    const id = setTimeout(() => setEspera((v) => v - 1), 1000);
+    return () => clearTimeout(id);
+  }, [espera]);
   // Erro vindo do /auth/confirm ou /auth/callback (ex.: link expirado)
   const [error, setError] = useState(searchParams.get('error') ?? '');
 
@@ -83,10 +99,11 @@ export function LoginForm() {
         options: { emailRedirectTo },
       });
       if (otpErr) {
-        setError(otpErr.message);
+        setError(traduzErroAuth(otpErr.message));
         return;
       }
       setSent(true);
+      setEspera(REENVIO_S);
     } finally {
       setSending(false);
     }
@@ -98,18 +115,18 @@ export function LoginForm() {
     const token = code.trim();
     setError('');
     if (!normalized) {
-      setError('Email perdido — recomeça.');
+      setError('Informe seu e-mail de novo.');
       return;
     }
     if (!CODE_RE.test(token)) {
-      setError('Código de 6 dígitos.');
+      setError('O código tem 6 dígitos.');
       return;
     }
     setVerifying(true);
     try {
       const { error } = await supabase.auth.verifyOtp({ email: normalized, token, type: 'email' });
       if (error) {
-        setError(error.message);
+        setError(traduzErroAuth(error.message));
         return;
       }
       setCode('');
@@ -123,49 +140,76 @@ export function LoginForm() {
   if (sent) {
     return (
       <div>
-        <div className="font-brand text-lg font-semibold mb-2">Verifica teu email ✉</div>
-        <div className="text-sm text-ink-soft mb-4">
-          Mandamos pra <span className="font-mono">{email}</span>:
+        <div className="font-brand text-[28px] md:text-[32px] font-semibold mb-3 text-ink tracking-tight leading-none">
+          Confira seu e-mail
+        </div>
+        <p className="text-sm text-ink-soft leading-relaxed mb-8">
+          Enviamos um link de acesso para <span className="font-medium text-ink break-all">{email.trim().toLowerCase()}</span>.
+          Clique em <span className="font-medium text-ink">Entrar no tasks 360</span> no e-mail para entrar direto.
+        </p>
+
+        <div className="border-t border-line pt-8">
+          <label
+            htmlFor="login-codigo"
+            className="block text-[10px] uppercase tracking-[0.18em] text-muted font-mono mb-4"
+          >
+            Ou digite o código do e-mail
+          </label>
+          <input
+            id="login-codigo"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            pattern="\d*"
+            maxLength={6}
+            className="inp mb-4 font-mono text-center text-2xl tracking-[0.5em]"
+            style={{ height: 56 }}
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            onKeyUp={(e) => e.key === 'Enter' && verifyLoginCode()}
+            placeholder="000000"
+            autoFocus
+          />
+          {error && <div className="text-xs text-[color:var(--danger)] mb-4">{error}</div>}
+          <button
+            className="btn btn-primary w-full justify-center"
+            style={{ height: 48, fontSize: 14 }}
+            onClick={verifyLoginCode}
+            disabled={verifying || !CODE_RE.test(code)}
+          >
+            {verifying ? 'Entrando…' : 'Entrar com código'}
+          </button>
         </div>
 
-        <div className="text-xs text-muted mb-2">
-          <strong className="text-ink">Opção 1 — link no email</strong> (clica e volta pra cá)
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-[12px] text-muted">
+          <span>
+            Não chegou? Confira o spam ou{' '}
+            {espera > 0 ? (
+              <span>reenvie em {espera}s</span>
+            ) : (
+              <button
+                type="button"
+                className="text-[color:var(--green)] font-medium hover:underline"
+                onClick={sendMagicLink}
+                disabled={sending}
+              >
+                {sending ? 'reenviando…' : 'reenvie o código'}
+              </button>
+            )}
+            .
+          </span>
+          <button
+            type="button"
+            className="text-ink-soft hover:text-ink hover:underline"
+            onClick={() => {
+              setSent(false);
+              setCode('');
+              setError('');
+            }}
+          >
+            Usar outro e-mail
+          </button>
         </div>
-        <div className="border-t border-line my-3"></div>
-        <div className="text-xs text-muted mb-2">
-          <strong className="text-ink">Opção 2 — código de 6 dígitos</strong> (use no PWA / outro browser)
-        </div>
-
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="\d*"
-          maxLength={6}
-          className="inp mb-2 font-mono text-center text-xl tracking-[0.4em]"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          onKeyUp={(e) => e.key === 'Enter' && verifyLoginCode()}
-          placeholder="000000"
-        />
-        {error && <div className="text-xs text-danger mb-2">{error}</div>}
-        <button
-          className="btn btn-primary w-full justify-center"
-          onClick={verifyLoginCode}
-          disabled={verifying || !CODE_RE.test(code)}
-        >
-          {verifying ? 'verificando…' : 'Entrar com código'}
-        </button>
-
-        <button
-          className="btn btn-ghost text-xs mt-4"
-          onClick={() => {
-            setSent(false);
-            setCode('');
-            setError('');
-          }}
-        >
-          trocar email
-        </button>
       </div>
     );
   }
@@ -232,7 +276,7 @@ export function LoginForm() {
           onClick={sendMagicLink}
           disabled={sending || !emailValid || googleLoading}
         >
-          {sending ? 'enviando…' : 'Receber código por email'}
+          {sending ? 'Enviando…' : 'Receber código por e-mail'}
         </button>
       </div>
 
