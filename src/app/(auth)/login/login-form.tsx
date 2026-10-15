@@ -29,7 +29,8 @@ export function LoginForm() {
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState('');
+  // Erro vindo do /auth/confirm ou /auth/callback (ex.: link expirado)
+  const [error, setError] = useState(searchParams.get('error') ?? '');
 
   const supabase = createClient();
 
@@ -59,21 +60,21 @@ export function LoginForm() {
     }
     setSending(true);
     try {
-      const { data: pessoa, error: pErr } = await supabase
-        .from('pessoas')
-        .select('id, nome, invited_at')
-        .ilike('email', normalized)
-        .maybeSingle();
+      // Antes do login o navegador não lê `pessoas` (RLS) · status vem de
+      // uma função no servidor que não expõe dados da pessoa.
+      const { data: status, error: pErr } = await supabase.rpc('app_login_status', {
+        p_email: normalized,
+      });
       if (pErr) {
         setError('Erro ao validar acesso: ' + pErr.message);
         return;
       }
-      if (!pessoa) {
-        setError('Email não está cadastrado. Peça pro admin cadastrar antes.');
+      if (status === 'nao_cadastrado') {
+        setError('Este e-mail não tem acesso. Peça ao time da Kliente 360 para cadastrar você.');
         return;
       }
-      if (!pessoa.invited_at) {
-        setError('Email cadastrado mas sem convite ativo. Peça pro admin clicar em "convidar".');
+      if (status === 'sem_convite') {
+        setError('Seu acesso ainda não foi liberado. Peça ao time da Kliente 360 para enviar o convite.');
         return;
       }
       const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
