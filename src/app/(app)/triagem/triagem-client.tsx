@@ -102,7 +102,8 @@ export function TriagemClient() {
       // própria ausência de "triada_em" é o failure relevante aqui).
       if (!failures.length && !aguardandoIA) continue;
       // Marca "aguardando aceitação" como failure virtual pra UI ranquear
-      const allFailures = aguardandoIA ? ['aguardando aceitação IA', ...failures] : failures;
+      const rotuloGate = t.criadoPorCliente ? 'solicitação do cliente' : 'aguardando aceitação IA';
+      const allFailures = aguardandoIA ? [rotuloGate, ...failures] : failures;
       out.push({ ...t, _failures: allFailures, _failCount: allFailures.length });
     }
     // IA pre-triagem primeiro (gate prioritário); demais ordenadas por
@@ -447,7 +448,7 @@ export function TriagemClient() {
                         style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}
                         title="Criada pelo cliente via Portal"
                       >
-                        🙋 cliente
+                        cliente
                       </span>
                     )}
                     <span className="font-medium text-ink break-words">{t.titulo}</span>
@@ -542,6 +543,15 @@ function FilterChip({
 // triada_em). 3 inputs inline (Responsável · Prazo · Esforço) +
 // botões Aceitar/Rejeitar. Aceitar fica disabled até os 3 campos
 // estarem preenchidos. Tooltip lista o que falta.
+
+/** Motivos de recusa de solicitação do cliente · o texto vai no aviso pra
+ *  ele, então nada de "spam"/"não acionável". */
+const CLIENTE_REJECT_REASONS = [
+  'Já existe uma solicitação igual',
+  'Fora do escopo do contrato',
+  'Já foi resolvido',
+  'Não será feito agora',
+] as const;
 
 const REJECT_REASONS = [
   'Duplicada',
@@ -753,11 +763,14 @@ function IaTriageActions({
               onClick={() => setRejectOpen((v) => !v)}
               className="btn btn-ghost text-xs"
               style={{ color: 'var(--danger)' }}
-              title="Rejeitar (arquiva com motivo)"
+              title={task.criadoPorCliente ? 'Recusar · o cliente recebe o motivo e sua mensagem' : 'Rejeitar (arquiva com motivo)'}
             >
-              Rejeitar
+              {task.criadoPorCliente ? 'Recusar' : 'Rejeitar'}
             </button>
-            {rejectOpen && (
+            {rejectOpen && task.criadoPorCliente && (
+              <ClienteRejectPopover onPick={submitReject} onClose={() => setRejectOpen(false)} />
+            )}
+            {rejectOpen && !task.criadoPorCliente && (
               <RejectPopover
                 value={customMotivo}
                 onChange={setCustomMotivo}
@@ -815,6 +828,85 @@ function TriageInlineField({
       <Icon name={icon} size={13} className="ic" />
       {children}
     </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+//  ClienteRejectPopover · recusa de solicitação aberta pelo cliente
+// ─────────────────────────────────────────────────────────
+// Motivo + mensagem obrigatória. Os dois vão no aviso que o cliente recebe
+// (motivo_arquivamento = "motivo — mensagem").
+
+function ClienteRejectPopover({
+  onPick,
+  onClose,
+}: {
+  onPick: (motivo: string) => void;
+  onClose: () => void;
+}) {
+  const ref = useClickAway<HTMLDivElement>(onClose);
+  const [motivo, setMotivo] = useState<string>(CLIENTE_REJECT_REASONS[0]);
+  const [mensagem, setMensagem] = useState('');
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      ref={ref}
+      className="absolute top-full right-0 mt-2 z-50 w-[340px] bg-bg-elev border border-line rounded-lg shadow-xl overflow-hidden"
+      role="dialog"
+      aria-label="Recusar solicitação do cliente"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-line">
+        <div className="w-2 h-2 rounded-full bg-[color:var(--danger)] shrink-0" />
+        <span className="text-sm font-medium">Recusar solicitação</span>
+      </div>
+      <div className="p-3 flex flex-col gap-3">
+        <fieldset className="flex flex-col gap-1">
+          <legend className="text-xs font-semibold text-ink mb-1">Motivo</legend>
+          {CLIENTE_REJECT_REASONS.map((r) => (
+            <label key={r} className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name="motivo-recusa-cliente"
+                checked={motivo === r}
+                onChange={() => setMotivo(r)}
+                style={{ accentColor: 'var(--green)' }}
+              />
+              {r}
+            </label>
+          ))}
+        </fieldset>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="msg-recusa-cliente" className="text-xs font-semibold text-ink">
+            Mensagem para o cliente <span className="font-normal text-muted">obrigatória</span>
+          </label>
+          <textarea
+            id="msg-recusa-cliente"
+            className="inp text-sm"
+            rows={3}
+            maxLength={220}
+            value={mensagem}
+            onChange={(e) => setMensagem(e.target.value)}
+            placeholder="Explique a decisão. Ele recebe este texto no aviso."
+            autoFocus
+          />
+        </div>
+        <button
+          type="button"
+          className="btn btn-primary text-xs self-end"
+          disabled={!mensagem.trim()}
+          onClick={() => onPick(`${motivo} — ${mensagem.trim()}`)}
+        >
+          Recusar e avisar o cliente
+        </button>
+      </div>
+    </div>
   );
 }
 

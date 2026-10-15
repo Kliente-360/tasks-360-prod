@@ -434,7 +434,13 @@ function NotifRow({ n, onClick }: { n: Notif; onClick: () => void }) {
             </div>
           </div>
           {n.payload?.preview && (
-            <div className="text-xs text-muted mt-0.5 truncate pl-3">{n.payload.preview}</div>
+            <div
+              className={`text-xs text-muted mt-0.5 pl-3 ${
+                n.kind === 'portal_recusada' ? 'line-clamp-4 whitespace-normal' : 'truncate'
+              }`}
+            >
+              {n.payload.preview}
+            </div>
           )}
           <div className="text-[10px] font-mono text-muted mt-0.5 pl-3">{fmtPostedEm(n.criado_em)}</div>
         </div>
