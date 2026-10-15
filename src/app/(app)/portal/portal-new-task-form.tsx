@@ -11,6 +11,7 @@
  */
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase/client';
 import { useData } from '@/lib/data-store';
 
@@ -97,7 +98,7 @@ export function PortalNewTaskForm({
     });
   }, [titulo, descricao, valorEsperado, projetoId, prioridadeSolicitada, tipoTrabalho, clienteId, upsertTask, onClose]);
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 px-2 py-2 md:items-center md:px-4 md:py-4"
       onClick={onClose}
@@ -202,6 +203,7 @@ export function PortalNewTaskForm({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -14,6 +14,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase/client';
 import { useData } from '@/lib/data-store';
 import { useToastSafe } from '@/components/toast';
@@ -235,7 +236,7 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
     }
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 px-2 py-2 md:items-center md:px-4 md:py-4"
       onClick={onClose}
@@ -500,6 +501,7 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
