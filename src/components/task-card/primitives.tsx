@@ -170,6 +170,20 @@ export function TagIA({ className }: { className?: string }) {
 }
 
 // ───────────────────────────────────────────────────────────────────
+// PedidoPrioridadeChip · cliente pediu prioridade pelo portal
+// ───────────────────────────────────────────────────────────────────
+
+/** Etiqueta âmbar enquanto o pedido do cliente espera resposta do time. */
+export function PedidoPrioridadeChip({ className }: { className?: string }) {
+  return (
+    <span className={cn('tag-pedido-prio', className)} title="Cliente pediu prioridade · aguardando resposta do time">
+      <Icon name="arrow-up" size={10} />
+      Pedido de prioridade
+    </span>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────
 // RadarBadge · Radar do CEO (v1.03.214)
 // ───────────────────────────────────────────────────────────────────
 

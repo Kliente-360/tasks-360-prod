@@ -30,7 +30,7 @@ import { useToast } from '@/components/toast';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
-import { PriChip, TaskAvatar, PrazoLabel, RadarBadge } from '@/components/task-card/primitives';
+import { PriChip, TaskAvatar, PrazoLabel, RadarBadge, PedidoPrioridadeChip } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
 import { atrasada, etapaTempoColor, etapaTempoDays, fmtDateShort, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, sumTimeEntriesHours, triageFailures, validateSubetapaAdvance, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
@@ -578,6 +578,7 @@ function KCard({
       </div>
       <div className="flex items-center gap-1.5 mt-2">
         {extraFooter}
+        {t.prioridadePedidoEm && <PedidoPrioridadeChip />}
         {needsTriage(t) && (
           <span className="triage-badge" title={triageFailures(t).join(' · ')}>
             triar

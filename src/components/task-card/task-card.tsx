@@ -31,7 +31,7 @@
 
 import { useMemo } from 'react';
 import { Icon } from '@/components/icons';
-import { PriChip, TaskAvatar, PrazoLabel, TagIA, RadarBadge } from './primitives';
+import { PriChip, TaskAvatar, PrazoLabel, TagIA, RadarBadge, PedidoPrioridadeChip } from './primitives';
 import { cn } from '@/lib/utils';
 import type { Task } from '@/lib/types';
 
@@ -163,6 +163,7 @@ export function TaskCard({
             {respNome && <TaskAvatar name={respNome} title={respNome} />}
             {respNome && <span className="text-xs text-muted">{firstName}</span>}
             {task.criadoPorIa && <TagIA />}
+            {task.prioridadePedidoEm && <PedidoPrioridadeChip />}
             {size === 'lg' && showStatus && (
               <span className={cn('status', `status-${task.status}`)} style={{ fontSize: 10 }}>
                 <span className="status-dot" />

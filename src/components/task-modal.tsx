@@ -69,6 +69,8 @@ type Comment = {
   external_id: string | null;
   visivel_cliente: boolean;
   from_cliente: boolean;
+  /** Papel especial no fluxo do portal (pendencia, pedido_prioridade...). */
+  kind?: string | null;
 };
 
 type HistoryEntry = {
@@ -161,6 +163,8 @@ function blankEditing(): Task {
     motivoArquivamento: null,
     privada: false,
     radar: false,
+    prioridadePedidoEm: null,
+    prioridadePedidoAte: null,
     webhookSyncStatus: '',
     webhookSyncError: '',
   };
@@ -821,7 +825,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       const { data: cdata } = await sb
         .from('task_comments')
         .select(
-          'id, parent_id, author, author_external_id, author_pessoa_id, body, posted_em, criado_em, edited_em, external_source, external_id, visivel_cliente, from_cliente',
+          'id, parent_id, author, author_external_id, author_pessoa_id, body, posted_em, criado_em, edited_em, external_source, external_id, visivel_cliente, from_cliente, kind',
         )
         .eq('task_id', taskId)
         .order('posted_em', { ascending: true, nullsFirst: true })
@@ -1103,18 +1107,23 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
 
           // Motivo de bloqueio: sempre que houver motivo digitado E a task
           // estiver atualmente em 'bloqueado' (transição OU já estava),
-          // insere como comment interno e limpa o campo. Permite empilhar
+          // insere como comment e limpa o campo. Permite empilhar
           // múltiplos motivos numa mesma task ao longo do bloqueio.
+          // Bloqueio "aguardando cliente": o motivo é a pergunta pro
+          // cliente → vira comment visível com kind='pendencia', que o
+          // portal mostra em destaque. Demais bloqueios seguem internos.
           const motivo = bloqueioMotivoRef.current.trim();
           if (e.subetapa === 'bloqueado' && motivo) {
+            const paraCliente = e.bloqueadoPor === 'cliente';
             const commentPayload = {
               task_id: e.id,
               body: motivo,
               author: currentPessoa?.nome ?? 'app',
               author_pessoa_id: currentPessoa?.id ?? null,
-              visivel_cliente: false,
+              visivel_cliente: paraCliente,
               from_cliente: false,
               posted_em: nowIso,
+              kind: paraCliente ? 'pendencia' : null,
             };
             sb.from('task_comments')
               .insert(commentPayload)
@@ -1128,13 +1137,14 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   author: currentPessoa?.nome ?? 'app',
                   author_pessoa_id: currentPessoa?.id ?? null,
                   author_external_id: null,
-                  visivel_cliente: false,
+                  visivel_cliente: paraCliente,
                   from_cliente: false,
                   external_source: null,
                   external_id: null,
                   posted_em: nowIso,
                   criado_em: nowIso,
                   edited_em: null,
+                  kind: commentPayload.kind,
                 };
                 setComments((cur) => [...cur, localComment]);
                 setBloqueioMotivo('');
@@ -1703,6 +1713,76 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     [attachments, lightboxAttachment, sb, toast],
   );
 
+  /** Resposta do time a um pedido de prioridade do cliente (portal).
+   *  Define a prioridade interna (pode manter), limpa o pedido pendente e
+   *  publica a resposta na conversa visível ao cliente. */
+  const responderPedidoPrioridade = useCallback(
+    async (novaPrio: string, resposta: string) => {
+      if (!editing.id) return false;
+      const prevTask = tasksById.get(editing.id);
+      const nowIso = new Date().toISOString();
+      const mudou = !!novaPrio && novaPrio !== editing.prioridade;
+      const upd: Record<string, unknown> = { prioridade_pedido_em: null, prioridade_pedido_ate: null };
+      if (mudou) upd.prioridade = novaPrio;
+      patchTask(editing.id, {
+        prioridadePedidoEm: null,
+        prioridadePedidoAte: null,
+        ...(mudou ? { prioridade: novaPrio as Task['prioridade'] } : {}),
+      });
+      skipNextDirty.current = true;
+      setEditing((cur) => ({
+        ...cur,
+        prioridadePedidoEm: null,
+        prioridadePedidoAte: null,
+        ...(mudou ? { prioridade: novaPrio as Task['prioridade'] } : {}),
+      }));
+      const { error } = await sb.from('tasks').update(upd).eq('id', editing.id);
+      if (error) {
+        if (prevTask) replaceTask(editing.id, prevTask);
+        toast.error('Erro ao responder pedido: ' + error.message);
+        return false;
+      }
+      if (mudou) {
+        void sb.from('task_field_history').insert({
+          task_id: editing.id,
+          field: 'prioridade',
+          from_value: editing.prioridade || null,
+          to_value: novaPrio,
+          actor_pessoa_id: currentPessoa?.id ?? null,
+          actor_source: 'app',
+          occurred_at: nowIso,
+        });
+      }
+      const commentPayload = {
+        task_id: editing.id,
+        body: resposta,
+        author: currentPessoa?.nome ?? 'app',
+        author_pessoa_id: currentPessoa?.id ?? null,
+        visivel_cliente: true,
+        from_cliente: false,
+        posted_em: nowIso,
+        kind: 'resposta_prioridade',
+      };
+      const { data: cData } = await sb.from('task_comments').insert(commentPayload).select('id').single();
+      setComments((cur) => [
+        ...cur,
+        {
+          ...commentPayload,
+          id: cData?.id ?? `tmp-prio-${Date.now()}`,
+          parent_id: null,
+          author_external_id: null,
+          external_source: null,
+          external_id: null,
+          criado_em: nowIso,
+          edited_em: null,
+        },
+      ]);
+      toast.success(mudou ? `Prioridade alterada para ${novaPrio}. Cliente avisado.` : 'Resposta enviada ao cliente.');
+      return true;
+    },
+    [editing.id, editing.prioridade, tasksById, patchTask, replaceTask, sb, toast, currentPessoa?.id, currentPessoa?.nome],
+  );
+
   /** Toggle do Radar do CEO · botão no subheader. Só CEO enxerga o
    *  botão · trigger DB `enforce_radar_ceo_only` reverte se caller
    *  não é CEO (defesa em profundidade).
@@ -2157,6 +2237,18 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           </div>
         </div>
 
+        {editing.id && live?.prioridadePedidoEm && (
+          <PedidoPrioridadeBanner
+            key={live.prioridadePedidoEm}
+            prioridadeAtual={editing.prioridade}
+            solicitada={live.prioridadeSolicitadaCliente ?? null}
+            pedidoEm={live.prioridadePedidoEm}
+            ate={live.prioridadePedidoAte}
+            pedido={[...comments].reverse().find((c) => c.kind === 'pedido_prioridade') ?? null}
+            onResponder={responderPedidoPrioridade}
+          />
+        )}
+
         {/* Mobile tabs — Detalhes + Comentários only */}
         <div className="tmodal-mobile-tabs">
           <div
@@ -2485,13 +2577,22 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   </div>
                   <div>
                     <label className="lbl">
-                      Motivo do bloqueio
+                      {editing.bloqueadoPor === 'cliente' ? 'Pergunta para o cliente' : 'Motivo do bloqueio'}
                       {isTransitionToBloqueado && <span className="text-danger"> *</span>}
                     </label>
+                    {editing.bloqueadoPor === 'cliente' && (
+                      <div className="text-[11px] text-[color:var(--warn)] mb-1">
+                        Visível no portal: o cliente vê este texto em destaque e responde por lá.
+                      </div>
+                    )}
                     <textarea
                       className={cn('inp', isTransitionToBloqueado && !bloqueioMotivo.trim() && 'is-missing')}
                       rows={3}
-                      placeholder="Descreva o motivo (vira comentário interno ao salvar)…"
+                      placeholder={
+                        editing.bloqueadoPor === 'cliente'
+                          ? 'O que você precisa que o cliente responda?'
+                          : 'Descreva o motivo (vira comentário interno ao salvar)…'
+                      }
                       value={bloqueioMotivo}
                       onChange={(e) => setBloqueioMotivo(e.target.value)}
                     />
@@ -3462,6 +3563,96 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
  * menu ··· pra evitar clique acidental. Excluir tem confirmação
  * dupla inline (não usa window.confirm).
  */
+// ============================================================
+// PedidoPrioridadeBanner · cliente pediu prioridade pelo portal
+// ============================================================
+
+function PedidoPrioridadeBanner({
+  prioridadeAtual,
+  solicitada,
+  pedidoEm,
+  ate,
+  pedido,
+  onResponder,
+}: {
+  prioridadeAtual: string;
+  solicitada: string | null;
+  pedidoEm: number;
+  ate: string | null;
+  pedido: Comment | null;
+  onResponder: (novaPrio: string, resposta: string) => Promise<boolean>;
+}) {
+  const sugerida = solicitada === 'urgente' ? 'P0' : 'P1';
+  const [prio, setPrio] = useState<string>(prioridadeAtual === sugerida ? prioridadeAtual : sugerida);
+  const [resposta, setResposta] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const mantem = prio === prioridadeAtual;
+  const enviar = async () => {
+    if (!resposta.trim() || enviando) return;
+    setEnviando(true);
+    await onResponder(prio, resposta.trim());
+    setEnviando(false);
+  };
+  const quando = new Date(pedidoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  return (
+    <div className="tmodal-pedido-prio">
+      <div className="tmodal-pedido-prio-head">
+        <Icon name="arrow-up" size={16} />
+        <span className="grow">Cliente pediu prioridade {solicitada ?? 'alta'}</span>
+        <span className="font-mono text-[11px]">{quando}</span>
+      </div>
+      <div className="tmodal-pedido-prio-body">
+        {pedido && (
+          <div className="text-xs text-muted">
+            <b className="text-ink">{pedido.author ?? 'Cliente'}</b>
+            {ate && <> · precisa até <span className="font-mono text-ink">{fmtDate(ate)}</span></>}
+          </div>
+        )}
+        {pedido && <blockquote className="tmodal-pedido-prio-quote">{pedido.body}</blockquote>}
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-semibold">Prioridade interna</span>
+          <div className="view-toggle" role="radiogroup" aria-label="Prioridade interna">
+            {(['P0', 'P1', 'P2', 'P3'] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                role="radio"
+                aria-checked={prio === p}
+                className={prio === p ? 'active' : ''}
+                onClick={() => setPrio(p)}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <span className="text-xs text-muted">hoje: <span className="font-mono text-ink">{prioridadeAtual || '—'}</span></span>
+        </div>
+        <label className="lbl" htmlFor="resp-pedido-prio">
+          Resposta para o cliente <span className="text-muted font-normal normal-case">vai para a conversa dele · obrigatória</span>
+        </label>
+        <textarea
+          id="resp-pedido-prio"
+          className="inp"
+          rows={2}
+          value={resposta}
+          onChange={(e) => setResposta(e.target.value)}
+          placeholder="Explique a decisão e, se possível, uma previsão."
+        />
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!resposta.trim() || enviando}
+            onClick={enviar}
+          >
+            {enviando ? 'Enviando…' : mantem ? `Manter ${prioridadeAtual || 'prioridade'} e responder` : `Mudar para ${prio} e responder`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FooterFoot({
   editing, isAdmin, onArquivar, onDesarquivar, onExcluir, onClose, onSave,
 }: {

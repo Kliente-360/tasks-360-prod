@@ -117,6 +117,17 @@ export function TriagemClient() {
     return out;
   }, [tasks]);
 
+  // Pedidos de prioridade do cliente (portal) aguardando resposta do time
+  const pedidosPrioridade = useMemo(
+    () =>
+      tasks
+        .filter((t) => t.prioridadePedidoEm && !t.arquivadoEm && t.status !== STATUS.CONCLUIDO)
+        .sort((a, b) => (a.prioridadePedidoEm ?? 0) - (b.prioridadePedidoEm ?? 0)),
+    [tasks],
+  );
+  const nomeCliente = useCallback((id: string) => clientes.find((c) => c.id === id)?.nome ?? '—', [clientes]);
+  const nomeProjeto = useCallback((id: string) => projetos.find((p) => p.id === id)?.nome ?? '—', [projetos]);
+
   // Aplica filtro arbitrário (não-state) — usado tanto pelo `filtered` real
   // quanto pelos previews de count "se eu ligar esse chip mantendo os outros".
   const applyFilter = useCallback(
@@ -356,8 +367,43 @@ export function TriagemClient() {
         </div>
       )}
 
+      {pedidosPrioridade.length > 0 && (
+        <div className="card overflow-hidden" style={{ borderColor: 'var(--warn)' }}>
+          <div className="px-4 py-2.5 flex items-center gap-2" style={{ background: 'var(--warn-soft)', color: 'var(--warn)' }}>
+            <span className="text-sm font-semibold grow">Pedidos de prioridade do cliente</span>
+            <span className="font-mono text-xs">{pedidosPrioridade.length}</span>
+          </div>
+          {pedidosPrioridade.map((t) => {
+            const dias = Math.floor((Date.now() - (t.prioridadePedidoEm ?? 0)) / 86400000);
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => openEdit(t.id)}
+                className="w-full text-left px-4 py-2.5 border-t border-line hover:bg-[var(--surface-3)] flex items-center gap-3"
+              >
+                <span className={`pri pri-${t.prioridade || 'P3'} shrink-0`}>
+                  <span className="pri-dot" />
+                  {t.prioridade || '—'}
+                </span>
+                <span className="min-w-0 grow">
+                  <span className="block truncate text-sm font-medium text-ink">{t.titulo}</span>
+                  <span className="block text-xs text-muted">{nomeCliente(t.clienteId)} · {nomeProjeto(t.projetoId)}</span>
+                </span>
+                <span className="shrink-0 text-xs font-semibold" style={{ color: 'var(--warn)' }}>
+                  pediu {t.prioridadeSolicitadaCliente ?? 'alta'}
+                </span>
+                <span className="shrink-0 font-mono text-[11px] text-muted w-14 text-right">
+                  {dias <= 0 ? 'hoje' : `há ${dias}d`}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Empty states */}
-      {triagemTasks.length === 0 && (
+      {triagemTasks.length === 0 && pedidosPrioridade.length === 0 && (
         <div className="card p-8 md:p-10 text-center">
           <div className="font-brand text-lg text-ink mb-2">Nenhuma tarefa em triagem</div>
           <div className="text-sm text-muted">

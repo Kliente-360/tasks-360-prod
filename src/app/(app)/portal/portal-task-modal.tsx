@@ -1,16 +1,17 @@
 'use client';
 
 /**
- * Modal de detalhe da task no Portal cliente. Aberto quando o cliente
- * clica num card. Layout simplificado vs task-modal interno:
- * - Status humanizado (em andamento / em pausa / ⚠ aguardando você / ✓ concluída)
- * - Descrição
- * - Projeto + contato (primeiro nome do responsável)
- * - "Já respondi" — quando bloqueado por cliente, formulário com textarea + botão
- * - Linha do tempo (criação + transição de status)
- * - Conversa pública (visível ao cliente, threaded com replies)
+ * Modal da task no Portal do cliente (out/2026 · mockup aprovado).
  *
- * Portado de index.html linhas 1892-1986 + lib/views/portal.js (handlers).
+ * Estrutura: cabeçalho (status, prioridade, prazo, responsável, pedir
+ * prioridade) → progresso das etapas → faixa de ação quando o cliente tem
+ * algo a fazer → corpo em 2 colunas: solicitação/entrega/dados à esquerda,
+ * conversa à direita.
+ *
+ * Ações do cliente vão por RPC security definer (RLS de cliente em tasks é
+ * só SELECT): app_aprovar_entrega, app_pedir_ajuste, app_responder_pendencia,
+ * app_pedir_prioridade. Cada RPC grava comentário + histórico + aviso ao time.
+ * Admin/interno simulando o portal veem as ações desabilitadas.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -18,21 +19,30 @@ import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase/client';
 import { useData } from '@/lib/data-store';
 import { useToastSafe } from '@/components/toast';
+import { Icon } from '@/components/icons';
 import { fmtDate, fmtPostedEm } from '@/lib/format';
-import { STATUS } from '@/lib/task-constants';
+import { STATUS, SUB_LABELS, SUB_TO_MACRO } from '@/lib/task-constants';
 import type { Task } from '@/lib/types';
 
 interface PortalComment {
   id: string;
-  parent_id: string | null;
   author: string | null;
-  author_pessoa_id: string | null;
   body: string;
   posted_em: string | null;
   criado_em: string;
-  external_source: string | null;
-  visivel_cliente: boolean;
   from_cliente: boolean | null;
+  kind: string | null;
+}
+
+interface SubetapaEvento {
+  to_value: string | null;
+  occurred_at: string;
+}
+
+interface Detalhes {
+  descricao: string;
+  valorEsperado: string;
+  solucao: string;
 }
 
 interface PortalTaskModalProps {
@@ -41,110 +51,351 @@ interface PortalTaskModalProps {
   onClose: () => void;
 }
 
-function timelineFor(t: Task): { ts: number; label: string }[] {
-  const items: { ts: number; label: string }[] = [];
-  if (t.criadoEm) items.push({ ts: t.criadoEm, label: 'Tarefa criada' });
-  if (t.statusEm && t.statusEm !== t.criadoEm) {
-    const macro =
-      t.status === 'andamento'
-        ? 'Em andamento'
-        : t.status === 'bloqueado'
-          ? 'Em pausa'
-          : t.status === STATUS.CONCLUIDO
-            ? 'Concluída'
-            : 'No backlog';
-    items.push({ ts: t.statusEm, label: macro });
-  }
-  return items.sort((a, b) => a.ts - b.ts);
+const PRIO_CLIENTE_LABEL: Record<string, string> = {
+  urgente: 'Urgente',
+  alta: 'Alta',
+  media: 'Média',
+  baixa: 'Baixa',
+};
+
+const SIMULANDO = 'Só o cliente faz esta ação · você está simulando o portal';
+
+function diaMes(ms: number | null | undefined): string {
+  if (!ms) return '';
+  return new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
+// ── Progresso ────────────────────────────────────────────────────────
+
+const ETAPAS = ['Solicitada', 'Desenvolvimento', 'Homologação', 'Concluída'] as const;
+
+function etapaAtual(t: Task): { idx: number; label?: string; pausada: boolean } {
+  if (t.status === STATUS.CONCLUIDO) return { idx: 4, pausada: false };
+  switch (t.subetapa) {
+    case 'em_desenvolvimento':
+    case 'em_revisao':
+      return { idx: 1, pausada: false };
+    case 'em_homologacao':
+      return { idx: 2, pausada: false };
+    case 'pronto_producao':
+    case 'em_implantacao':
+      return { idx: 3, label: 'Indo para produção', pausada: false };
+    case 'bloqueado':
+      return { idx: t.homologacaoEm ? 2 : t.andamentoEm ? 1 : 0, pausada: true };
+    default:
+      return { idx: 0, pausada: false };
+  }
+}
+
+function Progresso({ task }: { task: Task }) {
+  const cur = etapaAtual(task);
+  const datas = [
+    task.criadoEm,
+    task.andamentoEm || null,
+    task.homologacaoEm,
+    task.status === STATUS.CONCLUIDO ? task.statusEm : null,
+  ];
+  return (
+    <ol className="pmodal-steps" aria-label="Progresso da tarefa">
+      {ETAPAS.map((nome, i) => {
+        const feita = i < cur.idx;
+        const atual = i === cur.idx;
+        const estado = feita ? 'done' : atual ? (cur.pausada ? 'paused' : 'current') : 'todo';
+        return (
+          <li key={nome} className={`pmodal-step is-${estado}`} aria-current={atual ? 'step' : undefined}>
+            <div className="pmodal-step-track">
+              <span className="pmodal-step-dot">
+                {feita && <Icon name="check" size={12} />}
+                {estado === 'paused' && <Icon name="pause" size={10} />}
+              </span>
+              {i < ETAPAS.length - 1 && <span className="pmodal-step-line" />}
+            </div>
+            <div className="pmodal-step-name">
+              {atual ? `${cur.label ?? nome}${cur.pausada ? ' · pausada' : ' · agora'}` : nome}
+            </div>
+            <div className="pmodal-step-date">
+              {feita ? diaMes(datas[i]) || '—' : atual ? `desde ${diaMes(task.subetapaEm) || '—'}` : '—'}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+// ── Conversa ─────────────────────────────────────────────────────────
+
+const KIND_TAG: Record<string, string> = {
+  pendencia: 'Pergunta do time',
+  resposta_pendencia: 'Resposta à pendência',
+  pedido_prioridade: 'Pedido de prioridade',
+  resposta_prioridade: 'Resposta ao pedido de prioridade',
+  ajuste_solicitado: 'Pedido de ajuste',
+};
+
+type ItemConversa =
+  | { tipo: 'comment'; ts: number; c: PortalComment }
+  | { tipo: 'etapa'; ts: number; sub: string };
+
+function Conversa({ comments, eventos }: { comments: PortalComment[]; eventos: SubetapaEvento[] }) {
+  const itens = useMemo<ItemConversa[]>(() => {
+    const out: ItemConversa[] = [];
+    for (const c of comments) {
+      out.push({ tipo: 'comment', ts: new Date(c.posted_em || c.criado_em).getTime(), c });
+    }
+    for (const e of eventos) {
+      if (e.to_value) out.push({ tipo: 'etapa', ts: new Date(e.occurred_at).getTime(), sub: e.to_value });
+    }
+    return out.sort((a, b) => a.ts - b.ts);
+  }, [comments, eventos]);
+
+  if (itens.length === 0) {
+    return <div className="pmodal-empty">Nenhuma mensagem ainda. Escreva abaixo se quiser falar com o time.</div>;
+  }
+  return (
+    <div className="pmodal-convo">
+      {itens.map((it) => {
+        if (it.tipo === 'etapa') {
+          return (
+            <div key={`e-${it.ts}-${it.sub}`} className="pmodal-sep">
+              <span />
+              {SUB_LABELS[it.sub] ?? it.sub} · {diaMes(it.ts)}
+              <span />
+            </div>
+          );
+        }
+        const c = it.c;
+        if (c.kind === 'aprovacao') {
+          return (
+            <div key={c.id} className="pmodal-sep is-ok">
+              <span />
+              <Icon name="check" size={12} /> Entrega aprovada por {c.author ?? 'cliente'} · {diaMes(it.ts)}
+              <span />
+            </div>
+          );
+        }
+        const doCliente = !!c.from_cliente;
+        const tag = c.kind ? KIND_TAG[c.kind] : null;
+        return (
+          <div
+            key={c.id}
+            className={`pmodal-msg ${doCliente ? 'is-cliente' : 'is-time'} ${c.kind ? `kind-${c.kind}` : ''}`}
+          >
+            <div className="pmodal-msg-meta">
+              <b>{c.author || (doCliente ? 'Cliente' : 'Time')}</b> · {fmtPostedEm(c.posted_em || c.criado_em)}
+            </div>
+            <div className="pmodal-msg-body">
+              {tag && <div className="pmodal-msg-tag">{tag}</div>}
+              {c.body}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Diálogo de pedido de prioridade ──────────────────────────────────
+
+function PedirPrioridadeDialog({
+  prioridadeAtual,
+  enviando,
+  onCancel,
+  onEnviar,
+}: {
+  prioridadeAtual: string | null;
+  enviando: boolean;
+  onCancel: () => void;
+  onEnviar: (prio: 'alta' | 'urgente', motivo: string, ate: string | null) => void;
+}) {
+  const [prio, setPrio] = useState<'alta' | 'urgente'>('alta');
+  const [motivo, setMotivo] = useState('');
+  const [ate, setAte] = useState('');
+  return (
+    <div className="pmodal-dialog-wrap" onClick={onCancel}>
+      <div
+        className="pmodal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pp-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="pmodal-dialog-head">
+          <h2 id="pp-title">Pedir mais prioridade</h2>
+          <p>
+            Hoje esta tarefa está com prioridade{' '}
+            <b>{prioridadeAtual ? (PRIO_CLIENTE_LABEL[prioridadeAtual] ?? prioridadeAtual).toLowerCase() : 'não informada'}</b>.
+            O time avalia seu pedido e responde na conversa da tarefa.
+          </p>
+        </div>
+        <div className="pmodal-dialog-body">
+          <fieldset className="pmodal-fieldset">
+            <legend>Qual prioridade você precisa?</legend>
+            {(
+              [
+                { v: 'alta', t: 'Alta', d: 'Precisa entrar na fila das próximas entregas.' },
+                { v: 'urgente', t: 'Urgente', d: 'Está parando a operação hoje.' },
+              ] as const
+            ).map((o) => (
+              <label key={o.v} className={`pmodal-opt ${prio === o.v ? 'is-on' : ''}`}>
+                <input type="radio" name="pp-prio" checked={prio === o.v} onChange={() => setPrio(o.v)} />
+                <span>
+                  <b>{o.t}</b>
+                  <span>{o.d}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          <div className="pmodal-field">
+            <label htmlFor="pp-motivo">
+              O que mudou? <span>obrigatório</span>
+            </label>
+            <textarea
+              id="pp-motivo"
+              className="inp"
+              rows={3}
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              placeholder="Ex.: a campanha começa dia 1º e depende desta entrega."
+            />
+          </div>
+          <div className="pmodal-field">
+            <label htmlFor="pp-ate">
+              Precisa até quando? <span>opcional</span>
+            </label>
+            <input
+              id="pp-ate"
+              type="date"
+              className="inp"
+              style={{ width: 180 }}
+              value={ate}
+              min={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setAte(e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="pmodal-dialog-foot">
+          <span>A prioridade só muda depois que o time confirmar.</span>
+          <button type="button" className="btn" onClick={onCancel}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={!motivo.trim() || enviando}
+            onClick={() => onEnviar(prio, motivo.trim(), ate || null)}
+          >
+            {enviando ? 'Enviando…' : 'Enviar pedido'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Modal ────────────────────────────────────────────────────────────
+
 export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalProps) {
-  const { projetos, pessoas, patchTask, viewerRole } = useData();
+  const { projetos, pessoas, clientes, patchTask, viewerRole } = useData();
   const toast = useToastSafe();
-
-  const [comments, setComments] = useState<PortalComment[]>([]);
-  const [newComment, setNewComment] = useState('');
-  const [replyText, setReplyText] = useState('');
-  const [sending, setSending] = useState(false);
-  const [aprovando, setAprovando] = useState(false);
-
   const sb = useMemo(() => createClient(), []);
 
-  const projetosById = useMemo(() => new Map(projetos.map((p) => [p.id, p])), [projetos]);
-  const pessoasById = useMemo(() => new Map(pessoas.map((p) => [p.id, p])), [pessoas]);
+  const [comments, setComments] = useState<PortalComment[]>([]);
+  const [eventos, setEventos] = useState<SubetapaEvento[]>([]);
+  const [detalhes, setDetalhes] = useState<Detalhes | null>(null);
+  const [newComment, setNewComment] = useState('');
+  const [resposta, setResposta] = useState('');
+  const [ajusteAberto, setAjusteAberto] = useState(false);
+  const [ajuste, setAjuste] = useState('');
+  const [prioAberto, setPrioAberto] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
 
-  // Carrega comments públicos da task
-  const loadComments = useCallback(
-    async (taskId: string) => {
-      if (!taskId) {
-        setComments([]);
-        return;
+  const taskId = task?.id ?? '';
+  const ehCliente = viewerRole === 'cliente';
+
+  const carregar = useCallback(
+    async (id: string) => {
+      const [c, h, d] = await Promise.all([
+        sb
+          .from('task_comments')
+          .select('id, author, body, posted_em, criado_em, from_cliente, kind')
+          .eq('task_id', id)
+          .eq('visivel_cliente', true)
+          .order('posted_em', { ascending: true, nullsFirst: true })
+          .order('criado_em', { ascending: true }),
+        sb
+          .from('task_field_history')
+          .select('to_value, occurred_at')
+          .eq('task_id', id)
+          .eq('field', 'subetapa')
+          .order('occurred_at', { ascending: true }),
+        sb.from('tasks').select('descricao, valor_esperado, solucao_implementada').eq('id', id).single(),
+      ]);
+      if (!c.error) setComments((c.data ?? []) as PortalComment[]);
+      if (!h.error) setEventos((h.data ?? []) as SubetapaEvento[]);
+      if (!d.error && d.data) {
+        const r = d.data as Record<string, string | null>;
+        setDetalhes({
+          descricao: r.descricao ?? '',
+          valorEsperado: r.valor_esperado ?? '',
+          solucao: r.solucao_implementada ?? '',
+        });
       }
-      const { data, error } = await sb
-        .from('task_comments')
-        .select(
-          'id, parent_id, author, author_pessoa_id, body, posted_em, criado_em, external_source, visivel_cliente, from_cliente',
-        )
-        .eq('task_id', taskId)
-        .eq('visivel_cliente', true)
-        .order('posted_em', { ascending: true, nullsFirst: true })
-        .order('criado_em', { ascending: true });
-      if (!error) setComments((data || []) as PortalComment[]);
     },
     [sb],
   );
 
   useEffect(() => {
-    if (!task) {
-      setComments([]);
-      setNewComment('');
-      setReplyText('');
-      return;
-    }
-    void loadComments(task.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task?.id, loadComments]);
+    setComments([]);
+    setEventos([]);
+    setDetalhes(null);
+    setNewComment('');
+    setResposta('');
+    setAjuste('');
+    setAjusteAberto(false);
+    setPrioAberto(false);
+    if (taskId) void carregar(taskId);
+  }, [taskId, carregar]);
 
-  // ESC fecha
   useEffect(() => {
-    if (!task) return;
+    if (!taskId) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      if (prioAberto) setPrioAberto(false);
+      else onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [task, onClose]);
+  }, [taskId, prioAberto, onClose]);
 
-  // Notif fire-and-forget pro responsável da task. Disparado pelos
-  // 2 fluxos abaixo (Comentar = cliente_comentou; Já respondi =
-  // cliente_respondeu). Sem await — não bloqueia o sucesso do post.
-  const fireClienteNotif = useCallback(
-    (kind: 'cliente_comentou' | 'cliente_respondeu', commentId: string, preview: string) => {
-      if (!task?.pessoaId) return;
-      sb.from('notifications')
-        .insert({
-          recipient_pessoa_id: task.pessoaId,
-          kind,
-          payload: {
-            author: clienteNome || 'cliente',
-            task_id: task.id,
-            comment_id: commentId,
-            preview: preview.slice(0, 80),
-          },
-          source_task_id: task.id,
-          source_comment_id: commentId,
-        })
-        .then(({ error }) => {
-          if (error) console.warn('[notif cliente] insert failed', error);
-        });
+  // Executa uma RPC de ação do cliente com feedback e recarga
+  const acao = useCallback(
+    async (
+      nome: string,
+      run: () => PromiseLike<{ data: unknown; error: { message: string } | null }>,
+      sucesso: string,
+      aplicar: (data: unknown) => void,
+    ) => {
+      if (!task || busy) return false;
+      setBusy(nome);
+      const { data, error } = await run();
+      setBusy(null);
+      if (error) {
+        toast.error(error.message);
+        return false;
+      }
+      aplicar(data);
+      toast.success(sucesso);
+      void carregar(task.id);
+      return true;
     },
-    [task, sb, clienteNome],
+    [task, busy, toast, carregar],
   );
 
-  const submitComment = useCallback(async () => {
+  const enviarComentario = useCallback(async () => {
     const body = newComment.trim();
-    if (!body || !task || sending) return;
-    setSending(true);
+    if (!body || !task || busy) return;
+    setBusy('comentar');
     const { data, error } = await sb
       .from('task_comments')
       .insert({
@@ -157,362 +408,398 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
       })
       .select('id')
       .single();
-    setSending(false);
+    setBusy(null);
     if (error) {
-      toast.error('Erro ao comentar: ' + error.message);
+      toast.error('Erro ao enviar: ' + error.message);
       return;
     }
-    if (data?.id) fireClienteNotif('cliente_comentou', data.id, body);
+    if (task.pessoaId && data?.id) {
+      void sb.from('notifications').insert({
+        recipient_pessoa_id: task.pessoaId,
+        kind: 'cliente_comentou',
+        payload: { author: clienteNome || 'cliente', task_id: task.id, comment_id: data.id, preview: body.slice(0, 80) },
+        source_task_id: task.id,
+        source_comment_id: data.id,
+      });
+    }
     setNewComment('');
-    await loadComments(task.id);
-    toast.success('Comentário enviado.');
-  }, [newComment, task, sending, sb, clienteNome, toast, loadComments, fireClienteNotif]);
-
-  const submitJaRespondi = useCallback(async () => {
-    const body = replyText.trim();
-    if (!body || !task || sending) return;
-    setSending(true);
-    const fullBody = '✓ Já respondi: ' + body;
-    const { data, error } = await sb
-      .from('task_comments')
-      .insert({
-        task_id: task.id,
-        author: clienteNome || 'cliente',
-        body: fullBody,
-        author_pessoa_id: null,
-        visivel_cliente: true,
-        from_cliente: true,
-      })
-      .select('id')
-      .single();
-    setSending(false);
-    if (error) {
-      toast.error('Erro: ' + error.message);
-      return;
-    }
-    if (data?.id) fireClienteNotif('cliente_respondeu', data.id, fullBody);
-    setReplyText('');
-    await loadComments(task.id);
-    toast.success('Sua resposta foi enviada ao time. Eles vão verificar.');
-  }, [replyText, task, sending, sb, clienteNome, toast, loadComments, fireClienteNotif]);
+    void carregar(task.id);
+  }, [newComment, task, busy, sb, clienteNome, toast, carregar]);
 
   if (!task) return null;
 
-  const topLevel = comments.filter((c) => !c.parent_id);
-  const repliesOf = (parentId: string) => comments.filter((c) => c.parent_id === parentId);
+  const agora = Date.now();
+  const projeto = projetos.find((p) => p.id === task.projetoId)?.nome ?? '';
+  const cliente = clientes.find((c) => c.id === task.clienteId)?.nome ?? clienteNome;
+  const responsavel = (pessoas.find((p) => p.id === task.pessoaId)?.nome ?? '').split(' ')[0];
+  const concluida = task.status === STATUS.CONCLUIDO;
+  const aguardandoResposta = task.subetapa === 'bloqueado' && task.bloqueadoPor === 'cliente';
+  const homologar = task.subetapa === 'em_homologacao' && task.aprovadoEm == null;
+  const pedidoPendente = !!task.prioridadePedidoEm;
+  const pendencia = [...comments].reverse().find((c) => c.kind === 'pendencia') ?? null;
+  const atrasada = !!(task.prazo && !concluida && task.prazo < new Date().toISOString().slice(0, 10));
 
-  const projetoNome = projetosById.get(task.projetoId)?.nome ?? '';
-  const contatoNome =
-    task.pessoaId && pessoasById.get(task.pessoaId)
-      ? (pessoasById.get(task.pessoaId)!.nome || '').split(' ')[0]
-      : '';
+  const statusChip = concluida
+    ? { cls: 'is-ok', txt: 'Concluída' }
+    : aguardandoResposta
+      ? { cls: 'is-danger', txt: 'Pausada · aguardando você' }
+      : task.subetapa === 'bloqueado'
+        ? { cls: 'is-muted', txt: 'Pausada' }
+        : homologar
+          ? { cls: 'is-warn', txt: SUB_LABELS[task.subetapa] }
+          : { cls: 'is-brand', txt: SUB_LABELS[task.subetapa] ?? task.subetapa };
 
-  const aguardandoCliente =
-    task.subetapa === 'bloqueado' && task.bloqueadoPor === 'cliente';
+  const aprovar = () =>
+    acao(
+      'aprovar',
+      () => sb.rpc('app_aprovar_entrega', { p_task_id: task.id }),
+      'Entrega aprovada. O time foi avisado.',
+      () =>
+        patchTask(task.id, {
+          aprovadoEm: task.aprovadoEm ?? agora,
+          ...(task.subetapa === 'em_homologacao'
+            ? { subetapa: 'pronto_producao', status: 'andamento', subetapaEm: agora }
+            : {}),
+        }),
+    );
 
-  // 3.7 · Portal cliente pode aprovar entrega quando task está em
-  // homologação ou estágios pós-homologação E ainda não foi aprovada.
-  const APROVAR_SUBS = new Set(['em_homologacao', 'em_revisao', 'pronto_producao', 'em_implantacao']);
-  const podeAprovar = APROVAR_SUBS.has(task.subetapa) && task.aprovadoEm == null;
-  const jaAprovado = task.aprovadoEm != null && task.subetapa !== 'concluido';
-
-  // RPC só aceita role=cliente · admin/interno simulando o portal vê o
-  // botão desabilitado com explicação (antes o erro era engolido).
-  const podeClicarAprovar = viewerRole === 'cliente';
-
-  async function aprovarEntrega() {
-    if (!task || aprovando) return;
-    setAprovando(true);
-    const { data, error } = await sb.rpc('app_aprovar_entrega', { p_task_id: task.id });
-    setAprovando(false);
-    if (error) {
-      toast.error('Não foi possível aprovar: ' + error.message);
-      return;
+  const pedirAjuste = async () => {
+    const ok = await acao(
+      'ajuste',
+      () => sb.rpc('app_pedir_ajuste', { p_task_id: task.id, p_body: ajuste.trim() }),
+      'Pedido de ajuste enviado ao time.',
+      () => patchTask(task.id, { subetapa: 'em_revisao', status: 'andamento', subetapaEm: agora }),
+    );
+    if (ok) {
+      setAjuste('');
+      setAjusteAberto(false);
     }
-    const nowMs = data ? new Date(data as string).getTime() : Date.now();
-    // Espelha o que a RPC fez: grava aprovação e, se estava em
-    // homologação, avança pra Pronto p/ produção.
-    patchTask(task.id, {
-      aprovadoEm: task.aprovadoEm ?? nowMs,
-      ...(task.subetapa === 'em_homologacao'
-        ? { subetapa: 'pronto_producao', status: 'andamento', subetapaEm: nowMs }
-        : {}),
-    });
-    toast.success('Entrega aprovada. O time foi avisado.');
-    if (task.pessoaId) {
-      void sb.from('notifications').insert({
-        recipient_pessoa_id: task.pessoaId,
-        kind: 'cliente_respondeu',
-        payload: { author: clienteNome || 'cliente', task_id: task.id, preview: 'Aprovou a entrega' },
-      });
-    }
-  }
+  };
+
+  const responder = async () => {
+    const ok = await acao(
+      'responder',
+      () => sb.rpc('app_responder_pendencia', { p_task_id: task.id, p_body: resposta.trim() }),
+      'Resposta enviada. O time foi avisado.',
+      (data) => {
+        const sub = typeof data === 'string' ? data : 'bloqueado';
+        if (sub !== 'bloqueado') {
+          patchTask(task.id, {
+            subetapa: sub,
+            status: (SUB_TO_MACRO[sub] ?? 'andamento') as Task['status'],
+            subetapaEm: agora,
+            bloqueadoPor: '',
+          });
+        }
+      },
+    );
+    if (ok) setResposta('');
+  };
+
+  const pedirPrioridade = async (prio: 'alta' | 'urgente', motivo: string, ate: string | null) => {
+    const ok = await acao(
+      'prioridade',
+      () =>
+        sb.rpc('app_pedir_prioridade', {
+          p_task_id: task.id,
+          p_prioridade: prio,
+          p_motivo: motivo,
+          p_ate: ate,
+        }),
+      'Pedido enviado. O time responde aqui na conversa.',
+      () =>
+        patchTask(task.id, {
+          prioridadeSolicitadaCliente: prio,
+          prioridadePedidoEm: agora,
+          prioridadePedidoAte: ate,
+        }),
+    );
+    if (ok) setPrioAberto(false);
+  };
+
+  const prioBloqueadaMotivo = !ehCliente
+    ? SIMULANDO
+    : concluida
+      ? 'Tarefa concluída'
+      : pedidoPendente
+        ? 'Já existe um pedido aguardando o time'
+        : undefined;
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/40 px-2 py-2 md:items-center md:px-4 md:py-4"
-      onClick={onClose}
-    >
+    <div className="pmodal-backdrop" onClick={onClose}>
       <div
-        className="flex max-h-[92vh] w-full max-w-[680px] flex-col overflow-hidden rounded-lg border border-line bg-bg-elev shadow-2xl"
+        className="pmodal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pmodal-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-line px-4 py-3 md:px-6">
-          <div className="min-w-0">
-            <div className="font-mono text-[10px] uppercase tracking-wider text-muted">
-              tarefa
+        {/* Cabeçalho */}
+        <header className="pmodal-head">
+          <div className="pmodal-head-main">
+            <div className="pmodal-eyebrow">
+              {cliente}
+              {projeto && ` · ${projeto}`}
             </div>
-            <div className="mt-0.5 font-brand text-lg font-semibold md:text-xl">
+            <h1 id="pmodal-title" className="pmodal-title">
               {task.titulo}
-            </div>
-          </div>
-          <button
-            className="px-2 text-2xl text-muted hover:text-ink"
-            onClick={onClose}
-            aria-label="Fechar"
-          >
-            ×
-          </button>
-        </div>
-        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 md:px-6">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            {task.status === 'andamento' && (
-              <span
-                className="rounded px-2 py-1 font-mono text-xs"
-                style={{
-                  background: 'var(--brand-tint)',
-                  color: 'var(--brand-dark)',
-                  border: '1px solid var(--brand)',
-                }}
-              >
-                em andamento
+            </h1>
+            <div className="pmodal-chips">
+              <span className={`pmodal-chip ${statusChip.cls}`}>
+                <span className="pmodal-dot" />
+                {statusChip.txt}
               </span>
-            )}
-            {task.status === STATUS.CONCLUIDO && (
-              <span
-                className="rounded px-2 py-1 font-mono text-xs"
-                style={{
-                  background: 'var(--bg-elev)',
-                  color: 'var(--p3)',
-                  border: '1px solid var(--line)',
-                }}
-              >
-                ✓ concluída
-              </span>
-            )}
-            {aguardandoCliente && (
-              <span
-                className="rounded px-2 py-1 font-mono text-xs"
-                style={{
-                  background: '#fef3c7',
-                  color: '#b45309',
-                  border: '1px solid #fde68a',
-                }}
-              >
-                ⚠ aguardando você
-              </span>
-            )}
-            {task.status === 'bloqueado' && !aguardandoCliente && (
-              <span
-                className="rounded px-2 py-1 font-mono text-xs"
-                style={{
-                  background: 'var(--bg-elev)',
-                  color: 'var(--muted)',
-                  border: '1px solid var(--line)',
-                }}
-              >
-                em pausa
-              </span>
-            )}
-            {task.status === 'backlog' && (
-              <span
-                className="rounded px-2 py-1 font-mono text-xs"
-                style={{
-                  background: 'var(--bg-elev)',
-                  color: 'var(--muted)',
-                  border: '1px solid var(--line)',
-                }}
-              >
-                a iniciar
-              </span>
-            )}
-            {task.prazo && (
-              <span className="font-mono text-xs text-ink-soft">
-                prazo: {fmtDate(task.prazo)}
-              </span>
-            )}
-          </div>
-
-          {task.descricao && (
-            <div className="mb-4 whitespace-pre-wrap text-sm text-ink-soft">
-              {task.descricao}
-            </div>
-          )}
-
-          <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="font-mono text-[10px] uppercase tracking-wider text-muted">
-                Projeto
-              </div>
-              <div className="mt-0.5 text-ink">{projetoNome}</div>
-            </div>
-            {contatoNome && (
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-wider text-muted">
-                  Seu contato
-                </div>
-                <div className="mt-0.5 text-ink">{contatoNome}</div>
-              </div>
-            )}
-          </div>
-
-          {/* 3.7 · Botão Aprovar entrega · cliente fecha o loop quando a
-              entrega está em homologação/pós-homologação. Dispara RPC
-              security-definer que marca aprovado_em. */}
-          {podeAprovar && (
-            <div className="card mb-4 p-4" style={{ background: 'var(--brand-soft)', borderColor: 'var(--brand)' }}>
-              <div className="mb-1 font-brand text-sm font-semibold" style={{ color: 'var(--brand-dark)' }}>
-                Entrega pronta pra sua aprovação
-              </div>
-              <div className="mb-3 text-xs text-ink-soft">
-                Reveja a solução implementada e aprove pra fechar a entrega. Você ainda pode comentar dúvidas antes.
-              </div>
-              <button
-                className="btn btn-primary text-sm"
-                onClick={aprovarEntrega}
-                disabled={sending || aprovando || !podeClicarAprovar}
-                title={podeClicarAprovar ? undefined : 'Só o cliente aprova · você está simulando o portal'}
-              >
-                {aprovando ? 'Aprovando…' : '✓ Aprovo a entrega'}
-              </button>
-            </div>
-          )}
-          {jaAprovado && (
-            <div className="mb-4 rounded px-3 py-2 text-xs" style={{ background: 'var(--brand-soft)', color: 'var(--brand-dark)' }}>
-              ✓ Aprovado em {fmtDate(new Date(task.aprovadoEm!).toISOString().slice(0, 10))}
-            </div>
-          )}
-
-          {aguardandoCliente && (
-            <div
-              className="card mb-4 p-4"
-              style={{ background: '#fffbeb', borderColor: '#fde68a' }}
-            >
-              <div
-                className="mb-1 font-brand text-sm font-semibold"
-                style={{ color: '#b45309' }}
-              >
-                Já respondeu?
-              </div>
-              <div className="mb-3 text-xs text-ink-soft">
-                Conta pro time o que você decidiu/respondeu. Eles vão revisar e seguir.
-              </div>
-              <textarea
-                className="inp min-h-[80px] resize-y text-sm"
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder="ex.: Aprovei o desconto de 10% nos planos família."
-              />
-              <button
-                className="btn btn-primary mt-2 text-sm"
-                onClick={submitJaRespondi}
-                disabled={!replyText.trim() || sending}
-              >
-                enviar resposta ao time
-              </button>
-            </div>
-          )}
-
-          <div className="mb-4">
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted">
-              Linha do tempo
-            </div>
-            <div className="space-y-1.5 text-sm">
-              {timelineFor(task).map((ev) => (
-                <div key={ev.ts} className="flex items-center gap-2 text-ink-soft">
-                  <span className="w-20 font-mono text-[10px] text-muted">
-                    {new Date(ev.ts).toLocaleDateString('pt-BR')}
-                  </span>
-                  <span>{ev.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t border-line pt-4">
-            <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted">
-              Conversa
-            </div>
-            <div className="mb-4 space-y-3">
-              {topLevel.map((c) => (
-                <div key={c.id}>
-                  <div
-                    className="border-l-2 py-1 pl-3"
-                    style={{
-                      borderColor: c.from_cliente ? '#b45309' : 'var(--brand)',
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-2 text-xs">
-                      <span className="font-medium text-ink">{c.author || '—'}</span>
-                      <span className="font-mono text-muted">
-                        {fmtPostedEm(c.posted_em || c.criado_em)}
-                      </span>
-                    </div>
-                    <div className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-soft">
-                      {c.body}
-                    </div>
-                  </div>
-                  {repliesOf(c.id).map((r) => (
-                    <div
-                      key={r.id}
-                      className="ml-5 mt-2 border-l-2 py-1 pl-3"
-                      style={{
-                        borderColor: r.from_cliente ? '#b45309' : 'var(--brand)',
-                      }}
-                    >
-                      <div className="flex items-center justify-between gap-2 text-xs">
-                        <span className="font-medium text-ink">{r.author || '—'}</span>
-                        <span className="font-mono text-muted">
-                          {fmtPostedEm(r.posted_em || r.criado_em)}
-                        </span>
-                      </div>
-                      <div className="mt-1 whitespace-pre-wrap break-words text-sm text-ink-soft">
-                        {r.body}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
-              {comments.length === 0 && (
-                <div className="text-xs italic text-muted">Nenhum comentário ainda.</div>
+              {task.prioridade && (
+                <span className={`pri pri-${task.prioridade}`}>
+                  <span className="pri-dot" />
+                  {task.prioridade}
+                </span>
+              )}
+              {task.prazo && (
+                <span className={`pmodal-chip font-mono ${atrasada ? 'is-danger' : ''}`}>
+                  Prazo {fmtDate(task.prazo)}
+                </span>
+              )}
+              {responsavel && (
+                <span className="pmodal-chip">
+                  <span className="pmodal-avatar">{responsavel.charAt(0)}</span>
+                  {responsavel}
+                </span>
               )}
             </div>
-            <textarea
-              className="inp min-h-[60px] resize-y text-sm"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              placeholder="comentar nesta tarefa…"
-              onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                  e.preventDefault();
-                  void submitComment();
-                }
-              }}
-            />
-            <div className="mt-2 flex items-center justify-between">
-              <span className="text-[10px] text-muted">
-                ⌘ + enter envia · seu comentário fica visível ao time
-              </span>
-              <button
-                className="btn btn-primary text-sm"
-                onClick={submitComment}
-                disabled={!newComment.trim() || sending}
-              >
-                enviar
-              </button>
+          </div>
+          <div className="pmodal-head-actions">
+            <button
+              type="button"
+              className="btn pmodal-btn-quiet"
+              onClick={() => setPrioAberto(true)}
+              disabled={!!prioBloqueadaMotivo}
+              title={prioBloqueadaMotivo}
+            >
+              <Icon name="arrow-up" size={15} />
+              Pedir prioridade
+            </button>
+            <button type="button" className="pmodal-close" onClick={onClose} aria-label="Fechar">
+              <Icon name="x" size={20} />
+            </button>
+          </div>
+        </header>
+
+        <div className="pmodal-scroll">
+          <Progresso task={task} />
+
+          {/* Faixa de ação */}
+          {aguardandoResposta ? (
+            <section className="pmodal-band is-danger">
+              <div className="pmodal-band-title">O time precisa de uma resposta sua para seguir</div>
+              <div className="pmodal-band-quote">
+                {pendencia ? (
+                  <>
+                    <span className="pmodal-band-quote-meta">
+                      <b>{pendencia.author ?? 'Time'}</b> · {fmtPostedEm(pendencia.posted_em || pendencia.criado_em)}
+                    </span>
+                    {pendencia.body}
+                  </>
+                ) : (
+                  'O time está aguardando um retorno seu. Veja a conversa ao lado.'
+                )}
+              </div>
+              <div className="pmodal-band-form">
+                <label htmlFor="pmodal-resposta">Sua resposta</label>
+                <div className="pmodal-band-row">
+                  <textarea
+                    id="pmodal-resposta"
+                    className="inp"
+                    rows={2}
+                    value={resposta}
+                    onChange={(e) => setResposta(e.target.value)}
+                    placeholder="Responda aqui. O time é avisado e a tarefa volta a andar."
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={!ehCliente || !resposta.trim() || !!busy}
+                    title={ehCliente ? undefined : SIMULANDO}
+                    onClick={responder}
+                  >
+                    {busy === 'responder' ? 'Enviando…' : 'Responder'}
+                  </button>
+                </div>
+              </div>
+            </section>
+          ) : homologar ? (
+            <section className="pmodal-band is-warn">
+              <div className="pmodal-band-line">
+                <div className="pmodal-band-text">
+                  <div className="pmodal-band-title">Sua vez: homologar a entrega</div>
+                  <div className="pmodal-band-sub">
+                    Confira o que foi entregue. Ao aprovar, a tarefa segue para produção.
+                  </div>
+                </div>
+                {!ajusteAberto && (
+                  <>
+                    <button
+                      type="button"
+                      className="btn"
+                      disabled={!ehCliente || !!busy}
+                      title={ehCliente ? undefined : SIMULANDO}
+                      onClick={() => setAjusteAberto(true)}
+                    >
+                      Pedir ajuste
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={!ehCliente || !!busy}
+                      title={ehCliente ? undefined : SIMULANDO}
+                      onClick={aprovar}
+                    >
+                      <Icon name="check" size={15} />
+                      {busy === 'aprovar' ? 'Aprovando…' : 'Aprovar entrega'}
+                    </button>
+                  </>
+                )}
+              </div>
+              {ajusteAberto && (
+                <div className="pmodal-band-form">
+                  <label htmlFor="pmodal-ajuste">O que precisa ser ajustado?</label>
+                  <textarea
+                    id="pmodal-ajuste"
+                    className="inp"
+                    rows={3}
+                    value={ajuste}
+                    onChange={(e) => setAjuste(e.target.value)}
+                    placeholder="Descreva o que não ficou como esperado."
+                    autoFocus
+                  />
+                  <div className="pmodal-band-actions">
+                    <button type="button" className="btn" onClick={() => setAjusteAberto(false)}>
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      disabled={!ajuste.trim() || !!busy}
+                      onClick={pedirAjuste}
+                    >
+                      {busy === 'ajuste' ? 'Enviando…' : 'Enviar pedido de ajuste'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+          ) : pedidoPendente ? (
+            <section className="pmodal-band is-info">
+              <div className="pmodal-band-title">
+                Pedido de prioridade {PRIO_CLIENTE_LABEL[task.prioridadeSolicitadaCliente ?? 'alta']?.toLowerCase()} enviado
+                em {diaMes(task.prioridadePedidoEm)}
+              </div>
+              <div className="pmodal-band-sub">O time responde aqui na conversa.</div>
+            </section>
+          ) : task.aprovadoEm && !concluida ? (
+            <section className="pmodal-band is-ok">
+              <div className="pmodal-band-title">Você aprovou esta entrega em {diaMes(task.aprovadoEm)}</div>
+              <div className="pmodal-band-sub">A tarefa segue para produção.</div>
+            </section>
+          ) : null}
+
+          {/* Corpo */}
+          <div className="pmodal-body">
+            <div className="pmodal-col-main">
+              <section className="pmodal-section">
+                <div className="pmodal-lbl">Sua solicitação</div>
+                {detalhes === null ? (
+                  <div className="pmodal-loading">Carregando…</div>
+                ) : detalhes.descricao ? (
+                  <div className="pmodal-text">{detalhes.descricao}</div>
+                ) : (
+                  <div className="pmodal-empty">Sem descrição.</div>
+                )}
+                {detalhes?.valorEsperado && (
+                  <div className="pmodal-valor">
+                    <div className="pmodal-lbl">Valor esperado</div>
+                    <div className="pmodal-text">{detalhes.valorEsperado}</div>
+                  </div>
+                )}
+              </section>
+
+              {detalhes?.solucao && (
+                <section className="pmodal-section">
+                  <div className="pmodal-lbl">O que foi entregue</div>
+                  <div className="pmodal-text">{detalhes.solucao}</div>
+                </section>
+              )}
+
+              <section className="pmodal-facts">
+                <div>
+                  <div className="pmodal-lbl">Projeto</div>
+                  <div>{projeto || '—'}</div>
+                </div>
+                <div>
+                  <div className="pmodal-lbl">Responsável</div>
+                  <div>{responsavel || '—'}</div>
+                </div>
+                <div>
+                  <div className="pmodal-lbl">Aberta em</div>
+                  <div className="font-mono text-[13px]">
+                    {task.criadoEm ? new Date(task.criadoEm).toLocaleDateString('pt-BR') : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="pmodal-lbl">Sua prioridade</div>
+                  <div>
+                    {task.prioridadeSolicitadaCliente
+                      ? PRIO_CLIENTE_LABEL[task.prioridadeSolicitadaCliente]
+                      : '—'}
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div className="pmodal-col-convo">
+              <div className="pmodal-lbl pmodal-convo-head">Conversa</div>
+              <Conversa comments={comments} eventos={eventos} />
+              <div className="pmodal-composer">
+                <label htmlFor="pmodal-msg" className="pmodal-lbl">
+                  Falar com o time
+                </label>
+                <div className="pmodal-band-row">
+                  <textarea
+                    id="pmodal-msg"
+                    className="inp"
+                    rows={2}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Escreva uma dúvida ou comentário"
+                    onKeyDown={(e) => {
+                      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                        e.preventDefault();
+                        void enviarComentario();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    disabled={!newComment.trim() || !!busy}
+                    onClick={enviarComentario}
+                  >
+                    {busy === 'comentar' ? 'Enviando…' : 'Enviar'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
+        {prioAberto && (
+          <PedirPrioridadeDialog
+            prioridadeAtual={task.prioridadeSolicitadaCliente ?? null}
+            enviando={busy === 'prioridade'}
+            onCancel={() => setPrioAberto(false)}
+            onEnviar={pedirPrioridade}
+          />
+        )}
       </div>
     </div>,
     document.body,

@@ -38,7 +38,12 @@ export interface Task {
   valorEntregue?: string;
   /** Prioridade que o cliente sinalizou. Separado de `prioridade` (interna).
    *  Enum: 'alta' · 'media' · 'baixa' · null (não informado). */
-  prioridadeSolicitadaCliente?: 'alta' | 'media' | 'baixa' | null;
+  prioridadeSolicitadaCliente?: 'urgente' | 'alta' | 'media' | 'baixa' | null;
+  /** Pedido de prioridade do cliente aguardando resposta do time (ms).
+   *  Null = sem pedido pendente. Só o time limpa, ao responder. */
+  prioridadePedidoEm: number | null;
+  /** Data até quando o cliente precisa (opcional no pedido). */
+  prioridadePedidoAte: string | null;
   /** Motivo capturado quando uma task é reaberta (concluido → outra). */
   motivoReabertura?: string;
   /** UUIDs de tasks que precisam estar concluídas antes desta poder concluir. */

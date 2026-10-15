@@ -61,6 +61,10 @@ function notifKindGroup(n: Notif): KindFilter | 'other' {
       return 'task';
     case 'cliente_comentou':
     case 'cliente_respondeu':
+    case 'cliente_aprovou':
+    case 'cliente_pediu_ajuste':
+    case 'cliente_respondeu_pendencia':
+    case 'cliente_pediu_prioridade':
       return 'cliente';
     default:
       return 'other';
@@ -80,6 +84,14 @@ function notifSummary(n: Notif): string {
       return `${who} comentou em uma tarefa sua`;
     case 'cliente_respondeu':
       return `${who} respondeu sua mensagem`;
+    case 'cliente_aprovou':
+      return `${who} aprovou uma entrega`;
+    case 'cliente_pediu_ajuste':
+      return `${who} pediu ajuste numa entrega`;
+    case 'cliente_respondeu_pendencia':
+      return `${who} respondeu uma pendência`;
+    case 'cliente_pediu_prioridade':
+      return `${who} pediu prioridade numa tarefa`;
     case 'status_change':
       return `${who} mudou status de uma tarefa sua` + (n.payload?.to ? ` → ${n.payload.to}` : '');
     default:
@@ -94,6 +106,10 @@ const KIND_ICON: Record<string, IconName> = {
   comment_on_my_task: 'comment',
   cliente_comentou: 'inbox',
   cliente_respondeu: 'inbox',
+  cliente_aprovou: 'check-circle',
+  cliente_pediu_ajuste: 'refresh',
+  cliente_respondeu_pendencia: 'inbox',
+  cliente_pediu_prioridade: 'arrow-up',
   status_change: 'refresh',
 };
 

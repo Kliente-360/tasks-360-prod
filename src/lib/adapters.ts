@@ -28,7 +28,9 @@ export function taskFromDb(r: Row): Task {
     valorEsperado: r.valor_esperado === undefined ? undefined : str(r.valor_esperado),
     criterioAceite: r.criterio_aceite === undefined ? undefined : str(r.criterio_aceite),
     valorEntregue: r.valor_entregue === undefined ? undefined : str(r.valor_entregue),
-    prioridadeSolicitadaCliente: (r.prioridade_solicitada_cliente as 'alta' | 'media' | 'baixa' | null) ?? null,
+    prioridadeSolicitadaCliente: (r.prioridade_solicitada_cliente as Task['prioridadeSolicitadaCliente']) ?? null,
+    prioridadePedidoEm: r.prioridade_pedido_em ? new Date(r.prioridade_pedido_em as string).getTime() : null,
+    prioridadePedidoAte: r.prioridade_pedido_ate ? String(r.prioridade_pedido_ate) : null,
     motivoReabertura: r.motivo_reabertura === undefined ? undefined : (r.motivo_reabertura as string | null) ?? undefined,
     bloqueadaPorTasks: arr<string>(r.bloqueada_por_tasks),
     tipoTrabalho: (r.tipo_trabalho as Task['tipoTrabalho']) ?? null,
@@ -140,4 +142,4 @@ export function timeEntryFromDb(r: Row): TimeEntry {
 
 /** Colunas leves carregadas no boot. `descricao` é lazy (modal puxa). */
 export const TASK_LIGHT_COLS =
-  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,prioridade_solicitada_cliente,tipo_trabalho,esforco,complexidade,prazo,status,subetapa,bloqueado_por,bloqueada_por_tasks,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,homologacao_em,aprovado_em,ordem,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,criado_por_cliente,triada_em,triada_por,motivo_arquivamento,privada,radar,webhook_sync_status,webhook_sync_error';
+  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,prioridade_solicitada_cliente,prioridade_pedido_em,prioridade_pedido_ate,tipo_trabalho,esforco,complexidade,prazo,status,subetapa,bloqueado_por,bloqueada_por_tasks,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,homologacao_em,aprovado_em,ordem,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,criado_por_cliente,triada_em,triada_por,motivo_arquivamento,privada,radar,webhook_sync_status,webhook_sync_error';

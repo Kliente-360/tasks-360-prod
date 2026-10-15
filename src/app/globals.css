@@ -1446,6 +1446,45 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 }
 .tmodal-radar-btn[data-active="true"]:hover { filter: brightness(0.95); }
 
+/* Etiqueta de pedido de prioridade pendente nos cards */
+.tag-pedido-prio {
+  display: inline-flex; align-items: center; gap: 3px;
+  height: 18px; padding: 0 6px;
+  border-radius: var(--r-pill);
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 10px; font-weight: 600;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* Pedido de prioridade do cliente (portal) · banner no modal interno */
+.tmodal-pedido-prio {
+  margin: 12px 20px 0;
+  border: 1px solid var(--warn);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.tmodal-pedido-prio-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 14px; font-weight: 700;
+}
+.tmodal-pedido-prio-body {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 12px 14px;
+}
+.tmodal-pedido-prio-quote {
+  margin: 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--warn);
+  background: var(--surface-2);
+  font-size: 13px; line-height: 1.5;
+  white-space: pre-wrap;
+}
+
 /* Chip Radar · não-CEO enxerga read-only quando task está no radar */
 .tmodal-radar-chip {
   display: inline-flex; align-items: center; gap: 4px;
@@ -2958,3 +2997,210 @@ body {
 .mt14 { margin-top: 14px; }
 .mt18 { margin-top: 18px; }
 .m-hr { height: 1px; background: var(--line); border: 0; margin: 16px 0; }
+
+/* ── Portal · modal da task (out/2026 · mockup aprovado) ───────────── */
+.pmodal-backdrop {
+  position: fixed; inset: 0; z-index: 70;
+  display: flex; align-items: flex-end; justify-content: center;
+  background: rgba(20, 20, 20, .45);
+  padding: 8px;
+}
+@media (min-width: 768px) { .pmodal-backdrop { align-items: center; padding: 24px; } }
+.pmodal {
+  position: relative;
+  width: 100%; max-width: 1040px; max-height: 92vh;
+  display: flex; flex-direction: column;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--sh-lg);
+  overflow: hidden;
+}
+.pmodal-head {
+  display: flex; align-items: flex-start; gap: 16px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.pmodal-head-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.pmodal-eyebrow, .pmodal-lbl {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+.pmodal-title { margin: 0; font-size: 22px; line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+.pmodal-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pmodal-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 10px; box-sizing: border-box;
+  border-radius: var(--r-pill); border: 1px solid var(--line);
+  background: var(--bg-elev); color: var(--ink-soft);
+  font-size: 12px; font-weight: 500;
+}
+.pmodal-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+.pmodal-chip.is-brand { color: var(--green); }
+.pmodal-chip.is-ok { background: var(--green-tint); color: var(--green); border-color: transparent; }
+.pmodal-chip.is-warn { background: var(--warn-soft); color: var(--warn); border-color: var(--warn); }
+.pmodal-chip.is-danger { background: var(--danger-soft); color: var(--danger); border-color: var(--danger); }
+.pmodal-chip.is-muted { color: var(--muted); }
+.pmodal-avatar {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--green-tint); color: var(--green);
+  font-size: 10px; font-weight: 700;
+}
+.pmodal-head-actions { display: flex; align-items: center; gap: 4px; flex: none; }
+.pmodal-btn-quiet { height: 36px; padding: 0 12px; font-size: 13px; font-weight: 500; }
+.pmodal-close {
+  width: 40px; height: 40px; border-radius: 8px; border: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--ink-soft); cursor: pointer;
+}
+.pmodal-close:hover { background: var(--surface-3); color: var(--ink); }
+
+.pmodal-scroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+
+/* Progresso */
+.pmodal-steps {
+  list-style: none; margin: 0; padding: 14px 24px;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  background: var(--surface-2); border-bottom: 1px solid var(--line);
+  flex: none;
+}
+.pmodal-step { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.pmodal-step-track { display: flex; align-items: center; }
+.pmodal-step-dot {
+  width: 20px; height: 20px; border-radius: 50%; box-sizing: border-box; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 2px solid var(--line-strong); background: var(--bg-elev); color: #fff;
+}
+.pmodal-step-line { flex: 1; height: 2px; background: var(--line); }
+.pmodal-step-name { font-size: 13px; font-weight: 500; color: var(--muted); }
+.pmodal-step-date { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.pmodal-step.is-done .pmodal-step-dot { background: var(--green); border-color: var(--green); }
+.pmodal-step.is-done .pmodal-step-line { background: var(--green); }
+.pmodal-step.is-done .pmodal-step-name { color: var(--ink); font-weight: 600; }
+.pmodal-step.is-current .pmodal-step-dot { border: 3px solid var(--warn); }
+.pmodal-step.is-current .pmodal-step-name { color: var(--warn); font-weight: 700; }
+.pmodal-step.is-paused .pmodal-step-dot { background: var(--danger); border-color: var(--danger); }
+.pmodal-step.is-paused .pmodal-step-name { color: var(--danger); font-weight: 700; }
+@media (max-width: 640px) {
+  .pmodal-steps { padding: 12px 16px; }
+  .pmodal-step-name { font-size: 11px; }
+}
+
+/* Faixa de ação */
+.pmodal-band {
+  margin: 16px 24px 0; padding: 14px 16px;
+  border-radius: var(--r-md); border: 1px solid;
+  display: flex; flex-direction: column; gap: 12px;
+  flex: none;
+}
+.pmodal-band.is-warn { background: var(--warn-soft); border-color: var(--warn); }
+.pmodal-band.is-danger { background: var(--danger-soft); border-color: var(--danger); }
+.pmodal-band.is-info { background: var(--surface-2); border-color: var(--line-strong); gap: 2px; }
+.pmodal-band.is-ok { background: var(--green-tint); border-color: var(--green); gap: 2px; }
+.pmodal-band-line { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pmodal-band-text { flex: 1; min-width: 240px; }
+.pmodal-band-title { font-size: 15px; font-weight: 700; color: var(--ink); }
+.pmodal-band.is-warn .pmodal-band-title { color: var(--warn); }
+.pmodal-band.is-danger .pmodal-band-title { color: var(--danger); }
+.pmodal-band.is-ok .pmodal-band-title { color: var(--green); }
+.pmodal-band-sub { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+.pmodal-band-quote {
+  padding: 10px 12px; border-radius: 8px;
+  background: var(--bg-elev); border: 1px solid var(--line);
+  font-size: 14px; line-height: 1.5; color: var(--ink); white-space: pre-wrap;
+}
+.pmodal-band-quote-meta { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.pmodal-band-quote-meta b { color: var(--ink); font-weight: 600; }
+.pmodal-band-form { display: flex; flex-direction: column; gap: 6px; }
+.pmodal-band-form > label { font-size: 13px; font-weight: 600; color: var(--ink); }
+.pmodal-band-row { display: flex; align-items: flex-end; gap: 8px; }
+.pmodal-band-row textarea { flex: 1; resize: none; }
+.pmodal-band-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Corpo */
+.pmodal-body { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1; min-height: 0; margin-top: 16px; border-top: 1px solid var(--line); }
+@media (min-width: 900px) { .pmodal-body { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); } }
+.pmodal-col-main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (min-width: 900px) { .pmodal-col-main { border-right: 1px solid var(--line); } }
+.pmodal-section { display: flex; flex-direction: column; gap: 8px; }
+.pmodal-text { font-size: 14px; line-height: 1.6; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.pmodal-valor { padding: 12px 14px; border-radius: 8px; background: var(--green-tint); display: flex; flex-direction: column; gap: 4px; }
+.pmodal-valor .pmodal-lbl { color: var(--green); }
+.pmodal-facts {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px;
+  padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 14px; color: var(--ink);
+}
+.pmodal-facts .pmodal-lbl { margin-bottom: 4px; }
+.pmodal-empty, .pmodal-loading { font-size: 13px; font-style: italic; color: var(--muted); }
+
+.pmodal-col-convo { display: flex; flex-direction: column; background: var(--surface-2); min-height: 320px; }
+.pmodal-convo-head { padding: 16px 20px 8px; }
+.pmodal-col-convo > .pmodal-empty { padding: 0 20px; flex: 1; }
+.pmodal-convo { flex: 1; padding: 0 20px 8px; display: flex; flex-direction: column; gap: 12px; }
+.pmodal-sep {
+  display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+}
+.pmodal-sep > span { flex: 1; height: 1px; background: var(--line); }
+.pmodal-sep.is-ok { color: var(--green); }
+.pmodal-msg { max-width: 88%; display: flex; flex-direction: column; gap: 4px; }
+.pmodal-msg.is-time { align-self: flex-start; }
+.pmodal-msg.is-cliente { align-self: flex-end; align-items: flex-end; }
+.pmodal-msg-meta { font-size: 12px; color: var(--muted); }
+.pmodal-msg-meta b { color: var(--ink); font-weight: 600; }
+.pmodal-msg-body {
+  padding: 9px 12px; font-size: 13px; line-height: 1.5; color: var(--ink);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+  background: var(--bg-elev); border: 1px solid var(--line);
+  border-radius: 4px 10px 10px 10px;
+}
+.pmodal-msg.is-cliente .pmodal-msg-body { background: var(--green-tint); border-color: transparent; border-radius: 10px 4px 10px 10px; }
+.pmodal-msg-tag { font-size: 11px; font-weight: 700; margin-bottom: 3px; color: var(--ink-soft); }
+.pmodal-msg.kind-pendencia .pmodal-msg-body { background: var(--danger-soft); border-color: var(--danger); }
+.pmodal-msg.kind-pendencia .pmodal-msg-tag { color: var(--danger); }
+.pmodal-msg.kind-pedido_prioridade .pmodal-msg-body,
+.pmodal-msg.kind-resposta_prioridade .pmodal-msg-body { background: var(--warn-soft); border-color: var(--warn); }
+.pmodal-msg.kind-pedido_prioridade .pmodal-msg-tag,
+.pmodal-msg.kind-resposta_prioridade .pmodal-msg-tag { color: var(--warn); }
+.pmodal-composer { padding: 12px 20px 18px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); }
+
+/* Diálogo de pedido de prioridade */
+.pmodal-dialog-wrap {
+  position: absolute; inset: 0; z-index: 2;
+  background: rgba(20, 20, 20, .38);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 72px 16px 16px; overflow-y: auto;
+}
+.pmodal-dialog {
+  width: 100%; max-width: 520px;
+  background: var(--bg-elev); border-radius: 14px; box-shadow: var(--sh-lg);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.pmodal-dialog-head { padding: 20px 22px 4px; }
+.pmodal-dialog-head h2 { margin: 0 0 6px; font-size: 19px; font-weight: 700; color: var(--ink); }
+.pmodal-dialog-head p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink-soft); }
+.pmodal-dialog-head b { color: var(--ink); }
+.pmodal-dialog-body { padding: 14px 22px; display: flex; flex-direction: column; gap: 16px; }
+.pmodal-fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pmodal-fieldset legend { font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--ink); }
+.pmodal-opt {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 13px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer;
+}
+.pmodal-opt.is-on { border-color: var(--green); background: var(--green-tint); }
+.pmodal-opt input { margin-top: 2px; accent-color: var(--green); width: 16px; height: 16px; }
+.pmodal-opt > span { display: flex; flex-direction: column; gap: 2px; }
+.pmodal-opt b { font-size: 14px; color: var(--ink); }
+.pmodal-opt span span { font-size: 13px; color: var(--ink-soft); }
+.pmodal-field { display: flex; flex-direction: column; gap: 6px; }
+.pmodal-field label { font-size: 14px; font-weight: 600; color: var(--ink); }
+.pmodal-field label span { font-weight: 400; color: var(--muted); }
+.pmodal-field textarea { resize: none; }
+.pmodal-dialog-foot {
+  padding: 12px 22px; background: var(--surface-2); border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.pmodal-dialog-foot > span { flex: 1; min-width: 180px; font-size: 12px; color: var(--muted); }
