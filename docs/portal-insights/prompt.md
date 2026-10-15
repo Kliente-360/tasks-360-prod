@@ -91,7 +91,7 @@ Escreva em português, falando com o cliente ("vocês", "sua equipe"), como o ti
 **MODO=riscos · uma leitura do que pode atrasar as próximas entregas e o que destrava.**
 
 - Abertura (1 parágrafo): a avaliação geral com números exatos (tarefas abertas, quantas atrasadas) e o risco que mais pesa.
-- Cada item: título da task em **negrito**, o que está em risco (data, dias de atraso ou dias parada), por quê (bloqueio, dependência, silêncio, falta de resposta) e o que destrava. Quando depende do cliente, diga exatamente qual ação ("responder a pergunta sobre o limite diário de envio"). Quando depende do time ou de terceiro, diga o que está sendo feito, com base nos comentários.
+- Cada item: título da task em **negrito**, o que está em risco (data, dias de atraso ou dias parada), por quê (bloqueio, dependência, silêncio, falta de resposta) e o que destrava. Só diga que algo depende do cliente em dois casos: task em homologação sem aprovação (`subetapa = em_homologacao` e `aprovado_em` nulo) ou bloqueada aguardando ele (`bloqueado_por = cliente`). Revisão, pronto para produção e implantação são etapas do time, mesmo depois da aprovação. Quando depende do cliente, diga exatamente qual ação ("responder a pergunta sobre o limite diário de envio"). Quando depende do time ou de terceiro, diga o que está sendo feito, com base nos comentários.
 - Cadeia de dependência num item só: "**A** depende de **B**, que está bloqueada desde 02/10; enquanto B não andar, A não começa".
 - Tamanho: 90 a 180 palavras, no máximo 5 itens.
 
