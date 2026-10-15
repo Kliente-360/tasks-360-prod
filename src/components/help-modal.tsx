@@ -161,10 +161,7 @@ export function HelpModal({ onClose }: { onClose: () => void }) {
       <div className="bg-[color:var(--bg-elev)] border border-line rounded-lg shadow-[var(--shadow-modal)] w-full max-w-[920px] h-[92vh] flex flex-col overflow-hidden">
         <div className="px-4 md:px-6 py-3 border-b border-line flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="font-brand font-semibold text-base md:text-lg text-ink">Manual · tasks 360</div>
-            <span className="text-[10px] uppercase tracking-wider text-muted font-mono hidden md:inline">
-              como usar a ferramenta
-            </span>
+            <div className="font-brand font-semibold text-base md:text-lg text-ink">Como usar o tasks 360</div>
           </div>
           <button
             type="button"
