@@ -23,6 +23,7 @@ import { fmtDate, fmtDataCurta } from '@/lib/format';
 import type { Task } from '@/lib/types';
 import { usePortalData } from './use-portal-data';
 import { usePortalNomes } from './use-portal-nomes';
+import { PortalIaBoxes } from './portal-ia-boxes';
 import { PortalTaskModal } from './portal-task-modal';
 import { PortalNewTaskForm } from './portal-new-task-form';
 import { Icon } from '@/components/icons';
@@ -504,18 +505,8 @@ export function PortalClient() {
       {/* Listas de prioridade removidas (v1.03.217) · info agora vive
           no Kanban 4 macros acima. */}
 
-      {/* 6. Seções IA · placeholders (v1.03.216).
-             Conteúdo virá de rotinas agendadas depois. */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-        <PortalIaPlaceholder
-          title="Entregas de valor no mês anterior"
-          hint="Sumário narrativo do que foi entregue e do impacto gerado."
-        />
-        <PortalIaPlaceholder
-          title="Riscos no backlog atual"
-          hint="Análise de o que pode atrasar ou bloquear as próximas entregas."
-        />
-      </div>
+      {/* Caixas de IA · textos das rotinas agendadas (docs/portal-insights) */}
+      <PortalIaBoxes clienteId={effectiveCid} />
 
       <PortalTaskModal
         task={liveOpenTask}
@@ -822,10 +813,6 @@ function PortalAcaoBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t
 }
 
 // ─────────────────────────────────────────────────────────
-// PortalIaPlaceholder · seção com "em breve"
-// ─────────────────────────────────────────────────────────
-
-// ─────────────────────────────────────────────────────────
 // PortalFilterSelect · single-select droplist (reusa .fselect)
 // ─────────────────────────────────────────────────────────
 
@@ -934,19 +921,5 @@ function PortalPriMultiSelect({
         </div>
       )}
     </span>
-  );
-}
-
-function PortalIaPlaceholder({ title, hint }: { title: string; hint: string }) {
-  return (
-    <div className="card p-4 md:p-5 border-dashed">
-      <div className="flex items-baseline justify-between mb-2">
-        <div className="font-brand text-sm font-semibold text-ink">{title}</div>
-        <span className="font-mono text-[10px] uppercase tracking-wider text-muted">
-          em breve
-        </span>
-      </div>
-      <div className="text-xs text-muted italic">{hint}</div>
-    </div>
   );
 }

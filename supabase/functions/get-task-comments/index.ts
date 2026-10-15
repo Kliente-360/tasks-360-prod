@@ -9,6 +9,8 @@
 // Query params:
 //   ?task_id=<uuid>   OBRIGATÓRIO. UUID da task.
 //   ?limit=50         máx de comentários retornados (default 100, máx 200).
+//   ?portal=true      só comentários visíveis ao cliente (sem anotações
+//                     internas). Usado pelas caixas de IA do portal.
 //
 // Resposta 200:
 //   {
@@ -76,11 +78,13 @@ Deno.serve(async (req) => {
     limit = Math.min(n, MAX_LIMIT);
   }
 
+  const portalOnly = p.get('portal') === 'true';
+
   // --- Query principal ---
   // Embed da tabela pessoas (autor interno) — não-ambíguo aqui (uma FK só:
   // task_comments_author_pessoa_id_fkey). Mantém `author` (texto livre) como
   // fallback pra comentários de clientes externos sem pessoa_id resolvida.
-  const { data: rows, error: cErr } = await sb
+  let q = sb
     .from('task_comments')
     .select(
       `id, body, posted_em, criado_em, author, author_pessoa_id,
@@ -93,6 +97,8 @@ Deno.serve(async (req) => {
     .order('posted_em', { ascending: false, nullsFirst: false })
     .order('criado_em', { ascending: false })
     .limit(limit);
+  if (portalOnly) q = q.eq('visivel_cliente', true);
+  const { data: rows, error: cErr } = await q;
 
   if (cErr) return err(500, 'db_error', cErr.message);
 

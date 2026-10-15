@@ -17,6 +17,11 @@
 //   ?cliente_id=<uuid>          filtra por cliente.
 //   ?projeto_id=<uuid>          filtra por projeto.
 //   ?limit=50                   máx de tasks retornadas (default 100, máx 200).
+//   ?portal=true                só o que o cliente vê no portal: visivel_cliente
+//                               = true e não privada (usado pelas caixas de IA).
+//
+// Campos extras na resposta: descricao, status_em (última mudança de status;
+// pra concluídas = data de conclusão), subetapa_em, aprovado_em, bloqueado_por.
 //
 // Resposta 200:
 //   {
@@ -155,11 +160,13 @@ Deno.serve(async (req) => {
   const excludePrivadas = p.get('exclude_privadas') === 'true';
   const excludeInternos = p.get('exclude_internos') === 'true';
   const radarOnly       = p.get('radar') === 'true';
+  const portalOnly      = p.get('portal') === 'true';
 
   // --- Query principal ---
   // Join via chave estrangeira: clientes, projetos, pessoas.
   let q = sb.from('tasks').select(
     `id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, criado_por_ia, criado_em, privada, radar,
+     descricao, status_em, subetapa_em, aprovado_em, bloqueado_por,
      escopo, valor_esperado, solucao_implementada, valor_entregue, tempo_real_horas,
      pessoa_id, cliente_id, projeto_id,
      clientes ( nome, eh_interno ),
@@ -169,6 +176,7 @@ Deno.serve(async (req) => {
 
   if (excludePrivadas) q = q.eq('privada', false);
   if (radarOnly) q = q.eq('radar', true);
+  if (portalOnly) q = q.eq('visivel_cliente', true).eq('privada', false);
 
   // Filtro por status.
   // Se ?status explícito → usa exatamente esses.
@@ -204,6 +212,11 @@ Deno.serve(async (req) => {
     tipo_trabalho: string | null; criado_por_ia: boolean; criado_em: string;
     privada: boolean;
     radar: boolean;
+    descricao: string | null;
+    status_em: string | null;
+    subetapa_em: string | null;
+    aprovado_em: string | null;
+    bloqueado_por: string | null;
     escopo: string[] | null;
     valor_esperado: string | null;
     solucao_implementada: string | null;
@@ -233,6 +246,11 @@ Deno.serve(async (req) => {
     tipo_trabalho: t.tipo_trabalho,
     privada:      t.privada === true,
     radar:        t.radar === true,
+    descricao:    t.descricao,
+    status_em:    t.status_em,
+    subetapa_em:  t.subetapa_em,
+    aprovado_em:  t.aprovado_em,
+    bloqueado_por: t.bloqueado_por,
     escopo:       t.escopo ?? [],
     valor_esperado:       t.valor_esperado,
     solucao_implementada: t.solucao_implementada,
