@@ -5,7 +5,7 @@ Duas rotinas **cloud-hosted** (triggers do claude.ai/code) escrevem os textos da
 | Caixa | Modo | Quando | Período gravado |
 |---|---|---|---|
 | Entregas de valor no mês anterior | `MODO=entregas` | dia 1, 08:00 BRT (`0 11 1 * *` UTC) | `YYYY-MM` do mês anterior |
-| Riscos no backlog atual | `MODO=riscos` | segunda, 08:00 BRT (`0 11 * * 1` UTC) | `YYYY-MM-DD` da segunda |
+| Riscos no backlog atual | `MODO=riscos` | todos os dias, 08:00 BRT (`0 11 * * *` UTC) | `YYYY-MM-DD` do dia |
 
 ## Arquivos
 

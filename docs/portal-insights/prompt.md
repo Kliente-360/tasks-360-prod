@@ -5,7 +5,7 @@ Este arquivo é o "programa" das rotinas agendadas (cloud triggers no claude.ai)
 O trigger informa o **MODO** na mensagem de disparo:
 
 - `MODO=entregas` · todo dia 1, 08:00 BRT · avalia o **mês anterior** · caixa "Entregas de valor no mês anterior"
-- `MODO=riscos` · toda segunda, 08:00 BRT · avalia o **backlog atual** · caixa "Riscos no backlog atual"
+- `MODO=riscos` · todos os dias, 08:00 BRT · avalia o **backlog atual** · caixa "Riscos no backlog atual"
 
 O texto é publicado **direto no portal, sem revisão humana**. Por isso as regras de conteúdo abaixo não são sugestões.
 
@@ -43,8 +43,7 @@ export TZ="America/Sao_Paulo"
 HOJE=$(date +%Y-%m-%d)
 # entregas: mês anterior
 MES_REF=$(date -d "$(date +%Y-%m-01) -1 day" +%Y-%m 2>/dev/null || date -v1d -v-1d +%Y-%m)
-# riscos: segunda-feira desta semana (= HOJE quando roda na segunda, o normal)
-SEGUNDA=$(date -d "$HOJE -$(( $(date +%u) - 1 )) days" +%Y-%m-%d 2>/dev/null || date -v-$(( $(date +%u) - 1 ))d +%Y-%m-%d)
+# riscos: o período é o próprio dia (HOJE); o portal mostra o mais recente
 ```
 
 ### 2. Clientes
@@ -63,17 +62,36 @@ Para cada entrega, os três campos centrais são:
 
 Use `titulo`, `projeto`, `tipo_trabalho` e `descricao` como contexto quando esses campos estiverem vazios. Busque até 5 comentários (`portal=true`) das entregas mais relevantes se ajudarem a entender o resultado.
 
-**MODO=riscos** · tasks abertas (`status ≠ concluido`). Para cada uma, calcule os sinais:
+**MODO=riscos** · o objetivo é encontrar os **riscos reais** para o negócio do cliente, não listar tudo que está atrasado. Isso pede leitura atenta e inferência, em quatro etapas.
 
-- **Atraso**: `atrasada` e quantos dias de atraso (`HOJE − prazo`).
+**a) Sinais por task aberta** (`status ≠ concluido`):
+
+- **Atraso**: `atrasada` e quantos dias (`HOJE − prazo`).
 - **Prazo próximo**: prazo nos próximos 7 dias.
 - **Prioridade**: P0 e P1 pesam mais.
-- **Dependência**: `bloqueada_por_tasks` lista tasks que precisam terminar antes. Uma dependência é risco quando a task da qual ela depende está aberta, atrasada ou bloqueada; o atraso de uma passa para a outra. Trate a cadeia como um risco só.
+- **Dependência**: `bloqueada_por_tasks` lista tasks que precisam terminar antes. É risco quando a task da qual ela depende está aberta, atrasada ou bloqueada; o atraso de uma passa para a outra.
 - **Bloqueio**: `subetapa = bloqueado`, com `bloqueado_por` (`cliente`, `terceiro` ou `nos`) e há quantos dias (`HOJE − subetapa_em`).
 - **Tempo parada**: dias desde `subetapa_em` na etapa atual. Em desenvolvimento ou revisão há mais de 10 dias, ou em homologação há mais de 5 dias sem aprovação, é sinal de travamento.
-- **Silêncio**: dias desde o último comentário visível (`get-task-comments?portal=true`). Task ativa sem comentário há mais de 10 dias reforça o travamento.
+- **Silêncio**: dias desde o último comentário visível. Task ativa sem comentário há mais de 10 dias reforça o travamento.
 
-Escolha até 5 riscos, pesando nesta ordem: o que impede uma entrega importante (P0/P1 atrasada ou em cadeia de dependência), o que depende do cliente agir, o que está parado há mais tempo, o que vence nos próximos dias. Leia os últimos 3 comentários (`portal=true`) de cada escolhido para descrever o estado real, e use o que eles dizem sobre causa e próximo passo.
+**b) Valor para o negócio.** Pese cada task pelo que ela representa para o cliente, não só pela prioridade: `valor_esperado` preenchido e concreto, `esforco` alto (tarefa grande), tipo melhoria ou projeto em vez de manutenção pontual, títulos que indicam épico ou frente inteira, e quantas outras tasks dependem dela. Uma task grande e de alto valor parada há duas semanas pesa mais que uma correção pequena atrasada um dia.
+
+**c) Leitura atenta dos comentários.** Para as tasks com algum sinal em (a) e todas as de maior valor em (b), leia **todos** os comentários visíveis (`get-task-comments?portal=true&limit=30`), não só os últimos. Procure o que os campos não mostram:
+
+- causas declaradas de atraso (dependência de terceiro, acesso pendente, ambiente indisponível, decisão em aberto);
+- sinais de retrabalho ou escopo instável (pedido de ajuste repetido, requisito mudando, "na verdade precisamos…");
+- promessas de data feitas na conversa que já passaram;
+- perguntas do time sem resposta, mesmo quando a task não está formalmente bloqueada;
+- a mesma causa aparecendo em várias tasks.
+
+**d) Cruzamento e inferência.** Junte o que encontrou em riscos de negócio:
+
+- várias tasks travadas pela mesma causa (mesmo terceiro, mesma decisão, mesmo acesso) são **um** risco, com o efeito somado;
+- uma cadeia de dependência em que a primeira está parada ameaça todas as seguintes, inclusive as que ainda nem começaram;
+- uma frente (projeto ou épico) em que a maioria das tasks está atrasada ou parada indica risco para a frente inteira, não para cada task;
+- uma entrega de alto valor perto do prazo cujas dependências ainda não andaram é risco mesmo sem estar atrasada.
+
+Infira somente o que os dados sustentam: cada risco precisa apontar os fatos (campo ou comentário) que o comprovam. Escolha os até 5 riscos de maior efeito no negócio, nesta ordem: o que ameaça uma entrega de alto valor; o que trava várias tasks de uma vez; o que depende do cliente agir; o que está parado há mais tempo; o que vence nos próximos dias.
 
 ### 4. Escrever o texto
 
@@ -90,8 +108,8 @@ Escreva em português, falando com o cliente ("vocês", "sua equipe"), como o ti
 
 **MODO=riscos · uma leitura do que pode atrasar as próximas entregas e o que destrava.**
 
-- Abertura (1 parágrafo): a avaliação geral com números exatos (tarefas abertas, quantas atrasadas) e o risco que mais pesa.
-- Cada item: título da task em **negrito**, o que está em risco (data, dias de atraso ou dias parada), por quê (bloqueio, dependência, silêncio, falta de resposta) e o que destrava. Só diga que algo depende do cliente em dois casos: task em homologação sem aprovação (`subetapa = em_homologacao` e `aprovado_em` nulo) ou bloqueada aguardando ele (`bloqueado_por = cliente`). Revisão, pronto para produção e implantação são etapas do time, mesmo depois da aprovação. Quando depende do cliente, diga exatamente qual ação ("responder a pergunta sobre o limite diário de envio"). Quando depende do time ou de terceiro, diga o que está sendo feito, com base nos comentários.
+- Abertura (1 parágrafo): a avaliação geral com números exatos (tarefas abertas, quantas atrasadas) e o risco que mais pesa para o negócio, dito em termos do efeito (o que deixa de funcionar ou de chegar), não só da task.
+- Cada item: o risco em uma frase de efeito no negócio, as tasks envolvidas em **negrito**, a evidência (data, dias de atraso ou parada, o que o comentário diz) e o que destrava. Só diga que algo depende do cliente em dois casos: task em homologação sem aprovação (`subetapa = em_homologacao` e `aprovado_em` nulo) ou bloqueada aguardando ele (`bloqueado_por = cliente`). Revisão, pronto para produção e implantação são etapas do time, mesmo depois da aprovação. Quando depende do cliente, diga exatamente qual ação ("responder a pergunta sobre o limite diário de envio"). Quando depende do time ou de terceiro, diga o que está sendo feito, com base nos comentários.
 - Cadeia de dependência num item só: "**A** depende de **B**, que está bloqueada desde 02/10; enquanto B não andar, A não começa".
 - Tamanho: 90 a 180 palavras, no máximo 5 itens.
 
@@ -105,7 +123,7 @@ Escreva em português, falando com o cliente ("vocês", "sua equipe"), como o ti
 **Casos vazios** (ainda assim publique):
 
 - Entregas sem nenhuma conclusão no mês: uma ou duas frases dizendo que nenhuma entrega foi concluída em [mês] e o que está mais perto de terminar (até 3 títulos em homologação ou em desenvolvimento com prazo próximo).
-- Riscos sem nenhum caso: uma ou duas frases dizendo que não há riscos relevantes no backlog nesta semana, com o número de tarefas abertas.
+- Riscos sem nenhum caso: uma ou duas frases dizendo que não há riscos relevantes no backlog hoje, com o número de tarefas abertas.
 
 ### 5. Publicar
 
@@ -115,7 +133,7 @@ curl -s -X POST -H "x-api-key: $TASKS360_API_KEY" -H "Content-Type: application/
 {
   "cliente_id": "<id>",
   "tipo": "entregas",           // ou "riscos"
-  "periodo": "$MES_REF",        // riscos: "$SEGUNDA"
+  "periodo": "$MES_REF",        // riscos: "$HOJE"
   "conteudo_md": $(jq -Rs . <<<"$TEXTO")
 }
 JSON

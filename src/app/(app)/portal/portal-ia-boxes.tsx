@@ -20,20 +20,6 @@ interface Insight {
   gerado_em: string;
 }
 
-const MESES = [
-  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
-];
-
-function rotuloPeriodo(i: Insight): string {
-  if (i.tipo === 'entregas') {
-    const [y, m] = i.periodo.split('-');
-    return `${MESES[Number(m) - 1] ?? m} de ${y}`;
-  }
-  const [, m, d] = i.periodo.split('-');
-  return `semana de ${d}/${m}`;
-}
-
 /** O texto vem de IA lendo o que o cliente escreve: HTML é escapado antes
  *  do markdown (o formato só usa parágrafo, lista e negrito). */
 function renderSeguro(md: string): string {
@@ -75,7 +61,7 @@ export function PortalIaBoxes({ clienteId }: { clienteId: string }) {
       />
       <IaBox
         titulo="Riscos no backlog atual"
-        vazio="A análise de riscos é atualizada toda segunda-feira."
+        vazio="A análise de riscos é atualizada todos os dias."
         insight={dados.riscos}
       />
     </div>
@@ -94,25 +80,13 @@ function IaBox({
   const html = useMemo(() => (insight ? renderSeguro(insight.conteudo_md) : ''), [insight]);
   return (
     <section className="card p-4 md:p-5 portal-ia-box">
-      <div className="flex items-baseline justify-between gap-3 mb-2">
-        <h2 className="font-brand text-sm font-semibold text-ink m-0">{titulo}</h2>
-        {insight && (
-          <span className="font-mono text-[10px] uppercase tracking-wider text-muted shrink-0">
-            {rotuloPeriodo(insight)}
-          </span>
-        )}
-      </div>
+      <h2 className="font-brand text-sm font-semibold text-ink m-0 mb-2">{titulo}</h2>
       {insight === undefined ? (
         <div className="text-xs text-muted italic">Carregando…</div>
       ) : insight === null ? (
         <div className="text-xs text-muted italic">{vazio}</div>
       ) : (
-        <>
-          <div className="portal-ia-md" dangerouslySetInnerHTML={{ __html: html }} />
-          <div className="mt-3 text-[10px] font-mono text-muted">
-            gerado em {new Date(insight.gerado_em).toLocaleDateString('pt-BR')} · texto escrito por IA a partir das tarefas
-          </div>
-        </>
+        <div className="portal-ia-md" dangerouslySetInnerHTML={{ __html: html }} />
       )}
     </section>
   );
