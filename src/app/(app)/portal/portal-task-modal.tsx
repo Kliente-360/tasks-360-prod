@@ -21,7 +21,7 @@ import { useData } from '@/lib/data-store';
 import { useToastSafe } from '@/components/toast';
 import { Icon } from '@/components/icons';
 import { fmtDate, fmtPostedEm } from '@/lib/format';
-import { STATUS, SUB_LABELS, SUB_TO_MACRO } from '@/lib/task-constants';
+import { STATUS, SUB_LABELS } from '@/lib/task-constants';
 import type { Task } from '@/lib/types';
 
 interface PortalComment {
@@ -433,7 +433,9 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
   const cliente = clientes.find((c) => c.id === task.clienteId)?.nome ?? clienteNome;
   const responsavel = (pessoas.find((p) => p.id === task.pessoaId)?.nome ?? '').split(' ')[0];
   const concluida = task.status === STATUS.CONCLUIDO;
-  const aguardandoResposta = task.subetapa === 'bloqueado' && task.bloqueadoPor === 'cliente';
+  const bloqueadoPorCliente = task.subetapa === 'bloqueado' && task.bloqueadoPor === 'cliente';
+  const aguardandoResposta = bloqueadoPorCliente && !task.pendenciaRespondidaEm;
+  const respondida = bloqueadoPorCliente && !!task.pendenciaRespondidaEm;
   const homologar = task.subetapa === 'em_homologacao' && task.aprovadoEm == null;
   const pedidoPendente = !!task.prioridadePedidoEm;
   const pendencia = [...comments].reverse().find((c) => c.kind === 'pendencia') ?? null;
@@ -443,6 +445,8 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
     ? { cls: 'is-ok', txt: 'Concluída' }
     : aguardandoResposta
       ? { cls: 'is-danger', txt: 'Pausada · aguardando você' }
+      : respondida
+        ? { cls: 'is-muted', txt: 'Pausada · você respondeu' }
       : task.subetapa === 'bloqueado'
         ? { cls: 'is-muted', txt: 'Pausada' }
         : homologar
@@ -481,17 +485,7 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
       'responder',
       () => sb.rpc('app_responder_pendencia', { p_task_id: task.id, p_body: resposta.trim() }),
       'Resposta enviada. O time foi avisado.',
-      (data) => {
-        const sub = typeof data === 'string' ? data : 'bloqueado';
-        if (sub !== 'bloqueado') {
-          patchTask(task.id, {
-            subetapa: sub,
-            status: (SUB_TO_MACRO[sub] ?? 'andamento') as Task['status'],
-            subetapaEm: agora,
-            bloqueadoPor: '',
-          });
-        }
-      },
+      () => patchTask(task.id, { pendenciaRespondidaEm: agora }),
     );
     if (ok) setResposta('');
   };
@@ -613,7 +607,7 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
                     rows={2}
                     value={resposta}
                     onChange={(e) => setResposta(e.target.value)}
-                    placeholder="Responda aqui. O time é avisado e a tarefa volta a andar."
+                    placeholder="Responda aqui. O time é avisado e decide os próximos passos."
                   />
                   <button
                     type="button"
@@ -626,6 +620,11 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
                   </button>
                 </div>
               </div>
+            </section>
+          ) : respondida ? (
+            <section className="pmodal-band is-info">
+              <div className="pmodal-band-title">Você respondeu em {diaMes(task.pendenciaRespondidaEm)}</div>
+              <div className="pmodal-band-sub">O time vai avaliar sua resposta e retomar a tarefa.</div>
             </section>
           ) : homologar ? (
             <section className="pmodal-band is-warn">

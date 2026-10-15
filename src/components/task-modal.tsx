@@ -165,6 +165,7 @@ function blankEditing(): Task {
     radar: false,
     prioridadePedidoEm: null,
     prioridadePedidoAte: null,
+    pendenciaRespondidaEm: null,
     webhookSyncStatus: '',
     webhookSyncError: '',
   };
@@ -1125,6 +1126,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               posted_em: nowIso,
               kind: paraCliente ? 'pendencia' : null,
             };
+            if (paraCliente && tasksById.get(e.id)?.pendenciaRespondidaEm) {
+              patchTask(e.id, { pendenciaRespondidaEm: null });
+              void sb.from('tasks').update({ pendencia_respondida_em: null }).eq('id', e.id);
+            }
             sb.from('task_comments')
               .insert(commentPayload)
               .select('id')
@@ -2580,6 +2585,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                       {editing.bloqueadoPor === 'cliente' ? 'Pergunta para o cliente' : 'Motivo do bloqueio'}
                       {isTransitionToBloqueado && <span className="text-danger"> *</span>}
                     </label>
+                    {editing.bloqueadoPor === 'cliente' && live?.pendenciaRespondidaEm && (
+                      <div className="text-[12px] font-semibold text-[color:var(--green)] mb-1">
+                        Cliente respondeu em {new Date(live.pendenciaRespondidaEm).toLocaleDateString('pt-BR')} · veja a conversa.
+                        Desbloqueie quando puder seguir.
+                      </div>
+                    )}
                     {editing.bloqueadoPor === 'cliente' && (
                       <div className="text-[11px] text-[color:var(--warn)] mb-1">
                         Visível no portal: o cliente vê este texto em destaque e responde por lá.

@@ -51,7 +51,7 @@ type PrazoFiltro = '' | 'atrasadas' | 'hoje' | 'semana' | 'sem';
 /** Cliente tem ação pendente: homologar entrega ou responder bloqueio. */
 function acaoDoCliente(t: Task): 'homologar' | 'responder' | null {
   if (t.subetapa === 'em_homologacao' && t.aprovadoEm == null) return 'homologar';
-  if (t.subetapa === 'bloqueado' && t.bloqueadoPor === 'cliente') return 'responder';
+  if (t.subetapa === 'bloqueado' && t.bloqueadoPor === 'cliente' && !t.pendenciaRespondidaEm) return 'responder';
   return null;
 }
 

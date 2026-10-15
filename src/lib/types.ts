@@ -44,6 +44,9 @@ export interface Task {
   prioridadePedidoEm: number | null;
   /** Data até quando o cliente precisa (opcional no pedido). */
   prioridadePedidoAte: string | null;
+  /** Cliente respondeu a pendência do bloqueio (ms). O time decide se
+   *  desbloqueia; limpa ao sair de bloqueado ou com nova pergunta. */
+  pendenciaRespondidaEm: number | null;
   /** Motivo capturado quando uma task é reaberta (concluido → outra). */
   motivoReabertura?: string;
   /** UUIDs de tasks que precisam estar concluídas antes desta poder concluir. */

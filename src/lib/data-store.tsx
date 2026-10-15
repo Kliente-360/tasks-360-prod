@@ -36,6 +36,7 @@ const COL_TO_FIELD: Record<string, keyof Task> = {
   prioridade_solicitada_cliente: 'prioridadeSolicitadaCliente',
   prioridade_pedido_em: 'prioridadePedidoEm',
   prioridade_pedido_ate: 'prioridadePedidoAte',
+  pendencia_respondida_em: 'pendenciaRespondidaEm',
   motivo_reabertura: 'motivoReabertura',
   bloqueada_por_tasks: 'bloqueadaPorTasks',
   tipo_trabalho: 'tipoTrabalho',
