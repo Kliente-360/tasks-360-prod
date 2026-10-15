@@ -3287,15 +3287,14 @@ body {
 .portal-ia-md strong { font-weight: 600; }
 .portal-ia-md > :last-child { margin-bottom: 0; }
 
-/* Portal · seções recolhíveis (seta no canto superior direito) */
+/* Portal · seções recolhíveis (seta à esquerda do título, como no Briefing) */
 .portal-recolher {
-  flex: none; width: 28px; height: 28px; margin: -4px -4px 0 0;
-  display: inline-flex; align-items: center; justify-content: center;
-  border: 0; border-radius: 6px; background: transparent;
-  color: var(--ink-soft); cursor: pointer;
-  transition: background-color .12s, transform .15s;
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 0; border: 0; background: transparent; text-align: left;
+  cursor: pointer; color: inherit;
 }
-.portal-recolher:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
-.portal-recolher[aria-expanded="false"] { transform: rotate(-90deg); }
+.portal-recolher-seta { flex: none; color: var(--muted); transition: transform .15s; }
+.portal-recolher[aria-expanded="false"] .portal-recolher-seta { transform: rotate(-90deg); }
+.portal-recolher:hover .portal-recolher-seta { color: var(--ink); }
 /* Caixas dentro da Visão qualitativa */
 .portal-ia-box { padding: 14px 16px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line); }

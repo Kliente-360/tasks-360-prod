@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 import { createClient } from '@/lib/supabase/client';
-import { SetaRecolher, useSecaoAberta } from './recolher';
+import { CabecalhoRecolher, useSecaoAberta } from './recolher';
 
 type Tipo = 'entregas' | 'riscos';
 
@@ -56,10 +56,9 @@ export function PortalIaBoxes({ clienteId }: { clienteId: string }) {
   const [aberta, alternar] = useSecaoAberta('visao-qualitativa');
   return (
     <section className="card p-4 md:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-brand text-sm font-semibold text-ink m-0">Visão qualitativa</h2>
-        <SetaRecolher aberta={aberta} onClick={alternar} rotulo="visão qualitativa" />
-      </div>
+      <CabecalhoRecolher aberta={aberta} onClick={alternar}>
+        <span className="font-brand text-sm font-semibold text-ink">Visão qualitativa</span>
+      </CabecalhoRecolher>
       {aberta && (
     <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
       <IaBox

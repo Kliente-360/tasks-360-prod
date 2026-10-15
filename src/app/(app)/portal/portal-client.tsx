@@ -24,7 +24,7 @@ import type { Task } from '@/lib/types';
 import { usePortalData } from './use-portal-data';
 import { usePortalNomes } from './use-portal-nomes';
 import { PortalIaBoxes } from './portal-ia-boxes';
-import { SetaRecolher, useSecaoAberta } from './recolher';
+import { CabecalhoRecolher, useSecaoAberta } from './recolher';
 import { PortalTaskModal } from './portal-task-modal';
 import { PortalNewTaskForm } from './portal-new-task-form';
 import { Icon } from '@/components/icons';
@@ -308,7 +308,7 @@ export function PortalClient() {
 
   // ---- Conteúdo do portal ----
   return (
-    <div className="fade-up space-y-5 md:space-y-6">
+    <div className="fade-up space-y-3 md:space-y-4">
       {/* 1. HEADER-BAR · nome do cliente (esquerda) + filtros do Kanban
              (direita, mesmo estilo do FilterBar do Backlog). Fundo com
              a cor do cliente (corPortal). Switcher de cliente (admin/
@@ -776,12 +776,11 @@ function PortalAcaoBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t
     <div className="portal-alert portal-alert-alta">
       <div className="portal-alert-icon">⏳</div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-3">
-          <div className="portal-alert-title">
+        <CabecalhoRecolher aberta={aberta} onClick={alternar}>
+          <span className="portal-alert-title">
             {items.length === 1 ? '1 item aguardando você' : `${items.length} itens aguardando você`}
-          </div>
-          <SetaRecolher aberta={aberta} onClick={alternar} rotulo="itens aguardando você" />
-        </div>
+          </span>
+        </CabecalhoRecolher>
         {aberta && (<>
         <div className="mt-2 space-y-1">
           {visiveis.map((t) => {

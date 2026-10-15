@@ -29,26 +29,28 @@ export function useSecaoAberta(chave: string, padrao = true): [boolean, () => vo
   return [aberta, alternar];
 }
 
-/** Seta no canto superior direito que recolhe/expande a seção. */
-export function SetaRecolher({
+/** Cabeçalho recolhível · seta à esquerda do título (padrão do Briefing);
+ *  a linha inteira é clicável. */
+export function CabecalhoRecolher({
   aberta,
   onClick,
-  rotulo,
+  children,
+  className = '',
 }: {
   aberta: boolean;
   onClick: () => void;
-  rotulo: string;
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="portal-recolher"
+      className={`portal-recolher ${className}`}
       aria-expanded={aberta}
-      aria-label={`${aberta ? 'Recolher' : 'Expandir'} ${rotulo}`}
-      title={aberta ? 'Recolher' : 'Expandir'}
     >
-      <Icon name="chevron-down" size={16} />
+      <Icon name="chevron-down" size={14} className="portal-recolher-seta" />
+      {children}
     </button>
   );
 }
