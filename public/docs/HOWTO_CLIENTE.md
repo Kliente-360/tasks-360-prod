@@ -41,11 +41,15 @@ Depois de aceita, a tarefa avança pelas etapas até a entrega. A **Prioridade i
 
 ## Como leio a tela do portal?
 
-A tela tem quatro partes, de cima para baixo.
+A tela tem cinco partes, de cima para baixo.
 
 **A barra com o nome da sua empresa** concentra a busca e os filtros. É também onde você alterna entre ver as tarefas em quadro (Kanban) ou em lista.
 
 **O aviso de itens aguardando você** só aparece quando existe alguma tarefa parada à sua espera, e mostra quais são. Clique no título para abrir a tarefa direto.
+
+**A visão qualitativa** traz dois textos curtos: o que foi entregue no mês anterior e os riscos do backlog hoje. Ela tem uma seção própria logo abaixo.
+
+O aviso e a visão qualitativa podem ser recolhidos clicando no título; o portal lembra a sua escolha.
 
 **Os cinco indicadores** resumem as tarefas abertas:
 
@@ -57,7 +61,17 @@ A tela tem quatro partes, de cima para baixo.
 | **Bloqueadas** | Tarefas pausadas, por falta de uma resposta sua ou por algo externo. Ficam em vermelho quando há alguma. |
 | **Atrasadas** | Tarefas com prazo vencido. Também ficam em vermelho quando há alguma. |
 
-**O quadro ou a lista** mostra cada tarefa, explicados nas próximas seções.
+**O quadro ou a lista** mostra cada tarefa, explicados mais adiante.
+
+## O que é a visão qualitativa e por que vale ler?
+
+Os indicadores dizem quantas tarefas estão atrasadas; a visão qualitativa diz o que isso significa para o seu negócio. Ela é escrita automaticamente a partir das tarefas e das conversas que você vê no portal, lendo o que nenhum número mostra: o motivo de cada atraso, as tarefas que dependem umas das outras, as perguntas que ainda esperam resposta e as frentes que estão andando mais devagar.
+
+**Riscos no backlog atual** é atualizado todos os dias, de manhã. Em poucas linhas, mostra o que pode atrasar as próximas entregas, por que e o que destrava cada risco. Quando o próximo passo depende de vocês, o texto diz exatamente qual é, e esse costuma ser o caminho mais curto para uma entrega importante voltar a andar. Ler esse quadro antes de uma reunião com o time poupa o tempo de abrir tarefa por tarefa.
+
+**Entregas de valor no mês anterior** sai no primeiro dia de cada mês. Em vez de listar tarefas, ele junta o que foi entregue pelo efeito no seu negócio: o que vocês esperavam ganhar com cada pedido, o que o time construiu e o resultado que a entrega gerou. É um resumo pronto para compartilhar com quem acompanha o contrato na sua empresa.
+
+Os dois textos usam apenas informações registradas nas tarefas. Se algo parecer impreciso, comente na tarefa citada; a correção entra no texto seguinte.
 
 ## O que significa cada coluna do quadro?
 
