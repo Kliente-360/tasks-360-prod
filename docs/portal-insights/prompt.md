@@ -24,7 +24,7 @@ Base URL: `https://nxtlipldmsopscpshrfd.supabase.co/functions/v1` · header obri
 
 **Sempre** use `portal=true` em `get-tasks` e `get-task-comments`. Sem ele vêm tasks privadas e anotações internas, que nunca podem aparecer no texto.
 
-Campos úteis de `get-tasks`: `titulo`, `status`, `subetapa`, `prazo`, `prioridade`, `tipo_trabalho`, `descricao`, `valor_esperado`, `solucao_implementada`, `valor_entregue`, `status_em` (pra concluídas, a data de conclusão), `subetapa_em` (desde quando está na etapa atual), `aprovado_em`, `bloqueado_por` (`cliente` · `nos` · `terceiro`), `atrasada`, `projeto`, `responsavel`.
+Campos úteis de `get-tasks`: `id`, `titulo`, `status`, `subetapa`, `prazo`, `prioridade`, `tipo_trabalho`, `descricao`, `valor_esperado`, `solucao_implementada`, `valor_entregue`, `status_em` (pra concluídas, a data de conclusão), `subetapa_em` (desde quando está na etapa atual), `aprovado_em`, `bloqueado_por` (`cliente` · `nos` · `terceiro`), `bloqueada_por_tasks` (ids das tasks que precisam terminar antes), `atrasada`, `projeto`, `responsavel`.
 
 ---
 
@@ -47,31 +47,53 @@ SEGUNDA=$(date -d "$HOJE -$(( $(date +%u) - 1 )) days" +%Y-%m-%d 2>/dev/null || 
 
 ### 3. Montar o recorte
 
-**MODO=entregas** · tasks com `status = concluido` e `status_em` dentro de `MES_REF`. Para cada uma, use `titulo`, `projeto`, `valor_esperado`, `solucao_implementada` e `valor_entregue`. Busque até 5 comentários (`portal=true`) só das 3 entregas mais relevantes, se ajudarem a explicar o resultado.
+**MODO=entregas** · tasks com `status = concluido` e `status_em` dentro de `MES_REF`.
 
-**MODO=riscos** · tasks abertas (`status ≠ concluido`). Um risco é um destes casos, nesta ordem de peso:
+Para cada entrega, os três campos centrais são:
 
-1. Bloqueada aguardando o cliente (`subetapa = bloqueado` e `bloqueado_por = cliente`) · dizer há quantos dias e o que destrava.
-2. Em homologação há mais de 5 dias sem aprovação (`subetapa = em_homologacao`, `aprovado_em` nulo).
-3. Atrasada (`atrasada = true`), sobretudo P0 e P1.
-4. Bloqueada por terceiro ou por nós há mais de 5 dias.
-5. P0 ou P1 sem prazo definido.
-6. Prazo nos próximos 7 dias ainda em backlog (não iniciada).
+- `valor_esperado`: o que o cliente queria ganhar quando pediu;
+- `solucao_implementada`: o que o time de fato construiu;
+- `valor_entregue`: o resultado que a entrega gerou.
 
-Busque os últimos 3 comentários (`portal=true`) de cada risco que entrar no texto, para descrever o estado real.
+Use `titulo`, `projeto`, `tipo_trabalho` e `descricao` como contexto quando esses campos estiverem vazios. Busque até 5 comentários (`portal=true`) das entregas mais relevantes se ajudarem a entender o resultado.
+
+**MODO=riscos** · tasks abertas (`status ≠ concluido`). Para cada uma, calcule os sinais:
+
+- **Atraso**: `atrasada` e quantos dias de atraso (`HOJE − prazo`).
+- **Prazo próximo**: prazo nos próximos 7 dias.
+- **Prioridade**: P0 e P1 pesam mais.
+- **Dependência**: `bloqueada_por_tasks` lista tasks que precisam terminar antes. Uma dependência é risco quando a task da qual ela depende está aberta, atrasada ou bloqueada; o atraso de uma passa para a outra. Trate a cadeia como um risco só.
+- **Bloqueio**: `subetapa = bloqueado`, com `bloqueado_por` (`cliente`, `terceiro` ou `nos`) e há quantos dias (`HOJE − subetapa_em`).
+- **Tempo parada**: dias desde `subetapa_em` na etapa atual. Em desenvolvimento ou revisão há mais de 10 dias, ou em homologação há mais de 5 dias sem aprovação, é sinal de travamento.
+- **Silêncio**: dias desde o último comentário visível (`get-task-comments?portal=true`). Task ativa sem comentário há mais de 10 dias reforça o travamento.
+
+Escolha até 5 riscos, pesando nesta ordem: o que impede uma entrega importante (P0/P1 atrasada ou em cadeia de dependência), o que depende do cliente agir, o que está parado há mais tempo, o que vence nos próximos dias. Leia os últimos 3 comentários (`portal=true`) de cada escolhido para descrever o estado real, e use o que eles dizem sobre causa e próximo passo.
 
 ### 4. Escrever o texto
 
-Escreva em português, falando com o cliente ("vocês", "sua equipe"), como o time da Kliente 360 escreve um relatório periódico. Regras:
+Escreva em português, falando com o cliente ("vocês", "sua equipe"), como o time da Kliente 360 escreve um relatório periódico.
 
-- **Tamanho**: 90 a 180 palavras. Um parágrafo de abertura com a conclusão e, depois, no máximo 5 itens em lista.
-- **Abertura com a conclusão**: a primeira frase diz o que importa no período, com o número exato ("Em setembro concluímos 7 entregas, 4 delas no projeto Sustentação.").
-- **Cada item da lista** cita o título da tarefa em **negrito** e diz, em frase completa, o que aconteceu (entregas) ou o que está em risco e o que destrava (riscos).
-- **Entregas**: priorize o efeito para o cliente (`valor_entregue`, `valor_esperado`) em vez da descrição técnica. Se o valor entregue não estiver preenchido, descreva o que passou a funcionar, sem inventar impacto.
-- **Riscos**: quando o próximo passo depende do cliente, diga exatamente qual ("responder a pergunta sobre o limite diário de envio"). Quando depende do time, diga o que o time está fazendo. Termine com uma frase curta sobre o que mais pesa.
+**MODO=entregas · um compilado do mês para o negócio do cliente, não uma lista de tarefas.**
+
+- Agrupe as entregas pelo efeito no negócio (por exemplo: atendimento, vendas, operação, dados), inferido de `valor_esperado`, `solucao_implementada` e `valor_entregue`. Duas a quatro frentes, cada uma num item.
+- Abertura (1 parágrafo): o que ficou melhor para o negócio no mês, com o número exato de entregas e onde se concentraram ("Em setembro concluímos 7 entregas, a maioria no atendimento: o SAC passou a…").
+- Cada item: o que mudou na operação do cliente, ligando o que era esperado ao que foi entregue, e citando as entregas em **negrito**. Quando `valor_entregue` existir, ele é a frase principal; quando não existir, descreva o que passou a funcionar, sem inventar impacto ou número.
+- Se houver correções de erro, junte-as numa frase ("também corrigimos 3 falhas no fluxo de e-mail") em vez de um item por correção.
+- Fecho (1 frase, opcional): o que está para chegar, se houver task em homologação.
+- Tamanho: 120 a 220 palavras.
+
+**MODO=riscos · uma leitura do que pode atrasar as próximas entregas e o que destrava.**
+
+- Abertura (1 parágrafo): a avaliação geral com números exatos (tarefas abertas, quantas atrasadas) e o risco que mais pesa.
+- Cada item: título da task em **negrito**, o que está em risco (data, dias de atraso ou dias parada), por quê (bloqueio, dependência, silêncio, falta de resposta) e o que destrava. Quando depende do cliente, diga exatamente qual ação ("responder a pergunta sobre o limite diário de envio"). Quando depende do time ou de terceiro, diga o que está sendo feito, com base nos comentários.
+- Cadeia de dependência num item só: "**A** depende de **B**, que está bloqueada desde 02/10; enquanto B não andar, A não começa".
+- Tamanho: 90 a 180 palavras, no máximo 5 itens.
+
+**Regras para os dois modos:**
+
 - **Só fatos dos dados**: nada de número, data, impacto ou causa que não esteja nos campos ou comentários lidos. Sem promessa de prazo que não esteja na task.
 - **Sem culpar ninguém**: descreva a situação, não a pessoa. Não cite nomes de pessoas do cliente; nomes do time só como responsável, se ajudar.
-- **Sem**: emoji, exclamação, elogio ("ótimo trabalho"), jargão interno (subetapa, P0 escrito como código só se vier junto da palavra: "prioridade urgente (P0)"), títulos/headers markdown, tabelas.
+- **Sem**: emoji, exclamação, elogio ("ótimo trabalho"), jargão interno (prioridade só como "urgente (P0)" ou "alta (P1)"), títulos markdown, tabelas.
 - **Markdown permitido**: parágrafos, lista com `-`, **negrito**.
 
 **Casos vazios** (ainda assim publique):

@@ -21,7 +21,8 @@
 //                               = true e não privada (usado pelas caixas de IA).
 //
 // Campos extras na resposta: descricao, status_em (última mudança de status;
-// pra concluídas = data de conclusão), subetapa_em, aprovado_em, bloqueado_por.
+// pra concluídas = data de conclusão), subetapa_em, aprovado_em, bloqueado_por,
+// bloqueada_por_tasks (ids das tasks que precisam concluir antes desta).
 //
 // Resposta 200:
 //   {
@@ -166,7 +167,7 @@ Deno.serve(async (req) => {
   // Join via chave estrangeira: clientes, projetos, pessoas.
   let q = sb.from('tasks').select(
     `id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, criado_por_ia, criado_em, privada, radar,
-     descricao, status_em, subetapa_em, aprovado_em, bloqueado_por,
+     descricao, status_em, subetapa_em, aprovado_em, bloqueado_por, bloqueada_por_tasks,
      escopo, valor_esperado, solucao_implementada, valor_entregue, tempo_real_horas,
      pessoa_id, cliente_id, projeto_id,
      clientes ( nome, eh_interno ),
@@ -217,6 +218,7 @@ Deno.serve(async (req) => {
     subetapa_em: string | null;
     aprovado_em: string | null;
     bloqueado_por: string | null;
+    bloqueada_por_tasks: string[] | null;
     escopo: string[] | null;
     valor_esperado: string | null;
     solucao_implementada: string | null;
@@ -251,6 +253,7 @@ Deno.serve(async (req) => {
     subetapa_em:  t.subetapa_em,
     aprovado_em:  t.aprovado_em,
     bloqueado_por: t.bloqueado_por,
+    bloqueada_por_tasks: t.bloqueada_por_tasks ?? [],
     escopo:       t.escopo ?? [],
     valor_esperado:       t.valor_esperado,
     solucao_implementada: t.solucao_implementada,
