@@ -99,3 +99,11 @@ export function renderCommentBody(body: string, internalFirstNames: Set<string>)
 
   return result;
 }
+
+/** Data curta pro portal: 'DD/MM', ou 'DD/MM/AA' quando é de outro ano. */
+export function fmtDataCurta(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  if (!y || !m || !d) return '';
+  return y === String(new Date().getFullYear()) ? `${d}/${m}` : `${d}/${m}/${y.slice(2)}`;
+}

@@ -97,3 +97,13 @@ export const SKILL_GROUPS = [
 ] as const;
 
 export const ALL_SKILLS = SKILL_GROUPS.flatMap((g) => g.values) as string[];
+
+/** Tipos de trabalho · lista única usada no modal interno e no portal do
+ *  cliente. `hint` explica o tipo pra quem abre a solicitação. */
+export const TIPOS_TRABALHO = [
+  { v: 'bug', label: 'Correção de erro', hint: 'Algo que deveria funcionar e não está funcionando.' },
+  { v: 'feature', label: 'Melhoria', hint: 'Algo novo ou diferente do que existe hoje.' },
+  { v: 'discovery', label: 'Dúvida ou análise', hint: 'Entender, investigar ou avaliar antes de fazer.' },
+  { v: 'manutencao', label: 'Manutenção', hint: 'Ajustes de rotina: usuários, acessos, cadastros, configurações.' },
+  { v: 'admin', label: 'Administrativo', hint: 'Relatórios, reuniões e apoio que não mudam o sistema.' },
+] as const;

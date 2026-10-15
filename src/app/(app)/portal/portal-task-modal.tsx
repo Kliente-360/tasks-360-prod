@@ -20,7 +20,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useData } from '@/lib/data-store';
 import { useToastSafe } from '@/components/toast';
 import { Icon } from '@/components/icons';
-import { fmtDate, fmtPostedEm } from '@/lib/format';
+import { fmtDataCurta, fmtPostedEm } from '@/lib/format';
 import { STATUS, SUB_LABELS } from '@/lib/task-constants';
 import type { Task } from '@/lib/types';
 
@@ -528,18 +528,24 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
         {/* Cabeçalho */}
         <header className="pmodal-head">
           <div className="pmodal-head-main">
-            <div className="pmodal-eyebrow">
-              {cliente}
-              {projeto && ` · ${projeto}`}
-            </div>
+            <div className="pmodal-eyebrow">{cliente}</div>
             <h1 id="pmodal-title" className="pmodal-title">
               {task.titulo}
             </h1>
+            {/* Mesma ordem do card e da tabela: projeto · subetapa ·
+                responsável · prioridade · prazo */}
             <div className="pmodal-chips">
+              {projeto && <span className="pmodal-chip">{projeto}</span>}
               <span className={`pmodal-chip ${statusChip.cls}`}>
                 <span className="pmodal-dot" />
                 {statusChip.txt}
               </span>
+              {responsavel && (
+                <span className="pmodal-chip">
+                  <span className="pmodal-avatar">{responsavel.charAt(0)}</span>
+                  {responsavel}
+                </span>
+              )}
               {task.prioridade && (
                 <span className={`pri pri-${task.prioridade}`}>
                   <span className="pri-dot" />
@@ -548,13 +554,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
               )}
               {task.prazo && (
                 <span className={`pmodal-chip font-mono ${atrasada ? 'is-danger' : ''}`}>
-                  Prazo {fmtDate(task.prazo)}
-                </span>
-              )}
-              {responsavel && (
-                <span className="pmodal-chip">
-                  <span className="pmodal-avatar">{responsavel.charAt(0)}</span>
-                  {responsavel}
+                  {fmtDataCurta(task.prazo)}
                 </span>
               )}
             </div>
@@ -727,14 +727,6 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
               )}
 
               <section className="pmodal-facts">
-                <div>
-                  <div className="pmodal-lbl">Projeto</div>
-                  <div>{projeto || '—'}</div>
-                </div>
-                <div>
-                  <div className="pmodal-lbl">Responsável</div>
-                  <div>{responsavel || '—'}</div>
-                </div>
                 <div>
                   <div className="pmodal-lbl">Aberta em</div>
                   <div className="font-mono text-[13px]">

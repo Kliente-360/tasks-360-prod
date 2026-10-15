@@ -738,14 +738,23 @@ input[type="checkbox"] { accent-color: var(--brand); }
 /* Fselect dentro do header colorido: garante fundo branco + texto ink
    independente da cor de fundo do cliente. */
 .portal-headerbar .fselect {
-  background: #fff; color: var(--ink); border-color: rgba(0,0,0,0.08);
+  background: #fff; color: #141414; border-color: rgba(0,0,0,0.08);
 }
-.portal-headerbar .fselect .ic { color: var(--ink-soft); }
-.portal-headerbar .fselect:hover:not(.is-disabled) { border-color: rgba(0,0,0,0.24); color: var(--ink); }
+.portal-headerbar .fselect .ic { color: #4A4A47; }
+.portal-headerbar .fselect:hover:not(.is-disabled) { border-color: rgba(0,0,0,0.24); color: #141414; }
+/* Busca e toggle de visão: mesmo fundo branco dos filtros, em qualquer tema
+   (o header tem a cor do cliente; tokens de tema deixavam o texto ilegível no dark) */
+.portal-headerbar .search { background: #fff; border-color: rgba(0,0,0,0.08); }
+.portal-headerbar .search input { color: #141414; background: transparent; }
+.portal-headerbar .search input::placeholder { color: #6E6D68; }
+.portal-headerbar .search .ic { color: #4A4A47; }
+.portal-headerbar .view-toggle { background: #fff; border-color: rgba(0,0,0,0.08); }
+.portal-headerbar .view-toggle button { color: #6E6D68; }
+.portal-headerbar .view-toggle button.active { background: #E7F2EB; color: #007A3D; }
 .portal-headerbar .fselect.on {
-  background: var(--green-tint); color: var(--green); border-color: var(--green);
+  background: #E7F2EB; color: #007A3D; border-color: #007A3D;
 }
-.portal-headerbar .fselect.on .ic { color: var(--green); }
+.portal-headerbar .fselect.on .ic { color: #007A3D; }
 .portal-headerbar .fselect.clear { background: transparent; }
 .portal-headerbar .fselect.clear:not(.is-empty):not(:disabled) { color: #fff; }
 .portal-headerbar .fselect.clear:not(.is-empty):not(:disabled) .ic { color: #fff; }
@@ -773,10 +782,11 @@ input[type="checkbox"] { accent-color: var(--brand); }
 }
 .portal-alert-title { font-family: var(--font-sans); font-weight: 600; font-size: 14px; color: var(--ink); line-height: 1.3; }
 .portal-alert-sub   { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; line-height: 1.4; }
-.portal-alert-alta { background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%); border-color: #fde68a; }
-.portal-alert-alta .portal-alert-icon { background: #fef3c7; color: #b45309; }
-.portal-alert-alta .portal-alert-title { color: #b45309; }
-.portal-alert-alta .portal-alert-sub   { color: #92400e; }
+/* Tokens do tema · antes eram hex de modo claro e o texto sumia no dark */
+.portal-alert-alta { background: var(--warn-soft); border-color: var(--warn); }
+.portal-alert-alta .portal-alert-icon { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.portal-alert-alta .portal-alert-title { color: var(--warn); }
+.portal-alert-alta .portal-alert-sub { color: var(--ink-soft); }
 .portal-alert-media { background: var(--surface-1); border-color: color-mix(in srgb, var(--sig-amber) 30%, var(--line)); }
 .portal-alert-media .portal-alert-icon { background: color-mix(in srgb, var(--sig-amber) 15%, var(--bg)); color: #b45309; }
 .portal-alert-positivo { background: color-mix(in srgb, var(--sig-green) 6%, var(--surface-1)); border-color: color-mix(in srgb, var(--sig-green) 35%, var(--line)); }
@@ -1788,13 +1798,11 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
   font-size: 14px; color: var(--ink); line-height: 1.3;
 }
 .portal-alert-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; line-height: 1.4; }
-.portal-alert-alta {
-  background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
-  border-color: #fde68a;
-}
-.portal-alert-alta .portal-alert-icon { background: #fef3c7; color: #b45309; }
-.portal-alert-alta .portal-alert-title { color: #b45309; }
-.portal-alert-alta .portal-alert-sub { color: #92400e; }
+/* Tokens do tema · antes eram hex de modo claro e o texto sumia no dark */
+.portal-alert-alta { background: var(--warn-soft); border-color: var(--warn); }
+.portal-alert-alta .portal-alert-icon { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.portal-alert-alta .portal-alert-title { color: var(--warn); }
+.portal-alert-alta .portal-alert-sub { color: var(--ink-soft); }
 .portal-alert-media {
   background: var(--surface-1);
   border-color: color-mix(in srgb, var(--sig-amber) 30%, var(--line));
@@ -3217,3 +3225,15 @@ body {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
 .pmodal-dialog-foot > span { flex: 1; min-width: 180px; font-size: 12px; color: var(--muted); }
+
+/* Nova solicitação (portal) · mesmo padrão do modal da task */
+.pmodal.pmodal-narrow { max-width: 640px; }
+.pmodal-form { padding: 20px 24px; display: flex; flex-direction: column; gap: 18px; }
+.pmodal-form-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+@media (min-width: 560px) { .pmodal-form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pmodal-field-label { font-size: 14px; font-weight: 600; color: var(--ink); }
+.pmodal-field-hint { font-size: 12px; color: var(--muted); line-height: 1.4; }
+.pmodal-seg { align-self: flex-start; }
+.pmodal-seg button { min-width: 76px; justify-content: center; }
+.pmodal-form-err { font-size: 13px; color: var(--danger); }
+.pmodal-form-foot { justify-content: flex-end; }

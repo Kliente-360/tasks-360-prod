@@ -1,30 +1,33 @@
 'use client';
 
 /**
- * 3.D · Form de nova solicitação · cliente externo abre task pelo Portal.
+ * Nova solicitação · cliente abre task pelo Portal (mesmo padrão visual do
+ * modal da task · classes pmodal-*).
  *
- * Cai na Triagem do time (não direto no backlog) — espelha o gate de IA:
- * task criada com `criado_por_cliente=true`, `triada_em=null`, sem
- * `pessoa_id`, `visivel_cliente=true`, `subetapa='backlog'`.
- *
- * RLS `tasks_cliente_insert` valida tudo isso no banco.
+ * Cai na Triagem do time (não direto no backlog): task criada com
+ * `criado_por_cliente=true`, `triada_em=null`, sem `pessoa_id`,
+ * `visivel_cliente=true`, `subetapa='backlog'`. RLS `tasks_cliente_insert`
+ * valida tudo isso no banco.
  */
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase/client';
 import { useData } from '@/lib/data-store';
+import { useToastSafe } from '@/components/toast';
+import { Icon } from '@/components/icons';
+import { TIPOS_TRABALHO } from '@/lib/task-constants';
+import { taskFromDb } from '@/lib/adapters';
 
-type TipoTrabalho = 'bug' | 'feature' | 'discovery' | 'manutencao' | 'admin';
-type PrioCliente = 'alta' | 'media' | 'baixa';
+type TipoTrabalho = (typeof TIPOS_TRABALHO)[number]['v'];
+type PrioCliente = 'baixa' | 'media' | 'alta' | 'urgente';
 
-const TIPO_LABEL: Record<TipoTrabalho, string> = {
-  bug: '🐛 Erro / Bug',
-  feature: '✨ Melhoria / Feature',
-  discovery: '🔍 Dúvida / Discovery',
-  manutencao: '🔧 Manutenção',
-  admin: '📋 Administrativo',
-};
+const PRIORIDADES: { v: PrioCliente; label: string }[] = [
+  { v: 'baixa', label: 'Baixa' },
+  { v: 'media', label: 'Média' },
+  { v: 'alta', label: 'Alta' },
+  { v: 'urgente', label: 'Urgente' },
+];
 
 export function PortalNewTaskForm({
   clienteId,
@@ -33,173 +36,205 @@ export function PortalNewTaskForm({
   clienteId: string;
   onClose: () => void;
 }) {
-  const { projetos, upsertTask } = useData();
+  const { projetos, clientes, upsertTask } = useData();
+  const toast = useToastSafe();
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
   const [valorEsperado, setValorEsperado] = useState('');
-  const [projetoId, setProjetoId] = useState<string>('');
-  const [tipoTrabalho, setTipoTrabalho] = useState<TipoTrabalho>('discovery');
-  const [prioridadeSolicitada, setPrioridadeSolicitada] = useState<PrioCliente>('media');
+  const [projetoId, setProjetoId] = useState('');
+  const [tipo, setTipo] = useState<TipoTrabalho | ''>('');
+  const [prioridade, setPrioridade] = useState<PrioCliente>('media');
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const projetosCliente = projetos.filter((p) => p.clienteId === clienteId && !p.arquivadoEm);
+  const clienteNome = clientes.find((c) => c.id === clienteId)?.nome ?? '';
+  const tipoHint = TIPOS_TRABALHO.find((t) => t.v === tipo)?.hint;
+  const podeEnviar = !!titulo.trim() && !!projetoId && !!tipo && !pending;
 
-  // ESC fecha
+  // Projeto único: já vem selecionado
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    if (!projetoId && projetosCliente.length === 1) setProjetoId(projetosCliente[0].id);
+  }, [projetoId, projetosCliente]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
   const submit = useCallback(() => {
+    if (!podeEnviar) return;
     setErr(null);
-    const t = titulo.trim();
-    if (!t) {
-      setErr('Dê um título à sua solicitação.');
-      return;
-    }
-    if (!projetoId) {
-      setErr('Escolha o projeto.');
-      return;
-    }
     startTransition(async () => {
-      const sb = createClient();
       const nowIso = new Date().toISOString();
-      const payload = {
-        titulo: t,
-        descricao: descricao.trim(),
-        valor_esperado: valorEsperado.trim(),
-        cliente_id: clienteId,
-        projeto_id: projetoId,
-        pessoa_id: null,
-        prioridade: null,
-        prioridade_solicitada_cliente: prioridadeSolicitada,
-        tipo_trabalho: tipoTrabalho,
-        status: 'backlog',
-        subetapa: 'backlog',
-        visivel_cliente: true,
-        criado_por_cliente: true,
-        privada: false,
-        triada_em: null,
-        status_em: nowIso,
-        subetapa_em: nowIso,
-      };
-      const { data, error } = await sb.from('tasks').insert(payload).select().single();
+      const { data, error } = await createClient()
+        .from('tasks')
+        .insert({
+          titulo: titulo.trim(),
+          descricao: descricao.trim(),
+          valor_esperado: valorEsperado.trim(),
+          cliente_id: clienteId,
+          projeto_id: projetoId,
+          pessoa_id: null,
+          prioridade: null,
+          prioridade_solicitada_cliente: prioridade,
+          tipo_trabalho: tipo,
+          status: 'backlog',
+          subetapa: 'backlog',
+          visivel_cliente: true,
+          criado_por_cliente: true,
+          privada: false,
+          triada_em: null,
+          status_em: nowIso,
+          subetapa_em: nowIso,
+        })
+        .select()
+        .single();
       if (error || !data) {
-        setErr(error?.message || 'Falha ao enviar solicitação. Tente novamente.');
+        setErr(error?.message || 'Não foi possível enviar. Tente novamente.');
         return;
       }
-      // Adiciona optimistic ao store (cliente vai ver a task aparecer na lista)
-      // Adapter resolve do row recebido.
-      const { taskFromDb } = await import('@/lib/adapters');
       upsertTask(taskFromDb(data as Record<string, unknown>));
+      toast.success('Solicitação enviada.');
       onClose();
     });
-  }, [titulo, descricao, valorEsperado, projetoId, prioridadeSolicitada, tipoTrabalho, clienteId, upsertTask, onClose]);
+  }, [podeEnviar, titulo, descricao, valorEsperado, projetoId, prioridade, tipo, clienteId, upsertTask, toast, onClose]);
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/40 px-2 py-2 md:items-center md:px-4 md:py-4"
-      onClick={onClose}
-    >
+    <div className="pmodal-backdrop" onClick={onClose}>
       <div
-        className="flex max-h-[92vh] w-full max-w-[560px] flex-col overflow-hidden rounded-lg border border-line bg-bg-elev shadow-2xl"
+        className="pmodal pmodal-narrow"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="nova-sol-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3 md:px-6">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-wider text-muted">Nova solicitação</div>
-            <div className="mt-0.5 font-brand text-lg font-semibold">Conta pra gente o que você precisa</div>
-            <div className="mt-1 text-xs text-muted">
-              O time vai revisar e priorizar — você recebe atualização aqui no Portal.
+        <header className="pmodal-head">
+          <div className="pmodal-head-main">
+            {clienteNome && <div className="pmodal-eyebrow">{clienteNome}</div>}
+            <h1 id="nova-sol-title" className="pmodal-title">
+              Nova solicitação
+            </h1>
+          </div>
+          <button type="button" className="pmodal-close" onClick={onClose} aria-label="Fechar">
+            <Icon name="x" size={20} />
+          </button>
+        </header>
+
+        <div className="pmodal-scroll">
+          <div className="pmodal-form">
+            <div className="pmodal-field">
+              <label htmlFor="ns-titulo">Título</label>
+              <input
+                id="ns-titulo"
+                type="text"
+                className="inp"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value)}
+                placeholder="Resumo curto do que você precisa"
+                maxLength={120}
+                autoFocus
+              />
             </div>
-          </div>
-          <button className="px-2 text-2xl text-muted hover:text-ink" onClick={onClose} aria-label="Fechar">×</button>
-        </div>
 
-        <div className="overflow-y-auto px-4 py-4 md:px-6 space-y-3">
-          <div>
-            <label className="lbl">Título <span className="text-danger">*</span></label>
-            <input
-              type="text"
-              className="inp"
-              value={titulo}
-              onChange={(e) => setTitulo(e.target.value)}
-              placeholder="Resumo curto da solicitação"
-              maxLength={120}
-              autoFocus
-            />
-          </div>
-
-          <div>
-            <label className="lbl">Projeto <span className="text-danger">*</span></label>
-            <select className="inp" value={projetoId} onChange={(e) => setProjetoId(e.target.value)}>
-              <option value="">— escolher</option>
-              {projetosCliente.map((p) => (
-                <option key={p.id} value={p.id}>{p.nome}</option>
-              ))}
-            </select>
-            {projetosCliente.length === 0 && (
-              <div className="text-[11px] text-muted mt-1">
-                Sem projetos vinculados a este cliente. Peça ao time pra cadastrar.
+            <div className="pmodal-form-row">
+              <div className="pmodal-field">
+                <label htmlFor="ns-projeto">Projeto</label>
+                <select
+                  id="ns-projeto"
+                  className="inp"
+                  value={projetoId}
+                  onChange={(e) => setProjetoId(e.target.value)}
+                >
+                  <option value="">Escolher</option>
+                  {projetosCliente.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nome}
+                    </option>
+                  ))}
+                </select>
+                {projetosCliente.length === 0 && (
+                  <div className="pmodal-field-hint">Nenhum projeto cadastrado. Fale com o time.</div>
+                )}
               </div>
-            )}
-          </div>
+              <div className="pmodal-field">
+                <label htmlFor="ns-tipo">Tipo</label>
+                <select
+                  id="ns-tipo"
+                  className="inp"
+                  value={tipo}
+                  onChange={(e) => setTipo(e.target.value as TipoTrabalho | '')}
+                >
+                  <option value="">Escolher</option>
+                  {TIPOS_TRABALHO.map((t) => (
+                    <option key={t.v} value={t.v}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+                {tipoHint && <div className="pmodal-field-hint">{tipoHint}</div>}
+              </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="lbl">Tipo</label>
-              <select className="inp" value={tipoTrabalho} onChange={(e) => setTipoTrabalho(e.target.value as TipoTrabalho)}>
-                {(Object.keys(TIPO_LABEL) as TipoTrabalho[]).map((k) => (
-                  <option key={k} value={k}>{TIPO_LABEL[k]}</option>
+            <div className="pmodal-field">
+              <span className="pmodal-field-label" id="ns-prio-lbl">
+                Prioridade
+              </span>
+              <div className="view-toggle pmodal-seg" role="radiogroup" aria-labelledby="ns-prio-lbl">
+                {PRIORIDADES.map((p) => (
+                  <button
+                    key={p.v}
+                    type="button"
+                    role="radio"
+                    aria-checked={prioridade === p.v}
+                    className={prioridade === p.v ? 'active' : ''}
+                    onClick={() => setPrioridade(p.v)}
+                  >
+                    {p.label}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
-            <div>
-              <label className="lbl">Urgência</label>
-              <select className="inp" value={prioridadeSolicitada} onChange={(e) => setPrioridadeSolicitada(e.target.value as PrioCliente)}>
-                <option value="alta">Alta</option>
-                <option value="media">Média</option>
-                <option value="baixa">Baixa</option>
-              </select>
+
+            <div className="pmodal-field">
+              <label htmlFor="ns-desc">O que você precisa?</label>
+              <textarea
+                id="ns-desc"
+                className="inp"
+                rows={4}
+                value={descricao}
+                onChange={(e) => setDescricao(e.target.value)}
+                placeholder="Contexto, exemplos e links ajudam o time a entender."
+              />
             </div>
-          </div>
 
-          <div>
-            <label className="lbl">Descrição</label>
-            <textarea
-              className="inp"
-              rows={4}
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              placeholder="O que você precisa que seja feito? Contexto · prints · links ajudam."
-            />
-          </div>
+            <div className="pmodal-field">
+              <label htmlFor="ns-valor">
+                Valor esperado <span>opcional</span>
+              </label>
+              <textarea
+                id="ns-valor"
+                className="inp"
+                rows={2}
+                value={valorEsperado}
+                onChange={(e) => setValorEsperado(e.target.value)}
+                placeholder="O que muda para você quando isso estiver pronto?"
+              />
+            </div>
 
-          <div>
-            <label className="lbl">Valor esperado</label>
-            <textarea
-              className="inp"
-              rows={2}
-              value={valorEsperado}
-              onChange={(e) => setValorEsperado(e.target.value)}
-              placeholder="O que essa entrega vai gerar de positivo pra você ou pro time?"
-            />
+            {err && <div className="pmodal-form-err">{err}</div>}
           </div>
-
-          {err && <div className="text-sm text-[color:var(--danger)]">{err}</div>}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-line px-4 py-3 md:px-6">
-          <button type="button" className="btn" onClick={onClose} disabled={pending}>cancelar</button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={submit}
-            disabled={pending || !titulo.trim() || !projetoId}
-          >
-            {pending ? 'enviando…' : 'enviar solicitação'}
+        <div className="pmodal-dialog-foot pmodal-form-foot">
+          <button type="button" className="btn" onClick={onClose} disabled={pending}>
+            Cancelar
+          </button>
+          <button type="button" className="btn btn-primary" onClick={submit} disabled={!podeEnviar}>
+            {pending ? 'Enviando…' : 'Enviar'}
           </button>
         </div>
       </div>

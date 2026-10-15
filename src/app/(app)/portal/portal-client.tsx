@@ -19,7 +19,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useData } from '@/lib/data-store';
 import { ROLE, STATUS, SUB_LABELS, SUBS_FLAT_ORDER } from '@/lib/task-constants';
 import { atrasada as isAtrasada } from '@/lib/task-utils';
-import { fmtDate } from '@/lib/format';
+import { fmtDate, fmtDataCurta } from '@/lib/format';
 import type { Task } from '@/lib/types';
 import { usePortalData } from './use-portal-data';
 import { usePortalNomes } from './use-portal-nomes';
@@ -589,24 +589,25 @@ function PortalKanban({ tasks, pessoasById, projetosById, onOpenTask, today }: P
                         acao ? 'border-[color:var(--warn)]' : 'border-line'
                       }`}
                     >
-                      <div className="flex items-start gap-2 mb-1">
+                      {/* Linha 1: título · Linha 2: projeto · subetapa ·
+                          Linha 3: responsável · prioridade · prazo */}
+                      <div className="text-xs font-medium text-ink break-words mb-1">{t.titulo}</div>
+                      <div className="text-[10px] text-ink-soft font-mono mb-1 truncate">
+                        {proj}
+                        {proj && ' · '}
+                        {SUB_LABELS[t.subetapa] ?? t.subetapa}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted font-mono">
+                        {pess && <span className="truncate">{pess}</span>}
                         {t.prioridade && (
                           <span className={`pri pri-${t.prioridade} shrink-0`}>
                             <span className="pri-dot" />
                             {t.prioridade}
                           </span>
                         )}
-                        <span className="text-xs font-medium text-ink break-words">{t.titulo}</span>
-                      </div>
-                      <div className="text-[10px] text-ink-soft font-mono mb-0.5">
-                        {SUB_LABELS[t.subetapa] ?? t.subetapa}
-                      </div>
-                      <div className="text-[10px] text-muted font-mono">
-                        {proj}
-                        {pess && ` · ${pess}`}
                         {t.prazo && (
-                          <span className={atras ? ' text-[var(--p0)] font-semibold' : ''}>
-                            {' · '}{fmtDate(t.prazo)}
+                          <span className={`ml-auto shrink-0 ${atras ? 'text-[var(--p0)] font-semibold' : ''}`}>
+                            {fmtDataCurta(t.prazo)}
                           </span>
                         )}
                       </div>
@@ -739,7 +740,7 @@ function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: Po
                   className={`font-mono ${atras ? 'text-[var(--p0)] font-semibold' : 'text-ink-soft'}`}
                   style={{ paddingRight: 24 }}
                 >
-                  {t.prazo ? fmtDate(t.prazo) : '—'}
+                  {t.prazo ? fmtDataCurta(t.prazo) : '—'}
                 </td>
               </tr>
             );

@@ -45,7 +45,7 @@ import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
 import { fmtDate, fmtDateShort, lblStatus, missingFieldsForCurrentSubetapa, sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
-import { SUB_TO_MACRO, SUB_LABELS, SUBS_FLAT, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK } from '@/lib/task-constants';
+import { SUB_TO_MACRO, SUB_LABELS, SUBS_FLAT, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK, TIPOS_TRABALHO } from '@/lib/task-constants';
 import { taskFromDb, timeEntryFromDb } from '@/lib/adapters';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { NotePopover } from '@/components/timer-button';
@@ -2803,11 +2803,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     onChange={(e) => set('tipoTrabalho', (e.target.value || null) as Task['tipoTrabalho'])}
                   >
                     <option value="">—</option>
-                    <option value="bug">Bug</option>
-                    <option value="feature">Feature</option>
-                    <option value="discovery">Discovery</option>
-                    <option value="manutencao">Manutenção</option>
-                    <option value="admin">Admin</option>
+                    {TIPOS_TRABALHO.map((t) => (
+                      <option key={t.v} value={t.v}>{t.label}</option>
+                    ))}
                   </select>
                 </div>
                 {/* Prazo · movido da seção Esforço pra aba Triagem (M.2) */}
