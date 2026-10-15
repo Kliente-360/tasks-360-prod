@@ -53,6 +53,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     radar: false,
     prioridadePedidoEm: null,
     prioridadePedidoAte: null,
+    prioridadePedida: null,
     pendenciaRespondidaEm: null,
     webhookSyncStatus: '',
     webhookSyncError: '',

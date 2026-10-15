@@ -26,17 +26,13 @@ import type { Task } from '@/lib/types';
 
 interface PortalComment {
   id: string;
+  parent_id: string | null;
   author: string | null;
   body: string;
   posted_em: string | null;
   criado_em: string;
   from_cliente: boolean | null;
   kind: string | null;
-}
-
-interface SubetapaEvento {
-  to_value: string | null;
-  occurred_at: string;
 }
 
 interface Detalhes {
@@ -47,6 +43,8 @@ interface Detalhes {
 
 interface PortalTaskModalProps {
   task: Task | null;
+  /** Nome do responsável · vem do parent (cliente não lê `pessoas`). */
+  nomeResponsavel: string;
   clienteNome: string;
   onClose: () => void;
 }
@@ -57,6 +55,15 @@ const PRIO_CLIENTE_LABEL: Record<string, string> = {
   media: 'Média',
   baixa: 'Baixa',
 };
+
+/** Visão do cliente da prioridade interna: P0 urgente, P1 alta, P2 média, P3 baixa. */
+const PRIO_INTERNA_CLIENTE: Record<string, 'urgente' | 'alta' | 'media' | 'baixa'> = {
+  P0: 'urgente',
+  P1: 'alta',
+  P2: 'media',
+  P3: 'baixa',
+};
+const NIVEL_CLIENTE: Record<string, number> = { urgente: 0, alta: 1, media: 2, baixa: 3 };
 
 const SIMULANDO = 'Só o cliente faz esta ação · você está simulando o portal';
 
@@ -111,7 +118,7 @@ function Progresso({ task }: { task: Task }) {
               {i < ETAPAS.length - 1 && <span className="pmodal-step-line" />}
             </div>
             <div className="pmodal-step-name">
-              {atual ? `${cur.label ?? nome}${cur.pausada ? ' · pausada' : ' · agora'}` : nome}
+              {atual ? cur.label ?? nome : nome}
             </div>
             <div className="pmodal-step-date">
               {feita ? diaMes(datas[i]) || '—' : atual ? `desde ${diaMes(task.subetapaEm) || '—'}` : '—'}
@@ -133,49 +140,38 @@ const KIND_TAG: Record<string, string> = {
   ajuste_solicitado: 'Pedido de ajuste',
 };
 
-type ItemConversa =
-  | { tipo: 'comment'; ts: number; c: PortalComment }
-  | { tipo: 'etapa'; ts: number; sub: string };
+function Conversa({ comments }: { comments: PortalComment[] }) {
+  const porId = useMemo(() => new Map(comments.map((c) => [c.id, c])), [comments]);
+  const ordenados = useMemo(
+    () =>
+      [...comments].sort(
+        (a, b) =>
+          new Date(a.posted_em || a.criado_em).getTime() - new Date(b.posted_em || b.criado_em).getTime(),
+      ),
+    [comments],
+  );
 
-function Conversa({ comments, eventos }: { comments: PortalComment[]; eventos: SubetapaEvento[] }) {
-  const itens = useMemo<ItemConversa[]>(() => {
-    const out: ItemConversa[] = [];
-    for (const c of comments) {
-      out.push({ tipo: 'comment', ts: new Date(c.posted_em || c.criado_em).getTime(), c });
-    }
-    for (const e of eventos) {
-      if (e.to_value) out.push({ tipo: 'etapa', ts: new Date(e.occurred_at).getTime(), sub: e.to_value });
-    }
-    return out.sort((a, b) => a.ts - b.ts);
-  }, [comments, eventos]);
-
-  if (itens.length === 0) {
+  if (ordenados.length === 0) {
     return <div className="pmodal-empty">Nenhuma mensagem ainda. Escreva abaixo se quiser falar com o time.</div>;
   }
   return (
     <div className="pmodal-convo">
-      {itens.map((it) => {
-        if (it.tipo === 'etapa') {
-          return (
-            <div key={`e-${it.ts}-${it.sub}`} className="pmodal-sep">
-              <span />
-              {SUB_LABELS[it.sub] ?? it.sub} · {diaMes(it.ts)}
-              <span />
-            </div>
-          );
-        }
-        const c = it.c;
+      {ordenados.map((c) => {
+        const ts = new Date(c.posted_em || c.criado_em).getTime();
         if (c.kind === 'aprovacao') {
           return (
             <div key={c.id} className="pmodal-sep is-ok">
               <span />
-              <Icon name="check" size={12} /> Entrega aprovada por {c.author ?? 'cliente'} · {diaMes(it.ts)}
+              <Icon name="check" size={12} /> Entrega aprovada por {c.author ?? 'cliente'} · {diaMes(ts)}
               <span />
             </div>
           );
         }
         const doCliente = !!c.from_cliente;
         const tag = c.kind ? KIND_TAG[c.kind] : null;
+        // Resposta a uma mensagem específica: cita a original (estilo WhatsApp).
+        // Se a original não é visível ao cliente, não há citação.
+        const original = c.parent_id ? porId.get(c.parent_id) : undefined;
         return (
           <div
             key={c.id}
@@ -185,6 +181,12 @@ function Conversa({ comments, eventos }: { comments: PortalComment[]; eventos: S
               <b>{c.author || (doCliente ? 'Cliente' : 'Time')}</b> · {fmtPostedEm(c.posted_em || c.criado_em)}
             </div>
             <div className="pmodal-msg-body">
+              {original && (
+                <div className="pmodal-msg-quote">
+                  <b>{original.author || (original.from_cliente ? 'Cliente' : 'Time')}</b>
+                  <span>{original.body}</span>
+                </div>
+              )}
               {tag && <div className="pmodal-msg-tag">{tag}</div>}
               {c.body}
             </div>
@@ -203,12 +205,18 @@ function PedirPrioridadeDialog({
   onCancel,
   onEnviar,
 }: {
-  prioridadeAtual: string | null;
+  prioridadeAtual: 'urgente' | 'alta' | 'media' | 'baixa' | null;
   enviando: boolean;
   onCancel: () => void;
   onEnviar: (prio: 'alta' | 'urgente', motivo: string, ate: string | null) => void;
 }) {
-  const [prio, setPrio] = useState<'alta' | 'urgente'>('alta');
+  const opcoes = (
+    [
+      { v: 'alta', t: 'Alta', d: 'Precisa entrar na fila das próximas entregas.' },
+      { v: 'urgente', t: 'Urgente', d: 'Está parando a operação hoje.' },
+    ] as const
+  ).filter((o) => prioridadeAtual == null || NIVEL_CLIENTE[o.v] < NIVEL_CLIENTE[prioridadeAtual]);
+  const [prio, setPrio] = useState<'alta' | 'urgente'>(opcoes[0]?.v ?? 'urgente');
   const [motivo, setMotivo] = useState('');
   const [ate, setAte] = useState('');
   return (
@@ -231,12 +239,7 @@ function PedirPrioridadeDialog({
         <div className="pmodal-dialog-body">
           <fieldset className="pmodal-fieldset">
             <legend>Qual prioridade você precisa?</legend>
-            {(
-              [
-                { v: 'alta', t: 'Alta', d: 'Precisa entrar na fila das próximas entregas.' },
-                { v: 'urgente', t: 'Urgente', d: 'Está parando a operação hoje.' },
-              ] as const
-            ).map((o) => (
+            {opcoes.map((o) => (
               <label key={o.v} className={`pmodal-opt ${prio === o.v ? 'is-on' : ''}`}>
                 <input type="radio" name="pp-prio" checked={prio === o.v} onChange={() => setPrio(o.v)} />
                 <span>
@@ -295,13 +298,12 @@ function PedirPrioridadeDialog({
 
 // ── Modal ────────────────────────────────────────────────────────────
 
-export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalProps) {
-  const { projetos, pessoas, clientes, patchTask, viewerRole } = useData();
+export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }: PortalTaskModalProps) {
+  const { projetos, clientes, patchTask, viewerRole } = useData();
   const toast = useToastSafe();
   const sb = useMemo(() => createClient(), []);
 
   const [comments, setComments] = useState<PortalComment[]>([]);
-  const [eventos, setEventos] = useState<SubetapaEvento[]>([]);
   const [detalhes, setDetalhes] = useState<Detalhes | null>(null);
   const [newComment, setNewComment] = useState('');
   const [resposta, setResposta] = useState('');
@@ -315,24 +317,17 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
 
   const carregar = useCallback(
     async (id: string) => {
-      const [c, h, d] = await Promise.all([
+      const [c, d] = await Promise.all([
         sb
           .from('task_comments')
-          .select('id, author, body, posted_em, criado_em, from_cliente, kind')
+          .select('id, parent_id, author, body, posted_em, criado_em, from_cliente, kind')
           .eq('task_id', id)
           .eq('visivel_cliente', true)
           .order('posted_em', { ascending: true, nullsFirst: true })
           .order('criado_em', { ascending: true }),
-        sb
-          .from('task_field_history')
-          .select('to_value, occurred_at')
-          .eq('task_id', id)
-          .eq('field', 'subetapa')
-          .order('occurred_at', { ascending: true }),
         sb.from('tasks').select('descricao, valor_esperado, solucao_implementada').eq('id', id).single(),
       ]);
       if (!c.error) setComments((c.data ?? []) as PortalComment[]);
-      if (!h.error) setEventos((h.data ?? []) as SubetapaEvento[]);
       if (!d.error && d.data) {
         const r = d.data as Record<string, string | null>;
         setDetalhes({
@@ -347,7 +342,6 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
 
   useEffect(() => {
     setComments([]);
-    setEventos([]);
     setDetalhes(null);
     setNewComment('');
     setResposta('');
@@ -431,7 +425,8 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
   const agora = Date.now();
   const projeto = projetos.find((p) => p.id === task.projetoId)?.nome ?? '';
   const cliente = clientes.find((c) => c.id === task.clienteId)?.nome ?? clienteNome;
-  const responsavel = (pessoas.find((p) => p.id === task.pessoaId)?.nome ?? '').split(' ')[0];
+  const responsavel = nomeResponsavel.split(' ')[0];
+  const prioClienteAtual = task.prioridade ? PRIO_INTERNA_CLIENTE[task.prioridade] ?? null : null;
   const concluida = task.status === STATUS.CONCLUIDO;
   const bloqueadoPorCliente = task.subetapa === 'bloqueado' && task.bloqueadoPor === 'cliente';
   const aguardandoResposta = bloqueadoPorCliente && !task.pendenciaRespondidaEm;
@@ -503,7 +498,7 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
       'Pedido enviado. O time responde aqui na conversa.',
       () =>
         patchTask(task.id, {
-          prioridadeSolicitadaCliente: prio,
+          prioridadePedida: prio,
           prioridadePedidoEm: agora,
           prioridadePedidoAte: ate,
         }),
@@ -515,6 +510,8 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
     ? SIMULANDO
     : concluida
       ? 'Tarefa concluída'
+      : prioClienteAtual === 'urgente'
+        ? 'Esta tarefa já está com prioridade urgente'
       : pedidoPendente
         ? 'Já existe um pedido aguardando o time'
         : undefined;
@@ -690,7 +687,7 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
           ) : pedidoPendente ? (
             <section className="pmodal-band is-info">
               <div className="pmodal-band-title">
-                Pedido de prioridade {PRIO_CLIENTE_LABEL[task.prioridadeSolicitadaCliente ?? 'alta']?.toLowerCase()} enviado
+                Pedido de prioridade {PRIO_CLIENTE_LABEL[task.prioridadePedida ?? 'alta']?.toLowerCase()} enviado
                 em {diaMes(task.prioridadePedidoEm)}
               </div>
               <div className="pmodal-band-sub">O time responde aqui na conversa.</div>
@@ -745,7 +742,7 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
                   </div>
                 </div>
                 <div>
-                  <div className="pmodal-lbl">Sua prioridade</div>
+                  <div className="pmodal-lbl">Prioridade inicial</div>
                   <div>
                     {task.prioridadeSolicitadaCliente
                       ? PRIO_CLIENTE_LABEL[task.prioridadeSolicitadaCliente]
@@ -757,19 +754,15 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
 
             <div className="pmodal-col-convo">
               <div className="pmodal-lbl pmodal-convo-head">Conversa</div>
-              <Conversa comments={comments} eventos={eventos} />
+              <Conversa comments={comments} />
               <div className="pmodal-composer">
-                <label htmlFor="pmodal-msg" className="pmodal-lbl">
-                  Falar com o time
-                </label>
-                <div className="pmodal-band-row">
+                <div className="tmodal-composer-pill">
                   <textarea
-                    id="pmodal-msg"
-                    className="inp"
-                    rows={2}
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Escreva uma dúvida ou comentário"
+                    rows={1}
+                    aria-label="Mensagem para o time"
+                    placeholder="Escreva para o time · ⌘↵ envia"
                     onKeyDown={(e) => {
                       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                         e.preventDefault();
@@ -779,11 +772,13 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
                   />
                   <button
                     type="button"
-                    className="btn btn-primary"
+                    className="tmodal-composer-send"
                     disabled={!newComment.trim() || !!busy}
                     onClick={enviarComentario}
+                    title="Enviar (⌘↵)"
+                    aria-label="Enviar mensagem"
                   >
-                    {busy === 'comentar' ? 'Enviando…' : 'Enviar'}
+                    <Icon name="send" size={14} />
                   </button>
                 </div>
               </div>
@@ -793,7 +788,7 @@ export function PortalTaskModal({ task, clienteNome, onClose }: PortalTaskModalP
 
         {prioAberto && (
           <PedirPrioridadeDialog
-            prioridadeAtual={task.prioridadeSolicitadaCliente ?? null}
+            prioridadeAtual={prioClienteAtual}
             enviando={busy === 'prioridade'}
             onCancel={() => setPrioAberto(false)}
             onEnviar={pedirPrioridade}

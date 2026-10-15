@@ -42,6 +42,9 @@ export interface Task {
   /** Pedido de prioridade do cliente aguardando resposta do time (ms).
    *  Null = sem pedido pendente. Só o time limpa, ao responder. */
   prioridadePedidoEm: number | null;
+  /** Prioridade pedida pelo cliente no pedido pendente. Separada de
+   *  prioridadeSolicitadaCliente (escolha inicial, na abertura). */
+  prioridadePedida: 'urgente' | 'alta' | null;
   /** Data até quando o cliente precisa (opcional no pedido). */
   prioridadePedidoAte: string | null;
   /** Cliente respondeu a pendência do bloqueio (ms). O time decide se

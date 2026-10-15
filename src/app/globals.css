@@ -3165,7 +3165,20 @@ body {
 .pmodal-msg.kind-resposta_prioridade .pmodal-msg-body { background: var(--warn-soft); border-color: var(--warn); }
 .pmodal-msg.kind-pedido_prioridade .pmodal-msg-tag,
 .pmodal-msg.kind-resposta_prioridade .pmodal-msg-tag { color: var(--warn); }
-.pmodal-composer { padding: 12px 20px 18px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); }
+.pmodal-composer { padding: 10px 16px 14px; border-top: 1px solid var(--line); }
+/* Citação da mensagem respondida (estilo WhatsApp) */
+.pmodal-msg-quote {
+  display: flex; flex-direction: column; gap: 1px;
+  margin: -2px -4px 6px; padding: 5px 8px;
+  border-left: 3px solid var(--green); border-radius: 4px;
+  background: var(--surface-3);
+  font-size: 12px; line-height: 1.4; color: var(--ink-soft);
+}
+.pmodal-msg-quote b { font-weight: 600; color: var(--green); }
+.pmodal-msg-quote span {
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  white-space: normal;
+}
 
 /* Diálogo de pedido de prioridade */
 .pmodal-dialog-wrap {

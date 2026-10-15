@@ -22,6 +22,7 @@ import { atrasada as isAtrasada } from '@/lib/task-utils';
 import { fmtDate } from '@/lib/format';
 import type { Task } from '@/lib/types';
 import { usePortalData } from './use-portal-data';
+import { usePortalNomes } from './use-portal-nomes';
 import { PortalTaskModal } from './portal-task-modal';
 import { PortalNewTaskForm } from './portal-new-task-form';
 import { Icon } from '@/components/icons';
@@ -81,7 +82,7 @@ const VIEW_LS_KEY = 'kliente360-portal-view';
 const LS_KEY = 'kliente360-portal-cliente';
 
 export function PortalClient() {
-  const { clientes, projetos, pessoas, currentPessoa, viewerRole } = useData();
+  const { clientes, projetos, currentPessoa, viewerRole } = useData();
 
   // Cliente sendo visualizado. Cliente real: trava no próprio cliente_id.
   // Admin/interno: simulam via selector (persistido em localStorage).
@@ -196,7 +197,12 @@ export function PortalClient() {
 
   // Lookups
   const projetosById = useMemo(() => new Map(projetos.map((p) => [p.id, p])), [projetos]);
-  const pessoasById = useMemo(() => new Map(pessoas.map((p) => [p.id, p])), [pessoas]);
+  // Cliente não lê `pessoas` (RLS) · nomes dos responsáveis vêm por RPC
+  const nomes = usePortalNomes(effectiveCid);
+  const pessoasById = useMemo(
+    () => new Map([...nomes].map(([id, nome]) => [id, { nome }])),
+    [nomes],
+  );
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -501,6 +507,7 @@ export function PortalClient() {
 
       <PortalTaskModal
         task={liveOpenTask}
+        nomeResponsavel={liveOpenTask?.pessoaId ? nomes.get(liveOpenTask.pessoaId) ?? '' : ''}
         clienteNome={portalCliente?.nome ?? 'cliente'}
         onClose={closeModal}
       />
@@ -555,13 +562,16 @@ function PortalKanban({ tasks, pessoasById, projetosById, onOpenTask, today }: P
                   <span className="text-xs font-semibold text-ink">{col.label}</span>
                   <span className="font-mono text-[10px] text-muted">{items.length}</span>
                 </div>
-                {pendentes > 0 && (
+                {/* 2ª linha sempre presente (vazia se não houver nada) pra
+                    alinhar a altura dos cabeçalhos das 5 colunas */}
+                {pendentes > 0 ? (
                   <div className="mt-0.5 text-[10px] font-semibold text-[color:var(--warn)]">
                     {pendentes} com ação sua
                   </div>
-                )}
-                {col.key === 'concluido' && (
+                ) : col.key === 'concluido' ? (
                   <div className="mt-0.5 text-[10px] text-muted">desde {desde}</div>
+                ) : (
+                  <div className="mt-0.5 text-[10px]" aria-hidden="true">&nbsp;</div>
                 )}
               </div>
               <div className="p-2 space-y-1.5 min-h-[80px]">
@@ -650,7 +660,8 @@ function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: Po
   };
 
   const sorted = useMemo(() => {
-    if (sortKeys.length === 0) return tasks;
+    const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO);
+    if (sortKeys.length === 0) return abertas;
     const val = (t: Task, k: string): number | string => {
       if (k === 'titulo') return t.titulo.toLowerCase();
       if (k === 'projeto') return (projetosById.get(t.projetoId)?.nome ?? '').toLowerCase();
@@ -660,7 +671,7 @@ function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: Po
       if (k === 'prazo') return t.prazo || '';
       return '';
     };
-    return [...tasks].sort((a, b) => {
+    return abertas.sort((a, b) => {
       for (const { key, dir } of sortKeys) {
         const mul = dir === 'asc' ? 1 : -1;
         const av = val(a, key);

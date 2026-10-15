@@ -391,7 +391,7 @@ export function TriagemClient() {
                   <span className="block text-xs text-muted">{nomeCliente(t.clienteId)} · {nomeProjeto(t.projetoId)}</span>
                 </span>
                 <span className="shrink-0 text-xs font-semibold" style={{ color: 'var(--warn)' }}>
-                  pediu {t.prioridadeSolicitadaCliente ?? 'alta'}
+                  pediu {t.prioridadePedida ?? 'alta'}
                 </span>
                 <span className="shrink-0 font-mono text-[11px] text-muted w-14 text-right">
                   {dias <= 0 ? 'hoje' : `há ${dias}d`}

@@ -165,6 +165,7 @@ function blankEditing(): Task {
     radar: false,
     prioridadePedidoEm: null,
     prioridadePedidoAte: null,
+    prioridadePedida: null,
     pendenciaRespondidaEm: null,
     webhookSyncStatus: '',
     webhookSyncError: '',
@@ -1727,11 +1728,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       const prevTask = tasksById.get(editing.id);
       const nowIso = new Date().toISOString();
       const mudou = !!novaPrio && novaPrio !== editing.prioridade;
-      const upd: Record<string, unknown> = { prioridade_pedido_em: null, prioridade_pedido_ate: null };
+      const upd: Record<string, unknown> = { prioridade_pedido_em: null, prioridade_pedido_ate: null, prioridade_pedida: null };
       if (mudou) upd.prioridade = novaPrio;
       patchTask(editing.id, {
         prioridadePedidoEm: null,
         prioridadePedidoAte: null,
+        prioridadePedida: null,
         ...(mudou ? { prioridade: novaPrio as Task['prioridade'] } : {}),
       });
       skipNextDirty.current = true;
@@ -1739,6 +1741,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         ...cur,
         prioridadePedidoEm: null,
         prioridadePedidoAte: null,
+        prioridadePedida: null,
         ...(mudou ? { prioridade: novaPrio as Task['prioridade'] } : {}),
       }));
       const { error } = await sb.from('tasks').update(upd).eq('id', editing.id);
@@ -2246,7 +2249,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           <PedidoPrioridadeBanner
             key={live.prioridadePedidoEm}
             prioridadeAtual={editing.prioridade}
-            solicitada={live.prioridadeSolicitadaCliente ?? null}
+            solicitada={live.prioridadePedida ?? null}
             pedidoEm={live.prioridadePedidoEm}
             ate={live.prioridadePedidoAte}
             pedido={[...comments].reverse().find((c) => c.kind === 'pedido_prioridade') ?? null}
