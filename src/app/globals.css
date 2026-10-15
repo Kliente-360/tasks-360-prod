@@ -3227,13 +3227,20 @@ body {
 .pmodal-dialog-foot > span { flex: 1; min-width: 180px; font-size: 12px; color: var(--muted); }
 
 /* Nova solicitação (portal) · mesmo padrão do modal da task */
-.pmodal.pmodal-narrow { max-width: 640px; }
+.pmodal.pmodal-narrow { max-width: 760px; }
 .pmodal-form { padding: 20px 24px; display: flex; flex-direction: column; gap: 18px; }
-.pmodal-form-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
-@media (min-width: 560px) { .pmodal-form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.pmodal-form-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+@media (min-width: 640px) { .pmodal-form-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* Select com seta própria, mais pra dentro (a nativa ficava colada na borda) */
+.pmodal-form select.inp {
+  appearance: none; -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236E6D68' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px 14px;
+}
 .pmodal-field-label { font-size: 14px; font-weight: 600; color: var(--ink); }
 .pmodal-field-hint { font-size: 12px; color: var(--muted); line-height: 1.4; }
-.pmodal-seg { align-self: flex-start; }
-.pmodal-seg button { min-width: 76px; justify-content: center; }
 .pmodal-form-err { font-size: 13px; color: var(--danger); }
 .pmodal-form-foot { justify-content: flex-end; }

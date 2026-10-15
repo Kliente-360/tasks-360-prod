@@ -49,7 +49,6 @@ export function PortalNewTaskForm({
 
   const projetosCliente = projetos.filter((p) => p.clienteId === clienteId && !p.arquivadoEm);
   const clienteNome = clientes.find((c) => c.id === clienteId)?.nome ?? '';
-  const tipoHint = TIPOS_TRABALHO.find((t) => t.v === tipo)?.hint;
   const podeEnviar = !!titulo.trim() && !!projetoId && !!tipo && !pending;
 
   // Projeto único: já vem selecionado
@@ -175,29 +174,24 @@ export function PortalNewTaskForm({
                     </option>
                   ))}
                 </select>
-                {tipoHint && <div className="pmodal-field-hint">{tipoHint}</div>}
+              </div>
+              <div className="pmodal-field">
+                <label htmlFor="ns-prio">Prioridade</label>
+                <select
+                  id="ns-prio"
+                  className="inp"
+                  value={prioridade}
+                  onChange={(e) => setPrioridade(e.target.value as PrioCliente)}
+                >
+                  {PRIORIDADES.map((p) => (
+                    <option key={p.v} value={p.v}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
-            <div className="pmodal-field">
-              <span className="pmodal-field-label" id="ns-prio-lbl">
-                Prioridade
-              </span>
-              <div className="view-toggle pmodal-seg" role="radiogroup" aria-labelledby="ns-prio-lbl">
-                {PRIORIDADES.map((p) => (
-                  <button
-                    key={p.v}
-                    type="button"
-                    role="radio"
-                    aria-checked={prioridade === p.v}
-                    className={prioridade === p.v ? 'active' : ''}
-                    onClick={() => setPrioridade(p.v)}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             <div className="pmodal-field">
               <label htmlFor="ns-desc">O que você precisa?</label>
