@@ -14,7 +14,7 @@
  * Admin/interno simulando o portal veem as ações desabilitadas.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase/client';
 import { useData } from '@/lib/data-store';
@@ -140,7 +140,7 @@ const KIND_TAG: Record<string, string> = {
   ajuste_solicitado: 'Pedido de ajuste',
 };
 
-function Conversa({ comments }: { comments: PortalComment[] }) {
+function Conversa({ comments, onReply }: { comments: PortalComment[]; onReply: (c: PortalComment) => void }) {
   const porId = useMemo(() => new Map(comments.map((c) => [c.id, c])), [comments]);
   const ordenados = useMemo(
     () =>
@@ -190,6 +190,9 @@ function Conversa({ comments }: { comments: PortalComment[] }) {
               {tag && <div className="pmodal-msg-tag">{tag}</div>}
               {c.body}
             </div>
+            <button type="button" className="pmodal-msg-reply" onClick={() => onReply(c)}>
+              Responder
+            </button>
           </div>
         );
       })}
@@ -306,6 +309,10 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
   const [comments, setComments] = useState<PortalComment[]>([]);
   const [detalhes, setDetalhes] = useState<Detalhes | null>(null);
   const [newComment, setNewComment] = useState('');
+  // Resposta a uma mensagem específica · banco só permite 1 nível, então
+  // responder uma resposta entra na conversa da mensagem original
+  const [respondendo, setRespondendo] = useState<PortalComment | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const [resposta, setResposta] = useState('');
   const [ajusteAberto, setAjusteAberto] = useState(false);
   const [ajuste, setAjuste] = useState('');
@@ -344,6 +351,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
     setComments([]);
     setDetalhes(null);
     setNewComment('');
+    setRespondendo(null);
     setResposta('');
     setAjuste('');
     setAjusteAberto(false);
@@ -399,6 +407,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
         author_pessoa_id: null,
         visivel_cliente: true,
         from_cliente: true,
+        parent_id: respondendo ? respondendo.parent_id ?? respondendo.id : null,
       })
       .select('id')
       .single();
@@ -410,15 +419,16 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
     if (task.pessoaId && data?.id) {
       void sb.from('notifications').insert({
         recipient_pessoa_id: task.pessoaId,
-        kind: 'cliente_comentou',
+        kind: respondendo ? 'cliente_respondeu' : 'cliente_comentou',
         payload: { author: clienteNome || 'cliente', task_id: task.id, comment_id: data.id, preview: body.slice(0, 80) },
         source_task_id: task.id,
         source_comment_id: data.id,
       });
     }
     setNewComment('');
+    setRespondendo(null);
     void carregar(task.id);
-  }, [newComment, task, busy, sb, clienteNome, toast, carregar]);
+  }, [newComment, respondendo, task, busy, sb, clienteNome, toast, carregar]);
 
   if (!task) return null;
 
@@ -746,10 +756,33 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
 
             <div className="pmodal-col-convo">
               <div className="pmodal-lbl pmodal-convo-head">Conversa</div>
-              <Conversa comments={comments} />
+              <Conversa
+                comments={comments}
+                onReply={(c) => {
+                  setRespondendo(c);
+                  composerRef.current?.focus();
+                }}
+              />
               <div className="pmodal-composer">
+                {respondendo && (
+                  <div className="pmodal-reply-bar">
+                    <div className="pmodal-reply-bar-text">
+                      <b>Respondendo a {respondendo.author || (respondendo.from_cliente ? 'Cliente' : 'Time')}</b>
+                      <span>{respondendo.body}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="pmodal-close"
+                      onClick={() => setRespondendo(null)}
+                      aria-label="Cancelar resposta"
+                    >
+                      <Icon name="x" size={14} />
+                    </button>
+                  </div>
+                )}
                 <div className="tmodal-composer-pill">
                   <textarea
+                    ref={composerRef}
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     rows={1}
