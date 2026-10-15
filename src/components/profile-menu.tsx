@@ -27,6 +27,7 @@ import { OnboardingMenuItem } from '@/components/onboarding-modal';
 import { MobileHelpMenuItem } from '@/components/mobile-help-modal';
 import { Icon, type IconName } from '@/components/icons';
 import { APP_VERSION } from '@/components/app-nav';
+import { useMarcaCliente } from '@/lib/use-marca-cliente';
 
 const PROFILE_ICON: Record<string, IconName> = {
   '/cadastros': 'sliders',
@@ -36,6 +37,7 @@ export function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { currentPessoa, viewerRole } = useData();
+  const marca = useMarcaCliente();
   const sbRef = useRef<ReturnType<typeof createClient> | null>(null);
   if (!sbRef.current) sbRef.current = createClient();
   const sb = sbRef.current;
@@ -78,7 +80,14 @@ export function ProfileMenu() {
         aria-label="Conta"
         aria-expanded={open}
       >
-        <span className="w-6 h-6 rounded-full bg-[color:var(--green-soft)] text-[color:var(--green)] font-brand font-semibold text-xs flex items-center justify-center">
+        <span
+          className="w-6 h-6 rounded-full bg-[color:var(--green-soft)] text-[color:var(--green)] font-brand font-semibold text-xs flex items-center justify-center"
+          style={
+            marca
+              ? { background: `color-mix(in srgb, ${marca.cor} 75%, var(--bg))`, color: marca.texto }
+              : undefined
+          }
+        >
           {initial}
         </span>
       </button>

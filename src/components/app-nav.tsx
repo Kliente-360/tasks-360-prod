@@ -17,9 +17,10 @@ import { isPreTriagem, triageFailures } from '@/lib/task-utils';
 import { STATUS } from '@/lib/task-constants';
 import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
+import { useMarcaCliente } from '@/lib/use-marca-cliente';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.229';
+export const APP_VERSION = 'v1.03.230';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -55,6 +56,8 @@ export function AppNav() {
   const { refreshAll, refreshing, viewerRole, tasks, currentPessoa } = useData();
   const { openNew } = useTaskModal();
   const { isResolved } = useFocoDone();
+  // Cliente logado: ícone, + Solicitação e avatar na cor do cliente
+  const marca = useMarcaCliente();
 
   // Counter da Triagem · mesma lógica de triagemTasks (failures OU IA pre-triagem).
   // Bolinha vermelha aparece ao lado do label da aba.
@@ -90,7 +93,10 @@ export function AppNav() {
             title="Recarregar dados"
             aria-label="Recarregar dados"
           >
-            <span className={cn('mark sz-24', refreshing && 'loading-pulse')}>
+            <span
+              className={cn('mark sz-24', refreshing && 'loading-pulse')}
+              style={marca ? ({ '--logo-green': marca.cor } as React.CSSProperties) : undefined}
+            >
               <span /><span /><span /><span />
             </span>
             <b className="leading-none truncate">tasks 360</b>
@@ -132,7 +138,11 @@ export function AppNav() {
                   openNew();
                 }
               }}
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[color:var(--green)] text-white text-xs font-medium hover:bg-[color:var(--green-hover)] transition-colors"
+              className={cn(
+                'hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-[filter,background-color]',
+                marca ? 'hover:brightness-95' : 'bg-[color:var(--green)] text-white hover:bg-[color:var(--green-hover)]',
+              )}
+              style={marca ? { background: marca.cor, color: marca.texto } : undefined}
               title={viewerRole === 'cliente' ? 'Nova solicitação' : 'Nova tarefa'}
               aria-label={viewerRole === 'cliente' ? 'Nova solicitação' : 'Nova tarefa'}
             >
