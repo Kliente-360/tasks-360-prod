@@ -3298,3 +3298,13 @@ body {
 .portal-recolher:hover .portal-recolher-seta { color: var(--ink); }
 /* Caixas dentro da Visão qualitativa */
 .portal-ia-box { padding: 14px 16px; border-radius: var(--r-md); background: var(--surface-2); border: 1px solid var(--line); }
+
+/* Visão qualitativa · destaque verde suave (card da seção) */
+.portal-visao-qualitativa {
+  padding: 16px 20px;
+  border-radius: var(--r-md);
+  background: var(--green-tint);
+  border: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
+}
+.portal-visao-qualitativa .portal-recolher-seta { color: var(--green); }
+.portal-visao-qualitativa .portal-ia-box { background: var(--bg-elev); border-color: color-mix(in srgb, var(--green) 18%, var(--line)); }

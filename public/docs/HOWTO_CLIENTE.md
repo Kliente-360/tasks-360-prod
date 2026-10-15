@@ -49,7 +49,7 @@ A tela tem cinco partes, de cima para baixo.
 
 **A visão qualitativa** traz dois textos curtos: o que foi entregue no mês anterior e os riscos do backlog hoje. Ela tem uma seção própria logo abaixo.
 
-O aviso e a visão qualitativa podem ser recolhidos clicando no título; o portal lembra a sua escolha.
+O aviso e a visão qualitativa começam fechados; clique no título para abrir ou fechar.
 
 **Os cinco indicadores** resumem as tarefas abertas:
 

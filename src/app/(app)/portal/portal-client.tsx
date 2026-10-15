@@ -769,12 +769,11 @@ function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: Po
 
 function PortalAcaoBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t: Task) => void }) {
   const [expandido, setExpandido] = useState(false);
-  const [aberta, alternar] = useSecaoAberta('aguardando');
+  const [aberta, alternar] = useSecaoAberta();
   const visiveis = expandido ? items : items.slice(0, 3);
   const agora = Date.now();
   return (
     <div className="portal-alert portal-alert-alta">
-      <div className="portal-alert-icon">⏳</div>
       <div className="min-w-0 flex-1">
         <CabecalhoRecolher aberta={aberta} onClick={alternar}>
           <span className="portal-alert-title">

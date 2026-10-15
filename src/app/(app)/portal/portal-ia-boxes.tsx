@@ -53,9 +53,9 @@ export function PortalIaBoxes({ clienteId }: { clienteId: string }) {
     };
   }, [clienteId]);
 
-  const [aberta, alternar] = useSecaoAberta('visao-qualitativa');
+  const [aberta, alternar] = useSecaoAberta();
   return (
-    <section className="card p-4 md:p-5">
+    <section className="portal-visao-qualitativa">
       <CabecalhoRecolher aberta={aberta} onClick={alternar}>
         <span className="font-brand text-sm font-semibold text-ink">Visão qualitativa</span>
       </CabecalhoRecolher>
