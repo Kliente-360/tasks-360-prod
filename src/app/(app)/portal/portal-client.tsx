@@ -17,7 +17,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '@/lib/data-store';
-import { ROLE, STATUS, SUB_LABELS } from '@/lib/task-constants';
+import { ROLE, STATUS, SUB_LABELS, SUBS_FLAT_ORDER } from '@/lib/task-constants';
 import { atrasada as isAtrasada } from '@/lib/task-utils';
 import { fmtDate } from '@/lib/format';
 import type { Task } from '@/lib/types';
@@ -121,7 +121,7 @@ export function PortalClient() {
     [clientes, effectiveCid],
   );
 
-  const { portalTasks, alerts, headline } = usePortalData(effectiveCid);
+  const { portalTasks, alerts } = usePortalData(effectiveCid);
 
   // Modal state
   const [openTask, setOpenTask] = useState<Task | null>(null);
@@ -398,10 +398,6 @@ export function PortalClient() {
         )}
       </div>
 
-      {/* headline (sub-linha antiga) fica logo abaixo do header colorido */}
-      {headline && (
-        <div className="text-xs text-muted -mt-2">{headline}</div>
-      )}
 
       {showNewTask && effectiveCid && (
         <PortalNewTaskForm
@@ -628,7 +624,60 @@ function PortalKanban({ tasks, pessoasById, projetosById, onOpenTask, today }: P
 // PortalLista · tabela no padrão do Backlog
 // ─────────────────────────────────────────────────────────
 
+type SortKey = { key: string; dir: 'asc' | 'desc' };
+
 function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: PortalViewProps) {
+  // Mesmo mecanismo do Backlog: clique ordena asc → desc → remove; nova
+  // coluna vira o critério principal e mantém até 2 anteriores. Sem
+  // critério, vale a ordem padrão do portal (já aplicada no parent).
+  const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
+  const sortBy = (key: string) => {
+    setSortKeys((cur) => {
+      const idx = cur.findIndex((s) => s.key === key);
+      if (idx !== 0) {
+        const rest = cur.filter((s) => s.key !== key).slice(0, 2);
+        return [{ key, dir: 'asc' }, ...rest];
+      }
+      if (cur[0].dir === 'asc') return [{ key, dir: 'desc' }, ...cur.slice(1)];
+      return cur.slice(1);
+    });
+  };
+  const sortIcon = (key: string): string => {
+    const idx = sortKeys.findIndex((s) => s.key === key);
+    if (idx === -1) return '';
+    const arrow = sortKeys[idx].dir === 'asc' ? '▲' : '▼';
+    return sortKeys.length > 1 ? `${arrow}${idx + 1}` : arrow;
+  };
+
+  const sorted = useMemo(() => {
+    if (sortKeys.length === 0) return tasks;
+    const val = (t: Task, k: string): number | string => {
+      if (k === 'titulo') return t.titulo.toLowerCase();
+      if (k === 'projeto') return (projetosById.get(t.projetoId)?.nome ?? '').toLowerCase();
+      if (k === 'subetapa') return SUBS_FLAT_ORDER[t.subetapa] ?? 99;
+      if (k === 'pessoa') return (pessoasById.get(t.pessoaId)?.nome ?? '').toLowerCase();
+      if (k === 'prioridade') return t.prioridade ? +t.prioridade.slice(1) : 99;
+      if (k === 'prazo') return t.prazo || '';
+      return '';
+    };
+    return [...tasks].sort((a, b) => {
+      for (const { key, dir } of sortKeys) {
+        const mul = dir === 'asc' ? 1 : -1;
+        const av = val(a, key);
+        const bv = val(b, key);
+        if (av < bv) return -mul;
+        if (av > bv) return mul;
+      }
+      return 0;
+    });
+  }, [tasks, sortKeys, projetosById, pessoasById]);
+
+  const th = (label: string, key: string, style?: React.CSSProperties) => (
+    <th className="sortable" onClick={() => sortBy(key)} style={style}>
+      {label} <span className="text-[10px] ml-1 text-ink">{sortIcon(key)}</span>
+    </th>
+  );
+
   return (
     <div className="card tbl-wrap overflow-x-auto">
       <table className="tbl">
@@ -637,21 +686,21 @@ function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: Po
           <col style={{ width: 180 }} />
           <col style={{ width: 170 }} />
           <col style={{ width: 130 }} />
-          <col style={{ width: 70 }} />
-          <col style={{ width: 100 }} />
+          <col style={{ width: 80 }} />
+          <col style={{ width: 130 }} />
         </colgroup>
         <thead>
           <tr>
-            <th>Tarefa</th>
-            <th>Projeto</th>
-            <th>Subetapa</th>
-            <th>Responsável</th>
-            <th>Prio</th>
-            <th>Prazo</th>
+            {th('Tarefa', 'titulo')}
+            {th('Projeto', 'projeto')}
+            {th('Subetapa', 'subetapa')}
+            {th('Responsável', 'pessoa')}
+            {th('Prio', 'prioridade')}
+            {th('Prazo', 'prazo', { paddingRight: 24 })}
           </tr>
         </thead>
         <tbody>
-          {tasks.map((t) => {
+          {sorted.map((t) => {
             const acao = acaoDoCliente(t);
             const atras = !!(t.prazo && t.prazo < today && t.status !== STATUS.CONCLUIDO);
             return (
@@ -675,13 +724,16 @@ function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: Po
                     </span>
                   ) : '—'}
                 </td>
-                <td className={`font-mono ${atras ? 'text-[var(--p0)] font-semibold' : 'text-ink-soft'}`}>
+                <td
+                  className={`font-mono ${atras ? 'text-[var(--p0)] font-semibold' : 'text-ink-soft'}`}
+                  style={{ paddingRight: 24 }}
+                >
                   {t.prazo ? fmtDate(t.prazo) : '—'}
                 </td>
               </tr>
             );
           })}
-          {tasks.length === 0 && (
+          {sorted.length === 0 && (
             <tr>
               <td colSpan={6} className="text-center text-xs italic text-muted py-6">
                 Nenhuma tarefa com esses filtros.
