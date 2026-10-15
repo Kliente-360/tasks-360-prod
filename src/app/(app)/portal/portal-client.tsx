@@ -24,6 +24,7 @@ import type { Task } from '@/lib/types';
 import { usePortalData } from './use-portal-data';
 import { usePortalNomes } from './use-portal-nomes';
 import { PortalIaBoxes } from './portal-ia-boxes';
+import { SetaRecolher, useSecaoAberta } from './recolher';
 import { PortalTaskModal } from './portal-task-modal';
 import { PortalNewTaskForm } from './portal-new-task-form';
 import { Icon } from '@/components/icons';
@@ -430,6 +431,9 @@ export function PortalClient() {
         <PortalAcaoBanner items={acaoItems} onOpenTask={openPortalTask} />
       )}
 
+      {/* Visão qualitativa · caixas de IA (docs/portal-insights) */}
+      <PortalIaBoxes clienteId={effectiveCid} />
+
       {/* 2. ALERTAS amigáveis */}
       {alerts.length > 0 && (
         <div className="space-y-2">
@@ -505,8 +509,6 @@ export function PortalClient() {
       {/* Listas de prioridade removidas (v1.03.217) · info agora vive
           no Kanban 4 macros acima. */}
 
-      {/* Caixas de IA · textos das rotinas agendadas (docs/portal-insights) */}
-      <PortalIaBoxes clienteId={effectiveCid} />
 
       <PortalTaskModal
         task={liveOpenTask}
@@ -767,15 +769,20 @@ function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: Po
 
 function PortalAcaoBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t: Task) => void }) {
   const [expandido, setExpandido] = useState(false);
+  const [aberta, alternar] = useSecaoAberta('aguardando');
   const visiveis = expandido ? items : items.slice(0, 3);
   const agora = Date.now();
   return (
     <div className="portal-alert portal-alert-alta">
       <div className="portal-alert-icon">⏳</div>
       <div className="min-w-0 flex-1">
-        <div className="portal-alert-title">
-          {items.length === 1 ? '1 item aguardando você' : `${items.length} itens aguardando você`}
+        <div className="flex items-start justify-between gap-3">
+          <div className="portal-alert-title">
+            {items.length === 1 ? '1 item aguardando você' : `${items.length} itens aguardando você`}
+          </div>
+          <SetaRecolher aberta={aberta} onClick={alternar} rotulo="itens aguardando você" />
         </div>
+        {aberta && (<>
         <div className="mt-2 space-y-1">
           {visiveis.map((t) => {
             const acao = acaoDoCliente(t)!;
@@ -807,6 +814,7 @@ function PortalAcaoBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t
             {expandido ? 'Mostrar menos' : `Ver todos (${items.length})`}
           </button>
         )}
+        </>)}
       </div>
     </div>
   );

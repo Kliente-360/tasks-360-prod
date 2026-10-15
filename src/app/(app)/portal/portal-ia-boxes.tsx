@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 import { createClient } from '@/lib/supabase/client';
+import { SetaRecolher, useSecaoAberta } from './recolher';
 
 type Tipo = 'entregas' | 'riscos';
 
@@ -52,8 +53,15 @@ export function PortalIaBoxes({ clienteId }: { clienteId: string }) {
     };
   }, [clienteId]);
 
+  const [aberta, alternar] = useSecaoAberta('visao-qualitativa');
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
+    <section className="card p-4 md:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-brand text-sm font-semibold text-ink m-0">Visão qualitativa</h2>
+        <SetaRecolher aberta={aberta} onClick={alternar} rotulo="visão qualitativa" />
+      </div>
+      {aberta && (
+    <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
       <IaBox
         titulo="Entregas de valor no mês anterior"
         vazio="O resumo do mês sai no primeiro dia de cada mês."
@@ -65,6 +73,8 @@ export function PortalIaBoxes({ clienteId }: { clienteId: string }) {
         insight={dados.riscos}
       />
     </div>
+      )}
+    </section>
   );
 }
 
@@ -79,8 +89,8 @@ function IaBox({
 }) {
   const html = useMemo(() => (insight ? renderSeguro(insight.conteudo_md) : ''), [insight]);
   return (
-    <section className="card p-4 md:p-5 portal-ia-box">
-      <h2 className="font-brand text-sm font-semibold text-ink m-0 mb-2">{titulo}</h2>
+    <div className="portal-ia-box">
+      <h3 className="text-[13px] font-semibold text-ink m-0 mb-2">{titulo}</h3>
       {insight === undefined ? (
         <div className="text-xs text-muted italic">Carregando…</div>
       ) : insight === null ? (
@@ -88,6 +98,6 @@ function IaBox({
       ) : (
         <div className="portal-ia-md" dangerouslySetInnerHTML={{ __html: html }} />
       )}
-    </section>
+    </div>
   );
 }
