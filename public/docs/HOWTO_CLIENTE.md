@@ -1,109 +1,154 @@
-# Portal Kliente 360 · guia rápido
-
-Este é o seu painel de acompanhamento das demandas em curso com o time da Kliente 360. Tudo o que precisa estar nas suas mãos está em **uma única tela**.
+# Portal Kliente 360
 
 ---
 
-## 1. O que você vê
+O portal reúne num só lugar tudo o que o time da Kliente 360 está fazendo para a sua empresa. Por aqui você abre novas solicitações, acompanha cada tarefa da fila até a entrega e responde quando o time precisa de você, sem depender de e-mail ou WhatsApp para saber em que pé as coisas estão.
 
-Logo no topo, um cabeçalho com o nome da sua empresa e uma frase-resumo: quantas tarefas estão em andamento, quantas aguardam sua resposta, quantas foram entregues no mês.
+Este guia segue a ordem em que você costuma usar o portal: abrir um pedido, acompanhar, agir quando é a sua vez e conversar com o time.
 
-Logo abaixo, em **caixa âmbar destacada**, aparecem alertas amigáveis quando algo merece atenção:
+## Como abro uma nova solicitação?
 
-- ⏳ **Algo aguardando você** — quando uma tarefa está parada esperando uma decisão sua e o time não pode seguir até você responder.
-- 📅 **Entrega próxima** — quando há prazo nos próximos 3 dias.
-- ↑ **Mês forte** — quando o ritmo de entregas do mês atual está acima da média histórica.
+Clique em **+ Solicitação**, no canto superior direito. Abre um formulário curto, e cada campo ajuda o time a entender e priorizar o seu pedido sem precisar voltar com perguntas.
 
-Se a caixa âmbar não aparecer, é porque não há nada urgente.
-
----
-
-## 2. Os 4 indicadores principais
-
-Logo abaixo do cabeçalho, em cards numerados:
-
-| Indicador | O que significa |
+| Campo | O que colocar |
 |---|---|
-| **Entregues este mês** | Total concluído em [mês corrente], com comparação ao mês anterior |
-| **Em andamento** | Tarefas que o time está executando agora |
-| **Aguardando você** | Itens que dependem de uma decisão/resposta sua |
-| **Próxima entrega** | Quantos dias até a próxima entrega prevista (e o título dela) |
+| **Título** | Um resumo curto, do jeito que você procuraria a tarefa depois. |
+| **Projeto** | A frente de trabalho a que o pedido pertence. Se a sua empresa tem um projeto só, ele já vem marcado. |
+| **Tipo** | A natureza do pedido (veja a tabela abaixo). |
+| **Prioridade** | O quanto isso pesa para você hoje: baixa, média, alta ou urgente. |
+| **O que você precisa?** | O contexto: o que acontece hoje, o que deveria acontecer, exemplos e links. |
+| **Valor esperado** | Opcional. O que muda para você quando isso estiver pronto. |
 
----
+O tipo ajuda o time a escolher quem vai cuidar do pedido e como estimar o esforço:
 
-## 3. Storytelling em 3 cards
+| Tipo | Quando usar |
+|---|---|
+| **Correção de erro** | Algo que deveria funcionar e não está funcionando. |
+| **Melhoria** | Algo novo ou diferente do que existe hoje. |
+| **Dúvida ou análise** | Você quer entender, investigar ou avaliar algo antes de decidir. |
+| **Manutenção** | Ajustes de rotina, como usuários, acessos, cadastros e configurações. |
+| **Administrativo** | Relatórios, reuniões e apoio que não mudam o sistema. |
 
-Logo após os indicadores:
+Vale a pena preencher o valor esperado. É ele que mostra ao time por que o pedido importa, e ele volta a aparecer quando a entrega chega para você aprovar.
 
-- **Ritmo de entregas** — barras dos últimos 6 meses. O mês atual aparece em cor escura pra destacar. Lê de uma só vez se vocês estão dentro do esperado.
-- **Onde a energia está** — os 5 projetos com mais tarefas ativas. Mostra rapidamente onde estamos investindo esforço.
-- **Tempo médio** — quanto tempo, em média, uma tarefa leva do início ao fim (90 dias). Inclui o total acumulado já entregue.
+## O que acontece depois que eu envio?
 
----
+A solicitação aparece na hora na coluna **Backlog** do seu portal e vai para a triagem do time. Na triagem, alguém do time lê o pedido, define o responsável, a prioridade interna e o prazo. Você recebe um aviso no sino quando ela é aceita.
 
-## 4. As 4 listas operacionais
+Se o time decidir não seguir com o pedido, você também recebe um aviso, com o motivo e uma mensagem explicando a decisão. Isso costuma acontecer quando já existe uma solicitação igual, quando o pedido está fora do escopo do contrato ou quando o assunto já foi resolvido.
 
-Mais abaixo aparecem 4 listas com as tarefas detalhadas:
+Depois de aceita, a tarefa avança pelas etapas até a entrega. A **Prioridade inicial**, que aparece no detalhe de cada tarefa, guarda a prioridade que você escolheu na abertura. A prioridade que o time usa no dia a dia (P0 a P3) aparece nos cards.
 
-1. **Aguardando você** (em vermelho se tiver algo) — clique pra ver e responder
-2. **Em andamento agora** — o que o time está tocando
-3. **Próximas entregas (14d)** — o que vai chegar pra você nas próximas duas semanas
-4. **Entregues recentemente** — o que foi entregue nos últimos 30 dias
+## Como leio a tela do portal?
 
-Em cada linha aparece o nome da tarefa, o projeto, o seu contato no time, e — quando aplica — a data de prazo.
+A tela tem quatro partes, de cima para baixo.
 
----
+**A barra com o nome da sua empresa** concentra a busca e os filtros. É também onde você alterna entre ver as tarefas em quadro (Kanban) ou em lista.
 
-## 5. Clicando em uma tarefa
+**O aviso de itens aguardando você** só aparece quando existe alguma tarefa parada à sua espera, e mostra quais são. Clique no título para abrir a tarefa direto.
 
-Ao clicar em qualquer tarefa, abre uma janela com:
+**Os cinco indicadores** resumem as tarefas abertas:
 
-- **Status atual humanizado** (em andamento · aguardando você · em pausa · a iniciar · concluída)
-- **Descrição completa** do que está sendo feito
-- **Projeto** e **seu contato no time**
-- **Linha do tempo** com os principais marcos
-- **Conversa** — você pode comentar e ver as respostas do time
+| Indicador | O que conta |
+|---|---|
+| **Total ativas** | Todas as tarefas que ainda não foram concluídas. |
+| **Backlog** | Tarefas na fila, ainda não iniciadas. |
+| **Em andamento** | Tarefas que o time está desenvolvendo, testando ou levando para produção. |
+| **Bloqueadas** | Tarefas pausadas, por falta de uma resposta sua ou por algo externo. Ficam em vermelho quando há alguma. |
+| **Atrasadas** | Tarefas com prazo vencido. Também ficam em vermelho quando há alguma. |
 
----
+**O quadro ou a lista** mostra cada tarefa, explicados nas próximas seções.
 
-## 6. Como responder quando há "aguardando você"
+## O que significa cada coluna do quadro?
 
-Quando uma tarefa está esperando sua resposta, ao abri-la aparece uma **caixa âmbar destacada** com a pergunta "Já respondeu?".
+| Coluna | O que está ali |
+|---|---|
+| **Backlog** | Pedidos na fila, incluindo os que ainda estão em definição ou com escopo fechado e esperando início. |
+| **Em desenvolvimento** | O que o time está construindo. Inclui revisão interna, pronto para produção e implantação; o card mostra a etapa exata. |
+| **Em homologação** | Entregas prontas para você testar e aprovar. É a sua vez de agir. |
+| **Bloqueado** | Tarefas pausadas. Quando a pausa depende de você, o card avisa. |
+| **Concluído** | O que foi entregue no mês anterior e no mês atual. |
 
-Escreva o que decidiu/respondeu no campo e clique **enviar resposta ao time**. O time recebe a mensagem e segue.
+Cada card tem três linhas: o título; o projeto e a etapa; e o responsável, a prioridade e o prazo. Cards com **borda laranja** pedem alguma ação sua, e a última linha diz qual.
 
-> Dica: pode responder por aqui em vez de email ou WhatsApp. Concentra a conversa no contexto da tarefa.
+A visão de lista mostra as mesmas tarefas em tabela, sem as concluídas. Clique no nome de uma coluna para ordenar; clicando de novo, a ordem inverte, e na terceira vez a ordenação sai. Dá para combinar até três colunas.
 
----
+## Como encontro uma tarefa específica?
 
-## 7. Comentários públicos
+Use a **busca**: ela procura no título, na descrição, no projeto, no nome do responsável, na prioridade e na etapa. Os filtros de **projeto**, **prazo** (atrasadas, hoje, próximos 7 dias ou sem prazo) e **prioridade** podem ser combinados com a busca, e a prioridade aceita mais de uma opção ao mesmo tempo.
 
-A seção **Conversa** funciona como um chat com o time, **vinculado à tarefa**. Toda mensagem fica registrada e visível pros dois lados.
+O **X** no fim da barra mostra quantos filtros estão ativos e limpa todos de uma vez.
 
-- Atalho: **⌘ + Enter** envia
-- Comentários internos do time **não aparecem aqui** — só os marcados como visíveis ao cliente
+## Quando o time precisa de mim?
 
----
+Existem dois momentos em que uma tarefa só anda com você.
 
-## 8. Perguntas frequentes
+**Homologar uma entrega.** Quando a tarefa chega em homologação, o detalhe dela mostra o que você pediu e o que foi entregue, lado a lado. Teste e escolha:
 
-**Não estou vendo uma tarefa que esperava ver.**
-Provavelmente ela ainda não foi marcada como visível pra cliente, ou ainda está em fase de planejamento. Fale com seu contato no time.
+- **Aprovar entrega**: a tarefa segue para produção e o time é avisado.
+- **Pedir ajuste**: descreva o que não ficou como esperado. A tarefa volta para revisão do time, e você recebe a entrega de novo para homologar.
 
-**Mudei de ideia sobre o que respondi.**
-Comente de novo na tarefa explicando a mudança. O time vê em tempo real.
+**Responder uma pendência.** Às vezes o time precisa de uma informação ou de uma decisão sua para continuar. A tarefa fica pausada e a pergunta aparece em destaque no topo do detalhe, com o campo para você responder ali mesmo. O time é avisado na hora e decide quando retomar; até lá, a tarefa mostra que você já respondeu e sai da sua lista de pendências.
 
-**Como recebo notificações?**
-Por email automático em momentos críticos (algo aguardando você, entrega próxima). Em breve teremos notificações no próprio app.
+A barra de etapas no topo de cada tarefa mostra onde ela está. A etapa atual fica em laranja e, quando a tarefa está pausada, em vermelho.
+
+## Como converso com o time sobre uma tarefa?
+
+Abra a tarefa e use a **conversa**, à direita. Tudo o que fica ali está registrado no contexto da tarefa, o que evita perder decisões em trocas de e-mail.
+
+Para responder uma mensagem específica, passe o mouse sobre ela e clique em **Responder**. A sua resposta aparece com a citação da mensagem original, como no WhatsApp. O atalho **⌘ + Enter** (ou Ctrl + Enter) envia a mensagem.
+
+Algumas mensagens aparecem destacadas porque fazem parte de um fluxo, como a pergunta de uma pendência ou a resposta a um pedido de prioridade. Anotações internas do time não aparecem no portal.
+
+## Preciso que algo ande mais rápido. O que faço?
+
+Abra a tarefa e clique em **Pedir prioridade**. Escolha a prioridade que você precisa, conte o que mudou e, se houver, a data até quando precisa. O motivo é obrigatório porque é com ele que o time consegue reorganizar a fila com critério.
+
+O pedido vai para o responsável e para a gestão do time, que respondem na conversa da tarefa. A prioridade só muda depois que o time confirma, e cada tarefa aceita um pedido por vez.
+
+A prioridade que o time usa aparece nos cards como P0 a P3. Ela equivale à escala que você conhece:
+
+| Código | Prioridade |
+|---|---|
+| **P0** | Urgente |
+| **P1** | Alta |
+| **P2** | Média |
+| **P3** | Baixa |
+
+Por isso o pedido só oferece opções acima da prioridade atual, e o botão fica indisponível quando a tarefa já é urgente.
+
+## Que avisos eu recebo no sino?
+
+O sino, no topo da tela, avisa sempre que algo muda numa tarefa da sua empresa. Todas as pessoas da sua empresa com acesso ao portal recebem os mesmos avisos.
+
+| Aviso | Quando chega |
+|---|---|
+| **O time escreveu numa tarefa** | Um novo comentário do time na conversa. |
+| **O time precisa de uma resposta sua** | Uma tarefa foi pausada com uma pergunta para você. |
+| **Seu pedido de prioridade foi respondido** | O time decidiu sobre o seu pedido. |
+| **Entrega pronta para homologar** | Uma tarefa entrou em homologação. |
+| **Tarefa concluída** | Uma entrega foi finalizada. |
+| **Sua solicitação foi aceita ou recusada** | O time terminou a triagem de um pedido seu. Na recusa, o aviso traz o motivo e a mensagem do time. |
+
+Clique no aviso para abrir a tarefa.
+
+## Perguntas frequentes
+
+**Não estou vendo uma tarefa que esperava.**
+Algumas tarefas internas não aparecem no portal, e solicitações recusadas saem da lista. Se a dúvida continuar, pergunte ao responsável pelo projeto na conversa de qualquer tarefa ou pelo canal habitual.
+
+**Mudei de ideia sobre o que pedi ou respondi.**
+Escreva na conversa da tarefa explicando a mudança. O time é avisado e ajusta a partir dali.
 
 **Posso anexar arquivos?**
-Hoje o portal não tem upload pra cliente. Envia pro time pelo canal habitual (email, WhatsApp) e cita no comentário.
+Ainda não. Envie o arquivo pelo canal habitual com o time e cite isso na conversa da tarefa, para o contexto ficar registrado.
 
-**Quem mais da minha empresa pode entrar?**
-Cada pessoa cadastrada com email recebe acesso individual. Fale com seu contato pra adicionar mais nomes.
+**Quero que mais pessoas da minha empresa tenham acesso.**
+Cada pessoa entra com o próprio e-mail. Peça ao time para cadastrar quem precisa acompanhar as tarefas.
 
----
+**Prefiro a tela escura.**
+Use o botão de tema no topo da tela. A preferência fica salva no seu navegador.
 
-## 9. Suporte
+## E se algo não funcionar?
 
-Se algo parecer estranho, ou tiver dúvida que esse guia não respondeu, fala com seu contato direto no time da Kliente 360 — ele tem todos os recursos pra ajudar.
+Se algo no portal parecer errado, escreva na conversa de uma tarefa relacionada ou fale com o time pelo canal de sempre, de preferência com um print da tela. Isso já basta para o time investigar.

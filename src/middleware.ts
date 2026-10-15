@@ -12,7 +12,10 @@ import { NextResponse, type NextRequest } from 'next/server';
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
 const PUBLIC_PATHS = ['/login', '/auth/callback'];
-const CLIENTE_ALLOWED = ['/portal'];
+// Cliente externo só usa o portal. O guia do ajuda (markdown estático) precisa
+// passar também: sem ele, o fetch era redirecionado pra /portal e o modal de
+// ajuda renderizava o HTML da página (tela de carregamento infinita).
+const CLIENTE_ALLOWED = ['/portal', '/docs/HOWTO_CLIENTE.md'];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

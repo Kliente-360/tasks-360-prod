@@ -72,6 +72,10 @@ async function loadDoc(file: string): Promise<ParsedDoc> {
   if (cached) return cached;
   const r = await fetch(`/docs/${file}`, { cache: 'no-cache' });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  // Redirect de permissão devolve uma página HTML no lugar do markdown
+  if (r.redirected || (r.headers.get('content-type') ?? '').includes('text/html')) {
+    throw new Error('sem acesso ao manual');
+  }
   const md = await r.text();
   // Remove o título/subtítulo top-of-file pra não duplicar com o header
   // do modal (mesma regra do Alpine).
