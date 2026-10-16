@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Quick Capture — Onda 0 · 4.H
@@ -84,6 +85,7 @@ function Modal({ onClose }: { onClose: () => void }) {
     };
     const { data, error } = await sb.from('tasks').insert(payload).select('*').single();
     setSending(false);
+    if (data) track('task_create', { task_id: String(data.id), props: { origem: 'captura_rapida' } });
     if (error || !data) {
       toast.error('Erro ao capturar: ' + (error?.message ?? 'falha'));
       setTitulo(t);

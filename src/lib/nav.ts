@@ -37,5 +37,6 @@ export const NAV: ReadonlyArray<NavItem> = [
   // Cadastros sai da tab bar (espelha inProfileMenu do Alpine) — vive no
   // dropdown do avatar pra liberar espaço horizontal nas abas principais.
   { href: '/cadastros',  label: 'Cadastros',     roles: ['admin'],                     onda: 1, inProfileMenu: true },
-  // Adoção removida: PostHog cobre a camada comportamental (mai/2026).
+  // Adoção · telemetria própria (usage_events) · out/2026
+  { href: '/adocao',     label: 'Adoção',        roles: ['admin'],                     onda: 3, inProfileMenu: true },
 ] as const;

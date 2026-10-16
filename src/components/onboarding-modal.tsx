@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Onboarding — Onda 0 · 4.C
@@ -73,7 +74,10 @@ export function OnboardingProvider({ children }: { children: React.ReactNode }) 
   const [isOpen, setIsOpen] = useState(false);
   const api = useMemo<OnboardingApi>(
     () => ({
-      open: () => setIsOpen(true),
+      open: () => {
+        track('onboarding_open');
+        setIsOpen(true);
+      },
       close: () => setIsOpen(false),
       isOpen,
     }),

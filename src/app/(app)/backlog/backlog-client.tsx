@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Backlog — Onda 0 · Bloco 2.2
@@ -172,7 +173,13 @@ export function BacklogClient() {
   }, [searchParams]);
   useEffect(() => {
     const tid = setTimeout(() => setF((cur) => ({ ...cur, q: qDraft })), 150);
-    return () => clearTimeout(tid);
+    const tBusca = qDraft.trim()
+      ? setTimeout(() => track('busca', { props: { tela: 'backlog', tamanho: qDraft.trim().length } }), 1200)
+      : null;
+    return () => {
+      clearTimeout(tid);
+      if (tBusca) clearTimeout(tBusca);
+    };
   }, [qDraft]);
 
   const clientesAtivos = useMemo(
@@ -498,6 +505,7 @@ export function BacklogClient() {
       localPatch.tempoRealHoras = num;
     }
     if (Object.keys(updates).length === 0) return;
+    track('bulk_update', { props: { qtd: ids.length, campos: Object.keys(updates) } });
     const { error } = await sb.from('tasks').update(updates).in('id', ids);
     if (error) {
       toast.error('Erro: ' + error.message);
@@ -511,6 +519,7 @@ export function BacklogClient() {
     const ids = [...selectedIds];
     if (!ids.length) return;
     const nowIso = new Date().toISOString();
+    track('bulk_arquivar', { props: { qtd: ids.length } });
     const { error } = await sb.from('tasks').update({ arquivado_em: nowIso }).in('id', ids);
     if (error) {
       toast.error('Erro: ' + error.message);
@@ -524,6 +533,7 @@ export function BacklogClient() {
     const ids = [...selectedIds];
     if (!ids.length) return;
     if (!confirm(`Excluir ${ids.length} tarefa(s)? Esta ação não pode ser desfeita.`)) return;
+    track('bulk_excluir', { props: { qtd: ids.length } });
     try {
       const { data: atts } = await sb.from('task_attachments').select('storage_path').in('task_id', ids);
       const paths = ((atts ?? []) as { storage_path: string | null }[]).map((a) => a.storage_path).filter((p): p is string => !!p);

@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Help / Manual — Onda 0 · 4.B
@@ -38,7 +39,10 @@ export function HelpProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const api = useMemo<HelpApi>(
     () => ({
-      open: () => setIsOpen(true),
+      open: () => {
+        track('help_open');
+        setIsOpen(true);
+      },
       close: () => setIsOpen(false),
       isOpen,
     }),

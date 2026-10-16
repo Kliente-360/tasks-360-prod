@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Modal da task no Portal do cliente (out/2026 · mockup aprovado).
@@ -387,6 +388,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
       aplicar: (data: unknown) => void,
     ) => {
       if (!task || busy) return false;
+      track(`portal_${nome}`, { task_id: task.id });
       setBusy(nome);
       const { data, error } = await run();
       setBusy(null);
@@ -405,6 +407,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
   const enviarComentario = useCallback(async () => {
     const body = newComment.trim();
     if (!body || !task || busy) return;
+    track('comment_post', { task_id: task.id, props: { portal: true, resposta: !!respondendo } });
     setBusy('comentar');
     const { data, error } = await sb
       .from('task_comments')
@@ -581,7 +584,10 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
             <button
               type="button"
               className="btn pmodal-btn-quiet"
-              onClick={() => setPrioAberto(true)}
+              onClick={() => {
+                track('portal_prioridade_abrir', { task_id: task.id });
+                setPrioAberto(true);
+              }}
               disabled={!!prioBloqueadaMotivo}
               title={prioBloqueadaMotivo}
             >

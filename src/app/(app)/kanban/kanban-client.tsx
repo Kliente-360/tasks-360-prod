@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Kanban — Onda 0 · Bloco 2.4
@@ -213,6 +214,7 @@ export function KanbanClient() {
   const setTaskSubetapa = useCallback(
     async (t: Task, newSub: string) => {
       if (!t || t.subetapa === newSub) return;
+      track('task_update', { task_id: t.id, props: { campos: ['subetapa'], origem: 'kanban', para: newSub } });
       // Hidrata campos lazy antes de validar. Boot pula descricao/
       // criterio_aceite/solucao_implementada/valor_esperado/valor_entregue
       // (TASK_LIGHT_COLS) pra reduzir payload · o modal puxa quando abre.

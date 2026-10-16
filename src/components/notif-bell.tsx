@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Notificações — Onda 0 · 4.E
@@ -267,6 +268,7 @@ export function NotifBell() {
 
   const openNotif = useCallback(
     async (n: Notif) => {
+      track('notif_open', { task_id: n.source_task_id, props: { tipo: n.kind } });
       await markRead(n.id);
       setOpen(false);
       if (!n.source_task_id) return;

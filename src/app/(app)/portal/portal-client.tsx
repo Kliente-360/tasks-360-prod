@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Portal cliente · UI principal.
@@ -177,6 +178,12 @@ export function PortalClient() {
     const id = setTimeout(() => setQ(qDraft), 150);
     return () => clearTimeout(id);
   }, [qDraft]);
+  // Telemetria de busca: só registra que buscou (e o tamanho), não o texto
+  useEffect(() => {
+    if (!q.trim()) return;
+    const id = setTimeout(() => track('busca', { props: { tela: 'portal', tamanho: q.trim().length } }), 1200);
+    return () => clearTimeout(id);
+  }, [q]);
   const [kbProjeto, setKbProjeto] = useState('');
   const [kbPrazo, setKbPrazo] = useState<PrazoFiltro>('');
   const [kbPrio, setKbPrio] = useState<Set<string>>(new Set());
@@ -207,6 +214,7 @@ export function PortalClient() {
     if (!t || t.clienteId !== effectiveCid || t.visivelCliente === false || t.arquivadoEm) {
       return;
     }
+    track('task_open', { task_id: t.id, props: { portal: true } });
     setOpenTask(t);
   };
 

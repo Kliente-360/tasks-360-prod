@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Command Palette — Onda 0 · 4.G
@@ -52,7 +53,14 @@ export function useCommandPalette(): Api {
 export function CommandPaletteProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const api = useMemo<Api>(
-    () => ({ open: () => setIsOpen(true), close: () => setIsOpen(false), isOpen }),
+    () => ({
+      open: () => {
+        track('command_palette_open');
+        setIsOpen(true);
+      },
+      close: () => setIsOpen(false),
+      isOpen,
+    }),
     [isOpen],
   );
   return (

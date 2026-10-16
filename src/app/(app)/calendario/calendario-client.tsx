@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Calendário — Onda 0 · Bloco 2.7
@@ -295,6 +296,7 @@ export function CalendarioClient() {
   const setTaskSubetapa = useCallback(
     async (t: Task, newSub: string) => {
       if (!t || t.subetapa === newSub) return;
+      track('task_update', { task_id: t.id, props: { campos: ['subetapa'], origem: 'calendario', para: newSub } });
       const newMacro = SUB_TO_MACRO[newSub] ?? t.status;
       const macroChanged = t.status !== newMacro;
       const nowMs = Date.now();

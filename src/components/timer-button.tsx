@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTimer, fmtElapsed } from '@/lib/use-timer';
@@ -386,6 +387,7 @@ export function TimerButton() {
 
   async function handleStart(taskId: string) {
     setPicking(false);
+    track('timer_start', { task_id: taskId, props: { origem: 'header' } });
     await startTimer(taskId);
   }
 
@@ -397,11 +399,13 @@ export function TimerButton() {
 
   async function handleNoteConfirm(note: string) {
     setShowNote(false);
+    track('timer_stop', { props: { origem: 'header', com_nota: !!note } });
     await stopTimer(note || undefined);
   }
 
   async function handleManualConfirm(startedAt: Date, endedAt: Date, note?: string) {
     if (!manualTask) return;
+    track('timesheet_lancamento', { task_id: manualTask.id, props: { origem: 'cronometro_header' } });
     await insertManualEntry(manualTask.id, startedAt, endedAt, note);
     setManualTask(null);
   }

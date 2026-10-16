@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Export — Onda 0 · 4.F
@@ -146,6 +147,7 @@ export function ExportIconButton() {
               type="button"
               onClick={() => {
                 setOpen(false);
+                track('export', { props: { formato: 'csv' } });
                 exportCsv();
               }}
               className="block w-full text-left px-3 py-2 hover:bg-brand-tint transition-colors"

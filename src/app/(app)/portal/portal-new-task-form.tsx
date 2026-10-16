@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Nova solicitação · cliente abre task pelo Portal (mesmo padrão visual do
@@ -57,6 +58,10 @@ export function PortalNewTaskForm({
   }, [projetoId, projetosCliente]);
 
   useEffect(() => {
+    track('solicitacao_abrir');
+  }, []);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
@@ -97,6 +102,7 @@ export function PortalNewTaskForm({
         return;
       }
       upsertTask(taskFromDb(data as Record<string, unknown>));
+      track('solicitacao_criada', { task_id: String((data as { id: string }).id), props: { tipo, prioridade } });
       toast.success('Solicitação enviada.');
       onClose();
     });

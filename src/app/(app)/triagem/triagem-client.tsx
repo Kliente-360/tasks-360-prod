@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Triagem — Onda 0 · Bloco 2.5
@@ -213,6 +214,7 @@ export function TriagemClient() {
   // ===== Aceitar IA (salva draft + marca triada_em) =====
   const aceitarIA = useCallback(
     async (taskId: string, draft: TriageDraft) => {
+      track('triagem_aceitar', { task_id: taskId });
       const ok = await persistTriageDraft(taskId, draft, { markTriada: true });
       if (ok) toast.success('Task aceita. Entra no backlog agora.');
     },
@@ -223,6 +225,7 @@ export function TriagemClient() {
   // Motivo vem do picklist inline (IaRejectPicker) — nunca prompt nativo.
   const rejeitarIA = useCallback(
     async (taskId: string, motivo: string) => {
+      track('triagem_rejeitar', { task_id: taskId, props: { motivo: motivo.split(' — ')[0].slice(0, 60) } });
       const motivoFinal = motivo.trim() || 'rejeitada na triagem';
       const nowIso = new Date().toISOString();
       const triadaPor = currentPessoa?.id ?? null;
@@ -255,6 +258,7 @@ export function TriagemClient() {
   //       volta vazio. =====
   const salvarManual = useCallback(
     async (taskId: string, draft: TriageDraft) => {
+      track('triagem_salvar', { task_id: taskId });
       const ok = await persistTriageDraft(taskId, draft, { markTriada: false });
       if (ok) toast.success('Triagem concluída · task vai pro backlog.');
     },

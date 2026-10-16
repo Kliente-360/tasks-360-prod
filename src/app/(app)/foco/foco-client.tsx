@@ -1,4 +1,5 @@
 'use client';
+import { track } from '@/lib/telemetry';
 
 /**
  * Meu Foco — lista plana com pills de filtro (OR).
@@ -555,6 +556,7 @@ function FocoTaskRow({
       localPatch.tempoRealHoras = draft.tempoRealHoras;
     }
     if (Object.keys(dbPatch).length > 0) {
+      track('task_update', { task_id: task.id, props: { campos: Object.keys(dbPatch), origem: 'foco' } });
       const { error } = await sb.from('tasks').update(dbPatch).eq('id', task.id);
       if (error) {
         toast.error('Erro: ' + error.message);

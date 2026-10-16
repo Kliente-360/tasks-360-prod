@@ -47,6 +47,7 @@ import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
 import { fmtDate, fmtDateShort, lblStatus, missingFieldsForCurrentSubetapa, sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
 import { SUB_TO_MACRO, SUB_LABELS, SUBS_FLAT, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK, TIPOS_TRABALHO } from '@/lib/task-constants';
 import { taskFromDb, timeEntryFromDb } from '@/lib/adapters';
+import { track } from '@/lib/telemetry';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { NotePopover } from '@/components/timer-button';
 import { Icon } from '@/components/icons';
@@ -397,6 +398,7 @@ export function TaskModalProvider({ children }: { children: React.ReactNode }) {
 
   const openEdit = useCallback(
     (taskId: string) => {
+      track('task_open', { task_id: taskId });
       setIsNew(false);
       setOpenTaskId(taskId);
       syncUrlTaskParam(taskId);
@@ -404,6 +406,7 @@ export function TaskModalProvider({ children }: { children: React.ReactNode }) {
     [syncUrlTaskParam],
   );
   const openNew = useCallback(() => {
+    track('task_new_open');
     setIsNew(true);
     setOpenTaskId('__new__');
   }, []);
@@ -591,6 +594,25 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   }
 
   const [activeFormTab, setActiveFormTab] = useState<FormTab>(() => pickInitialFormTab());
+  // Telemetria · troca de aba no modal (seção do formulário e painel lateral)
+  const abaInicial = useRef(true);
+  useEffect(() => {
+    if (abaInicial.current) {
+      abaInicial.current = false;
+      return;
+    }
+    track('modal_aba', { task_id: editing.id || null, props: { aba: activeFormTab, tipo: 'formulario' } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFormTab]);
+  const painelInicial = useRef(true);
+  useEffect(() => {
+    if (painelInicial.current) {
+      painelInicial.current = false;
+      return;
+    }
+    track('modal_aba', { task_id: editing.id || null, props: { aba: modalTab, tipo: 'painel' } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalTab]);
   // Quando muda taskId (abrir outra task no mesmo modal), recalcula aba.
   const lastTaskIdRef = useRef<string>(editing.id);
   useEffect(() => {
@@ -1007,6 +1029,13 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
 
         // Log de mudanças no histórico (status + field changes)
         if (prev) {
+          // Telemetria · quais campos o usuário alterou neste salvamento
+          const IGNORAR = new Set(['statusEm', 'subetapaEm', 'andamentoEm', 'criadoEm', 'webhookSyncStatus', 'webhookSyncError', 'homologacaoEm', 'aprovadoEm']);
+          const norm = (v: unknown) => JSON.stringify(v ?? '');
+          const campos = (Object.keys(e) as (keyof Task)[]).filter(
+            (k) => !IGNORAR.has(k) && norm(prev[k]) !== norm(e[k]),
+          );
+          if (campos.length) track('task_update', { task_id: e.id, props: { campos, origem: 'modal' } });
           const TRACKED: { jsKey: keyof Task; field: string; fmt: (v: unknown) => string | null }[] = [
             { jsKey: 'prazo', field: 'prazo', fmt: (v) => (v as string) || null },
             { jsKey: 'esforco', field: 'esforco', fmt: (v) => (v == null ? null : String(v)) },
@@ -1165,6 +1194,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         const { data, error } = await sb.from('tasks').insert(payload).select('*').single();
         if (error) return { ok: false, error: error.message };
         if (data) {
+          track('task_create', { task_id: String(data.id), props: { origem: 'modal' } });
           // Adapter inline — taskFromDb importado seria redundante aqui
           const next: Task = {
             ...editingRef.current,
@@ -1428,6 +1458,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const postComment = useCallback(async () => {
     const body = newComment.trim();
     if (!body || !editing.id) return;
+    track('comment_post', { task_id: editing.id, props: { visivel_cliente: newCommentPublico, resposta: false } });
     const authorName = currentPessoa?.nome ?? 'app';
     const authorPessoaId = currentPessoa?.id ?? null;
     const tempId = 'tmp-' + Math.random().toString(36).slice(2, 8);
@@ -1478,6 +1509,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       if (!body || !editing.id || !parentId) return;
       const parent = comments.find((c) => c.id === parentId);
       const visivel = !!parent?.visivel_cliente;
+      track('comment_post', { task_id: editing.id, props: { visivel_cliente: visivel, resposta: true } });
       const authorName = currentPessoa?.nome ?? 'app';
       const authorPessoaId = currentPessoa?.id ?? null;
       const tempId = 'tmp-' + Math.random().toString(36).slice(2, 8);
@@ -1582,6 +1614,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const toggleCommentVisivel = useCallback(
     async (c: Comment) => {
       const next = !c.visivel_cliente;
+      track('comment_visibilidade', { props: { visivel_cliente: next } });
       setComments((cur) =>
         cur.map((x) => (x.id === c.id ? { ...x, visivel_cliente: next } : x)),
       );
@@ -1725,6 +1758,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const responderPedidoPrioridade = useCallback(
     async (novaPrio: string, resposta: string) => {
       if (!editing.id) return false;
+      track('prioridade_pedido_resposta', { task_id: editing.id, props: { mudou: novaPrio !== editing.prioridade } });
       const prevTask = tasksById.get(editing.id);
       const nowIso = new Date().toISOString();
       const mudou = !!novaPrio && novaPrio !== editing.prioridade;
@@ -1803,6 +1837,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const toggleRadar = useCallback(async () => {
     if (!editing.id || !isCEO) return;
     const next = !editing.radar;
+    track('radar_toggle', { task_id: editing.id, props: { ligado: next } });
     const prevTask = tasksById.get(editing.id);
     patchTask(editing.id, { radar: next });
     setEditing((cur) => ({ ...cur, radar: next }));
@@ -2215,7 +2250,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               const onClick = () => {
                 if (disabled) return;
                 if (activeEntry) setShowStopNote(true);
-                else startTimer(editing.id);
+                else {
+                  track('timer_start', { task_id: editing.id, props: { origem: 'modal' } });
+                  startTimer(editing.id);
+                }
               };
               return (
                 <span className="relative inline-flex">
@@ -2234,6 +2272,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     <NotePopover
                       onConfirm={async (note) => {
                         setShowStopNote(false);
+                        track('timer_stop', { props: { origem: 'modal', com_nota: !!note } });
                         await stopTimer(note || undefined);
                       }}
                       onCancel={() => setShowStopNote(false)}
