@@ -70,12 +70,11 @@ function concluidaEmMs(t: Task): number {
   return t.statusEm || t.aprovadoEm || t.subetapaEm || 0;
 }
 
-/** Etapa na ordem padrão: bloqueadas primeiro, depois a mais perto da
- *  entrega (implantação → … → backlog); concluídas sempre no fim. */
+/** Etapa na ordem padrão: ordem do fluxo (backlog → … → implantação →
+ *  bloqueado), concluídas sempre no fim. */
 function rankEtapa(t: Task): number {
   if (t.status === STATUS.CONCLUIDO || t.subetapa === 'concluido') return 99;
-  if (t.subetapa === 'bloqueado') return -1;
-  return -(SUBS_FLAT_ORDER[t.subetapa] ?? -50);
+  return SUBS_FLAT_ORDER[t.subetapa] ?? 50;
 }
 
 /** Ordem padrão: ação do cliente → etapa → prioridade → prazo. */
