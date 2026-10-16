@@ -3434,19 +3434,21 @@ body {
 .tmodal-pedido-prio-grid .lbl { margin: 0; }
 .tmodal-pedido-prio-grid .lbl + span { max-height: 4.5em; overflow-y: auto; }
 
-/* FAB desktop do cliente · nova solicitação na cor do cliente */
+/* FAB desktop do cliente · "+" redondo na cor do cliente, com a borda
+   direita alinhada à área de conteúdo (max-width 1320 + padding 16) */
 .cliente-fab {
-  position: fixed; right: 28px; bottom: 28px; z-index: 40;
-  height: 56px; padding: 0 24px 0 18px; gap: 10px;
-  align-items: center; border: 0; border-radius: 999px;
+  position: fixed; bottom: 28px; z-index: 40;
+  right: max(24px, calc((100% - 1320px) / 2 + 16px)); /* % = largura útil, sem a barra de rolagem */
+  width: 56px; height: 56px;
+  align-items: center; justify-content: center;
+  border: 0; border-radius: 999px;
   background: var(--brand); color: #fff;
-  font-size: 15px; font-weight: 600; letter-spacing: -0.005em;
+  font-size: 30px; font-weight: 300; line-height: 1;
   box-shadow: 0 8px 24px rgba(16, 19, 22, .18), 0 2px 6px rgba(16, 19, 22, .12);
   cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
 }
 .cliente-fab:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(16, 19, 22, .22), 0 3px 8px rgba(16, 19, 22, .14); filter: brightness(1.05); }
-.cliente-fab:active { transform: translateY(0) scale(.98); }
+.cliente-fab:active { transform: translateY(0) scale(.96); }
 .cliente-fab:focus-visible { outline: 3px solid color-mix(in srgb, currentColor 45%, transparent); outline-offset: 3px; }
-.cliente-fab-plus { font-size: 26px; font-weight: 300; line-height: 1; margin-top: -2px; }
 /* respiro no fim da página para o FAB não cobrir o último card */
 @media (min-width: 768px) { body:has(.cliente-fab) main { padding-bottom: 96px; } }

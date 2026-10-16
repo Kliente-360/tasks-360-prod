@@ -29,8 +29,8 @@ export function MobileFab() {
   );
 }
 
-/** FAB desktop do cliente — "+ Nova solicitação" ancorado no canto inferior
- *  direito, na cor do cliente. Em teste lado a lado com o botão do header
+/** FAB desktop do cliente — "+" redondo como o do mobile, alinhado à borda
+ *  direita da área de conteúdo (não da janela), na cor do cliente. Em teste lado a lado com o botão do header
  *  (out/2026); depois decidimos qual fica. */
 export function ClienteDesktopFab() {
   const { viewerRole } = useData();
@@ -43,10 +43,10 @@ export function ClienteDesktopFab() {
       className="cliente-fab hidden md:inline-flex"
       style={marca ? { background: marca.cor, color: marca.texto } : undefined}
       aria-label="Nova solicitação"
+      title="Nova solicitação"
       data-track="FAB nova solicitação"
     >
-      <span className="cliente-fab-plus" aria-hidden="true">+</span>
-      <span>Nova solicitação</span>
+      +
     </button>
   );
 }
