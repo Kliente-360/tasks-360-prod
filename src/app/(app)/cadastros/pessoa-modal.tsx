@@ -126,7 +126,12 @@ export function PessoaModal({
         ? await sb.from('pessoas').update(row).eq('id', initial.id).select().single()
         : await sb.from('pessoas').insert(row).select().single();
       if (error || !data) {
-        setErr(error?.message || 'Falha ao salvar.');
+        // Índice pessoas_email_unico: um e-mail só pode ter um cadastro
+        setErr(
+          error?.code === '23505'
+            ? 'Este e-mail já está cadastrado em outra pessoa. Use outro e-mail ou edite o cadastro existente.'
+            : error?.message || 'Falha ao salvar.',
+        );
         return;
       }
       upsertPessoa(pessoaFromDb(data as Record<string, unknown>));
