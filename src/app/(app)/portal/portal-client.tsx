@@ -585,7 +585,7 @@ function primeiroNome(pessoasById: Map<string, { nome: string }>, id: string): s
 // PortalKanban · 5 colunas (filtros já aplicados no parent)
 // ─────────────────────────────────────────────────────────
 
-function PortalKanban({ tasks, pessoasById, projetosById, onOpenTask }: PortalViewProps) {
+function PortalKanban({ tasks, pessoasById, projetosById, onOpenTask, today }: PortalViewProps) {
   const byCol = useMemo(() => {
     const m = Object.fromEntries(PORTAL_COLS.map((c) => [c.key, [] as Task[]])) as Record<PortalColKey, Task[]>;
     for (const t of tasks) {
@@ -622,20 +622,43 @@ function PortalKanban({ tasks, pessoasById, projetosById, onOpenTask }: PortalVi
                   <div className="mt-0.5 text-[10px]" aria-hidden="true">&nbsp;</div>
                 )}
               </div>
-              <div className="p-2 space-y-2 min-h-[80px]">
-                {/* Mesmo card do portal no celular (TaskCard + marca de ação) */}
+              <div className="p-2 space-y-1.5 min-h-[80px]">
                 {items.map((t) => {
                   const acao = acaoDoCliente(t);
+                  const proj = projetosById.get(t.projetoId)?.nome ?? '';
+                  const pess = primeiroNome(pessoasById, t.pessoaId);
+                  const atras = !!(t.prazo && t.prazo < today && t.status !== STATUS.CONCLUIDO);
+                  // Card compacto; com ação do cliente ganha a borda e o rodapé do mobile
                   return (
                     <div key={t.id} className={acao ? 'portal-mcard-acao' : undefined}>
-                      <TaskCard
-                        task={t}
-                        cliente={projetosById.get(t.projetoId)?.nome ?? '—'}
-                        projeto={SUB_LABELS[t.subetapa] ?? t.subetapa}
-                        respNome={pessoasById.get(t.pessoaId)?.nome ?? ''}
-                        size="md"
+                      <button
+                        type="button"
                         onClick={() => onOpenTask(t)}
-                      />
+                        className="pk-card w-full text-left rounded-md border border-line bg-elev hover:bg-brand-tint p-2 transition-colors"
+                      >
+                        {/* Linha 1: título · Linha 2: projeto · subetapa ·
+                            Linha 3: responsável · prioridade · prazo */}
+                        <div className="text-xs font-medium text-ink break-words mb-1">{t.titulo}</div>
+                        <div className="text-[10px] text-ink-soft font-mono mb-1 truncate">
+                          {proj}
+                          {proj && ' · '}
+                          {SUB_LABELS[t.subetapa] ?? t.subetapa}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-muted font-mono">
+                          {pess && <span className="truncate">{pess}</span>}
+                          {t.prioridade && (
+                            <span className={`pri pri-${t.prioridade} shrink-0`}>
+                              <span className="pri-dot" />
+                              {t.prioridade}
+                            </span>
+                          )}
+                          {t.prazo && (
+                            <span className={`ml-auto shrink-0 ${atras ? 'text-[var(--p0)] font-semibold' : ''}`}>
+                              {fmtDataCurta(t.prazo)}
+                            </span>
+                          )}
+                        </div>
+                      </button>
                       {acao && <div className="portal-mcard-acao-tag">⚠ {ACAO_LABEL[acao]}</div>}
                     </div>
                   );
