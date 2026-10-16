@@ -3438,12 +3438,14 @@ body {
    direita alinhada à área de conteúdo (max-width 1320 + padding 16) */
 .cliente-fab {
   position: fixed; bottom: 28px; z-index: 40;
-  right: max(24px, calc((100% - 1320px) / 2 + 16px)); /* % = largura útil, sem a barra de rolagem */
+  /* borda direita alinhada à dos cards do Kanban: padding do main (16) +
+     borda (1) + respiro da coluna (8) · % = largura útil, sem a barra */
+  right: max(24px, calc((100% - 1320px) / 2 + 25px));
   width: 56px; height: 56px;
   align-items: center; justify-content: center;
   border: 0; border-radius: 999px;
   background: var(--brand); color: #fff;
-  font-size: 30px; font-weight: 300; line-height: 1;
+  line-height: 0;
   box-shadow: 0 8px 24px rgba(16, 19, 22, .18), 0 2px 6px rgba(16, 19, 22, .12);
   cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
 }

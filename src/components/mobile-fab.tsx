@@ -1,5 +1,6 @@
 'use client';
 
+import { Icon } from '@/components/icons';
 import { useTaskModal } from '@/components/task-modal';
 import { useData } from '@/lib/data-store';
 import { useMarcaCliente, usePodeAbrirSolicitacao } from '@/lib/use-marca-cliente';
@@ -26,7 +27,7 @@ export function MobileFab() {
       aria-label={label}
       title={label}
     >
-      +
+      <Icon name="plus" size={26} />
     </button>
   );
 }
@@ -49,7 +50,8 @@ export function ClienteDesktopFab() {
       title="Nova solicitação"
       data-track="FAB nova solicitação"
     >
-      +
+      {/* SVG em vez do caractere "+": o glifo da fonte fica fora do centro */}
+      <Icon name="plus" size={26} />
     </button>
   );
 }

@@ -17,10 +17,10 @@ import { isPreTriagem, triageFailures } from '@/lib/task-utils';
 import { STATUS } from '@/lib/task-constants';
 import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
-import { useMarcaCliente, usePodeAbrirSolicitacao } from '@/lib/use-marca-cliente';
+import { useMarcaCliente } from '@/lib/use-marca-cliente';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.259';
+export const APP_VERSION = 'v1.03.260';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -58,7 +58,6 @@ export function AppNav() {
   const { isResolved } = useFocoDone();
   // Cliente logado: ícone, + Solicitação e avatar na cor do cliente
   const marca = useMarcaCliente();
-  const podeAbrir = usePodeAbrirSolicitacao();
 
   // Counter da Triagem · mesma lógica de triagemTasks (failures OU IA pre-triagem).
   // Bolinha vermelha aparece ao lado do label da aba.
@@ -128,29 +127,19 @@ export function AppNav() {
             <span className="hdr-sep hidden md:block" />
 
             {/* Cluster 3: criar + notif + avatar */}
-            {/* + Tarefa (staff) / + Solicitação (cliente) · dispara
-                PortalNewTaskForm via CustomEvent quando cliente. */}
-            {podeAbrir && (
-            <button
-              type="button"
-              onClick={() => {
-                if (viewerRole === 'cliente') {
-                  window.dispatchEvent(new CustomEvent('portal:new-task'));
-                } else {
-                  openNew();
-                }
-              }}
-              className={cn(
-                'hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-[filter,background-color]',
-                marca ? 'hover:brightness-95' : 'bg-[color:var(--green)] text-white hover:bg-[color:var(--green-hover)]',
-              )}
-              style={marca ? { background: marca.cor, color: marca.texto } : undefined}
-              title={viewerRole === 'cliente' ? 'Nova solicitação' : 'Nova tarefa'}
-              aria-label={viewerRole === 'cliente' ? 'Nova solicitação' : 'Nova tarefa'}
-            >
-              <Icon name="plus" size={14} />
-              {viewerRole === 'cliente' ? 'Solicitação' : 'Tarefa'}
-            </button>
+            {/* + Tarefa só para o time · cliente abre solicitação pelo FAB
+                (definitivo, out/2026) */}
+            {viewerRole !== 'cliente' && (
+              <button
+                type="button"
+                onClick={() => openNew()}
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-[filter,background-color] bg-[color:var(--green)] text-white hover:bg-[color:var(--green-hover)]"
+                title="Nova tarefa"
+                aria-label="Nova tarefa"
+              >
+                <Icon name="plus" size={14} />
+                Tarefa
+              </button>
             )}
             <ThemeIconButton className="md:hidden" />
             <NotifBell />
