@@ -1470,6 +1470,8 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
 
 /* Pedido de prioridade do cliente (portal) · banner no modal interno */
 .tmodal-pedido-prio {
+  /* não encolhe dentro do modal (antes cortava os botões) */
+  flex: none;
   margin: 12px 20px 0;
   border: 1px solid var(--warn);
   border-radius: var(--r-md);
@@ -3426,3 +3428,8 @@ body {
 .pmodal-req, .pmodal-field label .pmodal-req { color: var(--danger); font-weight: 700; margin-left: 2px; }
 .pmodal-dialog-foot > .pmodal-req-legenda { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); }
 .pmodal-dialog-foot > .pmodal-req-legenda .pmodal-req { margin: 0 2px 0 0; }
+
+/* Pedido de prioridade · lista rótulo/valor */
+.tmodal-pedido-prio-grid { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 14px; align-items: baseline; font-size: 13px; color: var(--ink); }
+.tmodal-pedido-prio-grid .lbl { margin: 0; }
+.tmodal-pedido-prio-grid .lbl + span { max-height: 4.5em; overflow-y: auto; }

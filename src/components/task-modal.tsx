@@ -1756,7 +1756,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
    *  Define a prioridade interna (pode manter), limpa o pedido pendente e
    *  publica a resposta na conversa visível ao cliente. */
   const responderPedidoPrioridade = useCallback(
-    async (novaPrio: string, resposta: string) => {
+    async (novaPrio: string, resposta: string, novoPrazo?: string | null) => {
       if (!editing.id) return false;
       track('prioridade_pedido_resposta', { task_id: editing.id, props: { mudou: novaPrio !== editing.prioridade } });
       const prevTask = tasksById.get(editing.id);
@@ -1765,10 +1765,14 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       // Banco guarda o nível pedido e define o resultado (aceito/mantido)
       const upd: Record<string, unknown> = { prioridade_pedido_em: null, prioridade_pedido_ate: null };
       if (mudou) upd.prioridade = novaPrio;
+      // Aceite com prazo pedido pelo cliente: aplica o novo prazo
+      const mudouPrazo = !!novoPrazo && novoPrazo !== editing.prazo;
+      if (mudouPrazo) upd.prazo = novoPrazo;
       patchTask(editing.id, {
         prioridadePedidoEm: null,
         prioridadePedidoAte: null,
         ...(mudou ? { prioridade: novaPrio as Task['prioridade'] } : {}),
+        ...(mudouPrazo ? { prazo: novoPrazo as string } : {}),
       });
       skipNextDirty.current = true;
       setEditing((cur) => ({
@@ -1776,6 +1780,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         prioridadePedidoEm: null,
         prioridadePedidoAte: null,
         ...(mudou ? { prioridade: novaPrio as Task['prioridade'] } : {}),
+        ...(mudouPrazo ? { prazo: novoPrazo as string } : {}),
       }));
       const { error } = await sb.from('tasks').update(upd).eq('id', editing.id);
       if (error) {
@@ -1818,10 +1823,21 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           edited_em: null,
         },
       ]);
-      toast.success(mudou ? `Prioridade alterada para ${novaPrio}. Cliente avisado.` : 'Resposta enviada ao cliente.');
+      if (mudouPrazo) {
+        void sb.from('task_field_history').insert({
+          task_id: editing.id,
+          field: 'prazo',
+          from_value: editing.prazo || null,
+          to_value: novoPrazo,
+          actor_pessoa_id: currentPessoa?.id ?? null,
+          actor_source: 'app',
+          occurred_at: nowIso,
+        });
+      }
+      toast.success(mudou || mudouPrazo ? 'Pedido aceito. Cliente avisado.' : 'Resposta enviada ao cliente.');
       return true;
     },
-    [editing.id, editing.prioridade, tasksById, patchTask, replaceTask, sb, toast, currentPessoa?.id, currentPessoa?.nome],
+    [editing.id, editing.prioridade, editing.prazo, tasksById, patchTask, replaceTask, sb, toast, currentPessoa?.id, currentPessoa?.nome],
   );
 
   /** Toggle do Radar do CEO · botão no subheader. Só CEO enxerga o
@@ -3630,74 +3646,106 @@ function PedidoPrioridadeBanner({
   pedidoEm: number;
   ate: string | null;
   pedido: Comment | null;
-  onResponder: (novaPrio: string, resposta: string) => Promise<boolean>;
+  onResponder: (novaPrio: string, resposta: string, novoPrazo?: string | null) => Promise<boolean>;
 }) {
-  const sugerida = solicitada === 'urgente' ? 'P0' : 'P1';
-  const [prio, setPrio] = useState<string>(prioridadeAtual === sugerida ? prioridadeAtual : sugerida);
-  const [resposta, setResposta] = useState('');
+  const nivel = solicitada === 'urgente' ? 'urgente' : 'alta';
+  const rotulo = nivel === 'urgente' ? 'Urgente' : 'Alta';
+  const alvo = nivel === 'urgente' ? 'P0' : 'P1';
+  // Já atende (ex.: pediu alta e está em P0) → aceitar mantém a atual
+  const novaPrio = prioridadeAtual === 'P0' || prioridadeAtual === alvo ? prioridadeAtual : alvo;
+  // "Pediu prioridade alta até 20/10/2026: motivo" → só o motivo
+  const motivo = pedido?.body ? pedido.body.replace(/^Pediu prioridade[^:]*:\s*/, '') : '';
+  const [recusando, setRecusando] = useState(false);
+  const [motivoRecusa, setMotivoRecusa] = useState('');
   const [enviando, setEnviando] = useState(false);
-  const mantem = prio === prioridadeAtual;
-  const enviar = async () => {
-    if (!resposta.trim() || enviando) return;
+
+  const aceitar = async () => {
+    if (enviando) return;
     setEnviando(true);
-    await onResponder(prio, resposta.trim());
+    const msg =
+      `Pedido aceito: prioridade ${rotulo.toLowerCase()}` + (ate ? `, com prazo para ${fmtDate(ate)}.` : '.');
+    await onResponder(novaPrio, msg, ate);
     setEnviando(false);
   };
+  const recusar = async () => {
+    if (!motivoRecusa.trim() || enviando) return;
+    setEnviando(true);
+    await onResponder(prioridadeAtual, motivoRecusa.trim());
+    setEnviando(false);
+  };
+
   const quando = new Date(pedidoEm).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   return (
     <div className="tmodal-pedido-prio">
       <div className="tmodal-pedido-prio-head">
         <Icon name="arrow-up" size={16} />
-        <span className="grow">Cliente pediu prioridade {solicitada ?? 'alta'}</span>
+        <span className="grow">Cliente pediu prioridade {rotulo.toLowerCase()}</span>
         <span className="font-mono text-[11px]">{quando}</span>
       </div>
       <div className="tmodal-pedido-prio-body">
-        {pedido && (
-          <div className="text-xs text-muted">
-            <b className="text-ink">{pedido.author ?? 'Cliente'}</b>
-            {ate && <> · precisa até <span className="font-mono text-ink">{fmtDate(ate)}</span></>}
+        <div className="tmodal-pedido-prio-grid">
+          <span className="lbl">Pedido por</span>
+          <span className="font-semibold text-ink">{pedido?.author ?? 'Cliente'}</span>
+          <span className="lbl">Nova prioridade</span>
+          <span>
+            {rotulo} <span className="font-mono text-muted">({novaPrio})</span>
+            {prioridadeAtual && prioridadeAtual !== novaPrio && (
+              <span className="text-muted"> · hoje {prioridadeAtual}</span>
+            )}
+          </span>
+          {ate && (
+            <>
+              <span className="lbl">Novo prazo</span>
+              <span className="font-mono">{fmtDate(ate)}</span>
+            </>
+          )}
+          {motivo && (
+            <>
+              <span className="lbl">O que mudou</span>
+              <span className="whitespace-pre-wrap break-words">{motivo}</span>
+            </>
+          )}
+        </div>
+
+        {recusando ? (
+          <div className="flex flex-col gap-2">
+            <label className="lbl" htmlFor="recusa-pedido-prio">
+              Motivo da recusa <span className="text-muted font-normal normal-case">vai para a conversa do cliente</span>
+            </label>
+            <textarea
+              id="recusa-pedido-prio"
+              className="inp"
+              rows={2}
+              value={motivoRecusa}
+              onChange={(e) => setMotivoRecusa(e.target.value)}
+              placeholder="Explique por que a prioridade fica como está e, se possível, uma previsão."
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <button type="button" className="btn" onClick={() => setRecusando(false)} disabled={enviando}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                disabled={!motivoRecusa.trim() || enviando}
+                onClick={recusar}
+              >
+                {enviando ? 'Enviando…' : 'Recusar pedido'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn" onClick={() => setRecusando(true)} disabled={enviando}>
+              Recusar
+            </button>
+            <button type="button" className="btn btn-primary" onClick={aceitar} disabled={enviando}>
+              <Icon name="check" size={14} />
+              {enviando ? 'Aceitando…' : `Aceitar · ${novaPrio}${ate ? ` até ${fmtDate(ate)}` : ''}`}
+            </button>
           </div>
         )}
-        {pedido && <blockquote className="tmodal-pedido-prio-quote">{pedido.body}</blockquote>}
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-semibold">Prioridade interna</span>
-          <div className="view-toggle" role="radiogroup" aria-label="Prioridade interna">
-            {(['P0', 'P1', 'P2', 'P3'] as const).map((p) => (
-              <button
-                key={p}
-                type="button"
-                role="radio"
-                aria-checked={prio === p}
-                className={prio === p ? 'active' : ''}
-                onClick={() => setPrio(p)}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-          <span className="text-xs text-muted">hoje: <span className="font-mono text-ink">{prioridadeAtual || '—'}</span></span>
-        </div>
-        <label className="lbl" htmlFor="resp-pedido-prio">
-          Resposta para o cliente <span className="text-muted font-normal normal-case">vai para a conversa dele · obrigatória</span>
-        </label>
-        <textarea
-          id="resp-pedido-prio"
-          className="inp"
-          rows={2}
-          value={resposta}
-          onChange={(e) => setResposta(e.target.value)}
-          placeholder="Explique a decisão e, se possível, uma previsão."
-        />
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={!resposta.trim() || enviando}
-            onClick={enviar}
-          >
-            {enviando ? 'Enviando…' : mantem ? `Manter ${prioridadeAtual || 'prioridade'} e responder` : `Mudar para ${prio} e responder`}
-          </button>
-        </div>
       </div>
     </div>
   );
