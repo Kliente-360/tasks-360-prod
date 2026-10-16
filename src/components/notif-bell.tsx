@@ -204,13 +204,53 @@ export function NotifBell() {
       setItems((data as Notif[]) ?? []);
     })();
 
-    // Realtime desligado em jul/2026 (egress). Sino atualiza no boot
-    // + click no logo do header (refreshAll). Sem toast automático de
-    // novas notifs — usuário verá ao abrir o sino / próximo refresh.
+    // Realtime segue desligado (egress, jul/2026). No lugar, consulta leve
+    // só das notificações novas: a cada 45s com a aba visível, ao voltar
+    // para a aba e ao abrir o sino.
     return () => {
       cancelled = true;
     };
   }, [pessoaId, sb, toast]);
+
+  const itemsRef = useRef<Notif[]>([]);
+  itemsRef.current = items;
+  const buscarNovas = useCallback(async () => {
+    if (!pessoaId || document.visibilityState !== 'visible') return;
+    const ultima = itemsRef.current.reduce((m, n) => (n.criado_em > m ? n.criado_em : m), '');
+    let q = sb
+      .from('notifications')
+      .select('id, recipient_pessoa_id, kind, payload, source_task_id, source_comment_id, criado_em, read_at')
+      .eq('recipient_pessoa_id', pessoaId)
+      .order('criado_em', { ascending: false })
+      .limit(50);
+    if (ultima) q = q.gt('criado_em', ultima);
+    const { data, error } = await q;
+    if (error || !data?.length) return;
+    setItems((cur) => {
+      const ids = new Set(cur.map((n) => n.id));
+      const novas = (data as Notif[]).filter((n) => !ids.has(n.id));
+      return novas.length ? [...novas, ...cur] : cur;
+    });
+  }, [pessoaId, sb]);
+
+  useEffect(() => {
+    if (!pessoaId) return;
+    const id = setInterval(() => void buscarNovas(), 45_000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void buscarNovas();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('focus', onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('focus', onVis);
+    };
+  }, [pessoaId, buscarNovas]);
+
+  useEffect(() => {
+    if (open) void buscarNovas();
+  }, [open, buscarNovas]);
 
   useEffect(() => {
     if (!open) return;
