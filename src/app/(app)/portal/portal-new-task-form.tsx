@@ -134,9 +134,11 @@ export function PortalNewTaskForm({
         <div className="pmodal-scroll">
           <div className="pmodal-form">
             <div className="pmodal-field">
-              <label htmlFor="ns-titulo">Título</label>
+              <label htmlFor="ns-titulo">Título <span className="pmodal-req" aria-hidden="true">*</span></label>
               <input
                 id="ns-titulo"
+                required
+                aria-required="true"
                 type="text"
                 className="inp"
                 value={titulo}
@@ -149,9 +151,11 @@ export function PortalNewTaskForm({
 
             <div className="pmodal-form-row">
               <div className="pmodal-field">
-                <label htmlFor="ns-projeto">Projeto</label>
+                <label htmlFor="ns-projeto">Projeto <span className="pmodal-req" aria-hidden="true">*</span></label>
                 <select
                   id="ns-projeto"
+                  required
+                  aria-required="true"
                   className="inp"
                   value={projetoId}
                   onChange={(e) => setProjetoId(e.target.value)}
@@ -168,9 +172,11 @@ export function PortalNewTaskForm({
                 )}
               </div>
               <div className="pmodal-field">
-                <label htmlFor="ns-tipo">Tipo</label>
+                <label htmlFor="ns-tipo">Tipo <span className="pmodal-req" aria-hidden="true">*</span></label>
                 <select
                   id="ns-tipo"
+                  required
+                  aria-required="true"
                   className="inp"
                   value={tipo}
                   onChange={(e) => setTipo(e.target.value as TipoTrabalho | '')}
@@ -205,9 +211,11 @@ export function PortalNewTaskForm({
 
 
             <div className="pmodal-field">
-              <label htmlFor="ns-desc">O que você precisa?</label>
+              <label htmlFor="ns-desc">O que você precisa? <span className="pmodal-req" aria-hidden="true">*</span></label>
               <textarea
                 id="ns-desc"
+                required
+                aria-required="true"
                 className="inp"
                 rows={4}
                 value={descricao}
@@ -218,10 +226,12 @@ export function PortalNewTaskForm({
 
             <div className="pmodal-field">
               <label htmlFor="ns-valor">
-                Valor esperado
+                Valor esperado <span className="pmodal-req" aria-hidden="true">*</span>
               </label>
               <textarea
                 id="ns-valor"
+                required
+                aria-required="true"
                 className="inp"
                 rows={2}
                 value={valorEsperado}
@@ -235,6 +245,9 @@ export function PortalNewTaskForm({
         </div>
 
         <div className="pmodal-dialog-foot pmodal-form-foot">
+          <span className="pmodal-req-legenda">
+            <span className="pmodal-req" aria-hidden="true">*</span> campos obrigatórios
+          </span>
           <button type="button" className="btn" onClick={onClose} disabled={pending}>
             Cancelar
           </button>

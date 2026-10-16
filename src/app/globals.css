@@ -3421,3 +3421,8 @@ body {
   .pmodal-dialog-wrap { align-items: flex-end; padding: 0; }
   .pmodal-dialog { width: 100%; max-width: none; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom); }
 }
+
+/* Campo obrigatório · asterisco vermelho */
+.pmodal-req, .pmodal-field label .pmodal-req { color: var(--danger); font-weight: 700; margin-left: 2px; }
+.pmodal-dialog-foot > .pmodal-req-legenda { flex: 1; min-width: 0; font-size: 12px; color: var(--muted); }
+.pmodal-dialog-foot > .pmodal-req-legenda .pmodal-req { margin: 0 2px 0 0; }
