@@ -44,13 +44,15 @@ export function PortalNewTaskForm({
   const [valorEsperado, setValorEsperado] = useState('');
   const [projetoId, setProjetoId] = useState('');
   const [tipo, setTipo] = useState<TipoTrabalho | ''>('');
-  const [prioridade, setPrioridade] = useState<PrioCliente>('media');
+  const [prioridade, setPrioridade] = useState<PrioCliente | ''>('');
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const projetosCliente = projetos.filter((p) => p.clienteId === clienteId && !p.arquivadoEm);
   const clienteNome = clientes.find((c) => c.id === clienteId)?.nome ?? '';
-  const podeEnviar = !!titulo.trim() && !!projetoId && !!tipo && !pending;
+  // Todos obrigatórios, exceto a prioridade
+  const podeEnviar =
+    !!titulo.trim() && !!projetoId && !!tipo && !!descricao.trim() && !!valorEsperado.trim() && !pending;
 
   // Projeto único: já vem selecionado
   useEffect(() => {
@@ -84,7 +86,7 @@ export function PortalNewTaskForm({
           projeto_id: projetoId,
           pessoa_id: null,
           prioridade: null,
-          prioridade_solicitada_cliente: prioridade,
+          prioridade_solicitada_cliente: prioridade || null,
           tipo_trabalho: tipo,
           status: 'backlog',
           subetapa: 'backlog',
@@ -102,7 +104,7 @@ export function PortalNewTaskForm({
         return;
       }
       upsertTask(taskFromDb(data as Record<string, unknown>));
-      track('solicitacao_criada', { task_id: String((data as { id: string }).id), props: { tipo, prioridade } });
+      track('solicitacao_criada', { task_id: String((data as { id: string }).id), props: { tipo, prioridade: prioridade || null } });
       toast.success('Solicitação enviada.');
       onClose();
     });
@@ -182,13 +184,16 @@ export function PortalNewTaskForm({
                 </select>
               </div>
               <div className="pmodal-field">
-                <label htmlFor="ns-prio">Prioridade</label>
+                <label htmlFor="ns-prio">
+                  Prioridade <span>opcional</span>
+                </label>
                 <select
                   id="ns-prio"
                   className="inp"
                   value={prioridade}
-                  onChange={(e) => setPrioridade(e.target.value as PrioCliente)}
+                  onChange={(e) => setPrioridade(e.target.value as PrioCliente | '')}
                 >
+                  <option value="">Escolher</option>
                   {PRIORIDADES.map((p) => (
                     <option key={p.v} value={p.v}>
                       {p.label}
@@ -213,7 +218,7 @@ export function PortalNewTaskForm({
 
             <div className="pmodal-field">
               <label htmlFor="ns-valor">
-                Valor esperado <span>opcional</span>
+                Valor esperado
               </label>
               <textarea
                 id="ns-valor"

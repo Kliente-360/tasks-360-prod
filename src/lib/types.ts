@@ -47,6 +47,9 @@ export interface Task {
   prioridadePedida: 'urgente' | 'alta' | null;
   /** Data até quando o cliente precisa (opcional no pedido). */
   prioridadePedidoAte: string | null;
+  /** Resultado do último pedido de prioridade (o banco define ao fechar). */
+  prioridadePedidoResultado?: 'aceito' | 'mantido' | null;
+  prioridadePedidoRespondidoEm?: number | null;
   /** Cliente respondeu a pendência do bloqueio (ms). O time decide se
    *  desbloqueia; limpa ao sair de bloqueado ou com nova pergunta. */
   pendenciaRespondidaEm: number | null;

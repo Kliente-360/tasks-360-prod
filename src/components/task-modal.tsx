@@ -1762,12 +1762,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       const prevTask = tasksById.get(editing.id);
       const nowIso = new Date().toISOString();
       const mudou = !!novaPrio && novaPrio !== editing.prioridade;
-      const upd: Record<string, unknown> = { prioridade_pedido_em: null, prioridade_pedido_ate: null, prioridade_pedida: null };
+      // Banco guarda o nível pedido e define o resultado (aceito/mantido)
+      const upd: Record<string, unknown> = { prioridade_pedido_em: null, prioridade_pedido_ate: null };
       if (mudou) upd.prioridade = novaPrio;
       patchTask(editing.id, {
         prioridadePedidoEm: null,
         prioridadePedidoAte: null,
-        prioridadePedida: null,
         ...(mudou ? { prioridade: novaPrio as Task['prioridade'] } : {}),
       });
       skipNextDirty.current = true;
@@ -1775,7 +1775,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         ...cur,
         prioridadePedidoEm: null,
         prioridadePedidoAte: null,
-        prioridadePedida: null,
         ...(mudou ? { prioridade: novaPrio as Task['prioridade'] } : {}),
       }));
       const { error } = await sb.from('tasks').update(upd).eq('id', editing.id);

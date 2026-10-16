@@ -70,6 +70,7 @@ function notifKindGroup(n: Notif): KindFilter | 'other' {
     case 'portal_comentario':
     case 'portal_pendencia':
     case 'portal_resposta_prioridade':
+    case 'portal_prioridade_aceita':
     case 'portal_homologar':
     case 'portal_concluida':
     case 'portal_aceita':
@@ -112,6 +113,8 @@ function notifSummary(n: Notif): string {
       return `O time precisa de uma resposta sua em ${tituloNotif(n)}`;
     case 'portal_resposta_prioridade':
       return `Seu pedido de prioridade foi respondido em ${tituloNotif(n)}`;
+    case 'portal_prioridade_aceita':
+      return `Seu pedido de prioridade foi aceito em ${tituloNotif(n)}`;
     case 'portal_homologar':
       return `Entrega pronta para homologar: ${tituloNotif(n)}`;
     case 'portal_concluida':
@@ -141,6 +144,7 @@ const KIND_ICON: Record<string, IconName> = {
   portal_comentario: 'comment',
   portal_pendencia: 'alert-triangle',
   portal_resposta_prioridade: 'arrow-up',
+  portal_prioridade_aceita: 'arrow-up',
   portal_homologar: 'check-circle',
   portal_concluida: 'check',
   portal_aceita: 'inbox',
@@ -270,6 +274,9 @@ export function NotifBell() {
     async (n: Notif) => {
       track('notif_open', { task_id: n.source_task_id, props: { tipo: n.kind } });
       await markRead(n.id);
+      // Solicitação recusada fica arquivada e não abre: o motivo completo
+      // já aparece na própria notificação
+      if (n.kind === 'portal_recusada') return;
       setOpen(false);
       if (!n.source_task_id) return;
       // Cliente só usa o portal · abre o modal do portal, não o interno
@@ -431,14 +438,18 @@ function NotifRow({ n, onClick }: { n: Notif; onClick: () => void }) {
               className="shrink-0 w-1.5 h-1.5 rounded-full"
               style={{ background: n.read_at ? 'transparent' : 'var(--brand)' }}
             />
-            <div className={`text-sm truncate ${n.read_at ? 'text-ink-soft' : 'text-ink'}`}>
+            <div
+              className={`text-sm ${n.kind === 'portal_recusada' ? 'break-words' : 'truncate'} ${
+                n.read_at ? 'text-ink-soft' : 'text-ink'
+              }`}
+            >
               {notifSummary(n)}
             </div>
           </div>
           {n.payload?.preview && (
             <div
               className={`text-xs text-muted mt-0.5 pl-3 ${
-                n.kind === 'portal_recusada' ? 'line-clamp-4 whitespace-normal' : 'truncate'
+                n.kind === 'portal_recusada' ? 'whitespace-pre-wrap break-words' : 'truncate'
               }`}
             >
               {n.payload.preview}

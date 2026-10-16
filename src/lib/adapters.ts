@@ -32,6 +32,10 @@ export function taskFromDb(r: Row): Task {
     prioridadePedidoEm: r.prioridade_pedido_em ? new Date(r.prioridade_pedido_em as string).getTime() : null,
     prioridadePedida: (r.prioridade_pedida as Task['prioridadePedida']) ?? null,
     prioridadePedidoAte: r.prioridade_pedido_ate ? String(r.prioridade_pedido_ate) : null,
+    prioridadePedidoResultado: (r.prioridade_pedido_resultado as Task['prioridadePedidoResultado']) ?? null,
+    prioridadePedidoRespondidoEm: r.prioridade_pedido_respondido_em
+      ? new Date(r.prioridade_pedido_respondido_em as string).getTime()
+      : null,
     pendenciaRespondidaEm: r.pendencia_respondida_em ? new Date(r.pendencia_respondida_em as string).getTime() : null,
     motivoReabertura: r.motivo_reabertura === undefined ? undefined : (r.motivo_reabertura as string | null) ?? undefined,
     bloqueadaPorTasks: arr<string>(r.bloqueada_por_tasks),
@@ -144,4 +148,4 @@ export function timeEntryFromDb(r: Row): TimeEntry {
 
 /** Colunas leves carregadas no boot. `descricao` é lazy (modal puxa). */
 export const TASK_LIGHT_COLS =
-  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,prioridade_solicitada_cliente,prioridade_pedido_em,prioridade_pedido_ate,prioridade_pedida,pendencia_respondida_em,tipo_trabalho,esforco,complexidade,prazo,status,subetapa,bloqueado_por,bloqueada_por_tasks,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,homologacao_em,aprovado_em,ordem,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,criado_por_cliente,triada_em,triada_por,motivo_arquivamento,privada,radar,webhook_sync_status,webhook_sync_error';
+  'id,titulo,cliente_id,projeto_id,pessoa_id,prioridade,prioridade_solicitada_cliente,prioridade_pedido_em,prioridade_pedido_ate,prioridade_pedida,prioridade_pedido_resultado,prioridade_pedido_respondido_em,pendencia_respondida_em,tipo_trabalho,esforco,complexidade,prazo,status,subetapa,bloqueado_por,bloqueada_por_tasks,visivel_cliente,criado_em,status_em,subetapa_em,andamento_em,homologacao_em,aprovado_em,ordem,checklist,reopen_count,escopo,tempo_real_horas,external_source,external_id,arquivado_em,criado_por_ia,criado_por_cliente,triada_em,triada_por,motivo_arquivamento,privada,radar,webhook_sync_status,webhook_sync_error';

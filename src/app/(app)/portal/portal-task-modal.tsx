@@ -743,6 +743,24 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
               </div>
               <div className="pmodal-band-sub">O time responde aqui na conversa.</div>
             </section>
+          ) : task.prioridadePedidoResultado && task.prioridadePedidoRespondidoEm && !concluida ? (
+            task.prioridadePedidoResultado === 'aceito' ? (
+              <section className="pmodal-band is-ok">
+                <div className="pmodal-band-title">
+                  Pedido de prioridade {PRIO_CLIENTE_LABEL[task.prioridadePedida ?? 'alta']?.toLowerCase()} aceito
+                  em {diaMes(task.prioridadePedidoRespondidoEm)}
+                </div>
+                <div className="pmodal-band-sub">A tarefa já está com a nova prioridade.</div>
+              </section>
+            ) : (
+              <section className="pmodal-band is-info">
+                <div className="pmodal-band-title">
+                  Pedido de prioridade {PRIO_CLIENTE_LABEL[task.prioridadePedida ?? 'alta']?.toLowerCase()} respondido
+                  em {diaMes(task.prioridadePedidoRespondidoEm)}
+                </div>
+                <div className="pmodal-band-sub">O time manteve a prioridade atual. A explicação está na conversa.</div>
+              </section>
+            )
           ) : task.aprovadoEm && !concluida ? (
             <section className="pmodal-band is-ok">
               <div className="pmodal-band-title">Você aprovou esta entrega em {diaMes(task.aprovadoEm)}</div>
@@ -810,9 +828,12 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                 <div>
                   <div className="pmodal-lbl">Prioridade inicial</div>
                   <div>
+                    {/* Sem escolha na abertura: vale a prioridade definida pelo time */}
                     {task.prioridadeSolicitadaCliente
                       ? PRIO_CLIENTE_LABEL[task.prioridadeSolicitadaCliente]
-                      : '—'}
+                      : prioClienteAtual
+                        ? PRIO_CLIENTE_LABEL[prioClienteAtual]
+                        : '—'}
                   </div>
                 </div>
               </section>
