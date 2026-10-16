@@ -3361,7 +3361,30 @@ body {
 @media (max-width: 767px) {
   .pmodal-so-desktop { display: none; }
   .pmodal-so-mobile { display: block; }
-  .pmodal-so-mobile .btn { width: 100%; justify-content: center; height: 44px; }
+  .pmodal-chips .pmodal-so-mobile { display: inline-flex; }
+  .pmodal-chip-acao {
+    gap: 5px; cursor: pointer; color: var(--green);
+    border: 1px dashed color-mix(in srgb, var(--green) 55%, transparent); background: transparent;
+  }
+  .pmodal-chip-acao:disabled { color: var(--muted); border-color: var(--line); cursor: default; }
+  .pmodal-abas.pmodal-so-mobile {
+    display: flex; gap: 4px; margin: 12px 16px 0; padding: 3px;
+    border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line);
+  }
+  .pmodal-abas button {
+    flex: 1; height: 36px; border: 0; border-radius: 8px; background: transparent;
+    font-size: 14px; font-weight: 500; color: var(--ink-soft);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .pmodal-abas button.is-on { background: var(--bg-elev); color: var(--ink); font-weight: 600; box-shadow: var(--sh-sm); }
+  .pmodal-abas-n { font-family: var(--font-mono); font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--green-tint); color: var(--green); }
+  .pmodal[data-aba="detalhes"] .pmodal-col-convo { display: none; }
+  .pmodal[data-aba="conversa"] .pmodal-col-main { display: none; }
+  .pmodal[data-aba="conversa"] .pmodal-body { flex: 1; border-top: 0; }
+  .pmodal[data-aba="conversa"] .pmodal-col-convo { flex: 1; background: transparent; }
+  .pmodal[data-aba="conversa"] .pmodal-convo-head { display: none; }
+  .pmodal[data-aba="conversa"] .pmodal-convo { padding-top: 14px; }
+  .pmodal[data-aba="conversa"] .pmodal-composer { background: var(--bg-elev); }
   .pmodal-backdrop { padding: 0; }
   .pmodal { max-height: none; height: 100dvh; border: 0; border-radius: 0; }
   .pmodal-head { padding: calc(12px + env(safe-area-inset-top)) 16px 12px; gap: 8px; }

@@ -327,6 +327,9 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
   const [ajuste, setAjuste] = useState('');
   const [prioAberto, setPrioAberto] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  // Celular: detalhes e conversa em abas (a conversa ficava no fim da rolagem)
+  const [abaMobile, setAbaMobile] = useState<'detalhes' | 'conversa'>('detalhes');
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const taskId = task?.id ?? '';
   const ehCliente = viewerRole === 'cliente';
@@ -365,8 +368,16 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
     setAjuste('');
     setAjusteAberto(false);
     setPrioAberto(false);
+    setAbaMobile('detalhes');
     if (taskId) void carregar(taskId);
   }, [taskId, carregar]);
+
+  // Na aba Conversa do celular, abre ancorada na mensagem mais recente
+  useEffect(() => {
+    if (abaMobile !== 'conversa') return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [abaMobile, comments.length]);
 
   useEffect(() => {
     if (!taskId) return;
@@ -537,14 +548,15 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
         ? 'Já existe um pedido aguardando o time'
         : undefined;
 
+  const abrirPrioridade = () => {
+    track('portal_prioridade_abrir', { task_id: task.id });
+    setPrioAberto(true);
+  };
   const botaoPrioridade = (
     <button
       type="button"
       className="btn pmodal-btn-quiet"
-      onClick={() => {
-        track('portal_prioridade_abrir', { task_id: task.id });
-        setPrioAberto(true);
-      }}
+      onClick={abrirPrioridade}
       disabled={!!prioBloqueadaMotivo}
       title={prioBloqueadaMotivo}
     >
@@ -557,6 +569,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
     <div className="pmodal-backdrop" onClick={onClose}>
       <div
         className="pmodal"
+        data-aba={abaMobile}
         role="dialog"
         aria-modal="true"
         aria-labelledby="pmodal-title"
@@ -594,6 +607,17 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                   {fmtDataCurta(task.prazo)}
                 </span>
               )}
+              {/* Celular: pedir prioridade fica junto das pills, no topo */}
+              <button
+                type="button"
+                className="pmodal-chip pmodal-chip-acao pmodal-so-mobile"
+                onClick={abrirPrioridade}
+                disabled={!!prioBloqueadaMotivo}
+                title={prioBloqueadaMotivo}
+              >
+                <Icon name="flag" size={13} />
+                Pedir prioridade
+              </button>
             </div>
           </div>
           <div className="pmodal-head-actions">
@@ -604,7 +628,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
           </div>
         </header>
 
-        <div className="pmodal-scroll">
+        <div className="pmodal-scroll" ref={scrollRef}>
           <Progresso task={task} />
 
           {/* Faixa de ação */}
@@ -727,6 +751,29 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
             </section>
           ) : null}
 
+          {/* Celular: abas Detalhes / Conversa */}
+          <div className="pmodal-abas pmodal-so-mobile" role="tablist" aria-label="Seções da tarefa">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={abaMobile === 'detalhes'}
+              className={abaMobile === 'detalhes' ? 'is-on' : ''}
+              onClick={() => setAbaMobile('detalhes')}
+            >
+              Detalhes
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={abaMobile === 'conversa'}
+              className={abaMobile === 'conversa' ? 'is-on' : ''}
+              onClick={() => setAbaMobile('conversa')}
+            >
+              Conversa
+              {comments.length > 0 && <span className="pmodal-abas-n">{comments.length}</span>}
+            </button>
+          </div>
+
           {/* Corpo */}
           <div className="pmodal-body">
             <div className="pmodal-col-main">
@@ -770,9 +817,6 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                   </div>
                 </div>
               </section>
-
-              {/* No celular o pedido de prioridade sai do cabeçalho */}
-              <div className="pmodal-so-mobile">{botaoPrioridade}</div>
             </div>
 
             <div className="pmodal-col-convo">

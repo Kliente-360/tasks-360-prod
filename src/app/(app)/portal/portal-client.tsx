@@ -17,6 +17,7 @@ import { track } from '@/lib/telemetry';
  */
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useData } from '@/lib/data-store';
 import { ROLE, STATUS, SUB_LABELS, SUBS_FLAT_ORDER } from '@/lib/task-constants';
 import { atrasada as isAtrasada } from '@/lib/task-utils';
@@ -69,13 +70,20 @@ function concluidaEmMs(t: Task): number {
   return t.statusEm || t.aprovadoEm || t.subetapaEm || 0;
 }
 
-/** Ordem padrão: ação do cliente → atrasadas → prioridade → prazo. */
-function compararPortal(a: Task, b: Task, today: string): number {
+/** Etapa na ordem padrão: bloqueadas primeiro, depois a mais perto da
+ *  entrega (implantação → … → backlog); concluídas sempre no fim. */
+function rankEtapa(t: Task): number {
+  if (t.status === STATUS.CONCLUIDO || t.subetapa === 'concluido') return 99;
+  if (t.subetapa === 'bloqueado') return -1;
+  return -(SUBS_FLAT_ORDER[t.subetapa] ?? -50);
+}
+
+/** Ordem padrão: ação do cliente → etapa → prioridade → prazo. */
+function compararPortal(a: Task, b: Task): number {
   const ac = (acaoDoCliente(a) ? 0 : 1) - (acaoDoCliente(b) ? 0 : 1);
   if (ac !== 0) return ac;
-  const aa = a.prazo && a.prazo < today && a.status !== STATUS.CONCLUIDO ? 0 : 1;
-  const bb = b.prazo && b.prazo < today && b.status !== STATUS.CONCLUIDO ? 0 : 1;
-  if (aa !== bb) return aa - bb;
+  const ed = rankEtapa(a) - rankEtapa(b);
+  if (ed !== 0) return ed;
   const pd = (PRIO_RANK[a.prioridade] ?? 9) - (PRIO_RANK[b.prioridade] ?? 9);
   if (pd !== 0) return pd;
   return (a.prazo || '9999') < (b.prazo || '9999') ? -1 : 1;
@@ -259,7 +267,7 @@ export function PortalClient() {
         if (kbPrazo === 'sem' && t.prazo) return false;
         return true;
       })
-      .sort((a, b) => compararPortal(a, b, today));
+      .sort(compararPortal);
   }, [portalTasks, q, kbProjeto, kbPrio, kbPrazo, today, projetosById, pessoasById]);
 
   // Itens com ação do cliente (independe dos filtros) · alimentam o banner
@@ -913,7 +921,7 @@ function PortalMobileLista(props: PortalMobileProps) {
         )}
       </div>
 
-      {sheetOpen && (
+      {sheetOpen && createPortal(
         <PortalFilterSheet
           {...props}
           status={status}
@@ -931,7 +939,9 @@ function PortalMobileLista(props: PortalMobileProps) {
             setSheetOpen(false);
           }}
           sortBy={(k) => setSortKeys((cur) => proximaOrdem(cur, k))}
-        />
+        />,
+        // Fora do fade-up (transform quebra o position: fixed do sheet)
+        document.body,
       )}
     </div>
   );
