@@ -31,6 +31,7 @@ import { useMarcaCliente } from '@/lib/use-marca-cliente';
 
 const PROFILE_ICON: Record<string, IconName> = {
   '/cadastros': 'sliders',
+  '/adocao': 'activity',
 };
 
 export function ProfileMenu() {
