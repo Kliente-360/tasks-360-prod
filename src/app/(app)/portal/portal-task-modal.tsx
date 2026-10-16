@@ -537,6 +537,22 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
         ? 'Já existe um pedido aguardando o time'
         : undefined;
 
+  const botaoPrioridade = (
+    <button
+      type="button"
+      className="btn pmodal-btn-quiet"
+      onClick={() => {
+        track('portal_prioridade_abrir', { task_id: task.id });
+        setPrioAberto(true);
+      }}
+      disabled={!!prioBloqueadaMotivo}
+      title={prioBloqueadaMotivo}
+    >
+      <Icon name="arrow-up" size={15} />
+      Pedir prioridade
+    </button>
+  );
+
   return createPortal(
     <div className="pmodal-backdrop" onClick={onClose}>
       <div
@@ -581,19 +597,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
             </div>
           </div>
           <div className="pmodal-head-actions">
-            <button
-              type="button"
-              className="btn pmodal-btn-quiet"
-              onClick={() => {
-                track('portal_prioridade_abrir', { task_id: task.id });
-                setPrioAberto(true);
-              }}
-              disabled={!!prioBloqueadaMotivo}
-              title={prioBloqueadaMotivo}
-            >
-              <Icon name="arrow-up" size={15} />
-              Pedir prioridade
-            </button>
+            <span className="pmodal-so-desktop">{botaoPrioridade}</span>
             <button type="button" className="pmodal-close" onClick={onClose} aria-label="Fechar">
               <Icon name="x" size={20} />
             </button>
@@ -766,6 +770,9 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                   </div>
                 </div>
               </section>
+
+              {/* No celular o pedido de prioridade sai do cabeçalho */}
+              <div className="pmodal-so-mobile">{botaoPrioridade}</div>
             </div>
 
             <div className="pmodal-col-convo">

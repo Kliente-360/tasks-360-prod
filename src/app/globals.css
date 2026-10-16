@@ -3325,12 +3325,12 @@ body {
 
 /* Portal mobile · barra só com nome + busca; cards com destaque de ação */
 @media (max-width: 767px) {
-  .portal-headerbar .portal-so-desktop { display: none !important; }
-  .portal-headerbar .fselect.clear { display: none; }
-  .portal-headerbar-filters { width: 100%; }
-  .portal-headerbar .search { width: 100%; height: 40px; }
-  .portal-headerbar .search input { font-size: 16px; }
+  /* busca e filtros vão para a barra mobile (m-filterbar) abaixo */
+  .portal-headerbar-filters { display: none !important; }
+  .portal-acao-item { padding: 6px 0; border-top: 1px solid color-mix(in srgb, var(--warn) 18%, transparent); }
+  .portal-acao-item:first-child { border-top: 0; }
 }
+.portal-acao-link { color: var(--ink); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ink) 30%, transparent); text-underline-offset: 3px; }
 .portal-mcard-acao { position: relative; }
 .portal-mcard-acao > .tcard { border: 2px solid var(--warn); }
 .portal-mcard-acao-tag {
@@ -3354,3 +3354,44 @@ body {
 .adocao-dia { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; min-width: 6px; }
 .adocao-dia-barra { width: 100%; background: var(--green); border-radius: 3px 3px 0 0; min-height: 2px; }
 .adocao-dia span { font-family: var(--font-mono); font-size: 9px; color: var(--muted); }
+
+/* Modal do portal · celular: tela cheia, cabeçalho compacto, ações
+   empilhadas e campo de mensagem preso ao fim da conversa */
+.pmodal-so-mobile { display: none; }
+@media (max-width: 767px) {
+  .pmodal-so-desktop { display: none; }
+  .pmodal-so-mobile { display: block; }
+  .pmodal-so-mobile .btn { width: 100%; justify-content: center; height: 44px; }
+  .pmodal-backdrop { padding: 0; }
+  .pmodal { max-height: none; height: 100dvh; border: 0; border-radius: 0; }
+  .pmodal-head { padding: calc(12px + env(safe-area-inset-top)) 16px 12px; gap: 8px; }
+  .pmodal-head-main { gap: 6px; }
+  .pmodal-title { font-size: 18px; }
+  .pmodal-chips { gap: 6px; }
+  .pmodal-chip { font-size: 12px; }
+  .pmodal-head .pmodal-close { margin: -6px -8px 0 0; }
+  .pmodal-steps { padding: 10px 16px; column-gap: 4px; }
+  .pmodal-step-name { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pmodal-step-date { font-size: 10px; }
+  .pmodal-band { margin: 12px 16px 0; padding: 12px 14px; }
+  .pmodal-band-text { min-width: 0; flex-basis: 100%; }
+  .pmodal-band-line > .btn { flex: 1; justify-content: center; height: 44px; }
+  .pmodal-band-row { flex-direction: column; align-items: stretch; }
+  .pmodal-band-row .btn, .pmodal-band-actions .btn { height: 44px; justify-content: center; }
+  .pmodal-band-actions .btn { flex: 1; }
+  .pmodal-band textarea { font-size: 16px; }
+  .pmodal-body { margin-top: 12px; }
+  .pmodal-col-main { padding: 16px; gap: 16px; }
+  .pmodal-col-convo { min-height: 0; }
+  .pmodal-convo-head { padding: 14px 16px 8px; }
+  .pmodal-col-convo > .pmodal-empty { padding: 0 16px 12px; }
+  .pmodal-convo { padding: 0 16px 12px; }
+  .pmodal-msg { max-width: 92%; }
+  .pmodal-composer {
+    position: sticky; bottom: 0; background: var(--surface-2);
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+  .pmodal-composer textarea { font-size: 16px; }
+  .pmodal-dialog-wrap { align-items: flex-end; padding: 0; }
+  .pmodal-dialog { width: 100%; max-width: none; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+}

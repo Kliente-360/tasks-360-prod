@@ -472,7 +472,7 @@ export function PortalClient() {
           atrasadas: openTasks.filter((t) => isAtrasada(t)).length,
         };
         return (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+          <div className="hidden md:grid gap-3 md:grid-cols-5">
             <div className="portal-kpi">
               <div className="portal-kpi-label">Total ativas</div>
               <div className="portal-kpi-value">{kpi.total}</div>
@@ -504,6 +504,19 @@ export function PortalClient() {
           pessoasById={pessoasById}
           projetosById={projetosById}
           onOpenTask={openPortalTask}
+          qDraft={qDraft}
+          setQDraft={setQDraft}
+          projetoOpcoes={projetos
+            .filter((p) => p.clienteId === effectiveCid && !p.arquivadoEm)
+            .map((p) => ({ v: p.id, label: p.nome }))}
+          projeto={kbProjeto}
+          setProjeto={setKbProjeto}
+          prazo={kbPrazo}
+          setPrazo={setKbPrazo}
+          prio={kbPrio}
+          setPrio={setKbPrio}
+          nFiltros={kbActive}
+          limparFiltros={clearFilters}
         />
       </div>
 
@@ -664,22 +677,49 @@ function PortalKanban({ tasks, pessoasById, projetosById, onOpenTask, today }: P
 
 type SortKey = { key: string; dir: 'asc' | 'desc' };
 
+/** asc → desc → remove; nova coluna vira o critério principal (mantém até 2). */
+function proximaOrdem(cur: SortKey[], key: string): SortKey[] {
+  const idx = cur.findIndex((s) => s.key === key);
+  if (idx !== 0) return [{ key, dir: 'asc' }, ...cur.filter((s) => s.key !== key).slice(0, 2)];
+  if (cur[0].dir === 'asc') return [{ key, dir: 'desc' }, ...cur.slice(1)];
+  return cur.slice(1);
+}
+
+/** Ordena pelas chaves; sem chave mantém a ordem padrão do portal. */
+function ordenarPortal(
+  tasks: Task[],
+  sortKeys: SortKey[],
+  projetosById: Map<string, { nome: string }>,
+  pessoasById: Map<string, { nome: string }>,
+): Task[] {
+  if (sortKeys.length === 0) return tasks;
+  const val = (t: Task, k: string): number | string => {
+    if (k === 'titulo') return t.titulo.toLowerCase();
+    if (k === 'projeto') return (projetosById.get(t.projetoId)?.nome ?? '').toLowerCase();
+    if (k === 'subetapa') return SUBS_FLAT_ORDER[t.subetapa] ?? 99;
+    if (k === 'pessoa') return (pessoasById.get(t.pessoaId)?.nome ?? '').toLowerCase();
+    if (k === 'prioridade') return t.prioridade ? +t.prioridade.slice(1) : 99;
+    if (k === 'prazo') return t.prazo || '9999';
+    return '';
+  };
+  return [...tasks].sort((a, b) => {
+    for (const { key, dir } of sortKeys) {
+      const mul = dir === 'asc' ? 1 : -1;
+      const av = val(a, key);
+      const bv = val(b, key);
+      if (av < bv) return -mul;
+      if (av > bv) return mul;
+    }
+    return 0;
+  });
+}
+
 function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: PortalViewProps) {
   // Mesmo mecanismo do Backlog: clique ordena asc → desc → remove; nova
   // coluna vira o critério principal e mantém até 2 anteriores. Sem
   // critério, vale a ordem padrão do portal (já aplicada no parent).
   const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
-  const sortBy = (key: string) => {
-    setSortKeys((cur) => {
-      const idx = cur.findIndex((s) => s.key === key);
-      if (idx !== 0) {
-        const rest = cur.filter((s) => s.key !== key).slice(0, 2);
-        return [{ key, dir: 'asc' }, ...rest];
-      }
-      if (cur[0].dir === 'asc') return [{ key, dir: 'desc' }, ...cur.slice(1)];
-      return cur.slice(1);
-    });
-  };
+  const sortBy = (key: string) => setSortKeys((cur) => proximaOrdem(cur, key));
   const sortIcon = (key: string): string => {
     const idx = sortKeys.findIndex((s) => s.key === key);
     if (idx === -1) return '';
@@ -687,29 +727,10 @@ function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: Po
     return sortKeys.length > 1 ? `${arrow}${idx + 1}` : arrow;
   };
 
-  const sorted = useMemo(() => {
-    const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO);
-    if (sortKeys.length === 0) return abertas;
-    const val = (t: Task, k: string): number | string => {
-      if (k === 'titulo') return t.titulo.toLowerCase();
-      if (k === 'projeto') return (projetosById.get(t.projetoId)?.nome ?? '').toLowerCase();
-      if (k === 'subetapa') return SUBS_FLAT_ORDER[t.subetapa] ?? 99;
-      if (k === 'pessoa') return (pessoasById.get(t.pessoaId)?.nome ?? '').toLowerCase();
-      if (k === 'prioridade') return t.prioridade ? +t.prioridade.slice(1) : 99;
-      if (k === 'prazo') return t.prazo || '';
-      return '';
-    };
-    return abertas.sort((a, b) => {
-      for (const { key, dir } of sortKeys) {
-        const mul = dir === 'asc' ? 1 : -1;
-        const av = val(a, key);
-        const bv = val(b, key);
-        if (av < bv) return -mul;
-        if (av > bv) return mul;
-      }
-      return 0;
-    });
-  }, [tasks, sortKeys, projetosById, pessoasById]);
+  const sorted = useMemo(
+    () => ordenarPortal(tasks.filter((t) => t.status !== STATUS.CONCLUIDO), sortKeys, projetosById, pessoasById),
+    [tasks, sortKeys, projetosById, pessoasById],
+  );
 
   const th = (label: string, key: string, style?: React.CSSProperties) => (
     <th className="sortable" onClick={() => sortBy(key)} style={style}>
@@ -789,49 +810,88 @@ function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: Po
 // PortalMobileLista · cards no estilo do Backlog mobile interno
 // ─────────────────────────────────────────────────────────
 
-type FiltroMobile = 'abertas' | 'acao' | 'concluidas';
+type FiltroMobile = 'abertas' | 'acao' | 'concluidas' | 'todas';
 
-function PortalMobileLista({
-  tasks,
-  pessoasById,
-  projetosById,
-  onOpenTask,
-}: Omit<PortalViewProps, 'today'>) {
-  const [filtro, setFiltro] = useState<FiltroMobile>('abertas');
-  const grupos = useMemo(() => {
-    const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO);
-    return {
-      abertas,
-      acao: abertas.filter((t) => acaoDoCliente(t)),
-      concluidas: tasks.filter((t) => t.status === STATUS.CONCLUIDO),
-    };
-  }, [tasks]);
-  const lista = grupos[filtro];
-  const chips: { k: FiltroMobile; label: string }[] = [
-    { k: 'abertas', label: 'Abertas' },
-    { k: 'acao', label: 'Aguardando você' },
-    { k: 'concluidas', label: 'Concluídas' },
-  ];
+interface PortalMobileProps extends Omit<PortalViewProps, 'today'> {
+  qDraft: string;
+  setQDraft: (v: string) => void;
+  projetoOpcoes: { v: string; label: string }[];
+  projeto: string;
+  setProjeto: (v: string) => void;
+  prazo: PrazoFiltro;
+  setPrazo: (v: PrazoFiltro) => void;
+  prio: Set<string>;
+  setPrio: (v: Set<string>) => void;
+  nFiltros: number;
+  limparFiltros: () => void;
+}
+
+/** Mesmo padrão do Backlog mobile: busca + botão de filtros (sheet com
+ *  filtro e ordenação por linha) + X que limpa filtros e ordenação. */
+function PortalMobileLista(props: PortalMobileProps) {
+  const { tasks, pessoasById, projetosById, onOpenTask, qDraft, setQDraft, nFiltros, limparFiltros } = props;
+  const [status, setStatus] = useState<FiltroMobile>('abertas');
+  const [sortKeys, setSortKeys] = useState<SortKey[]>([]);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const lista = useMemo(() => {
+    const porStatus = tasks.filter((t) => {
+      const concluida = t.status === STATUS.CONCLUIDO;
+      if (status === 'abertas') return !concluida;
+      if (status === 'acao') return !concluida && !!acaoDoCliente(t);
+      if (status === 'concluidas') return concluida;
+      return true;
+    });
+    return ordenarPortal(porStatus, sortKeys, projetosById, pessoasById);
+  }, [tasks, status, sortKeys, projetosById, pessoasById]);
+
+  const nActive = nFiltros + (status !== 'abertas' ? 1 : 0) + sortKeys.length;
+  const limpar = () => {
+    limparFiltros();
+    setStatus('abertas');
+    setSortKeys([]);
+  };
+
   return (
     <div>
-      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3" role="tablist" aria-label="Filtrar tarefas">
-        {chips.map((c) => (
-          <button
-            key={c.k}
-            type="button"
-            role="tab"
-            aria-selected={filtro === c.k}
-            className={`triage-filter-chip shrink-0 ${filtro === c.k ? 'is-on' : ''}`}
-            onClick={() => setFiltro(c.k)}
-          >
-            <strong>{grupos[c.k].length}</strong>&nbsp;{c.label}
-          </button>
-        ))}
+      <div className="m-filterbar">
+        <label className="m-search">
+          <Icon name="search" size={16} className="ic" />
+          <input
+            type="text"
+            value={qDraft}
+            onChange={(e) => setQDraft(e.target.value)}
+            placeholder="Buscar tudo…"
+            style={{ fontSize: 16 }}
+          />
+        </label>
+        <button
+          type="button"
+          className={`m-fbtn ${nActive > 0 ? 'on' : ''}`}
+          onClick={() => setSheetOpen(true)}
+          aria-label="Abrir filtros"
+        >
+          <Icon name="filter" size={16} />
+        </button>
+        <button
+          type="button"
+          className={`m-clr ${nActive === 0 ? 'is-empty' : ''}`}
+          disabled={nActive === 0}
+          onClick={limpar}
+          title={nActive > 0 ? `Limpar ${nActive} filtro${nActive > 1 ? 's' : ''} e ordenação` : 'Nenhum filtro aplicado'}
+          aria-label={nActive > 0 ? `Limpar ${nActive} filtros` : 'Sem filtros'}
+        >
+          <Icon name="x" size={15} />
+          <span className="font-mono" style={{ visibility: nActive > 0 ? 'visible' : 'hidden' }} aria-hidden={nActive === 0}>
+            {nActive > 0 ? nActive : 0}
+          </span>
+        </button>
       </div>
+
       <div className="m-list">
         {lista.length === 0 ? (
           <div className="card text-center py-8 px-4 text-sm text-muted">
-            {filtro === 'acao' ? 'Nada esperando você agora.' : 'Nenhuma tarefa aqui.'}
+            {status === 'acao' ? 'Nada esperando você agora.' : 'Nenhuma tarefa com esses filtros.'}
           </div>
         ) : (
           lista.map((t) => {
@@ -851,6 +911,163 @@ function PortalMobileLista({
             );
           })
         )}
+      </div>
+
+      {sheetOpen && (
+        <PortalFilterSheet
+          {...props}
+          status={status}
+          sortKeys={sortKeys}
+          onClose={() => setSheetOpen(false)}
+          onApply={(v) => {
+            setStatus(v.status);
+            props.setProjeto(v.projeto);
+            props.setPrazo(v.prazo);
+            props.setPrio(v.prio ? new Set([v.prio]) : new Set());
+            setSheetOpen(false);
+          }}
+          onClear={() => {
+            limpar();
+            setSheetOpen(false);
+          }}
+          sortBy={(k) => setSortKeys((cur) => proximaOrdem(cur, k))}
+        />
+      )}
+    </div>
+  );
+}
+
+function PortalFilterSheet({
+  status,
+  projeto,
+  prazo,
+  prio,
+  projetoOpcoes,
+  sortKeys,
+  sortBy,
+  onClose,
+  onApply,
+  onClear,
+}: PortalMobileProps & {
+  status: FiltroMobile;
+  sortKeys: SortKey[];
+  sortBy: (k: string) => void;
+  onClose: () => void;
+  onApply: (v: { status: FiltroMobile; projeto: string; prazo: PrazoFiltro; prio: string }) => void;
+  onClear: () => void;
+}) {
+  const [local, setLocal] = useState({
+    status,
+    projeto,
+    prazo,
+    // No celular a prioridade é escolha única; mantém a primeira se havia várias
+    prio: prio.size > 0 ? [...prio].sort()[0] : '',
+  });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  const icone = (key: string) => {
+    const sk = sortKeys[0];
+    if (!sk || sk.key !== key) return 'sort' as const;
+    return sk.dir === 'asc' ? ('arrow-up' as const) : ('arrow-down' as const);
+  };
+  const botaoOrdem = (key: string, rotulo: string) => (
+    <button
+      type="button"
+      className={`m-sort-btn ${sortKeys[0]?.key === key ? 'on' : ''}`}
+      onClick={() => sortBy(key)}
+      aria-label={`Ordenar por ${rotulo}`}
+    >
+      <Icon name={icone(key)} size={14} />
+    </button>
+  );
+
+  return (
+    <div className="sheet-bg" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Filtros do portal">
+        <div className="grab" />
+        <h2>Filtros e ordem</h2>
+        <div className="sh-sub">toque no valor para filtrar · ↑↓ para ordenar</div>
+
+        <div className="m-group">
+          <div className="m-row">
+            <span className="ric"><Icon name="list-filter" size={16} /></span>
+            <div className="rbody"><div className="rt">Status</div></div>
+            <select
+              className="m-select"
+              value={local.status}
+              onChange={(e) => setLocal({ ...local, status: e.target.value as FiltroMobile })}
+            >
+              <option value="abertas">Abertas</option>
+              <option value="acao">Aguardando você</option>
+              <option value="concluidas">Concluídas</option>
+              <option value="todas">Todas</option>
+            </select>
+            {botaoOrdem('subetapa', 'status')}
+          </div>
+
+          <div className="m-row">
+            <span className="ric"><Icon name="folder" size={16} /></span>
+            <div className="rbody"><div className="rt">Projeto</div></div>
+            <select
+              className="m-select"
+              value={local.projeto}
+              onChange={(e) => setLocal({ ...local, projeto: e.target.value })}
+            >
+              <option value="">Todos</option>
+              {projetoOpcoes.map((p) => (
+                <option key={p.v} value={p.v}>{p.label}</option>
+              ))}
+            </select>
+            {botaoOrdem('projeto', 'projeto')}
+          </div>
+
+          <div className="m-row">
+            <span className="ric"><Icon name="alert" size={16} /></span>
+            <div className="rbody"><div className="rt">Prioridade</div></div>
+            <select
+              className="m-select"
+              value={local.prio}
+              onChange={(e) => setLocal({ ...local, prio: e.target.value })}
+            >
+              <option value="">Todas</option>
+              {PRIO_OPTIONS.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+            {botaoOrdem('prioridade', 'prioridade')}
+          </div>
+
+          <div className="m-row">
+            <span className="ric"><Icon name="calendar" size={16} /></span>
+            <div className="rbody"><div className="rt">Prazo</div></div>
+            <select
+              className="m-select"
+              value={local.prazo}
+              onChange={(e) => setLocal({ ...local, prazo: e.target.value as PrazoFiltro })}
+            >
+              <option value="">Qualquer</option>
+              <option value="atrasadas">Atrasadas</option>
+              <option value="hoje">Hoje</option>
+              <option value="semana">Próximos 7 dias</option>
+              <option value="sem">Sem prazo</option>
+            </select>
+            {botaoOrdem('prazo', 'prazo')}
+          </div>
+        </div>
+
+        <div className="filter-actions">
+          <button type="button" className="btn" onClick={onClear}>Limpar</button>
+          <button type="button" className="btn btn-primary" onClick={() => onApply(local)}>
+            Aplicar
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -883,14 +1100,14 @@ function PortalAcaoBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t
                 key={t.id}
                 type="button"
                 onClick={() => onOpenTask(t)}
-                className="flex w-full items-baseline gap-2 text-left text-sm hover:underline"
+                className="portal-acao-item flex w-full items-baseline gap-2 text-left text-sm hover:underline"
               >
-                <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-muted">
+                <span className="hidden md:inline shrink-0 font-mono text-[10px] uppercase tracking-wide text-muted">
                   {ACAO_LABEL[acao]}
                 </span>
-                <span className="min-w-0 truncate font-medium text-ink">{t.titulo}</span>
+                <span className="portal-acao-link min-w-0 truncate font-medium">{t.titulo}</span>
                 {dias != null && dias > 0 && (
-                  <span className="shrink-0 font-mono text-[10px] text-muted">há {dias}d</span>
+                  <span className="hidden md:inline shrink-0 font-mono text-[10px] text-muted">há {dias}d</span>
                 )}
               </button>
             );
