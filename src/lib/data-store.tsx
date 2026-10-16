@@ -269,7 +269,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const refreshPessoas = useCallback(async () => {
     const { data, error } = await sb
       .from('pessoas')
-      .select('id,nome,email,user_id,invited_at,role,cliente_id,cliente_principal_id,cliente_secundario_id,capacidade_horas_semana,skills,senioridade,is_ceo,is_pm')
+      .select('id,nome,email,user_id,invited_at,role,cliente_id,cliente_principal_id,cliente_secundario_id,capacidade_horas_semana,skills,senioridade,is_ceo,is_pm,acesso_portal')
       .order('nome');
     if (error) return;
     setPessoas((data ?? []).map(pessoaFromDb));
@@ -340,7 +340,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const userId = session.user.id;
       const email = (session.user.email ?? '').trim().toLowerCase();
       const COLS =
-        'id,nome,email,user_id,invited_at,role,cliente_id,cliente_principal_id,cliente_secundario_id,capacidade_horas_semana,skills,senioridade,is_ceo,is_pm';
+        'id,nome,email,user_id,invited_at,role,cliente_id,cliente_principal_id,cliente_secundario_id,capacidade_horas_semana,skills,senioridade,is_ceo,is_pm,acesso_portal';
       // 1) por user_id já vinculado
       const r1 = await sb.from('pessoas').select(COLS).eq('user_id', userId).maybeSingle();
       if (cancelled) return;

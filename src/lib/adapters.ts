@@ -131,6 +131,7 @@ export function pessoaFromDb(r: Row): Pessoa {
     senioridade: (r.senioridade as string) ?? null,
     is_ceo: r.is_ceo === true,
     is_pm: r.is_pm === true,
+    acesso_portal: r.acesso_portal === 'leitura' ? 'leitura' : 'completo',
   };
 }
 

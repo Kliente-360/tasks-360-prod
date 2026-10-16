@@ -655,8 +655,10 @@ export function CadastrosClient() {
                   p.role === 'cliente' ? 'Cliente externo' :
                   p.role === 'admin' ? 'Admin' :
                   'Interno';
-                const principalNome = p.cliente_principal_id
-                  ? (clientes.find((c) => c.id === p.cliente_principal_id)?.nome ?? '—')
+                // Cliente externo: a coluna Principal mostra o cliente vinculado
+                const principalId = p.role === 'cliente' ? p.cliente_id : p.cliente_principal_id;
+                const principalNome = principalId
+                  ? (clientes.find((c) => c.id === principalId)?.nome ?? '—')
                   : null;
                 const secundarioNome = p.cliente_secundario_id
                   ? (clientes.find((c) => c.id === p.cliente_secundario_id)?.nome ?? '—')
@@ -681,6 +683,9 @@ export function CadastrosClient() {
                         <Chip show label="Admin" variant="green" />
                       ) : (
                         papelLabel
+                      )}
+                      {p.role === 'cliente' && p.acesso_portal === 'leitura' && (
+                        <div className="text-[11px] text-muted">somente leitura</div>
                       )}
                     </td>
                     <td className="text-[color:var(--ink-soft)] truncate" style={{ maxWidth: 160 }}>
@@ -755,6 +760,7 @@ export function CadastrosClient() {
                           capacidadeHorasSemana: p.capacidade_horas_semana,
                           skills: p.skills ?? [],
                           senioridade: p.senioridade,
+                          acessoPortal: p.acesso_portal,
                         }}
                         clientes={clienteOptions}
                       />
@@ -892,7 +898,11 @@ export function CadastrosClient() {
         {tab === 'pessoas' && (
           <div className="rounded-xl border border-line overflow-hidden bg-[color:var(--bg-elev)]">
             {pessoas.map((p) => {
-              const papelLabel = p.role === 'cliente' ? 'Cliente' : p.role === 'admin' ? 'Admin' : 'Interno';
+              const clienteNome = p.role === 'cliente' ? clientes.find((c) => c.id === p.cliente_id)?.nome : undefined;
+              const papelLabel =
+                p.role === 'cliente'
+                  ? `Cliente${clienteNome ? ` · ${clienteNome}` : ''}${p.acesso_portal === 'leitura' ? ' · leitura' : ''}`
+                  : p.role === 'admin' ? 'Admin' : 'Interno';
               const ativo = !!p.invited_at;
               return (
                 <div
@@ -901,7 +911,7 @@ export function CadastrosClient() {
                     'flex items-center gap-3 px-3 py-3 border-b border-line last:border-b-0 cursor-pointer active:bg-[color:var(--surface-3)] transition-colors',
                     !ativo && 'opacity-50',
                   )}
-                  onClick={() => setMobileEditPessoa({ id: p.id, nome: p.nome, email: p.email, role: p.role, clienteId: p.cliente_id, clientePrincipalId: p.cliente_principal_id, clienteSecundarioId: p.cliente_secundario_id, capacidadeHorasSemana: p.capacidade_horas_semana, skills: p.skills ?? [], senioridade: p.senioridade })}
+                  onClick={() => setMobileEditPessoa({ id: p.id, nome: p.nome, email: p.email, role: p.role, clienteId: p.cliente_id, clientePrincipalId: p.cliente_principal_id, clienteSecundarioId: p.cliente_secundario_id, capacidadeHorasSemana: p.capacidade_horas_semana, skills: p.skills ?? [], senioridade: p.senioridade, acessoPortal: p.acesso_portal })}
                 >
                   <Avatar label={p.nome} shape="circle" />
                   <div className="flex-1 min-w-0">

@@ -142,10 +142,14 @@ export function PortalClient() {
   // `portal:new-task` disparado pelo botão + Solicitação do header.
   const [showNewTask, setShowNewTask] = useState(false);
   useEffect(() => {
-    const handler = () => setShowNewTask(true);
+    // Acesso somente leitura não abre solicitação
+    const handler = () => {
+      if (viewerRole === ROLE.CLIENTE && currentPessoa?.acesso_portal === 'leitura') return;
+      setShowNewTask(true);
+    };
     window.addEventListener('portal:new-task', handler);
     return () => window.removeEventListener('portal:new-task', handler);
-  }, []);
+  }, [viewerRole, currentPessoa?.acesso_portal]);
 
   // Clique numa notificação do sino (cliente) abre o modal da task aqui
   useEffect(() => {

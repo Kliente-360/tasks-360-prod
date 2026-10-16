@@ -165,6 +165,8 @@ export interface Pessoa {
   /** Gerente de projeto · não conta em cálculos de capacidade/carga/saúde
    *  do time de desenvolvimento. Migration 2026-06-05_pessoa_is_pm.sql. */
   is_pm?: boolean;
+  /** Cliente externo · 'leitura' não abre solicitações no portal. */
+  acesso_portal?: 'completo' | 'leitura';
 }
 
 export interface TimeEntry {

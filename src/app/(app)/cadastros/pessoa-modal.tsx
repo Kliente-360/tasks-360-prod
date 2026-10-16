@@ -25,6 +25,7 @@ export type PessoaInitial = {
   capacidadeHorasSemana: number | string | null;
   skills: string[];
   senioridade: string | null;
+  acessoPortal?: 'completo' | 'leitura';
 };
 
 export const BLANK: PessoaInitial = {
@@ -38,6 +39,7 @@ export const BLANK: PessoaInitial = {
   capacidadeHorasSemana: 40,
   skills: [],
   senioridade: '',
+  acessoPortal: 'completo',
 };
 
 export function PessoaModal({
@@ -60,6 +62,7 @@ export function PessoaModal({
   );
   const [skills, setSkills] = useState<string[]>(initial.skills);
   const [senioridade, setSenioridade] = useState(initial.senioridade ?? '');
+  const [acessoPortal, setAcessoPortal] = useState<'completo' | 'leitura'>(initial.acessoPortal ?? 'completo');
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const nomeRef = useRef<HTMLInputElement | null>(null);
@@ -119,6 +122,7 @@ export function PessoaModal({
       capacidade_horas_semana: role !== 'cliente' ? capNum : 40,
       skills: role !== 'cliente' ? skills : [],
       senioridade: role !== 'cliente' ? senioridade || null : null,
+      acesso_portal: role === 'cliente' ? acessoPortal : 'completo',
     };
     startTransition(async () => {
       const sb = createClient();
@@ -148,6 +152,7 @@ export function PessoaModal({
     capacidade,
     skills,
     senioridade,
+    acessoPortal,
     onClose,
     upsertPessoa,
   ]);
@@ -226,6 +231,23 @@ export function PessoaModal({
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {isCliente && (
+            <div>
+              <label className="lbl">Acesso no portal</label>
+              <select
+                className="inp"
+                value={acessoPortal}
+                onChange={(e) => setAcessoPortal(e.target.value as 'completo' | 'leitura')}
+              >
+                <option value="completo">Completo · abre solicitações</option>
+                <option value="leitura">Somente leitura · não abre solicitações</option>
+              </select>
+              <div className="text-[11px] text-muted mt-1">
+                Nos dois casos a pessoa acompanha as tarefas, comenta, pede prioridade e homologa entregas.
+              </div>
             </div>
           )}
 

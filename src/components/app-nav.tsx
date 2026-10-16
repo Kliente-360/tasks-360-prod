@@ -17,10 +17,10 @@ import { isPreTriagem, triageFailures } from '@/lib/task-utils';
 import { STATUS } from '@/lib/task-constants';
 import { useMemo } from 'react';
 import { useFocoDone } from '@/lib/use-foco-done';
-import { useMarcaCliente } from '@/lib/use-marca-cliente';
+import { useMarcaCliente, usePodeAbrirSolicitacao } from '@/lib/use-marca-cliente';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.258';
+export const APP_VERSION = 'v1.03.259';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -58,6 +58,7 @@ export function AppNav() {
   const { isResolved } = useFocoDone();
   // Cliente logado: ícone, + Solicitação e avatar na cor do cliente
   const marca = useMarcaCliente();
+  const podeAbrir = usePodeAbrirSolicitacao();
 
   // Counter da Triagem · mesma lógica de triagemTasks (failures OU IA pre-triagem).
   // Bolinha vermelha aparece ao lado do label da aba.
@@ -129,6 +130,7 @@ export function AppNav() {
             {/* Cluster 3: criar + notif + avatar */}
             {/* + Tarefa (staff) / + Solicitação (cliente) · dispara
                 PortalNewTaskForm via CustomEvent quando cliente. */}
+            {podeAbrir && (
             <button
               type="button"
               onClick={() => {
@@ -149,6 +151,7 @@ export function AppNav() {
               <Icon name="plus" size={14} />
               {viewerRole === 'cliente' ? 'Solicitação' : 'Tarefa'}
             </button>
+            )}
             <ThemeIconButton className="md:hidden" />
             <NotifBell />
             <ProfileMenu />

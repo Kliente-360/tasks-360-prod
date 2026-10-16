@@ -2,7 +2,7 @@
 
 import { useTaskModal } from '@/components/task-modal';
 import { useData } from '@/lib/data-store';
-import { useMarcaCliente } from '@/lib/use-marca-cliente';
+import { useMarcaCliente, usePodeAbrirSolicitacao } from '@/lib/use-marca-cliente';
 
 /** FAB mobile — botão flutuante "+" no canto inferior direito, só em telas < md.
  *  Cliente: abre a nova solicitação do portal, na cor do cliente. */
@@ -10,7 +10,9 @@ export function MobileFab() {
   const { openNew } = useTaskModal();
   const { viewerRole } = useData();
   const marca = useMarcaCliente();
+  const pode = usePodeAbrirSolicitacao();
   const cliente = viewerRole === 'cliente';
+  if (!pode) return null;
   const label = cliente ? 'Nova solicitação' : 'Nova tarefa';
   return (
     <button
@@ -35,7 +37,8 @@ export function MobileFab() {
 export function ClienteDesktopFab() {
   const { viewerRole } = useData();
   const marca = useMarcaCliente();
-  if (viewerRole !== 'cliente') return null;
+  const pode = usePodeAbrirSolicitacao();
+  if (viewerRole !== 'cliente' || !pode) return null;
   return (
     <button
       type="button"

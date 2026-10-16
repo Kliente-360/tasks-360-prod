@@ -9,6 +9,13 @@ import { useData } from '@/lib/data-store';
  * + Solicitação e avatar. Staff e cliente sem cor cadastrada → null
  * (fica o verde padrão).
  */
+/** Cliente com acesso 'leitura' não abre solicitações (sem botão + nem FAB).
+ *  Staff sempre pode. O banco reforça na policy tasks_cliente_insert. */
+export function usePodeAbrirSolicitacao(): boolean {
+  const { viewerRole, currentPessoa } = useData();
+  return viewerRole !== 'cliente' || currentPessoa?.acesso_portal !== 'leitura';
+}
+
 export function useMarcaCliente(): { cor: string; texto: string } | null {
   const { viewerRole, currentPessoa, clientes } = useData();
   return useMemo(() => {
