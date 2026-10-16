@@ -28,3 +28,25 @@ export function MobileFab() {
     </button>
   );
 }
+
+/** FAB desktop do cliente — "+ Nova solicitação" ancorado no canto inferior
+ *  direito, na cor do cliente. Em teste lado a lado com o botão do header
+ *  (out/2026); depois decidimos qual fica. */
+export function ClienteDesktopFab() {
+  const { viewerRole } = useData();
+  const marca = useMarcaCliente();
+  if (viewerRole !== 'cliente') return null;
+  return (
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new CustomEvent('portal:new-task'))}
+      className="cliente-fab hidden md:inline-flex"
+      style={marca ? { background: marca.cor, color: marca.texto } : undefined}
+      aria-label="Nova solicitação"
+      data-track="FAB nova solicitação"
+    >
+      <span className="cliente-fab-plus" aria-hidden="true">+</span>
+      <span>Nova solicitação</span>
+    </button>
+  );
+}

@@ -11,7 +11,7 @@ import { QuickCaptureProvider } from '@/components/quick-capture';
 import { GlobalShortcuts } from '@/components/global-shortcuts';
 import { ServiceWorkerRegister } from '@/components/sw-register';
 import { AppSplash } from '@/components/app-splash';
-import { MobileFab } from '@/components/mobile-fab';
+import { ClienteDesktopFab, MobileFab } from '@/components/mobile-fab';
 import { TelemetryTracker } from '@/components/telemetry-tracker';
 import { BadgeSync } from '@/components/badge-sync';
 import { MobileTabShell } from '@/components/mobile-tab-shell';
@@ -41,6 +41,7 @@ export default function AppLayout({
                       <MobileTabShell>{children}</MobileTabShell>
                     </div>
                     <MobileFab />
+                    <ClienteDesktopFab />
                     <TelemetryTracker />
                     <BadgeSync />
                     </MobileHelpProvider>
