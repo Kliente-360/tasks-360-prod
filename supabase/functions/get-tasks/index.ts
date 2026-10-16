@@ -177,7 +177,11 @@ Deno.serve(async (req) => {
 
   if (excludePrivadas) q = q.eq('privada', false);
   if (radarOnly) q = q.eq('radar', true);
-  if (portalOnly) q = q.eq('visivel_cliente', true).eq('privada', false);
+  if (portalOnly) {
+    q = q.eq('visivel_cliente', true).eq('privada', false)
+      // Sugestão da IA ainda não triada não existe para o cliente
+      .or('criado_por_ia.is.null,criado_por_ia.eq.false,triada_em.not.is.null');
+  }
 
   // Filtro por status.
   // Se ?status explícito → usa exatamente esses.

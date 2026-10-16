@@ -69,7 +69,14 @@ export function usePortalData(clienteId: string): PortalData {
   return useMemo<PortalData>(() => {
     const cid = clienteId;
     const portalTasks: Task[] = cid
-      ? tasks.filter((t) => t.clienteId === cid && t.visivelCliente !== false && !t.arquivadoEm)
+      ? tasks.filter(
+          (t) =>
+            t.clienteId === cid &&
+            t.visivelCliente !== false &&
+            !t.arquivadoEm &&
+            // Sugestão da IA só vira task do cliente depois da triagem (RLS idem)
+            !(t.criadoPorIa && !t.triadaEm),
+        )
       : [];
 
     // ---- portalCards ----
