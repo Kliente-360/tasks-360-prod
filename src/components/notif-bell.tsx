@@ -38,7 +38,7 @@ type Notif = {
   id: string;
   recipient_pessoa_id: string;
   kind: NotifKind | string;
-  payload: { author?: string; task_id?: string; comment_id?: string; preview?: string; from?: string; to?: string; titulo?: string } | null;
+  payload: { author?: string; cliente?: string; task_id?: string; comment_id?: string; preview?: string; from?: string; to?: string; titulo?: string } | null;
   source_task_id: string | null;
   source_comment_id: string | null;
   criado_em: string;
@@ -66,6 +66,7 @@ function notifKindGroup(n: Notif): KindFilter | 'other' {
     case 'cliente_pediu_ajuste':
     case 'cliente_respondeu_pendencia':
     case 'cliente_pediu_prioridade':
+    case 'cliente_nova_solicitacao':
       return 'cliente';
     case 'portal_comentario':
     case 'portal_pendencia':
@@ -106,6 +107,8 @@ function notifSummary(n: Notif): string {
       return `${who} respondeu uma pendência`;
     case 'cliente_pediu_prioridade':
       return `${who} pediu prioridade numa tarefa`;
+    case 'cliente_nova_solicitacao':
+      return `${who}${n.payload?.cliente ? ` (${n.payload.cliente})` : ''} abriu ${tituloNotif(n)} · aguarda triagem`;
     // Avisos do portal (destinatário: usuário do cliente)
     case 'portal_comentario':
       return `${who} escreveu em ${tituloNotif(n)}`;
@@ -141,6 +144,7 @@ const KIND_ICON: Record<string, IconName> = {
   cliente_pediu_ajuste: 'refresh',
   cliente_respondeu_pendencia: 'inbox',
   cliente_pediu_prioridade: 'arrow-up',
+  cliente_nova_solicitacao: 'plus',
   portal_comentario: 'comment',
   portal_pendencia: 'alert-triangle',
   portal_resposta_prioridade: 'arrow-up',
