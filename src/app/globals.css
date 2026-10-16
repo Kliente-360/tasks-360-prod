@@ -3224,7 +3224,7 @@ body {
 .pmodal-field textarea { resize: none; }
 .pmodal-dialog-foot {
   padding: 12px 22px; background: var(--surface-2); border-top: 1px solid var(--line);
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end;
 }
 .pmodal-dialog-foot > span { flex: 1; min-width: 180px; font-size: 12px; color: var(--muted); }
 

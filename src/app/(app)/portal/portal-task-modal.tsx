@@ -276,7 +276,7 @@ function PedirPrioridadeDialog({
           </div>
           <div className="pmodal-field">
             <label htmlFor="pp-ate">
-              Precisa até quando? <span>opcional</span>
+              Novo prazo <span>opcional</span>
             </label>
             <input
               id="pp-ate"
@@ -290,7 +290,6 @@ function PedirPrioridadeDialog({
           </div>
         </div>
         <div className="pmodal-dialog-foot">
-          <span>A prioridade só muda depois que o time confirmar.</span>
           <button type="button" className="btn" onClick={onCancel}>
             Cancelar
           </button>
@@ -328,7 +327,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
   const [prioAberto, setPrioAberto] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   // Celular: detalhes e conversa em abas (a conversa ficava no fim da rolagem)
-  const [abaMobile, setAbaMobile] = useState<'detalhes' | 'conversa'>('detalhes');
+  const [abaMobile, setAbaMobile] = useState<'detalhes' | 'conversa'>('conversa');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const taskId = task?.id ?? '';
@@ -368,7 +367,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
     setAjuste('');
     setAjusteAberto(false);
     setPrioAberto(false);
-    setAbaMobile('detalhes');
+    setAbaMobile('conversa');
     if (taskId) void carregar(taskId);
   }, [taskId, carregar]);
 
@@ -756,21 +755,21 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
             <button
               type="button"
               role="tab"
-              aria-selected={abaMobile === 'detalhes'}
-              className={abaMobile === 'detalhes' ? 'is-on' : ''}
-              onClick={() => setAbaMobile('detalhes')}
-            >
-              Detalhes
-            </button>
-            <button
-              type="button"
-              role="tab"
               aria-selected={abaMobile === 'conversa'}
               className={abaMobile === 'conversa' ? 'is-on' : ''}
               onClick={() => setAbaMobile('conversa')}
             >
               Conversa
               {comments.length > 0 && <span className="pmodal-abas-n">{comments.length}</span>}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={abaMobile === 'detalhes'}
+              className={abaMobile === 'detalhes' ? 'is-on' : ''}
+              onClick={() => setAbaMobile('detalhes')}
+            >
+              Detalhes
             </button>
           </div>
 
