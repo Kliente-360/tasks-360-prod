@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.238 · **Atualizado**: 15/10/2026 · branch `main`
+> **Versão**: v1.03.243 · **Atualizado**: 16/10/2026 · branch `main`
 
 ---
 
@@ -166,6 +166,13 @@ Sprint do Bucket V com o Pão e Talho/Bodytech como referência. O portal deixou
 - ✅ **Visão qualitativa (IA)** · seção verde suave, recolhível (sempre abre fechada), com "Riscos no backlog atual" (rotina diária 08:00, trigger `trig_01QNLubDx8wX8BbrJSMqX7ic`) e "Entregas de valor no mês anterior" (dia 1 às 08:00, `trig_01NqS1drT2hBRF6tHc6jQmgd`). Tabela `portal_insights`, edge `post-portal-insight`, `get-tasks`/`get-task-comments` com `?portal=true` (nunca privadas nem internas). Roteiro em `docs/portal-insights/prompt.md`: riscos pesam valor pro negócio, leem todos os comentários e cruzam dependências; entregas agrupam por efeito no negócio. Publica sem revisão. HTML escapado antes do markdown
 - ⚠️ **Pendência operacional** · as duas rotinas novas foram criadas com conectores (Gmail/Drive/Calendar/Docs) anexados automaticamente e a API não removeu; remover no painel de routines do claude.ai/code
 - ⚠️ **Higiene de dados** · bloqueios antigos "aguardando cliente" sem pergunta registrada aparecem no texto de riscos como "pendência não registrada" (Bodytech, TotalPass, VB): registrar a pergunta ou desbloquear
+
+### Login, portal mobile e telemetria (out/2026 · v1.03.239 → v1.03.243)
+
+- ✅ **Login do cliente** · link do e-mail entra direto em qualquer aparelho (`/auth/confirm` com token_hash), código de 6 dígitos como alternativa, e-mails em PT via Resend, tela "Confira seu e-mail" redesenhada com reenvio e erros traduzidos. Sessão longa; arquivar ou revogar o cliente corta o acesso
+- ✅ **Portal mobile** · busca + filtros (status, projeto, prioridade, prazo) com ordenação por linha + X de limpar, no padrão do Backlog mobile; sem KPIs; banner "aguardando você" mostra só o título como link; modal da task em tela cheia com ações empilhadas e campo de mensagem preso ao fim da conversa; botão + abre nova solicitação
+- ✅ **Telemetria própria** · `usage_events` (autoria carimbada no banco, insert por qualquer logado, leitura só admin), rollup `usage_daily` + retenção de 90 dias (cron 03:30). Captura automática de sessão, troca de tela e cliques; eventos de negócio para abrir/criar/atualizar task (com campos e origem), comentários (externo, interno, resposta, do cliente), cronômetro do modal vs do topo, lançamento de horas, bulk do Backlog, busca, export, manual, notificações, triagem e ações do portal
+- ✅ **Tela Adoção** (`/adocao`, admin, menu do perfil) · RPCs `app_adocao` e `app_adocao_detalhes`: funcionalidades usadas e nunca usadas no período, telas, pessoas (inclusive convidadas sem uso), origem das ações, comentários, campos editados, abas do modal e cliques mais frequentes
 
 ---
 
