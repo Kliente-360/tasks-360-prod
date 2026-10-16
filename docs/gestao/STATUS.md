@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.243 · **Atualizado**: 16/10/2026 · branch `main`
+> **Versão**: v1.03.247 · **Atualizado**: 16/10/2026 · branch `main`
 
 ---
 
@@ -167,10 +167,11 @@ Sprint do Bucket V com o Pão e Talho/Bodytech como referência. O portal deixou
 - ⚠️ **Pendência operacional** · as duas rotinas novas foram criadas com conectores (Gmail/Drive/Calendar/Docs) anexados automaticamente e a API não removeu; remover no painel de routines do claude.ai/code
 - ⚠️ **Higiene de dados** · bloqueios antigos "aguardando cliente" sem pergunta registrada aparecem no texto de riscos como "pendência não registrada" (Bodytech, TotalPass, VB): registrar a pergunta ou desbloquear
 
-### Login, portal mobile e telemetria (out/2026 · v1.03.239 → v1.03.243)
+### Login, portal mobile e telemetria (out/2026 · v1.03.239 → v1.03.247)
 
 - ✅ **Login do cliente** · link do e-mail entra direto em qualquer aparelho (`/auth/confirm` com token_hash), código de 6 dígitos como alternativa, e-mails em PT via Resend, tela "Confira seu e-mail" redesenhada com reenvio e erros traduzidos. Sessão longa; arquivar ou revogar o cliente corta o acesso
-- ✅ **Portal mobile** · busca + filtros (status, projeto, prioridade, prazo) com ordenação por linha + X de limpar, no padrão do Backlog mobile; sem KPIs; banner "aguardando você" mostra só o título como link; modal da task em tela cheia com ações empilhadas e campo de mensagem preso ao fim da conversa; botão + abre nova solicitação
+- ✅ **Portal mobile** · busca + filtros (status, projeto, prioridade, prazo) com ordenação por linha + X de limpar, no padrão do Backlog mobile; sem KPIs; banner "aguardando você" mostra só o título como link; modal da task em tela cheia com abas Conversa (padrão, abre na mensagem mais recente) e Detalhes, pill "Pedir prioridade" junto das pills do topo, ações empilhadas; sheet de filtros via portal (ancorado na tela); botão + abre nova solicitação
+- ✅ **Portal · ajustes finos** · ordem padrão em todas as visões: ação do cliente → etapa (bloqueadas, depois a mais perto da entrega; concluídas no fim) → prioridade → prazo. Kanban desktop mantém o card compacto e ganha a borda amarela + rodapé de ação do mobile. Pedido de prioridade: campo "Novo prazo" (opcional), sem a frase do rodapé
 - ✅ **Telemetria própria** · `usage_events` (autoria carimbada no banco, insert por qualquer logado, leitura só admin), rollup `usage_daily` + retenção de 90 dias (cron 03:30). Captura automática de sessão, troca de tela e cliques; eventos de negócio para abrir/criar/atualizar task (com campos e origem), comentários (externo, interno, resposta, do cliente), cronômetro do modal vs do topo, lançamento de horas, bulk do Backlog, busca, export, manual, notificações, triagem e ações do portal
 - ✅ **Tela Adoção** (`/adocao`, admin, menu do perfil) · RPCs `app_adocao` e `app_adocao_detalhes`: funcionalidades usadas e nunca usadas no período, telas, pessoas (inclusive convidadas sem uso), origem das ações, comentários, campos editados, abas do modal e cliques mais frequentes
 
@@ -218,7 +219,7 @@ Diferente dos buckets A/B/C que são features incrementais, V é **um lote coeso
 | ~~V.2~~ | ✅ **Entregue out/2026** · KPIs = os 5 do Backlog, gráficos trocados pelo Kanban + visão qualitativa (IA). ~~**Indicadores e gráficos do Portal · revisão analítica** · KPIs atuais (Entregues mês · Em execução · Aguardando você · Próxima entrega) e gráficos (Ritmo 6 meses · Distribuição por projeto · Lead time + total concluídas) — auditar se métricas batem com o que o cliente quer ver, se valores casam com a realidade, se faltam ângulos (ex: NPS interno do cliente · histórico de comments · SLA cumprido). Definir versão "1.0 cliente real".~~ | 3-5 dias | Alto — informação útil é o que ancora valor percebido |
 | V.3 | **RLS audit · segurança end-to-end** · revisar todas as policies `pessoas`, `tasks`, `task_comments`, `clientes`, `projetos` pra garantir que cliente externo NUNCA vê dado fora do escopo dele. Casos a cobrir: cliente vê tasks de outro cliente · cliente vê comments internos (visivel_cliente=false) · cliente vê pessoas internas · cliente vê custos/horas internas. Documentar matriz role × tabela × CRUD. | 3-5 dias | Crítico — vazamento de dado entre clientes é gameover |
 | ~~V.4~~ | ✅ **Entregue out/2026** · modal do portal redesenhado + ações do cliente. ~~**Modal de task · review pra cliente externo** · cliente externo vê o mesmo modal do time interno hoje? Auditar campos visíveis: prazo/responsável/status/tags/checklist/tempo/anexos/histórico. Decidir o que esconder (custo/esforço/comments internos/historico de mudança de subetapa interna). Versão "modo cliente" do modal.~~ | 3-5 dias | Alto — modal é onde cliente passa tempo |
-| V.5 | **Forma de login · revisão UX** · hoje magic-link OTP por email + check em `pessoas.invited_at`. Avaliar: experiência do cliente recebendo o email · se o domínio do email vai pra spam · se a copy é clara · se tem fallback (botão "reenviar") · se a tela "verifica teu email ✉" tem CTA suficiente (ex: link mailto + suporte). Polir. Considerar adicionar "Lembrar de mim" / sessão mais longa pra cliente externo (hoje JWT 1h). | 2-3 dias | Médio-alto — primeira impressão técnica |
+| ~~V.5~~ | ✅ **Entregue out/2026** (v1.03.239-240) · link entra direto em qualquer aparelho, código de 6 dígitos, e-mails em PT via Resend, reenviar, erros traduzidos, sessão longa. ~~**Forma de login · revisão UX** · hoje magic-link OTP por email + check em `pessoas.invited_at`. Avaliar: experiência do cliente recebendo o email · se o domínio do email vai pra spam · se a copy é clara · se tem fallback (botão "reenviar") · se a tela "verifica teu email ✉" tem CTA suficiente (ex: link mailto + suporte). Polir. Considerar adicionar "Lembrar de mim" / sessão mais longa pra cliente externo (hoje JWT 1h).~~ | 2-3 dias | Médio-alto — primeira impressão técnica |
 | ~~V.6~~ | ❌ **Encerrado como está (out/2026)** · fica a cor do cliente na barra, ícone, botão e avatar; upload de logo descartado por decisão do Felipe. ~~**Identidade visual no Portal** · cada cliente já tem `corPortal` + `corPortalTexto` configuráveis (admin define em Cadastros). Auditar: como fica o portal com cor escura vs clara · se a logomarca/Mark aperture aparece bem nas duas variantes · se há contraste suficiente em alerts/KPIs em ambos os temas. Considerar permitir logo do cliente (upload) no header do portal.~~ | 2-3 dias | Médio — branding aumenta sensação de "feito pra mim" |
 | ~~V.7~~ | ❌ **Encerrado como está (out/2026)** · fica a ajuda do cliente reescrita; tour inicial descartado por decisão do Felipe. ~~**Docs · Help + Onboarding pro cliente externo** · tour inicial específico pra cliente (não admin), com 3-4 telas: "este é seu portal · veja suas tasks · responda comentários · acompanhe entregas". Help modal com FAQ ("como reportar problema? quem é meu contato? como exportar?"). Hoje o onboarding existe mas é interno.~~ | 2-3 dias | Médio — reduz suporte recorrente |
 | ~~V.8~~ | ✅ **Entregue out/2026** · 6 avisos no sino via triggers. Fora: e-mail digest. ~~**Notificações pro cliente externo** · cliente recebe notif quando: comment do time é marcado visivel_cliente=true, status muda pra "aguardando cliente", task é concluída. Hoje o sino do header funciona mas só pra usuários internos via realtime. Habilitar pro role=cliente (RLS já cobre? validar). Considerar email digest semanal opcional.~~ | 3-5 dias | Médio-alto — fecha o loop de comunicação |
@@ -287,7 +288,7 @@ Cobertura atual: **<10% das tasks concluídas têm time_entries** (medido jun/20
 
 ## ❌ Descontinuados (não repropor sem novo input)
 
-Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Aba Adoção · Email digest semanal · Notif digest hourly · Sentry · PostHog · Bottom tab bar mobile (substituída por carrossel MobileTabShell) · **B.1 `ai-suggest`** (sobrepõe B.4 auto-triage — descartado) · **C.9 Margem por hora vs ticket** (precisa custo/h da pessoa — dado não existe ainda) · **A.3 Push notifications** · **A.5 Saved views** · **A.6 Sticky thead Backlog**
+Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp digest · Slack integration · iCal feed · Triage inbox Linear-style · Importação CSV · File/Protocol/Share handlers · Multi-workspace externo · Faturamento NFe · API pública · Email digest semanal · Notif digest hourly · Sentry · PostHog (substituído por telemetria própria · `usage_events` + tela Adoção, out/2026) · Bottom tab bar mobile (substituída por carrossel MobileTabShell) · **B.1 `ai-suggest`** (sobrepõe B.4 auto-triage — descartado) · **C.9 Margem por hora vs ticket** (precisa custo/h da pessoa — dado não existe ainda) · **A.3 Push notifications** · **A.5 Saved views** · **A.6 Sticky thead Backlog**
 
 ---
 
@@ -309,13 +310,16 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 ## 🎯 NEXT · ordem definida (out/2026)
 
 **Bucket V · Visão cliente** — fechar o lançamento
-→ ✅ V.1 · V.2 · V.3 · V.4 · V.8. ❌ V.6 e V.7 encerrados como estão (logo e tour descartados). Restam: **V.5 (login UX)** → **V.9 (walkthrough final logado como cliente)**
+→ ✅ V.1 · V.2 · V.3 · V.4 · V.5 · V.8. ❌ V.6 e V.7 encerrados como estão (logo e tour descartados). Resta: **V.9 (walkthrough final logado como cliente)**
 
 **Bucket T · Adoção timesheet (paralelo baixo custo)**
 → T.1 ✅. Próximos: T.6 (trava no concluir · 0.5d · quick win) → T.4 (bulk retroativo) → T.2 (card "horas hoje")
 
 **C.10 · analytics na UI · polir o que foi publicado**
 → Parcial já publicado no Briefing (~38 cards). Pendente: versão Dashboard com widgets visuais refinados + integração nos KPIs · ~1 semana
+
+**Adoção · primeira leitura** (≈2 semanas após v1.03.242, fim de out/2026)
+→ abrir `/adocao` com 30 dias e decidir o que simplificar ou remover (funcionalidades nunca usadas, cronômetro do modal vs topo, uso de comentário externo, uso no celular). Serve de insumo para priorizar T e C.10
 
 **Ideia registrada** (não iniciada): página `/perfil` (nome + avatar) + calendário de férias do time + fluxo de aprovação via task pro CEO. Escopo detalhado em `~/.claude/plans/nested-churning-octopus.md`. ~4-5 dias.
 
@@ -325,4 +329,4 @@ Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA
 
 ## Próximo passo imediato
 
-**V.9 · walkthrough final logado como cliente** (validar todas as ações do portal com login real: aprovar, pedir ajuste, responder pendência, pedir prioridade, notificações, ajuda, dark mode) e **V.5 · login UX**. Depois, **T.6** (trava timesheet) como quick win.
+**V.9 · walkthrough final logado como cliente** (aprovar, pedir ajuste, responder pendência, pedir prioridade, notificações, ajuda, dark mode, desktop e celular). Fechando V.9, o Bucket V acaba. Depois, **T.6** (trava no concluir sem horas) como quick win, e a primeira leitura da Adoção no fim de outubro.
