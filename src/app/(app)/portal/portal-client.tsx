@@ -29,6 +29,7 @@ import { PortalTaskModal } from './portal-task-modal';
 import { PortalNewTaskForm } from './portal-new-task-form';
 import { Icon } from '@/components/icons';
 import { useClickAway } from '@/lib/use-click-away';
+import { TaskCard } from '@/components/task-card/task-card';
 
 /** 5 colunas do Kanban do Portal. Homologação e Bloqueado são onde o
  *  cliente costuma ter ação pendente. Etapas pós-homologação (revisão,
@@ -329,7 +330,7 @@ export function PortalClient() {
         </div>
 
         <div className="portal-headerbar-filters">
-          <div className="view-toggle view-toggle-icons" role="tablist" aria-label="Visão">
+          <div className="view-toggle view-toggle-icons portal-so-desktop" role="tablist" aria-label="Visão">
             <button
               type="button"
               className={view === 'kanban' ? 'active' : ''}
@@ -358,6 +359,7 @@ export function PortalClient() {
               onChange={(e) => setQDraft(e.target.value)}
             />
           </label>
+          <span className="portal-so-desktop contents">
           <PortalFilterSelect
             icon="folder"
             label="Projeto"
@@ -380,6 +382,7 @@ export function PortalClient() {
             onChange={(v) => setKbPrazo(v as PrazoFiltro)}
           />
           <PortalPriMultiSelect selected={kbPrio} onToggle={toggleKbPrio} />
+          </span>
 
           <button
             type="button"
@@ -486,8 +489,18 @@ export function PortalClient() {
         );
       })()}
 
-      {/* 4. KANBAN 4 macros · substitui os gráficos antigos (v1.03.216).
-          Filtros: projeto · subetapa · prazo · prioridade (multiselect). */}
+      {/* Mobile · lista de cards no estilo do Backlog mobile interno */}
+      <div className="md:hidden">
+        <PortalMobileLista
+          tasks={visibleTasks}
+          pessoasById={pessoasById}
+          projetosById={projetosById}
+          onOpenTask={openPortalTask}
+        />
+      </div>
+
+      {/* Desktop · Kanban 5 colunas ou Lista */}
+      <div className="hidden md:block">
       {view === 'kanban' ? (
         <PortalKanban
           tasks={visibleTasks}
@@ -505,6 +518,7 @@ export function PortalClient() {
           today={today}
         />
       )}
+      </div>
 
       {/* Listas de prioridade removidas (v1.03.217) · info agora vive
           no Kanban 4 macros acima. */}
@@ -759,6 +773,77 @@ function PortalLista({ tasks, pessoasById, projetosById, onOpenTask, today }: Po
           )}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// PortalMobileLista · cards no estilo do Backlog mobile interno
+// ─────────────────────────────────────────────────────────
+
+type FiltroMobile = 'abertas' | 'acao' | 'concluidas';
+
+function PortalMobileLista({
+  tasks,
+  pessoasById,
+  projetosById,
+  onOpenTask,
+}: Omit<PortalViewProps, 'today'>) {
+  const [filtro, setFiltro] = useState<FiltroMobile>('abertas');
+  const grupos = useMemo(() => {
+    const abertas = tasks.filter((t) => t.status !== STATUS.CONCLUIDO);
+    return {
+      abertas,
+      acao: abertas.filter((t) => acaoDoCliente(t)),
+      concluidas: tasks.filter((t) => t.status === STATUS.CONCLUIDO),
+    };
+  }, [tasks]);
+  const lista = grupos[filtro];
+  const chips: { k: FiltroMobile; label: string }[] = [
+    { k: 'abertas', label: 'Abertas' },
+    { k: 'acao', label: 'Aguardando você' },
+    { k: 'concluidas', label: 'Concluídas' },
+  ];
+  return (
+    <div>
+      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-3" role="tablist" aria-label="Filtrar tarefas">
+        {chips.map((c) => (
+          <button
+            key={c.k}
+            type="button"
+            role="tab"
+            aria-selected={filtro === c.k}
+            className={`triage-filter-chip shrink-0 ${filtro === c.k ? 'is-on' : ''}`}
+            onClick={() => setFiltro(c.k)}
+          >
+            <strong>{grupos[c.k].length}</strong>&nbsp;{c.label}
+          </button>
+        ))}
+      </div>
+      <div className="m-list">
+        {lista.length === 0 ? (
+          <div className="card text-center py-8 px-4 text-sm text-muted">
+            {filtro === 'acao' ? 'Nada esperando você agora.' : 'Nenhuma tarefa aqui.'}
+          </div>
+        ) : (
+          lista.map((t) => {
+            const acao = acaoDoCliente(t);
+            return (
+              <div key={t.id} className={acao ? 'portal-mcard-acao' : undefined}>
+                <TaskCard
+                  task={t}
+                  cliente={projetosById.get(t.projetoId)?.nome ?? '—'}
+                  projeto={SUB_LABELS[t.subetapa] ?? t.subetapa}
+                  respNome={pessoasById.get(t.pessoaId)?.nome ?? ''}
+                  size="md"
+                  onClick={() => onOpenTask(t)}
+                />
+                {acao && <div className="portal-mcard-acao-tag">⚠ {ACAO_LABEL[acao]}</div>}
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

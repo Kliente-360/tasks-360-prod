@@ -142,6 +142,13 @@ const KIND_TAG: Record<string, string> = {
 
 function Conversa({ comments, onReply }: { comments: PortalComment[]; onReply: (c: PortalComment) => void }) {
   const porId = useMemo(() => new Map(comments.map((c) => [c.id, c])), [comments]);
+  // Conversa ancorada na mais recente: ao abrir e a cada nova mensagem, rola
+  // até o fim (no desktop a conversa tem rolagem própria)
+  const fimRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = fimRef.current?.parentElement;
+    if (el && el.scrollHeight > el.clientHeight) el.scrollTop = el.scrollHeight;
+  }, [comments.length]);
   const ordenados = useMemo(
     () =>
       [...comments].sort(
@@ -196,6 +203,7 @@ function Conversa({ comments, onReply }: { comments: PortalComment[]; onReply: (
           </div>
         );
       })}
+      <div ref={fimRef} aria-hidden="true" />
     </div>
   );
 }

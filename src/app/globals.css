@@ -3308,3 +3308,36 @@ body {
 }
 .portal-visao-qualitativa .portal-recolher-seta { color: var(--green); }
 .portal-visao-qualitativa .portal-ia-box { background: var(--bg-elev); border-color: color-mix(in srgb, var(--green) 18%, var(--line)); }
+
+/* Modal do portal · desktop: altura fixa, coluna esquerda e conversa com
+   rolagem independente; conversa ancorada embaixo (mais recente no fim) e
+   campo de mensagem fixo. No mobile segue uma coluna só, rolando inteira. */
+@media (min-width: 900px) {
+  .pmodal:not(.pmodal-narrow) { height: min(880px, 92vh); }
+  .pmodal:not(.pmodal-narrow) .pmodal-scroll { overflow: hidden; }
+  .pmodal:not(.pmodal-narrow) .pmodal-body { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .pmodal:not(.pmodal-narrow) .pmodal-col-main { overflow-y: auto; min-height: 0; }
+  .pmodal:not(.pmodal-narrow) .pmodal-col-convo { min-height: 0; }
+  .pmodal:not(.pmodal-narrow) .pmodal-convo { min-height: 0; overflow-y: auto; padding-bottom: 12px; }
+  .pmodal:not(.pmodal-narrow) .pmodal-convo > :first-child { margin-top: auto; }
+  .pmodal:not(.pmodal-narrow) .pmodal-composer { flex: none; }
+}
+
+/* Portal mobile · barra só com nome + busca; cards com destaque de ação */
+@media (max-width: 767px) {
+  .portal-headerbar .portal-so-desktop { display: none !important; }
+  .portal-headerbar .fselect.clear { display: none; }
+  .portal-headerbar-filters { width: 100%; }
+  .portal-headerbar .search { width: 100%; height: 40px; }
+  .portal-headerbar .search input { font-size: 16px; }
+}
+.portal-mcard-acao { position: relative; }
+.portal-mcard-acao > .tcard { border: 2px solid var(--warn); }
+.portal-mcard-acao-tag {
+  margin-top: -6px; padding: 8px 12px 6px;
+  border: 2px solid var(--warn); border-top: 0;
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  background: var(--warn-soft); color: var(--warn);
+  font-size: 11px; font-weight: 600;
+}
+.portal-mcard-acao:has(.portal-mcard-acao-tag) > .tcard { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
