@@ -681,6 +681,8 @@ export function CadastrosClient() {
                     <td className="text-[color:var(--ink-soft)]">
                       {p.role === 'admin' ? (
                         <Chip show label="Admin" variant="green" />
+                      ) : p.role === 'cliente' ? (
+                        <Chip show label="Externo" variant="warn" />
                       ) : (
                         papelLabel
                       )}
@@ -983,7 +985,7 @@ function Avatar({ label, shape }: { label: string; shape: 'square' | 'circle' })
   );
 }
 
-type ChipVariant = 'default' | 'green' | 'warning' | 'danger' | 'muted';
+type ChipVariant = 'default' | 'green' | 'warning' | 'danger' | 'muted' | 'warn';
 
 /**
  * Chip helper — todas as variantes via DS tokens, sem cores hardcoded
@@ -1009,6 +1011,13 @@ function Chip({
 
 function chipStyle(variant: ChipVariant): CSSProperties {
   switch (variant) {
+    // Cliente externo · mesmo tom do aviso "aguardando você" do portal
+    case 'warn':
+      return {
+        background: 'var(--warn-soft)',
+        color: 'var(--warn)',
+        border: '1px solid color-mix(in srgb, var(--warn) 35%, transparent)',
+      };
     case 'green':
       return {
         background: 'var(--green-soft)',
