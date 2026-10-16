@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.247 · **Atualizado**: 16/10/2026 · branch `main`
+> **Versão**: v1.03.262 · **Atualizado**: 16/10/2026 · branch `main`
 
 ---
 
@@ -172,6 +172,18 @@ Sprint do Bucket V com o Pão e Talho/Bodytech como referência. O portal deixou
 - ✅ **Login do cliente** · link do e-mail entra direto em qualquer aparelho (`/auth/confirm` com token_hash), código de 6 dígitos como alternativa, e-mails em PT via Resend, tela "Confira seu e-mail" redesenhada com reenvio e erros traduzidos. Sessão longa; arquivar ou revogar o cliente corta o acesso
 - ✅ **Portal mobile** · busca + filtros (status, projeto, prioridade, prazo) com ordenação por linha + X de limpar, no padrão do Backlog mobile; sem KPIs; banner "aguardando você" mostra só o título como link; modal da task em tela cheia com abas Conversa (padrão, abre na mensagem mais recente) e Detalhes, pill "Pedir prioridade" junto das pills do topo, ações empilhadas; sheet de filtros via portal (ancorado na tela); botão + abre nova solicitação
 - ✅ **Portal · ajustes finos** · ordem padrão em todas as visões: ação do cliente → etapa (bloqueadas, depois a mais perto da entrega; concluídas no fim) → prioridade → prazo. Kanban desktop mantém o card compacto e ganha a borda amarela + rodapé de ação do mobile. Pedido de prioridade: campo "Novo prazo" (opcional), sem a frase do rodapé
+- ✅ **Portal · rodada de ajustes do cliente (v1.03.248-262)**
+  - **Nova solicitação** · todos os campos obrigatórios (asterisco vermelho + legenda), exceto prioridade, que é opcional e começa em "Escolher"; prioridade inicial sem escolha mostra a definida pelo time
+  - **FAB "+"** redondo na cor do cliente, desktop e mobile, alinhado à borda dos cards do Kanban; **é o caminho definitivo** · o "+ Solicitação" do header saiu para o cliente (time mantém "+ Tarefa")
+  - **Pedido de prioridade com resultado** · `prioridade_pedido_resultado` (aceito/mantido) + `_respondido_em`; trigger fecha como aceito quando o time sobe a prioridade direto no campo; aviso `portal_prioridade_aceita`; faixa verde/cinza no modal do cliente; diálogo com "Novo prazo". Lado do time: banner simplificado (pedido por · nova prioridade · novo prazo · o que mudou) com **Aceitar** (aplica prioridade e prazo) e **Recusar** (motivo obrigatório); não corta mais no modal
+  - **Recusa no sino** · motivo completo (preview até 1000 caracteres), clique não tenta abrir task arquivada
+  - **Ordem padrão** (lista desktop e mobile) · ação do cliente → subetapa ascendente → prioridade → prazo
+  - **Sugestão da IA só aparece para o cliente depois da triagem** · RLS de tasks e comentários, avisos, portal e `get-tasks?portal=true`
+  - **Sino** · busca leve a cada 45s, ao voltar para a aba e ao abrir (realtime segue desligado); aviso `cliente_nova_solicitacao` para admins e PMs quando o cliente abre solicitação
+  - **Acesso do cliente** · `pessoas.acesso_portal` completo/leitura; leitura não abre solicitação (policy `tasks_cliente_insert` + sem FAB). Cadastros: campo "Acesso no portal", tag **EXTERNO** no tom do "aguardando você", coluna Principal mostra o cliente do usuário externo
+  - **E-mail único por pessoa** · índice `pessoas_email_unico` + mensagem clara (dois cadastros com o mesmo gmail mandavam a sessão para o cliente errado). Atenção: o Gmail ignora pontos, então `jessica.silva` e `jessicasilva` chegam na mesma caixa mas contam como e-mails diferentes
+  - **Ajuda do cliente** atualizada · botão +, campos obrigatórios, acesso somente leitura, uso no celular, ordem padrão, resultado do pedido de prioridade, avisos novos
+  - **Menu** · ícone na entrada Adoção
 - ✅ **Telemetria própria** · `usage_events` (autoria carimbada no banco, insert por qualquer logado, leitura só admin), rollup `usage_daily` + retenção de 90 dias (cron 03:30). Captura automática de sessão, troca de tela e cliques; eventos de negócio para abrir/criar/atualizar task (com campos e origem), comentários (externo, interno, resposta, do cliente), cronômetro do modal vs do topo, lançamento de horas, bulk do Backlog, busca, export, manual, notificações, triagem e ações do portal
 - ✅ **Tela Adoção** (`/adocao`, admin, menu do perfil) · RPCs `app_adocao` e `app_adocao_detalhes`: funcionalidades usadas e nunca usadas no período, telas, pessoas (inclusive convidadas sem uso), origem das ações, comentários, campos editados, abas do modal e cliques mais frequentes
 
@@ -310,7 +322,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 ## 🎯 NEXT · ordem definida (out/2026)
 
 **Bucket V · Visão cliente** — fechar o lançamento
-→ ✅ V.1 · V.2 · V.3 · V.4 · V.5 · V.8. ❌ V.6 e V.7 encerrados como estão (logo e tour descartados). Resta: **V.9 (walkthrough final logado como cliente)**
+→ ✅ V.1 · V.2 · V.3 · V.4 · V.5 · V.8. ❌ V.6 e V.7 encerrados como estão (logo e tour descartados). Resta: **V.9 (walkthrough final logado como cliente)** · 🟡 em andamento: Felipe e Jessica rodaram o fluxo como cliente em 16/10 (nova solicitação, triagem/recusa, pedido de prioridade, homologação, sino) e os ajustes saíram em v1.03.248-262. Falta: celular real como cliente, dark mode, usuário somente leitura e a ajuda revisada
 
 **Bucket T · Adoção timesheet (paralelo baixo custo)**
 → T.1 ✅. Próximos: T.6 (trava no concluir · 0.5d · quick win) → T.4 (bulk retroativo) → T.2 (card "horas hoje")
@@ -329,4 +341,4 @@ Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA
 
 ## Próximo passo imediato
 
-**V.9 · walkthrough final logado como cliente** (aprovar, pedir ajuste, responder pendência, pedir prioridade, notificações, ajuda, dark mode, desktop e celular). Fechando V.9, o Bucket V acaba. Depois, **T.6** (trava no concluir sem horas) como quick win, e a primeira leitura da Adoção no fim de outubro.
+**Fechar V.9** com o que falta do walkthrough como cliente: celular real, dark mode, um usuário somente leitura e a leitura da ajuda atualizada. Com isso o Bucket V acaba. Depois, **T.6** (trava no concluir sem horas) como quick win, e a primeira leitura da Adoção no fim de outubro.
