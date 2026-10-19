@@ -166,7 +166,9 @@ export function PessoaModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="card max-w-lg w-full p-5 md:p-6" role="dialog" aria-label="Editar pessoa">
+      {/* text-left: o modal é renderizado dentro da célula de ações da tabela,
+          que alinha à direita */}
+      <div className="card max-w-lg w-full p-5 md:p-6 text-left" role="dialog" aria-label="Editar pessoa">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-brand text-lg font-semibold">
             {initial.id ? 'Editar pessoa' : 'Nova pessoa'}
@@ -245,9 +247,6 @@ export function PessoaModal({
                 <option value="completo">Completo · abre solicitações</option>
                 <option value="leitura">Somente leitura · não abre solicitações</option>
               </select>
-              <div className="text-[11px] text-muted mt-1">
-                Nos dois casos a pessoa acompanha as tarefas, comenta, pede prioridade e homologa entregas.
-              </div>
             </div>
           )}
 

@@ -115,7 +115,7 @@ export function ProjetoModal({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="card max-w-md w-full p-5 md:p-6" role="dialog" aria-label="Editar projeto">
+      <div className="card max-w-md w-full p-5 md:p-6 text-left" role="dialog" aria-label="Editar projeto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-brand text-lg font-semibold">
             {initial.id ? 'Editar projeto' : 'Novo projeto'}
