@@ -38,7 +38,9 @@ jobs:
 
   e2e:
     name: Playwright smoke
-    runs-on: ubuntu-latest
+    # Playwright 1.60 não instala deps no ubuntu-26.04 (ubuntu-latest desde out/2026).
+    # Voltar para ubuntu-latest quando o Playwright suportar.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: static
     env:
