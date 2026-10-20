@@ -707,15 +707,16 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
               </div>
               <div className="pmodal-band-form">
                 <label htmlFor="pmodal-resposta">Sua resposta</label>
-                <div className="pmodal-band-row">
-                  <textarea
-                    id="pmodal-resposta"
-                    className="inp"
-                    rows={2}
-                    value={resposta}
-                    onChange={(e) => setResposta(e.target.value)}
-                    placeholder="Responda aqui. O time é avisado e decide os próximos passos."
-                  />
+                <textarea
+                  id="pmodal-resposta"
+                  className="inp"
+                  rows={3}
+                  value={resposta}
+                  onChange={(e) => setResposta(e.target.value)}
+                  placeholder="Responda aqui. O time é avisado e decide os próximos passos."
+                />
+                {/* Botão abaixo, à direita (antes ficava ao lado, mais baixo que o campo) */}
+                <div className="pmodal-band-actions">
                   <button
                     type="button"
                     className="btn btn-primary"

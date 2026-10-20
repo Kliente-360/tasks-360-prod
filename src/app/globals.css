@@ -3497,5 +3497,68 @@ body {
   color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent);
   border-color: color-mix(in srgb, var(--danger) 35%, transparent);
 }
-.portal-acao-item { align-items: center !important; }
 .pmodal-title.is-placeholder { color: var(--muted); }
+
+/* ── Portal · acabamento sem "cara de Claude" (v1.03.271) ──────────────
+   Bordas neutras e finas, cor só num filete à esquerda, cantos de 6px e
+   etiquetas com fundo suave (no padrão da prioridade) no lugar de pills. */
+
+/* Seções do topo: aguardando você, atrasadas, visão qualitativa */
+.portal-alert.portal-alert-alta,
+.portal-alert.portal-alert-atrasadas,
+.portal-visao-qualitativa {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 14px 18px;
+}
+.portal-alert.portal-alert-alta { border-left-color: var(--warn); }
+.portal-alert.portal-alert-atrasadas { border-left-color: var(--danger); }
+.portal-visao-qualitativa { border-left-color: var(--green); }
+.portal-visao-qualitativa .portal-ia-box { background: var(--surface-2); border: 0; border-radius: 6px; }
+
+/* Linhas: título como link à esquerda, situação em texto à direita */
+.portal-acao-item {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  width: 100%; padding: 7px 0; margin: 0;
+  background: none; border: 0; border-top: 1px solid var(--line);
+  text-align: left; font-size: 14px; cursor: pointer;
+}
+.portal-acao-item:first-child { border-top: 0; }
+.portal-acao-link {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--ink); font-weight: 500; text-decoration: none;
+}
+.portal-acao-item:hover .portal-acao-link { text-decoration: underline; text-underline-offset: 3px; }
+.portal-acao-meta { flex: none; font-size: 12.5px; font-weight: 500; color: var(--warn); font-variant-numeric: tabular-nums; }
+.portal-alert-atrasadas .portal-acao-meta { color: var(--danger); }
+
+/* Modal · etiquetas do cabeçalho no padrão da prioridade */
+.pmodal-chip {
+  height: 24px; padding: 0 8px; border: 0; border-radius: var(--r-sm);
+  background: var(--surface-3); color: var(--ink-soft);
+}
+.pmodal-chip.is-ok { background: var(--green-tint); color: var(--green); border: 0; }
+.pmodal-chip.is-warn { background: var(--warn-soft); color: var(--warn); border: 0; }
+.pmodal-chip.is-danger { background: var(--danger-soft); color: var(--danger); border: 0; }
+.pmodal-chip-acao { border: 1px dashed color-mix(in srgb, var(--green) 55%, transparent); background: transparent; }
+
+/* Valor esperado · fundo continua, texto alinhado com os outros campos */
+.pmodal-valor { margin: 0 -14px; border-radius: 6px; }
+
+/* Faixas de ação do modal (homologar, pendência, avisos) */
+.pmodal-band {
+  border: 1px solid var(--line); border-left: 3px solid var(--line-strong);
+  border-radius: 6px; background: var(--bg-elev);
+}
+.pmodal-band.is-warn { background: color-mix(in srgb, var(--warn-soft) 55%, var(--bg-elev)); border-color: var(--line); border-left-color: var(--warn); }
+.pmodal-band.is-danger { background: color-mix(in srgb, var(--danger-soft) 55%, var(--bg-elev)); border-color: var(--line); border-left-color: var(--danger); }
+.pmodal-band.is-ok { background: color-mix(in srgb, var(--green-tint) 60%, var(--bg-elev)); border-color: var(--line); border-left-color: var(--green); }
+.pmodal-band.is-info { background: var(--surface-2); border-color: var(--line); border-left-color: var(--line-strong); }
+/* Pergunta do time: citação, não caixa (antes parecia um campo) */
+.pmodal-band-quote {
+  background: transparent; border: 0; border-radius: 0;
+  border-left: 2px solid color-mix(in srgb, var(--danger) 40%, transparent);
+  padding: 2px 0 2px 12px; color: var(--ink);
+}

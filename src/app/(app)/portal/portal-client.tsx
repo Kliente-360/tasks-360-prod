@@ -1096,13 +1096,14 @@ function PortalAcaoBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t
                 key={t.id}
                 type="button"
                 onClick={() => onOpenTask(t)}
-                className="portal-acao-item flex w-full items-baseline gap-2 text-left text-sm hover:underline"
+                className="portal-acao-item"
+                title={ACAO_LABEL[acao]}
               >
-                <span className="portal-acao-etiqueta hidden md:inline-flex">{ACAO_LABEL[acao]}</span>
-                <span className="portal-acao-link min-w-0 truncate font-medium">{t.titulo}</span>
-                {dias != null && dias > 0 && (
-                  <span className="hidden md:inline shrink-0 font-mono text-[10px] text-muted">há {dias}d</span>
-                )}
+                <span className="portal-acao-link">{t.titulo}</span>
+                <span className="portal-acao-meta">
+                  {acao === 'homologar' ? 'homologação pendente' : 'resposta pendente'}
+                  {dias != null && dias > 0 ? ` há ${dias}d` : ''}
+                </span>
               </button>
             );
           })}
@@ -1150,17 +1151,11 @@ function PortalAtrasadasBanner({ items, onOpenTask }: { items: Task[]; onOpenTas
                 key={t.id}
                 type="button"
                 onClick={() => onOpenTask(t)}
-                className="portal-acao-item flex w-full items-baseline gap-2 text-left text-sm hover:underline"
+                className="portal-acao-item"
+                title={t.prazo ? `Venceu em ${fmtDataCurta(t.prazo)}` : undefined}
               >
-                <span className="portal-acao-etiqueta is-danger hidden md:inline-flex">
-                  Venceu {t.prazo ? fmtDataCurta(t.prazo) : ''}
-                </span>
-                <span className="portal-acao-link min-w-0 truncate font-medium">{t.titulo}</span>
-                {dias > 0 && (
-                  <span className="hidden md:inline shrink-0 font-mono text-[11px] text-[color:var(--danger)]">
-                    há {dias}d
-                  </span>
-                )}
+                <span className="portal-acao-link">{t.titulo}</span>
+                <span className="portal-acao-meta">{dias > 0 ? `atrasada há ${dias}d` : 'vence hoje'}</span>
               </button>
             );
           })}
