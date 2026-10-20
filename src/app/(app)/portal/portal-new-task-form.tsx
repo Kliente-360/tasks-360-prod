@@ -209,9 +209,7 @@ export function PortalNewTaskForm({
                 </select>
               </div>
               <div className="pmodal-field">
-                <label htmlFor="ns-prio">
-                  Prioridade <span>opcional</span>
-                </label>
+                <label htmlFor="ns-prio">Prioridade</label>
                 <select
                   id="ns-prio"
                   className="inp"
@@ -251,11 +249,8 @@ export function PortalNewTaskForm({
 
             <div className="pmodal-field">
               <span className="pmodal-field-label">
-                Prints <span>opcional</span>
+                Prints <span>(clique abaixo ou cole o print ({atalhoColar()}) enquanto escreve a descrição)</span>
               </span>
-              <div className="pmodal-field-hint">
-                Clique em Adicionar imagem ou cole o print ({atalhoColar()}) enquanto escreve a descrição.
-              </div>
               <div className="pmodal-imagens">
                 <ImagensPendentes
                   arquivos={imagens}
