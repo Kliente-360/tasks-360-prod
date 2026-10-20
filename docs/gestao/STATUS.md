@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.262 · **Atualizado**: 16/10/2026 · branch `main`
+> **Versão**: v1.03.266 · **Atualizado**: 20/10/2026 · branch `main`
 
 ---
 
@@ -184,6 +184,10 @@ Sprint do Bucket V com o Pão e Talho/Bodytech como referência. O portal deixou
   - **E-mail único por pessoa** · índice `pessoas_email_unico` + mensagem clara (dois cadastros com o mesmo gmail mandavam a sessão para o cliente errado). Atenção: o Gmail ignora pontos, então `jessica.silva` e `jessicasilva` chegam na mesma caixa mas contam como e-mails diferentes
   - **Ajuda do cliente** atualizada · botão +, campos obrigatórios, acesso somente leitura, uso no celular, ordem padrão, resultado do pedido de prioridade, avisos novos
   - **Menu** · ícone na entrada Adoção
+- ✅ **Evidências · imagens (v1.03.266)** · clipe + Ctrl+V na conversa do portal e do time (até 6 por vez), campo Prints na nova solicitação, galeria Evidências no modal do cliente e aba Anexos do time com etiquetas externo/conversa. `task_attachments.comment_id`; imagem segue a visibilidade da mensagem (trigger); anexos soltos nascem internos (os 288 antigos viraram internos); cliente envia só nas tasks da própria empresa (RLS tabela + storage). Só PNG/JPG/WebP, reduzidas no navegador para 1600px (~200–300 KB). Ainda sem imagem nas respostas "↳ responder" do time
+- ✅ **Export CSV** · status pela subetapa, separado por ponto e vírgula, esforço com vírgula decimal (v1.03.265)
+- ✅ **Manual do cliente** reescrito em linguagem simples e direta (v1.03.264)
+- ✅ **CI** · job e2e em `ubuntu-24.04` (Playwright 1.60 não suporta o ubuntu-26.04 do `ubuntu-latest`); voltar quando o Playwright suportar
 - ✅ **Telemetria própria** · `usage_events` (autoria carimbada no banco, insert por qualquer logado, leitura só admin), rollup `usage_daily` + retenção de 90 dias (cron 03:30). Captura automática de sessão, troca de tela e cliques; eventos de negócio para abrir/criar/atualizar task (com campos e origem), comentários (externo, interno, resposta, do cliente), cronômetro do modal vs do topo, lançamento de horas, bulk do Backlog, busca, export, manual, notificações, triagem e ações do portal
 - ✅ **Tela Adoção** (`/adocao`, admin, menu do perfil) · RPCs `app_adocao` e `app_adocao_detalhes`: funcionalidades usadas e nunca usadas no período, telas, pessoas (inclusive convidadas sem uso), origem das ações, comentários, campos editados, abas do modal e cliques mais frequentes
 
@@ -332,6 +336,9 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 **Adoção · primeira leitura** (≈2 semanas após v1.03.242, fim de out/2026)
 → abrir `/adocao` com 30 dias e decidir o que simplificar ou remover (funcionalidades nunca usadas, cronômetro do modal vs topo, uso de comentário externo, uso no celular). Serve de insumo para priorizar T e C.10
+
+**Decidir · rotina de limpeza de anexos** (pendente de decisão do Felipe)
+→ cron `cleanup-task-attachments-daily` (03:17) chama a edge `cleanup-attachments`, que apaga anexos de tasks concluídas há mais de 30 dias. Hoje não roda de fato: a URL no cron está com o placeholder `<project-ref>`. Com as evidências do cliente, corrigir a URL faria os prints sumirem 30 dias após a entrega. Opções: desligar o cron de vez, ou corrigir a URL com prazo maior (ex.: 365 dias)
 
 **Ideia registrada** (não iniciada): página `/perfil` (nome + avatar) + calendário de férias do time + fluxo de aprovação via task pro CEO. Escopo detalhado em `~/.claude/plans/nested-churning-octopus.md`. ~4-5 dias.
 
