@@ -8,17 +8,17 @@ No portal você acompanha tudo o que o time da Kliente 360 está fazendo para a 
 
 Clique no botão redondo **+**, no canto inferior direito da tela. Ele aparece no computador e no celular.
 
-Preencha o formulário. Os campos com **\*** vermelho são obrigatórios, e o botão **Enviar** só libera quando eles estão preenchidos.
+Preencha o formulário. O título do formulário acompanha o que você digita. Os campos com **\*** vermelho são obrigatórios, e o botão **Enviar** só libera quando eles estão preenchidos.
 
 | Campo | O que colocar |
 |---|---|
 | **Título** | Um resumo curto do pedido. |
 | **Projeto** | A frente de trabalho do pedido. Se a sua empresa tem um projeto só, ele já vem marcado. |
 | **Tipo** | O tipo de pedido (veja abaixo). |
-| **Prioridade** | Opcional. Se não souber, deixe em "Escolher" e o time define. |
+| **Prioridade** | Não é obrigatória. Se não souber, deixe em "Escolher" e o time define. |
 | **Descrição** | O que acontece hoje, o que deveria acontecer, exemplos e links. |
 | **Valor esperado** | O que melhora para você quando isso estiver pronto. |
-| **Prints** | Opcional. Imagens que ajudam a mostrar o pedido. Clique em **Adicionar imagem** ou cole o print (Ctrl+V ou ⌘V) enquanto escreve a descrição. |
+| **Prints** | Não são obrigatórios. Imagens que ajudam a mostrar o pedido: clique em **Adicionar imagem** ou cole o print (⌘V no Mac, Ctrl+V no Windows) enquanto escreve a descrição. Até 6 imagens. |
 
 | Tipo | Quando usar |
 |---|---|
@@ -41,8 +41,8 @@ Depois de aceito, o pedido vira uma tarefa e avança pelas etapas até a entrega
 De cima para baixo:
 
 - **Barra com o nome da sua empresa**: busca, filtros e a troca entre quadro e lista.
-- **Itens aguardando você** (laranja): aparece só quando alguma tarefa depende de você. Cada item diz o que fazer: homologar a entrega ou responder uma pendência.
-- **Tarefas atrasadas** (vermelho): aparece só quando alguma tarefa passou do prazo. Mostra quando venceu e há quantos dias.
+- **Itens aguardando você** (laranja): aparece só quando alguma tarefa depende de você. Cada linha mostra a tarefa e, à direita, o que falta e há quanto tempo, como "homologação pendente há 13d" ou "resposta pendente há 5d".
+- **Tarefas atrasadas** (vermelho): aparece só quando alguma tarefa passou do prazo. À direita aparece "atrasada há 7d"; passe o mouse para ver a data em que venceu.
 - **Visão qualitativa**: dois textos curtos sobre riscos e entregas (explicados abaixo).
 - **Quadro ou lista** com as tarefas.
 
@@ -89,7 +89,7 @@ Ao abrir uma tarefa, ela ocupa a tela toda e tem duas abas: **Conversa**, que ab
 - **Aprovar entrega**: a tarefa segue para produção.
 - **Pedir ajuste**: conte o que não ficou certo. O time ajusta e manda de novo para você aprovar.
 
-**Para responder uma pergunta.** Quando o time precisa de uma informação sua, a tarefa fica bloqueada e a pergunta aparece no topo. Responda ali mesmo. O time é avisado e decide quando retomar.
+**Para responder uma pergunta.** Quando o time precisa de uma informação sua, a tarefa fica bloqueada e a pergunta aparece no topo. Escreva no campo **Sua resposta** e clique em **Responder**. O time é avisado e decide quando retomar.
 
 A barra de etapas no topo da tarefa mostra onde ela está: a etapa atual fica em laranja, ou em vermelho quando a tarefa está parada.
 
@@ -99,9 +99,9 @@ Abra a tarefa e escreva na **conversa** (à direita no computador, na aba Conver
 
 Para responder uma mensagem específica, passe o mouse sobre ela e clique em **Responder**. No computador, **⌘ + Enter** (ou **Ctrl + Enter**) envia.
 
-Para mandar um print, clique no **clipe** ao lado do campo de mensagem ou cole a imagem (Ctrl+V). Dá para enviar até 6 imagens por vez, com ou sem texto. Clique na imagem para ampliar.
+Para mandar um print, clique no **clipe** ao lado do campo de mensagem ou cole a imagem com o cursor no campo (⌘V no Mac, Ctrl+V no Windows). No celular, toque no clipe para escolher uma foto ou um print da galeria. Dá para enviar até 6 imagens por vez, com ou sem texto. Clique na imagem para ampliar.
 
-Todas as imagens da tarefa ficam reunidas em **Evidências**, nos detalhes da tarefa.
+As imagens da tarefa, as suas e as que o time compartilhou com você, ficam reunidas em **Evidências**: no computador, abaixo da sua solicitação; no celular, na aba **Detalhes**. A seção só aparece quando a tarefa tem alguma imagem.
 
 Anotações internas do time não aparecem para você.
 
