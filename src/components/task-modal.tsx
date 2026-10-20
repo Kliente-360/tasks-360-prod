@@ -52,7 +52,7 @@ import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { NotePopover } from '@/components/timer-button';
 import { Icon } from '@/components/icons';
 import type { ChecklistItem, Task, TimeEntry } from '@/lib/types';
-import { ANEXO_COLS, enviarImagem, imagensDoClipboard, type Anexo } from '@/lib/anexos';
+import { ANEXO_COLS, atalhoColar, enviarImagem, imagensDoClipboard, type Anexo } from '@/lib/anexos';
 import { BotaoAnexarImagem, ImagensPendentes, juntarPendentes, MiniaturasAnexos } from '@/components/anexos-ui';
 
 /** Imagens por mensagem, para o CommentBubble sem passar props em cascata. */
@@ -3543,7 +3543,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                           setImagensMsg((cur) => juntarPendentes(cur, imgs));
                         }}
                         rows={1}
-                        placeholder={isMobileVp ? '@ pra mencionar' : '@ pra mencionar · ⌘↵ envia'}
+                        placeholder={isMobileVp ? '@ pra mencionar' : `@ pra mencionar · cole print (${atalhoColar()}) · ⌘↵ envia`}
                         onKeyDown={(e) => {
                           if (mentionPicker.onKeyDown(e)) return;
                           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {

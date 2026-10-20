@@ -3498,3 +3498,4 @@ body {
   border-color: color-mix(in srgb, var(--danger) 35%, transparent);
 }
 .portal-acao-item { align-items: center !important; }
+.pmodal-title.is-placeholder { color: var(--muted); }

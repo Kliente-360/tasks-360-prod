@@ -24,7 +24,7 @@ import { Icon } from '@/components/icons';
 import { fmtDataCurta, fmtPostedEm } from '@/lib/format';
 import { STATUS, SUB_LABELS } from '@/lib/task-constants';
 import type { Task } from '@/lib/types';
-import { ANEXO_COLS, enviarImagem, imagensDoClipboard, urlsDosAnexos, type Anexo } from '@/lib/anexos';
+import { ANEXO_COLS, atalhoColar, enviarImagem, imagensDoClipboard, urlsDosAnexos, type Anexo } from '@/lib/anexos';
 import {
   BotaoAnexarImagem,
   ImagensPendentes,
@@ -961,7 +961,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                     onChange={(e) => setNewComment(e.target.value)}
                     rows={1}
                     aria-label="Mensagem para o time"
-                    placeholder="Escreva para o time · ⌘↵ envia"
+                    placeholder={`Escreva ou cole um print (${atalhoColar()}) · ⌘↵ envia`}
                     onKeyDown={(e) => {
                       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                         e.preventDefault();

@@ -19,7 +19,7 @@ import { useToastSafe } from '@/components/toast';
 import { Icon } from '@/components/icons';
 import { TIPOS_TRABALHO } from '@/lib/task-constants';
 import { taskFromDb } from '@/lib/adapters';
-import { enviarImagem, imagensDoClipboard, MAX_POR_MENSAGEM, TIPOS_IMAGEM } from '@/lib/anexos';
+import { atalhoColar, enviarImagem, imagensDoClipboard, MAX_POR_MENSAGEM, TIPOS_IMAGEM } from '@/lib/anexos';
 import { ImagensPendentes, juntarPendentes } from '@/components/anexos-ui';
 
 type TipoTrabalho = (typeof TIPOS_TRABALHO)[number]['v'];
@@ -137,9 +137,12 @@ export function PortalNewTaskForm({
       >
         <header className="pmodal-head">
           <div className="pmodal-head-main">
-            {clienteNome && <div className="pmodal-eyebrow">{clienteNome}</div>}
-            <h1 id="nova-sol-title" className="pmodal-title">
-              Nova solicitação
+            <div className="pmodal-eyebrow">
+              {clienteNome ? `${clienteNome} · ` : ''}Nova solicitação
+            </div>
+            {/* Título acompanha o que a pessoa digita */}
+            <h1 id="nova-sol-title" className={`pmodal-title ${titulo.trim() ? '' : 'is-placeholder'}`}>
+              {titulo.trim() || 'Nova solicitação'}
             </h1>
           </div>
           <button type="button" className="pmodal-close" onClick={onClose} aria-label="Fechar">
@@ -227,7 +230,7 @@ export function PortalNewTaskForm({
 
 
             <div className="pmodal-field">
-              <label htmlFor="ns-desc">O que você precisa? <span className="pmodal-req" aria-hidden="true">*</span></label>
+              <label htmlFor="ns-desc">Descrição <span className="pmodal-req" aria-hidden="true">*</span></label>
               <textarea
                 id="ns-desc"
                 required
@@ -242,7 +245,7 @@ export function PortalNewTaskForm({
                   e.preventDefault();
                   setImagens((cur) => juntarPendentes(cur, imgs));
                 }}
-                placeholder="Contexto, exemplos e links ajudam o time a entender. Dá para colar prints aqui."
+                placeholder="O que acontece hoje, o que deveria acontecer, exemplos e links."
               />
             </div>
 
@@ -250,6 +253,9 @@ export function PortalNewTaskForm({
               <span className="pmodal-field-label">
                 Prints <span>opcional</span>
               </span>
+              <div className="pmodal-field-hint">
+                Clique em Adicionar imagem ou cole o print ({atalhoColar()}) enquanto escreve a descrição.
+              </div>
               <div className="pmodal-imagens">
                 <ImagensPendentes
                   arquivos={imagens}

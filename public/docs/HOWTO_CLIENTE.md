@@ -16,9 +16,9 @@ Preencha o formulário. Os campos com **\*** vermelho são obrigatórios, e o bo
 | **Projeto** | A frente de trabalho do pedido. Se a sua empresa tem um projeto só, ele já vem marcado. |
 | **Tipo** | O tipo de pedido (veja abaixo). |
 | **Prioridade** | Opcional. Se não souber, deixe em "Escolher" e o time define. |
-| **O que você precisa?** | O que acontece hoje, o que deveria acontecer, exemplos e links. |
+| **Descrição** | O que acontece hoje, o que deveria acontecer, exemplos e links. |
 | **Valor esperado** | O que melhora para você quando isso estiver pronto. |
-| **Prints** | Opcional. Imagens que ajudam a mostrar o pedido. Clique em **Adicionar imagem** ou cole o print (Ctrl+V) no campo "O que você precisa?". |
+| **Prints** | Opcional. Imagens que ajudam a mostrar o pedido. Clique em **Adicionar imagem** ou cole o print (Ctrl+V ou ⌘V) enquanto escreve a descrição. |
 
 | Tipo | Quando usar |
 |---|---|

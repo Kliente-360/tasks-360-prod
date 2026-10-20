@@ -35,6 +35,12 @@ export const TIPOS_IMAGEM = /^image\/(png|jpe?g|webp)$/i;
 export const MAX_BYTES = 2 * 1024 * 1024;
 export const MAX_POR_MENSAGEM = 6;
 
+/** "⌘V" no Mac, "Ctrl+V" no resto · para textos de ajuda. */
+export function atalhoColar(): string {
+  if (typeof navigator === 'undefined') return 'Ctrl+V';
+  return /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent) ? '⌘V' : 'Ctrl+V';
+}
+
 /** Imagens coladas (Ctrl+V) num evento de clipboard. */
 export function imagensDoClipboard(ev: React.ClipboardEvent | ClipboardEvent): File[] {
   const files = ev.clipboardData?.files;
