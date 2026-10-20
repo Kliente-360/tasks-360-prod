@@ -18,6 +18,7 @@ Preencha o formulário. Os campos com **\*** vermelho são obrigatórios, e o bo
 | **Prioridade** | Opcional. Se não souber, deixe em "Escolher" e o time define. |
 | **O que você precisa?** | O que acontece hoje, o que deveria acontecer, exemplos e links. |
 | **Valor esperado** | O que melhora para você quando isso estiver pronto. |
+| **Prints** | Opcional. Imagens que ajudam a mostrar o pedido. Clique em **Adicionar imagem** ou cole o print (Ctrl+V) no campo "O que você precisa?". |
 
 | Tipo | Quando usar |
 |---|---|
@@ -96,6 +97,10 @@ Abra a tarefa e escreva na **conversa** (à direita no computador, na aba Conver
 
 Para responder uma mensagem específica, passe o mouse sobre ela e clique em **Responder**. No computador, **⌘ + Enter** (ou **Ctrl + Enter**) envia.
 
+Para mandar um print, clique no **clipe** ao lado do campo de mensagem ou cole a imagem (Ctrl+V). Dá para enviar até 6 imagens por vez, com ou sem texto. Clique na imagem para ampliar.
+
+Todas as imagens da tarefa ficam reunidas em **Evidências**, nos detalhes da tarefa.
+
 Anotações internas do time não aparecem para você.
 
 ## Como peço mais prioridade?
@@ -149,7 +154,7 @@ Pedidos recusados e algumas tarefas internas não aparecem no portal. Se a dúvi
 Escreva na conversa da tarefa. O time ajusta a partir dali.
 
 **Posso anexar arquivos?**
-Ainda não. Envie pelo canal habitual e avise na conversa da tarefa.
+Por enquanto, só imagens (PNG, JPG ou WebP). Para PDF e outros arquivos, envie pelo canal habitual e avise na conversa da tarefa.
 
 **Quero dar acesso a mais pessoas da minha empresa.**
 Peça ao time e diga o acesso de cada pessoa: **completo** (também abre pedidos) ou **somente leitura**.

@@ -11,7 +11,7 @@ import { track } from '@/lib/telemetry';
  * valida tudo isso no banco.
  */
 
-import { useCallback, useEffect, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@/lib/supabase/client';
 import { useData } from '@/lib/data-store';
@@ -19,6 +19,8 @@ import { useToastSafe } from '@/components/toast';
 import { Icon } from '@/components/icons';
 import { TIPOS_TRABALHO } from '@/lib/task-constants';
 import { taskFromDb } from '@/lib/adapters';
+import { enviarImagem, imagensDoClipboard, MAX_POR_MENSAGEM, TIPOS_IMAGEM } from '@/lib/anexos';
+import { ImagensPendentes, juntarPendentes } from '@/components/anexos-ui';
 
 type TipoTrabalho = (typeof TIPOS_TRABALHO)[number]['v'];
 type PrioCliente = 'baixa' | 'media' | 'alta' | 'urgente';
@@ -37,7 +39,7 @@ export function PortalNewTaskForm({
   clienteId: string;
   onClose: () => void;
 }) {
-  const { projetos, clientes, upsertTask } = useData();
+  const { projetos, clientes, upsertTask, currentPessoa } = useData();
   const toast = useToastSafe();
   const [titulo, setTitulo] = useState('');
   const [descricao, setDescricao] = useState('');
@@ -45,6 +47,8 @@ export function PortalNewTaskForm({
   const [projetoId, setProjetoId] = useState('');
   const [tipo, setTipo] = useState<TipoTrabalho | ''>('');
   const [prioridade, setPrioridade] = useState<PrioCliente | ''>('');
+  const [imagens, setImagens] = useState<File[]>([]);
+  const inputImagens = useRef<HTMLInputElement>(null);
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -104,11 +108,23 @@ export function PortalNewTaskForm({
         return;
       }
       upsertTask(taskFromDb(data as Record<string, unknown>));
+      // Prints da solicitação: anexos da task, visíveis ao cliente
+      const novaId = String((data as { id: string }).id);
+      for (const file of imagens) {
+        const r = await enviarImagem(createClient(), {
+          taskId: novaId,
+          file,
+          autorPessoaId: currentPessoa?.id ?? null,
+          visivelCliente: true,
+        });
+        if (r.erro) toast.error(r.erro);
+      }
+      if (imagens.length) track('anexo_imagem', { task_id: novaId, props: { portal: true, qtd: imagens.length, origem: 'solicitacao' } });
       track('solicitacao_criada', { task_id: String((data as { id: string }).id), props: { tipo, prioridade: prioridade || null } });
       toast.success('Solicitação enviada.');
       onClose();
     });
-  }, [podeEnviar, titulo, descricao, valorEsperado, projetoId, prioridade, tipo, clienteId, upsertTask, toast, onClose]);
+  }, [podeEnviar, titulo, descricao, valorEsperado, projetoId, prioridade, tipo, clienteId, upsertTask, toast, onClose, imagens, currentPessoa?.id]);
 
   return createPortal(
     <div className="pmodal-backdrop" onClick={onClose}>
@@ -220,8 +236,44 @@ export function PortalNewTaskForm({
                 rows={4}
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Contexto, exemplos e links ajudam o time a entender."
+                onPaste={(e) => {
+                  const imgs = imagensDoClipboard(e);
+                  if (!imgs.length) return;
+                  e.preventDefault();
+                  setImagens((cur) => juntarPendentes(cur, imgs));
+                }}
+                placeholder="Contexto, exemplos e links ajudam o time a entender. Dá para colar prints aqui."
               />
+            </div>
+
+            <div className="pmodal-field">
+              <span className="pmodal-field-label">
+                Prints <span>opcional</span>
+              </span>
+              <div className="pmodal-imagens">
+                <ImagensPendentes
+                  arquivos={imagens}
+                  onRemover={(i) => setImagens((cur) => cur.filter((_, j) => j !== i))}
+                />
+                {imagens.length < MAX_POR_MENSAGEM && (
+                  <button type="button" className="pmodal-imagens-btn" onClick={() => inputImagens.current?.click()}>
+                    <Icon name="paperclip" size={14} />
+                    Adicionar imagem
+                  </button>
+                )}
+                <input
+                  ref={inputImagens}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  multiple
+                  hidden
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files ?? []).filter((f) => TIPOS_IMAGEM.test(f.type));
+                    if (files.length) setImagens((cur) => juntarPendentes(cur, files));
+                    e.target.value = '';
+                  }}
+                />
+              </div>
             </div>
 
             <div className="pmodal-field">

@@ -52,6 +52,22 @@ import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { NotePopover } from '@/components/timer-button';
 import { Icon } from '@/components/icons';
 import type { ChecklistItem, Task, TimeEntry } from '@/lib/types';
+import { ANEXO_COLS, enviarImagem, imagensDoClipboard, type Anexo } from '@/lib/anexos';
+import { BotaoAnexarImagem, ImagensPendentes, juntarPendentes, MiniaturasAnexos } from '@/components/anexos-ui';
+
+/** Imagens por mensagem, para o CommentBubble sem passar props em cascata. */
+const AnexosMsgContext = createContext<{
+  porMsg: Map<string, Anexo[]>;
+  urls: Record<string, string>;
+  abrir: (a: Anexo) => void;
+} | null>(null);
+
+function ImagensDaMensagem({ commentId }: { commentId: string }) {
+  const ctx = useContext(AnexosMsgContext);
+  const lista = ctx?.porMsg.get(commentId) ?? [];
+  if (!ctx || lista.length === 0) return null;
+  return <MiniaturasAnexos anexos={lista} urls={ctx.urls} onAbrir={ctx.abrir} />;
+}
 
 // ============================================================
 // Tipos das tabelas auxiliares (snake_case, vêm direto do banco)
@@ -84,17 +100,7 @@ type HistoryEntry = {
   occurred_at: string;
 };
 
-type Attachment = {
-  id: string;
-  task_id: string;
-  storage_path: string;
-  mime: string;
-  size_bytes: number;
-  width: number | null;
-  height: number | null;
-  author_pessoa_id: string | null;
-  criado_em: string;
-};
+type Attachment = Anexo;
 
 type SaveState = 'idle' | 'dirty' | 'saving' | 'saved' | 'error' | 'off';
 
@@ -673,6 +679,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   });
   const newCommentRef = useRef<HTMLTextAreaElement | null>(null);
   const [newCommentPublico, setNewCommentPublico] = useState(false);
+  const [imagensMsg, setImagensMsg] = useState<File[]>([]);
   // Detecta viewport mobile pra ajustar placeholder do composer
   const [isMobileVp, setIsMobileVp] = useState(false);
   useEffect(() => {
@@ -712,6 +719,14 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const [attachmentUploadLabel, setAttachmentUploadLabel] = useState('');
   const [lightboxAttachment, setLightboxAttachment] = useState<Attachment | null>(null);
+  const anexosMsgCtx = useMemo(() => {
+    const porMsg = new Map<string, Anexo[]>();
+    for (const a of attachments) {
+      if (!a.comment_id) continue;
+      porMsg.set(a.comment_id, [...(porMsg.get(a.comment_id) ?? []), a]);
+    }
+    return { porMsg, urls: attachmentUrls, abrir: (a: Anexo) => setLightboxAttachment(a) };
+  }, [attachments, attachmentUrls]);
 
   // ===== Autosave =====
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -871,7 +886,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       // Attachments
       const { data: adata } = await sb
         .from('task_attachments')
-        .select('id, task_id, storage_path, mime, size_bytes, width, height, author_pessoa_id, criado_em')
+        .select(ANEXO_COLS)
         .eq('task_id', taskId)
         .order('criado_em', { ascending: false });
       if (!cancelled) {
@@ -1456,7 +1471,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   );
 
   const postComment = useCallback(async () => {
-    const body = newComment.trim();
+    const imgs = imagensMsg;
+    const body =
+      newComment.trim() || (imgs.length ? (imgs.length === 1 ? 'Enviou uma imagem.' : `Enviou ${imgs.length} imagens.`) : '');
     if (!body || !editing.id) return;
     track('comment_post', { task_id: editing.id, props: { visivel_cliente: newCommentPublico, resposta: false } });
     const authorName = currentPessoa?.nome ?? 'app';
@@ -1501,7 +1518,22 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     }
     setComments((cur) => cur.map((c) => (c.id === tempId ? (data as Comment) : c)));
     notifyAfterComment((data as Comment).id, body);
-  }, [newComment, newCommentPublico, editing.id, sb, currentPessoa, notifyAfterComment, toast]);
+    if (imgs.length) {
+      setImagensMsg([]);
+      for (const file of imgs) {
+        const r = await enviarImagem(sb, {
+          taskId: editing.id,
+          file,
+          autorPessoaId: authorPessoaId,
+          commentId: (data as Comment).id,
+          visivelCliente: newCommentPublico,
+        });
+        if (r.erro || !r.anexo) toast.error(r.erro ?? 'Falha ao enviar imagem.');
+        else setAttachments((cur) => [r.anexo as Attachment, ...cur]);
+      }
+      track('anexo_imagem', { task_id: editing.id, props: { portal: false, qtd: imgs.length, origem: 'conversa' } });
+    }
+  }, [newComment, newCommentPublico, imagensMsg, editing.id, sb, currentPessoa, notifyAfterComment, toast]);
 
   const submitReply = useCallback(
     async (parentId: string) => {
@@ -1633,97 +1665,25 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   );
 
   // ============ Attachments ============
-  const downscaleImage = (file: File, maxDim: number, quality: number) =>
-    new Promise<{ blob: Blob; width: number; height: number } | null>((resolve) => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
-        const w = Math.round(img.width * ratio);
-        const h = Math.round(img.height * ratio);
-        const canvas = document.createElement('canvas');
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(null);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, w, h);
-        const outType =
-          file.type === 'image/png' && file.size < 800 * 1024 ? 'image/png' : 'image/jpeg';
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) {
-              resolve(null);
-              return;
-            }
-            resolve({ blob, width: w, height: h });
-          },
-          outType,
-          quality,
-        );
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(url);
-        resolve(null);
-      };
-      img.src = url;
-    });
-
+  // Anexo solto (aba Anexos / colar fora do campo de mensagem): nasce interno.
+  // Imagem enviada junto da mensagem segue a visibilidade dela.
   const uploadAttachment = useCallback(
     async (file: File) => {
       if (!editing.id) return;
       setAttachmentUploading(true);
-      setAttachmentUploadLabel('processando…');
+      setAttachmentUploadLabel('enviando…');
       try {
-        const processed = await downscaleImage(file, 1600, 0.85);
-        if (!processed) {
-          toast.error('Falha ao processar imagem.');
+        const r = await enviarImagem(sb, {
+          taskId: editing.id,
+          file,
+          autorPessoaId: currentPessoa?.id ?? null,
+          visivelCliente: false,
+        });
+        if (r.erro || !r.anexo) {
+          toast.error(r.erro ?? 'Falha ao enviar imagem.');
           return;
         }
-        if (processed.blob.size > 2 * 1024 * 1024) {
-          toast.error('Imagem ainda acima de 2MB após compressão.');
-          return;
-        }
-        setAttachmentUploadLabel('enviando…');
-        const ext =
-          processed.blob.type === 'image/png'
-            ? 'png'
-            : processed.blob.type === 'image/webp'
-              ? 'webp'
-              : 'jpg';
-        const objId = crypto.randomUUID();
-        const path = `${editing.id}/${objId}.${ext}`;
-        const { error: upErr } = await sb.storage
-          .from('task-attachments')
-          .upload(path, processed.blob, { contentType: processed.blob.type, upsert: false });
-        if (upErr) {
-          toast.error('Erro no upload: ' + upErr.message);
-          return;
-        }
-        const { data, error: insErr } = await sb
-          .from('task_attachments')
-          .insert({
-            task_id: editing.id,
-            storage_path: path,
-            mime: processed.blob.type,
-            size_bytes: processed.blob.size,
-            width: processed.width,
-            height: processed.height,
-            author_pessoa_id: currentPessoa?.id ?? null,
-          })
-          .select(
-            'id, task_id, storage_path, mime, size_bytes, width, height, author_pessoa_id, criado_em',
-          )
-          .single();
-        if (insErr || !data) {
-          await sb.storage.from('task-attachments').remove([path]);
-          toast.error('Erro ao registrar anexo: ' + (insErr?.message ?? 'falha'));
-          return;
-        }
-        setAttachments((cur) => [data as Attachment, ...cur]);
+        setAttachments((cur) => [r.anexo as Attachment, ...cur]);
       } finally {
         setAttachmentUploading(false);
         setAttachmentUploadLabel('');
@@ -3466,6 +3426,15 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                             onClick={() => setLightboxAttachment(a)}
                             loading="lazy"
                           />
+                          {/* Origem e visibilidade: da conversa ou solta; cliente vê ou não */}
+                          <div className="absolute left-1 top-1 flex gap-1 pointer-events-none">
+                            {a.visivel_cliente && (
+                              <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[color:var(--green)] text-white">externo</span>
+                            )}
+                            {a.comment_id && (
+                              <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/55 text-white">conversa</span>
+                            )}
+                          </div>
                           <div className="absolute inset-x-0 bottom-0 bg-black/55 text-white text-[10px] px-1.5 py-1 flex items-center justify-between opacity-0 group-hover:opacity-100 transition">
                             <span className="font-mono truncate">
                               {a.width && a.height ? `${a.width}×${a.height} · ` : ''}
@@ -3495,6 +3464,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             {/* CONVERSA */}
             {(modalTab === 'conversa' || modalTab === 'detalhes') && (
               <>
+                <AnexosMsgContext.Provider value={anexosMsgCtx}>
                 <div className="tmodal-thread">
                   {topLevel.map((c) => (
                     <CommentItem
@@ -3544,16 +3514,34 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     </div>
                   )}
                 </div>
+                </AnexosMsgContext.Provider>
                 {editing.id && (
                   <div className="tmodal-composer relative">
                     {/* Bucket V · M.5 iter · composer linha única.
                         Default = não-visível pro cliente. Toggle interno/externo
                         no chip dentro do comentário publicado (CommentItem). */}
+                    <ImagensPendentes
+                      arquivos={imagensMsg}
+                      onRemover={(i) => setImagensMsg((cur) => cur.filter((_, j) => j !== i))}
+                    />
                     <div className="tmodal-composer-pill">
+                      <BotaoAnexarImagem
+                        quantidadeAtual={imagensMsg.length}
+                        onEscolher={(novas) => setImagensMsg((cur) => juntarPendentes(cur, novas))}
+                      />
                       <textarea
                         ref={newCommentRef}
                         value={newComment}
                         onChange={mentionPicker.onChange}
+                        onPaste={(e) => {
+                          // Colado no campo de mensagem: vai junto da mensagem,
+                          // não para a aba Anexos (paste do modal)
+                          const imgs = imagensDoClipboard(e);
+                          if (!imgs.length) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setImagensMsg((cur) => juntarPendentes(cur, imgs));
+                        }}
                         rows={1}
                         placeholder={isMobileVp ? '@ pra mencionar' : '@ pra mencionar · ⌘↵ envia'}
                         onKeyDown={(e) => {
@@ -3568,7 +3556,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                         type="button"
                         className="tmodal-composer-send"
                         onClick={postComment}
-                        disabled={!newComment.trim()}
+                        disabled={!newComment.trim() && imagensMsg.length === 0}
                         title="Enviar (⌘↵)"
                         aria-label="Enviar comentário"
                       >
@@ -4329,10 +4317,13 @@ function CommentBubble({
         </div>
       </div>
       {!isEditing ? (
-        <div
-          className="cmsg-body"
-          dangerouslySetInnerHTML={{ __html: renderCommentBody(c.body, internalFirstNames) }}
-        />
+        <>
+          <div
+            className="cmsg-body"
+            dangerouslySetInnerHTML={{ __html: renderCommentBody(c.body, internalFirstNames) }}
+          />
+          <ImagensDaMensagem commentId={c.id} />
+        </>
       ) : (
         <div className="flex flex-col gap-1.5 mt-1">
           <textarea

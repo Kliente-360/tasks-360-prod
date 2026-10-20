@@ -24,6 +24,14 @@ import { Icon } from '@/components/icons';
 import { fmtDataCurta, fmtPostedEm } from '@/lib/format';
 import { STATUS, SUB_LABELS } from '@/lib/task-constants';
 import type { Task } from '@/lib/types';
+import { ANEXO_COLS, enviarImagem, imagensDoClipboard, urlsDosAnexos, type Anexo } from '@/lib/anexos';
+import {
+  BotaoAnexarImagem,
+  ImagensPendentes,
+  juntarPendentes,
+  MiniaturasAnexos,
+  VisualizadorImagem,
+} from '@/components/anexos-ui';
 
 interface PortalComment {
   id: string;
@@ -141,7 +149,19 @@ const KIND_TAG: Record<string, string> = {
   ajuste_solicitado: 'Pedido de ajuste',
 };
 
-function Conversa({ comments, onReply }: { comments: PortalComment[]; onReply: (c: PortalComment) => void }) {
+function Conversa({
+  comments,
+  onReply,
+  anexosPorMsg,
+  urls,
+  onAbrirImagem,
+}: {
+  comments: PortalComment[];
+  onReply: (c: PortalComment) => void;
+  anexosPorMsg: Map<string, Anexo[]>;
+  urls: Record<string, string>;
+  onAbrirImagem: (a: Anexo) => void;
+}) {
   const porId = useMemo(() => new Map(comments.map((c) => [c.id, c])), [comments]);
   // Conversa ancorada na mais recente: ao abrir e a cada nova mensagem, rola
   // até o fim (no desktop a conversa tem rolagem própria)
@@ -197,6 +217,7 @@ function Conversa({ comments, onReply }: { comments: PortalComment[]; onReply: (
               )}
               {tag && <div className="pmodal-msg-tag">{tag}</div>}
               {c.body}
+              <MiniaturasAnexos anexos={anexosPorMsg.get(c.id) ?? []} urls={urls} onAbrir={onAbrirImagem} />
             </div>
             <button type="button" className="pmodal-msg-reply" onClick={() => onReply(c)}>
               Responder
@@ -310,7 +331,7 @@ function PedirPrioridadeDialog({
 // ── Modal ────────────────────────────────────────────────────────────
 
 export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }: PortalTaskModalProps) {
-  const { projetos, clientes, patchTask, viewerRole } = useData();
+  const { projetos, clientes, patchTask, viewerRole, currentPessoa } = useData();
   const toast = useToastSafe();
   const sb = useMemo(() => createClient(), []);
 
@@ -326,6 +347,11 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
   const [ajuste, setAjuste] = useState('');
   const [prioAberto, setPrioAberto] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  // Evidências · imagens da task (soltas e das mensagens) e envio pendente
+  const [anexos, setAnexos] = useState<Anexo[]>([]);
+  const [anexoUrls, setAnexoUrls] = useState<Record<string, string>>({});
+  const [pendentes, setPendentes] = useState<File[]>([]);
+  const [imagemAberta, setImagemAberta] = useState<string | null>(null);
   // Celular: detalhes e conversa em abas (a conversa ficava no fim da rolagem)
   const [abaMobile, setAbaMobile] = useState<'detalhes' | 'conversa'>('conversa');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -335,7 +361,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
 
   const carregar = useCallback(
     async (id: string) => {
-      const [c, d] = await Promise.all([
+      const [c, d, a] = await Promise.all([
         sb
           .from('task_comments')
           .select('id, parent_id, author, body, posted_em, criado_em, from_cliente, kind')
@@ -344,8 +370,15 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
           .order('posted_em', { ascending: true, nullsFirst: true })
           .order('criado_em', { ascending: true }),
         sb.from('tasks').select('descricao, valor_esperado, solucao_implementada').eq('id', id).single(),
+        // RLS: cliente só recebe imagens visíveis a ele
+        sb.from('task_attachments').select(ANEXO_COLS).eq('task_id', id).order('criado_em', { ascending: true }),
       ]);
       if (!c.error) setComments((c.data ?? []) as PortalComment[]);
+      if (!a.error) {
+        const lista = (a.data ?? []) as Anexo[];
+        setAnexos(lista);
+        void urlsDosAnexos(sb, lista).then(setAnexoUrls);
+      }
       if (!d.error && d.data) {
         const r = d.data as Record<string, string | null>;
         setDetalhes({
@@ -361,6 +394,9 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
   useEffect(() => {
     setComments([]);
     setDetalhes(null);
+    setAnexos([]);
+    setAnexoUrls({});
+    setPendentes([]);
     setNewComment('');
     setRespondendo(null);
     setResposta('');
@@ -415,7 +451,10 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
   );
 
   const enviarComentario = useCallback(async () => {
-    const body = newComment.trim();
+    // Só imagem também vale: o texto vira um aviso curto
+    const body =
+      newComment.trim() ||
+      (pendentes.length ? (pendentes.length === 1 ? 'Enviou uma imagem.' : `Enviou ${pendentes.length} imagens.`) : '');
     if (!body || !task || busy) return;
     track('comment_post', { task_id: task.id, props: { portal: true, resposta: !!respondendo } });
     setBusy('comentar');
@@ -432,11 +471,26 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
       })
       .select('id')
       .single();
-    setBusy(null);
     if (error) {
+      setBusy(null);
       toast.error('Erro ao enviar: ' + error.message);
       return;
     }
+    if (data?.id && pendentes.length) {
+      for (const file of pendentes) {
+        const r = await enviarImagem(sb, {
+          taskId: task.id,
+          file,
+          autorPessoaId: currentPessoa?.id ?? null,
+          commentId: data.id,
+          visivelCliente: true,
+        });
+        if (r.erro) toast.error(r.erro);
+      }
+      track('anexo_imagem', { task_id: task.id, props: { portal: true, qtd: pendentes.length, origem: 'conversa' } });
+    }
+    setBusy(null);
+    setPendentes([]);
     if (task.pessoaId && data?.id) {
       void sb.from('notifications').insert({
         recipient_pessoa_id: task.pessoaId,
@@ -449,11 +503,16 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
     setNewComment('');
     setRespondendo(null);
     void carregar(task.id);
-  }, [newComment, respondendo, task, busy, sb, clienteNome, toast, carregar]);
+  }, [newComment, pendentes, respondendo, task, busy, sb, clienteNome, toast, carregar, currentPessoa?.id]);
 
   if (!task) return null;
 
   const agora = Date.now();
+  const anexosPorMsg = new Map<string, Anexo[]>();
+  for (const a of anexos) {
+    if (!a.comment_id) continue;
+    anexosPorMsg.set(a.comment_id, [...(anexosPorMsg.get(a.comment_id) ?? []), a]);
+  }
   const projeto = projetos.find((p) => p.id === task.projetoId)?.nome ?? '';
   const cliente = clientes.find((c) => c.id === task.clienteId)?.nome ?? clienteNome;
   const responsavel = nomeResponsavel.split(' ')[0];
@@ -818,6 +877,18 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                 </section>
               )}
 
+              {anexos.length > 0 && (
+                <section className="pmodal-section">
+                  <div className="pmodal-lbl">Evidências · {anexos.length}</div>
+                  <MiniaturasAnexos
+                    anexos={anexos}
+                    urls={anexoUrls}
+                    tamanho="lg"
+                    onAbrir={(a) => setImagemAberta(anexoUrls[a.id] ?? null)}
+                  />
+                </section>
+              )}
+
               <section className="pmodal-facts">
                 <div>
                   <div className="pmodal-lbl">Aberta em</div>
@@ -842,6 +913,9 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
             <div className="pmodal-col-convo">
               <div className="pmodal-lbl pmodal-convo-head">Conversa</div>
               <Conversa
+                anexosPorMsg={anexosPorMsg}
+                urls={anexoUrls}
+                onAbrirImagem={(a) => setImagemAberta(anexoUrls[a.id] ?? null)}
                 comments={comments}
                 onReply={(c) => {
                   setRespondendo(c);
@@ -865,9 +939,24 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                     </button>
                   </div>
                 )}
+                <ImagensPendentes
+                  arquivos={pendentes}
+                  onRemover={(i) => setPendentes((cur) => cur.filter((_, j) => j !== i))}
+                />
                 <div className="tmodal-composer-pill">
+                  <BotaoAnexarImagem
+                    quantidadeAtual={pendentes.length}
+                    disabled={!!busy}
+                    onEscolher={(novas) => setPendentes((cur) => juntarPendentes(cur, novas))}
+                  />
                   <textarea
                     ref={composerRef}
+                    onPaste={(e) => {
+                      const imgs = imagensDoClipboard(e);
+                      if (!imgs.length) return;
+                      e.preventDefault();
+                      setPendentes((cur) => juntarPendentes(cur, imgs));
+                    }}
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     rows={1}
@@ -883,7 +972,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                   <button
                     type="button"
                     className="tmodal-composer-send"
-                    disabled={!newComment.trim() || !!busy}
+                    disabled={(!newComment.trim() && pendentes.length === 0) || !!busy}
                     onClick={enviarComentario}
                     title="Enviar (⌘↵)"
                     aria-label="Enviar mensagem"
@@ -895,6 +984,8 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
             </div>
           </div>
         </div>
+
+        <VisualizadorImagem url={imagemAberta} onFechar={() => setImagemAberta(null)} />
 
         {prioAberto && (
           <PedirPrioridadeDialog
