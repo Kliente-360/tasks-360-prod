@@ -19,7 +19,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useClickAway } from '@/lib/use-click-away';
 import { useData, useClientesById, useProjetosById, usePessoasById } from '@/lib/data-store';
 import { useToast } from '@/components/toast';
-import { lblStatus } from '@/lib/task-utils';
+import { SUB_LABELS } from '@/lib/task-constants';
 import type { Task } from '@/lib/types';
 
 function esc(v: unknown): string {
@@ -31,6 +31,9 @@ function esc(v: unknown): string {
     '"'
   );
 }
+
+// Ponto e vírgula: o Excel em português já abre separado em colunas
+const SEP = ';';
 
 function tasksToCsv(
   tasks: Task[],
@@ -50,7 +53,7 @@ function tasksToCsv(
     'Descrição',
     'Criado em',
   ];
-  const lines = [head.map(esc).join(',')];
+  const lines = [head.map(esc).join(SEP)];
   for (const t of tasks) {
     lines.push(
       [
@@ -59,14 +62,16 @@ function tasksToCsv(
         nomeProjeto(t.projetoId),
         nomePessoa(t.pessoaId),
         t.prioridade,
-        lblStatus(t.status),
-        t.esforco,
+        // Status = subetapa (ex.: "Em homologação"), não a macro etapa
+        SUB_LABELS[t.subetapa] ?? t.subetapa,
+        // Vírgula decimal para o Excel em português ler como número
+        t.esforco == null ? '' : String(t.esforco).replace('.', ','),
         t.prazo || '',
         t.descricao || '',
         t.criadoEm ? new Date(t.criadoEm).toISOString().slice(0, 10) : '',
       ]
         .map(esc)
-        .join(','),
+        .join(SEP),
     );
   }
   // BOM pra Excel reconhecer UTF-8.
