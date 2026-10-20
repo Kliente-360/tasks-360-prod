@@ -78,6 +78,8 @@ As tarefas aparecem em cards. No topo ficam a **busca**, o botão de **filtros**
 
 O botão de filtros abre um painel com status, projeto, prioridade e prazo. Cada linha tem uma seta para ordenar. Toque em **Aplicar**.
 
+No celular não aparecem as seções "aguardando você" e "atrasadas". Para ver essas tarefas, use o filtro de status **Aguardando você** ou o filtro de prazo **Atrasadas**. Os cards que esperam uma ação sua continuam com a borda laranja.
+
 Ao abrir uma tarefa, ela ocupa a tela toda e tem duas abas: **Conversa**, que abre primeiro, e **Detalhes**.
 
 ## Quando o time precisa de mim?

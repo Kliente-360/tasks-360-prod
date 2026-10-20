@@ -458,13 +458,19 @@ export function PortalClient() {
       )}
 
       {/* Ação do cliente · lista os itens (antes o alerta só dava a contagem) */}
+      {/* Aviso e atrasadas só no computador · no celular os filtros
+          (status "Aguardando você", prazo "Atrasadas") levam ao mesmo lugar */}
       {acaoItems.length > 0 && (
-        <PortalAcaoBanner items={acaoItems} onOpenTask={openPortalTask} />
+        <div className="hidden md:block">
+          <PortalAcaoBanner items={acaoItems} onOpenTask={openPortalTask} />
+        </div>
       )}
 
       {/* Atrasadas · mesma mecânica do aviso, em vermelho */}
       {atrasadasItems.length > 0 && (
-        <PortalAtrasadasBanner items={atrasadasItems} onOpenTask={openPortalTask} />
+        <div className="hidden md:block">
+          <PortalAtrasadasBanner items={atrasadasItems} onOpenTask={openPortalTask} />
+        </div>
       )}
 
       {/* Visão qualitativa · caixas de IA (docs/portal-insights) */}
