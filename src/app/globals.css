@@ -3479,3 +3479,22 @@ body {
 .pmodal-imagens-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border: 1px dashed var(--line-strong); border-radius: 8px; background: transparent; color: var(--ink-soft); font-size: 13px; cursor: pointer; }
 .pmodal-imagens-btn:hover { border-color: var(--green); color: var(--green); }
 .pmodal-field-label span { font-weight: 400; color: var(--muted); }
+
+/* Portal · seção de atrasadas (vermelho) e etiqueta de ação nos avisos */
+.portal-alert-atrasadas { background: var(--danger-soft); border-color: var(--danger); }
+.portal-alert-atrasadas .portal-alert-title { color: var(--danger); }
+.portal-alert-atrasadas .portal-recolher-seta { color: var(--danger); }
+.portal-alert-atrasadas .portal-acao-item { border-color: color-mix(in srgb, var(--danger) 18%, transparent); }
+.portal-alert-alta .portal-recolher-seta { color: var(--warn); }
+.portal-acao-etiqueta {
+  flex: none; align-items: center; height: 20px; padding: 0 8px;
+  border-radius: 999px; font-size: 11px; font-weight: 600; line-height: 1;
+  color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent);
+  align-self: center;
+}
+.portal-acao-etiqueta.is-danger {
+  color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+}
+.portal-acao-item { align-items: center !important; }

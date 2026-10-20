@@ -282,6 +282,15 @@ export function PortalClient() {
     [portalTasks],
   );
 
+  // Abertas com prazo vencido (independe dos filtros) · mais antigas primeiro
+  const atrasadasItems = useMemo(
+    () =>
+      portalTasks
+        .filter((t) => t.status !== STATUS.CONCLUIDO && isAtrasada(t))
+        .sort((a, b) => (a.prazo || '').localeCompare(b.prazo || '')),
+    [portalTasks],
+  );
+
   // Modal lê a versão viva da store (reflete aprovação na hora)
   const liveOpenTask = openTask
     ? portalTasks.find((t) => t.id === openTask.id) ?? openTask
@@ -453,6 +462,11 @@ export function PortalClient() {
         <PortalAcaoBanner items={acaoItems} onOpenTask={openPortalTask} />
       )}
 
+      {/* Atrasadas · mesma mecânica do aviso, em vermelho */}
+      {atrasadasItems.length > 0 && (
+        <PortalAtrasadasBanner items={atrasadasItems} onOpenTask={openPortalTask} />
+      )}
+
       {/* Visão qualitativa · caixas de IA (docs/portal-insights) */}
       <PortalIaBoxes clienteId={effectiveCid} />
 
@@ -471,42 +485,9 @@ export function PortalClient() {
         </div>
       )}
 
-      {/* 3. KPIs · alinhados com os do Backlog (v1.03.216).
-             Total · Backlog · Em andamento · Bloqueadas · Atrasadas */}
-      {(() => {
-        const openTasks = portalTasks.filter((t) => t.status !== STATUS.CONCLUIDO);
-        const kpi = {
-          total: openTasks.length,
-          backlog: openTasks.filter((t) => t.status === 'backlog').length,
-          andamento: openTasks.filter((t) => t.status === 'andamento').length,
-          bloqueadas: openTasks.filter((t) => t.status === 'bloqueado').length,
-          atrasadas: openTasks.filter((t) => isAtrasada(t)).length,
-        };
-        return (
-          <div className="hidden md:grid gap-3 md:grid-cols-5">
-            <div className="portal-kpi">
-              <div className="portal-kpi-label">Total ativas</div>
-              <div className="portal-kpi-value">{kpi.total}</div>
-            </div>
-            <div className="portal-kpi">
-              <div className="portal-kpi-label">Backlog</div>
-              <div className="portal-kpi-value">{kpi.backlog}</div>
-            </div>
-            <div className="portal-kpi">
-              <div className="portal-kpi-label">Em andamento</div>
-              <div className="portal-kpi-value">{kpi.andamento}</div>
-            </div>
-            <div className={`portal-kpi ${kpi.bloqueadas > 0 ? 'portal-kpi-danger' : ''}`}>
-              <div className="portal-kpi-label">Bloqueadas</div>
-              <div className="portal-kpi-value">{kpi.bloqueadas}</div>
-            </div>
-            <div className={`portal-kpi ${kpi.atrasadas > 0 ? 'portal-kpi-danger' : ''}`}>
-              <div className="portal-kpi-label">Atrasadas</div>
-              <div className="portal-kpi-value">{kpi.atrasadas}</div>
-            </div>
-          </div>
-        );
-      })()}
+      {/* KPIs removidos (v1.03.267): repetiam os contadores das colunas e,
+          5 cards sobre 5 colunas, pareciam títulos delas. Atrasadas virou
+          seção própria acima. */}
 
       {/* Mobile · lista de cards no estilo do Backlog mobile interno */}
       <div className="md:hidden">
@@ -1111,9 +1092,7 @@ function PortalAcaoBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t
                 onClick={() => onOpenTask(t)}
                 className="portal-acao-item flex w-full items-baseline gap-2 text-left text-sm hover:underline"
               >
-                <span className="hidden md:inline shrink-0 font-mono text-[10px] uppercase tracking-wide text-muted">
-                  {ACAO_LABEL[acao]}
-                </span>
+                <span className="portal-acao-etiqueta hidden md:inline-flex">{ACAO_LABEL[acao]}</span>
                 <span className="portal-acao-link min-w-0 truncate font-medium">{t.titulo}</span>
                 {dias != null && dias > 0 && (
                   <span className="hidden md:inline shrink-0 font-mono text-[10px] text-muted">há {dias}d</span>
@@ -1129,6 +1108,64 @@ function PortalAcaoBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t
             className="mt-1 text-xs text-ink-soft underline"
           >
             {expandido ? 'Mostrar menos' : `Ver todos (${items.length})`}
+          </button>
+        )}
+        </>)}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// PortalAtrasadasBanner · tarefas abertas com prazo vencido
+// ─────────────────────────────────────────────────────────
+
+function PortalAtrasadasBanner({ items, onOpenTask }: { items: Task[]; onOpenTask: (t: Task) => void }) {
+  const [expandido, setExpandido] = useState(false);
+  const [aberta, alternar] = useSecaoAberta();
+  const visiveis = expandido ? items : items.slice(0, 5);
+  const hoje = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00').getTime();
+  return (
+    <div className="portal-alert portal-alert-atrasadas">
+      <div className="min-w-0 flex-1">
+        <CabecalhoRecolher aberta={aberta} onClick={alternar}>
+          <span className="portal-alert-title">
+            {items.length === 1 ? '1 tarefa atrasada' : `${items.length} tarefas atrasadas`}
+          </span>
+        </CabecalhoRecolher>
+        {aberta && (<>
+        <div className="mt-2 space-y-1">
+          {visiveis.map((t) => {
+            const dias = t.prazo
+              ? Math.max(0, Math.round((hoje - new Date(t.prazo + 'T00:00:00').getTime()) / 86400000))
+              : 0;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => onOpenTask(t)}
+                className="portal-acao-item flex w-full items-baseline gap-2 text-left text-sm hover:underline"
+              >
+                <span className="portal-acao-etiqueta is-danger hidden md:inline-flex">
+                  Venceu {t.prazo ? fmtDataCurta(t.prazo) : ''}
+                </span>
+                <span className="portal-acao-link min-w-0 truncate font-medium">{t.titulo}</span>
+                {dias > 0 && (
+                  <span className="hidden md:inline shrink-0 font-mono text-[11px] text-[color:var(--danger)]">
+                    há {dias}d
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {items.length > 5 && (
+          <button
+            type="button"
+            onClick={() => setExpandido((v) => !v)}
+            className="mt-1 text-xs text-ink-soft underline"
+          >
+            {expandido ? 'Mostrar menos' : `Ver todas (${items.length})`}
           </button>
         )}
         </>)}

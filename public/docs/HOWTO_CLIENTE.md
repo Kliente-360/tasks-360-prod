@@ -41,12 +41,12 @@ Depois de aceito, o pedido vira uma tarefa e avança pelas etapas até a entrega
 De cima para baixo:
 
 - **Barra com o nome da sua empresa**: busca, filtros e a troca entre quadro e lista.
-- **Itens aguardando você**: aparece só quando alguma tarefa depende de você. Clique para abrir a lista e depois na tarefa.
+- **Itens aguardando você** (laranja): aparece só quando alguma tarefa depende de você. Cada item diz o que fazer: homologar a entrega ou responder uma pendência.
+- **Tarefas atrasadas** (vermelho): aparece só quando alguma tarefa passou do prazo. Mostra quando venceu e há quantos dias.
 - **Visão qualitativa**: dois textos curtos sobre riscos e entregas (explicados abaixo).
-- **Indicadores**: total de tarefas abertas, no backlog, em andamento, bloqueadas e atrasadas. Bloqueadas e atrasadas ficam em vermelho quando existe alguma. Só aparecem no computador.
 - **Quadro ou lista** com as tarefas.
 
-As seções "aguardando você" e "visão qualitativa" começam fechadas. Clique no título para abrir.
+As seções "aguardando você", "atrasadas" e "visão qualitativa" começam fechadas. Clique no título para abrir e depois na tarefa. O total de tarefas de cada etapa fica no topo de cada coluna do quadro.
 
 ## O que significa cada coluna do quadro?
 
