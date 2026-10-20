@@ -491,15 +491,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
     }
     setBusy(null);
     setPendentes([]);
-    if (task.pessoaId && data?.id) {
-      void sb.from('notifications').insert({
-        recipient_pessoa_id: task.pessoaId,
-        kind: respondendo ? 'cliente_respondeu' : 'cliente_comentou',
-        payload: { author: clienteNome || 'cliente', task_id: task.id, comment_id: data.id, preview: body.slice(0, 80) },
-        source_task_id: task.id,
-        source_comment_id: data.id,
-      });
-    }
+    // Aviso ao time: trigger trg_notif_comentario_cliente no banco
     setNewComment('');
     setRespondendo(null);
     void carregar(task.id);

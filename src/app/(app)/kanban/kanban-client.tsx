@@ -39,6 +39,7 @@ import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import type { Filters as StdFilters } from '@/lib/filters';
 import type { Task } from '@/lib/types';
+import { emSegundoPlano } from '@/lib/em-segundo-plano';
 
 const EMPTY = '__empty__';
 const MACROS = ['backlog', 'andamento', 'bloqueado', 'concluido'] as const;
@@ -288,7 +289,7 @@ export function KanbanClient() {
         return;
       }
       if (macroChanged) {
-        sb.from('task_field_history').insert({
+        emSegundoPlano(sb.from('task_field_history').insert({
           task_id: t.id,
           field: 'status',
           from_value: prev.status,
@@ -296,7 +297,7 @@ export function KanbanClient() {
           actor_pessoa_id: null,
           actor_source: 'app',
           occurred_at: nowIso,
-        });
+        }), 'historico-kanban');
       }
     },
     [patchTask, replaceTask, sb, toast, timeEntries],

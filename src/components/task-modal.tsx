@@ -54,6 +54,7 @@ import { Icon } from '@/components/icons';
 import type { ChecklistItem, Task, TimeEntry } from '@/lib/types';
 import { ANEXO_COLS, atalhoColar, enviarImagem, imagensDoClipboard, type Anexo } from '@/lib/anexos';
 import { BotaoAnexarImagem, ImagensPendentes, juntarPendentes, MiniaturasAnexos } from '@/components/anexos-ui';
+import { emSegundoPlano } from '@/lib/em-segundo-plano';
 
 /** Imagens por mensagem, para o CommentBubble sem passar props em cascata. */
 const AnexosMsgContext = createContext<{
@@ -1173,7 +1174,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             };
             if (paraCliente && tasksById.get(e.id)?.pendenciaRespondidaEm) {
               patchTask(e.id, { pendenciaRespondidaEm: null });
-              void sb.from('tasks').update({ pendencia_respondida_em: null }).eq('id', e.id);
+              emSegundoPlano(sb.from('tasks').update({ pendencia_respondida_em: null }).eq('id', e.id), 'pendencia-reset');
             }
             sb.from('task_comments')
               .insert(commentPayload)
@@ -1749,7 +1750,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         return false;
       }
       if (mudou) {
-        void sb.from('task_field_history').insert({
+        emSegundoPlano(sb.from('task_field_history').insert({
           task_id: editing.id,
           field: 'prioridade',
           from_value: editing.prioridade || null,
@@ -1757,7 +1758,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           actor_pessoa_id: currentPessoa?.id ?? null,
           actor_source: 'app',
           occurred_at: nowIso,
-        });
+        }), 'historico-prioridade');
       }
       const commentPayload = {
         task_id: editing.id,
@@ -1784,7 +1785,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         },
       ]);
       if (mudouPrazo) {
-        void sb.from('task_field_history').insert({
+        emSegundoPlano(sb.from('task_field_history').insert({
           task_id: editing.id,
           field: 'prazo',
           from_value: editing.prazo || null,
@@ -1792,7 +1793,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           actor_pessoa_id: currentPessoa?.id ?? null,
           actor_source: 'app',
           occurred_at: nowIso,
-        });
+        }), 'historico-prazo');
       }
       toast.success(mudou || mudouPrazo ? 'Pedido aceito. Cliente avisado.' : 'Resposta enviada ao cliente.');
       return true;

@@ -17,6 +17,7 @@ import { useData } from '@/lib/data-store';
 import { useToast } from '@/components/toast';
 import { createClient } from '@/lib/supabase/client';
 import { taskFromDb } from '@/lib/adapters';
+import { emSegundoPlano } from '@/lib/em-segundo-plano';
 
 type Api = { open: () => void; close: () => void; isOpen: boolean };
 const Ctx = createContext<Api | null>(null);
@@ -92,7 +93,7 @@ function Modal({ onClose }: { onClose: () => void }) {
       return;
     }
     upsertTask(taskFromDb(data as Record<string, unknown>));
-    sb.from('task_field_history').insert({
+    emSegundoPlano(sb.from('task_field_history').insert({
       task_id: data.id,
       field: 'status',
       from_value: null,
@@ -100,7 +101,7 @@ function Modal({ onClose }: { onClose: () => void }) {
       actor_pessoa_id: currentPessoa?.id ?? null,
       actor_source: 'app',
       occurred_at: nowIso,
-    });
+    }), 'historico-captura');
     toast.success('Tarefa capturada — vai pra Triagem.');
     // Mantém aberto pra próxima captura.
     inputRef.current?.focus();
