@@ -49,6 +49,8 @@ export interface Task {
   prioridadePedidoAte: string | null;
   /** Resultado do último pedido de prioridade (o banco define ao fechar). */
   prioridadePedidoResultado?: 'aceito' | 'mantido' | null;
+  /** Primeira prioridade interna da task (P0–P3) · o banco grava e não muda. */
+  prioridadeInicial?: string | null;
   prioridadePedidoRespondidoEm?: number | null;
   /** Cliente respondeu a pendência do bloqueio (ms). O time decide se
    *  desbloqueia; limpa ao sair de bloqueado ou com nova pergunta. */

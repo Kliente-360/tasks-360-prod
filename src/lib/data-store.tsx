@@ -38,6 +38,7 @@ const COL_TO_FIELD: Record<string, keyof Task> = {
   prioridade_pedido_ate: 'prioridadePedidoAte',
   prioridade_pedida: 'prioridadePedida',
   prioridade_pedido_resultado: 'prioridadePedidoResultado',
+  prioridade_inicial: 'prioridadeInicial',
   prioridade_pedido_respondido_em: 'prioridadePedidoRespondidoEm',
   pendencia_respondida_em: 'pendenciaRespondidaEm',
   motivo_reabertura: 'motivoReabertura',

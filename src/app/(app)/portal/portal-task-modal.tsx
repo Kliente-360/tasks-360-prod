@@ -892,11 +892,12 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                 <div>
                   <div className="pmodal-lbl">Prioridade inicial</div>
                   <div>
-                    {/* Sem escolha na abertura: vale a prioridade definida pelo time */}
+                    {/* Sem escolha na abertura: a primeira prioridade definida
+                        pelo time (fixa · não muda ao aceitar pedido de prioridade) */}
                     {task.prioridadeSolicitadaCliente
                       ? PRIO_CLIENTE_LABEL[task.prioridadeSolicitadaCliente]
-                      : prioClienteAtual
-                        ? PRIO_CLIENTE_LABEL[prioClienteAtual]
+                      : task.prioridadeInicial && PRIO_INTERNA_CLIENTE[task.prioridadeInicial]
+                        ? PRIO_CLIENTE_LABEL[PRIO_INTERNA_CLIENTE[task.prioridadeInicial]]
                         : '—'}
                   </div>
                 </div>
