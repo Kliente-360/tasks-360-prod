@@ -1478,6 +1478,7 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
   overflow: hidden;
 }
 .tmodal-pedido-prio-head {
+  flex: none;
   display: flex; align-items: center; gap: 8px;
   padding: 10px 14px;
   background: var(--warn-soft);
@@ -3316,8 +3317,12 @@ body {
    campo de mensagem fixo. No mobile segue uma coluna só, rolando inteira. */
 @media (min-width: 900px) {
   .pmodal:not(.pmodal-narrow) { height: min(880px, 92vh); }
-  .pmodal:not(.pmodal-narrow) .pmodal-scroll { overflow: hidden; }
-  .pmodal:not(.pmodal-narrow) .pmodal-body { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  /* O modal inteiro rola quando falta altura (tela baixa, faixa de pendência
+     ou de homologação aberta). O corpo ocupa o espaço que sobra, mas nunca
+     menos que 440px: ao rolar, etapas e faixa sobem e a conversa, com o
+     campo de mensagem, ocupa a tela. Com espaço sobrando, nada rola por fora. */
+  .pmodal:not(.pmodal-narrow) .pmodal-scroll { overflow-y: auto; overscroll-behavior: contain; scroll-behavior: smooth; }
+  .pmodal:not(.pmodal-narrow) .pmodal-body { flex: 1 0 440px; min-height: 0; grid-template-rows: minmax(0, 1fr); }
   .pmodal:not(.pmodal-narrow) .pmodal-col-main { overflow-y: auto; min-height: 0; }
   .pmodal:not(.pmodal-narrow) .pmodal-col-convo { min-height: 0; }
   .pmodal:not(.pmodal-narrow) .pmodal-convo { min-height: 0; overflow-y: auto; padding-bottom: 12px; }
@@ -3562,3 +3567,22 @@ body {
   border-left: 2px solid color-mix(in srgb, var(--danger) 40%, transparent);
   padding: 2px 0 2px 12px; color: var(--ink);
 }
+
+/* Rolagem com acabamento: barra fina e discreta nas áreas do modal */
+.pmodal-scroll, .pmodal-col-main, .pmodal-convo, .tmodal-pedido-prio-body {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--ink) 22%, transparent) transparent;
+}
+.pmodal-scroll::-webkit-scrollbar, .pmodal-col-main::-webkit-scrollbar, .pmodal-convo::-webkit-scrollbar { width: 8px; }
+.pmodal-scroll::-webkit-scrollbar-thumb, .pmodal-col-main::-webkit-scrollbar-thumb, .pmodal-convo::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box;
+}
+.pmodal-scroll::-webkit-scrollbar-thumb:hover, .pmodal-col-main::-webkit-scrollbar-thumb:hover, .pmodal-convo::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--ink) 32%, transparent);
+}
+
+/* Modal interno do time: o pedido de prioridade do cliente não pode
+   espremer o formulário em telas baixas; acima de ~40% da altura, rola
+   por dentro */
+.tmodal-pedido-prio { max-height: 42vh; display: flex; flex-direction: column; }
+.tmodal-pedido-prio-body { overflow-y: auto; min-height: 0; }
