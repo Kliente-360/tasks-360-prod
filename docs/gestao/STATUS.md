@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.276 · **Atualizado**: 23/10/2026 · branch `main`
+> **Versão**: v1.03.278 · **Atualizado**: 23/10/2026 · branch `main`
 
 ---
 
@@ -336,7 +336,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 ## 🎯 NEXT · ordem definida (out/2026)
 
 **Bucket V · Visão cliente** — fechar o lançamento
-→ ✅ V.1 · V.2 · V.3 · V.4 · V.5 · V.8. ❌ V.6 e V.7 encerrados como estão (logo e tour descartados). Resta: **V.9 (walkthrough final logado como cliente)** · 🟡 quase fechado: o Pão e Talho já usa o portal em produção desde ~20/10 e os ajustes do uso real saíram até v1.03.276. Falta conferir: dark mode, um usuário somente leitura e o primeiro acesso de um cliente novo (correção da v1.03.276)
+→ ✅ V.1 · V.2 · V.3 · V.4 · V.5 · V.8. ❌ V.6 e V.7 encerrados como estão (logo e tour descartados). ✅ **V.9 fechado (23/10)** · cliente testou e aprovou. **Bucket V encerrado.**
 
 **Bucket T · Adoção timesheet (paralelo baixo custo)**
 → T.1 ✅. Próximos: T.6 (trava no concluir · 0.5d · quick win) → T.4 (bulk retroativo) → T.2 (card "horas hoje")
@@ -344,8 +344,8 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 **C.10 · analytics na UI · polir o que foi publicado**
 → Parcial já publicado no Briefing (~38 cards). Pendente: versão Dashboard com widgets visuais refinados + integração nos KPIs · ~1 semana
 
-**Adoção · primeira leitura** (≈2 semanas após v1.03.242, fim de out/2026)
-→ abrir `/adocao` com 30 dias e decidir o que simplificar ou remover (funcionalidades nunca usadas, cronômetro do modal vs topo, uso de comentário externo, uso no celular). Serve de insumo para priorizar T e C.10
+**Adoção · primeira leitura feita (23/10, 8 dias de dados)** · revisão de qualidade aplicada em v1.03.277-278 (sessão com 30 min de inatividade, rótulo de campo nos cliques, área do clique, campos atualizados sem ruído, eventos `task_close` e `filtro`, contas de teste fora via `pessoas.conta_teste`)
+→ achados: timesheet praticamente sem uso (2 cronômetros, 0,9 h em 8 dias; horas digitadas no campo do modal); celular quase só no portal; Calendário e Timesheet sem nenhuma visita; 3 usuários do Pão e Talho com acesso e sem uso. **Segunda leitura** em ~2 semanas, com os dados limpos
 
 **Pendências operacionais**
 → confirmar com quem cuida das orgs Salesforce do VB, da CTF e da Bodytech se alguma automação rodou com os 206 `task.updated` redundantes de 21/10 (~10:56)
@@ -361,7 +361,7 @@ Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA
 
 ## Próximo passo imediato
 
-1. **Fechar V.9**: dark mode, usuário somente leitura e primeiro acesso de um cliente novo. Com isso o Bucket V acaba.
-2. **Primeira leitura da Adoção** (fim de outubro, ~2 semanas de dados desde a v1.03.242): o que simplificar ou remover.
-3. **T.6** (trava no concluir sem horas) como quick win.
+1. **Decidir com a leitura da Adoção**: o que fazer com Timesheet/cronômetro (adotar de verdade via Bucket T ou simplificar), Calendário e o celular do time.
+2. **T.6** (trava no concluir sem horas), se a decisão for adotar o timesheet.
+3. **Segunda leitura da Adoção** em ~2 semanas, já com os dados limpos.
 4. **C.10** (analytics no Dashboard).
