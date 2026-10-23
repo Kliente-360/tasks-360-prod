@@ -12,6 +12,7 @@ import { GlobalShortcuts } from '@/components/global-shortcuts';
 import { ServiceWorkerRegister } from '@/components/sw-register';
 import { AppSplash } from '@/components/app-splash';
 import { ClienteDesktopFab, MobileFab } from '@/components/mobile-fab';
+import { ClienteGuard } from '@/components/cliente-guard';
 import { TelemetryTracker } from '@/components/telemetry-tracker';
 import { BadgeSync } from '@/components/badge-sync';
 import { MobileTabShell } from '@/components/mobile-tab-shell';
@@ -42,6 +43,7 @@ export default function AppLayout({
                     </div>
                     <MobileFab />
                     <ClienteDesktopFab />
+                    <ClienteGuard />
                     <TelemetryTracker />
                     <BadgeSync />
                     </MobileHelpProvider>

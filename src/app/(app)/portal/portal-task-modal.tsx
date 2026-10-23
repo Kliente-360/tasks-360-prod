@@ -407,9 +407,16 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
     if (taskId) void carregar(taskId);
   }, [taskId, carregar]);
 
-  // Na aba Conversa do celular, abre ancorada na mensagem mais recente
+  // Ao abrir, o modal começa sempre no topo (faixa de pendência e etapas
+  // visíveis). Só a aba Conversa do celular desce até a mensagem mais
+  // recente; no computador a conversa tem rolagem própria e já ancora no fim.
+  const ehCelular = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
   useEffect(() => {
-    if (abaMobile !== 'conversa') return;
+    const el = scrollRef.current;
+    if (el) el.scrollTop = 0;
+  }, [taskId]);
+  useEffect(() => {
+    if (abaMobile !== 'conversa' || !ehCelular()) return;
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [abaMobile, comments.length]);

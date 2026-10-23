@@ -73,7 +73,15 @@ export async function middleware(request: NextRequest) {
       .select('role')
       .eq('user_id', user.id)
       .maybeSingle();
-    const role = pessoa?.role as 'admin' | 'interno' | 'cliente' | undefined;
+    let role = pessoa?.role as 'admin' | 'interno' | 'cliente' | undefined;
+    // Primeiro acesso: a pessoa ainda não está vinculada ao login. Sem a
+    // role, o cliente caía em /foco (tela do time, vazia) até dar F5. O RPC
+    // vincula pelo e-mail do JWT (security definer) e devolve a role.
+    if (!pessoa) {
+      const { data: vinculada } = await supabase.rpc('app_link_current_user_to_pessoa');
+      const linha = Array.isArray(vinculada) ? vinculada[0] : vinculada;
+      role = (linha as { role?: string } | null)?.role as typeof role;
+    }
 
     // "/" → redireciona por role
     if (pathname === '/') {
