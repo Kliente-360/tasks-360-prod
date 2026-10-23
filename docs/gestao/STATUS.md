@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.266 · **Atualizado**: 20/10/2026 · branch `main`
+> **Versão**: v1.03.276 · **Atualizado**: 23/10/2026 · branch `main`
 
 ---
 
@@ -189,6 +189,14 @@ Sprint do Bucket V com o Pão e Talho/Bodytech como referência. O portal deixou
 - ✅ **Manual do cliente** reescrito em linguagem simples e direta (v1.03.264)
 - ✅ **CI** · job e2e em `ubuntu-24.04` (Playwright 1.60 não suporta o ubuntu-26.04 do `ubuntu-latest`); voltar quando o Playwright suportar
 - ✅ **Correções de feedback da Jéssica (v1.03.273-274)** · gravações soltas do Supabase que nunca executavam (`void sb...insert()`): histórico do aceite de prioridade, Kanban, Calendário, captura rápida, reset da pendência · helper `emSegundoPlano()`. Aviso de comentário do cliente via trigger `trg_notif_comentario_cliente`. Prioridade inicial fixa em `tasks.prioridade_inicial` (vale a partir de agora; tasks antigas ficam como estão, decisão do Felipe)
+- ✅ **Portal · visual e uso real (v1.03.267-272, 275-276)** · pedidos vindos do uso da Jéssica Silva (cliente Pão e Talho) e da Jessica do time
+  - Seção **Atrasadas** em vermelho (recolhível, some sem itens) no lugar dos 5 KPIs, que repetiam os contadores das colunas e pareciam títulos delas
+  - Acabamento sem pills e contornos fortes: seções e faixas com borda neutra + filete colorido à esquerda, cantos de 6px; linhas com título-link e situação em texto à direita ("homologação pendente há 13d", "atrasada há 7d"); etiquetas do modal no padrão da prioridade; pergunta da pendência como citação; "Responder" abaixo do campo; valor esperado alinhado
+  - Nova solicitação: "Descrição" no lugar de "O que você precisa?", título do modal acompanha o digitado, sem "opcional", dica de colar print na linha do rótulo; dica de ⌘V/Ctrl+V nos campos de mensagem (portal e time)
+  - Celular: sem as seções aguardando você e atrasadas (filtros cobrem); visão qualitativa mantida
+  - Modal da tarefa rola por inteiro em telas baixas (corpo com 440px mínimos, colunas com rolagem própria, barra discreta) e abre sempre no topo; banner de prioridade do modal interno limitado a ~40% da tela
+  - **Primeiro acesso do cliente** caía em `/foco` vazio até o F5 (pessoa ainda não vinculada ao login): o middleware vincula pelo RPC `app_link_current_user_to_pessoa` e o `ClienteGuard` no app leva ao portal
+  - Manual do cliente revisado: prints no celular, Evidências, novas linhas das seções, atrasadas
 - ⚠️ **Incidente 21/10** · o backfill de `prioridade_inicial` alterou 206 tasks do Salesforce (VB, CTF, Bodytech) e o trigger `webhook_task_update` disparou 206 `task.updated` redundantes (dados iguais aos do Salesforce). Regra: update em massa em `tasks` exclui tasks Salesforce com webhook ligado, ou desliga o trigger com aprovação
 - ✅ **Telemetria própria** · `usage_events` (autoria carimbada no banco, insert por qualquer logado, leitura só admin), rollup `usage_daily` + retenção de 90 dias (cron 03:30). Captura automática de sessão, troca de tela e cliques; eventos de negócio para abrir/criar/atualizar task (com campos e origem), comentários (externo, interno, resposta, do cliente), cronômetro do modal vs do topo, lançamento de horas, bulk do Backlog, busca, export, manual, notificações, triagem e ações do portal
 - ✅ **Tela Adoção** (`/adocao`, admin, menu do perfil) · RPCs `app_adocao` e `app_adocao_detalhes`: funcionalidades usadas e nunca usadas no período, telas, pessoas (inclusive convidadas sem uso), origem das ações, comentários, campos editados, abas do modal e cliques mais frequentes
@@ -328,7 +336,7 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 ## 🎯 NEXT · ordem definida (out/2026)
 
 **Bucket V · Visão cliente** — fechar o lançamento
-→ ✅ V.1 · V.2 · V.3 · V.4 · V.5 · V.8. ❌ V.6 e V.7 encerrados como estão (logo e tour descartados). Resta: **V.9 (walkthrough final logado como cliente)** · 🟡 em andamento: Felipe e Jessica rodaram o fluxo como cliente em 16/10 (nova solicitação, triagem/recusa, pedido de prioridade, homologação, sino) e os ajustes saíram em v1.03.248-262. Falta: celular real como cliente, dark mode, usuário somente leitura e a ajuda revisada
+→ ✅ V.1 · V.2 · V.3 · V.4 · V.5 · V.8. ❌ V.6 e V.7 encerrados como estão (logo e tour descartados). Resta: **V.9 (walkthrough final logado como cliente)** · 🟡 quase fechado: o Pão e Talho já usa o portal em produção desde ~20/10 e os ajustes do uso real saíram até v1.03.276. Falta conferir: dark mode, um usuário somente leitura e o primeiro acesso de um cliente novo (correção da v1.03.276)
 
 **Bucket T · Adoção timesheet (paralelo baixo custo)**
 → T.1 ✅. Próximos: T.6 (trava no concluir · 0.5d · quick win) → T.4 (bulk retroativo) → T.2 (card "horas hoje")
@@ -338,6 +346,9 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 **Adoção · primeira leitura** (≈2 semanas após v1.03.242, fim de out/2026)
 → abrir `/adocao` com 30 dias e decidir o que simplificar ou remover (funcionalidades nunca usadas, cronômetro do modal vs topo, uso de comentário externo, uso no celular). Serve de insumo para priorizar T e C.10
+
+**Pendências operacionais**
+→ confirmar com quem cuida das orgs Salesforce do VB, da CTF e da Bodytech se alguma automação rodou com os 206 `task.updated` redundantes de 21/10 (~10:56)
 
 **Decidir · rotina de limpeza de anexos** (pendente de decisão do Felipe)
 → cron `cleanup-task-attachments-daily` (03:17) chama a edge `cleanup-attachments`, que apaga anexos de tasks concluídas há mais de 30 dias. Hoje não roda de fato: a URL no cron está com o placeholder `<project-ref>`. Com as evidências do cliente, corrigir a URL faria os prints sumirem 30 dias após a entrega. Opções: desligar o cron de vez, ou corrigir a URL com prazo maior (ex.: 365 dias)
@@ -350,4 +361,7 @@ Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA
 
 ## Próximo passo imediato
 
-**Fechar V.9** com o que falta do walkthrough como cliente: celular real, dark mode, um usuário somente leitura e a leitura da ajuda atualizada. Com isso o Bucket V acaba. Depois, **T.6** (trava no concluir sem horas) como quick win, e a primeira leitura da Adoção no fim de outubro.
+1. **Fechar V.9**: dark mode, usuário somente leitura e primeiro acesso de um cliente novo. Com isso o Bucket V acaba.
+2. **Primeira leitura da Adoção** (fim de outubro, ~2 semanas de dados desde a v1.03.242): o que simplificar ou remover.
+3. **T.6** (trava no concluir sem horas) como quick win.
+4. **C.10** (analytics no Dashboard).
