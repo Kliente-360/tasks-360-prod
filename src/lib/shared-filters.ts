@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { track } from '@/lib/telemetry';
 
 /**
  * Store global de filtros canônicos compartilhados entre as abas que usam
@@ -75,6 +76,7 @@ export function setSharedFilter<K extends keyof SharedFilters>(
   hydrate();
   if (state[key] === value) return;
   state = { ...state, [key]: value };
+  registrarFiltro([String(key)], value);
   notify();
 }
 
@@ -91,11 +93,19 @@ export function patchSharedFilters(patch: Partial<SharedFilters>) {
   }
   if (!changed) return;
   state = next;
+  registrarFiltro(Object.keys(patch), undefined);
   notify();
+}
+
+/** Telemetria · qual filtro mudou e se foi aplicado ou limpo (sem o valor). */
+function registrarFiltro(campos: string[], valor: unknown) {
+  const vazio = valor === '' || valor == null || (Array.isArray(valor) && valor.length === 0);
+  track('filtro', { alvo: campos.join(','), props: { campos, acao: valor === undefined ? 'varios' : vazio ? 'limpou' : 'aplicou' } });
 }
 
 export function clearSharedFilters() {
   hydrate();
+  track('filtro', { alvo: 'limpar', props: { acao: 'limpou_tudo' } });
   state = EMPTY_SHARED_FILTERS;
   notify();
 }

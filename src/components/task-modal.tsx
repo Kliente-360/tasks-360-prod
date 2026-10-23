@@ -56,6 +56,17 @@ import { ANEXO_COLS, atalhoColar, enviarImagem, imagensDoClipboard, type Anexo }
 import { BotaoAnexarImagem, ImagensPendentes, juntarPendentes, MiniaturasAnexos } from '@/components/anexos-ui';
 import { emSegundoPlano } from '@/lib/em-segundo-plano';
 
+/** Telemetria · campos que a pessoa edita no modal (o resto é derivado). */
+const CAMPOS_EDITAVEIS: (keyof Task)[] = [
+  'titulo', 'descricao', 'clienteId', 'projetoId', 'pessoaId', 'prioridade', 'tipoTrabalho',
+  'esforco', 'complexidade', 'prazo', 'subetapa', 'bloqueadoPor', 'bloqueadaPorTasks',
+  'visivelCliente', 'checklist', 'escopo', 'tempoRealHoras', 'privada', 'radar',
+  'solucaoImplementada', 'valorEsperado', 'criterioAceite', 'valorEntregue', 'motivoReabertura',
+];
+const CAMPOS_TARDIOS: (keyof Task)[] = [
+  'descricao', 'solucaoImplementada', 'valorEsperado', 'criterioAceite', 'valorEntregue', 'motivoReabertura',
+];
+
 /** Imagens por mensagem, para o CommentBubble sem passar props em cascata. */
 const AnexosMsgContext = createContext<{
   porMsg: Map<string, Anexo[]>;
@@ -423,6 +434,22 @@ export function TaskModalProvider({ children }: { children: React.ReactNode }) {
     syncUrlTaskParam(null);
   }, [syncUrlTaskParam]);
 
+  // Telemetria · quanto tempo a tarefa ficou aberta (ao fechar ou trocar)
+  useEffect(() => {
+    if (!openTaskId) return;
+    const inicio = Date.now();
+    const id = openTaskId;
+    return () => {
+      const segundos = Math.round((Date.now() - inicio) / 1000);
+      if (segundos >= 1) {
+        track('task_close', {
+          task_id: id === '__new__' ? null : id,
+          props: { segundos, nova: id === '__new__' },
+        });
+      }
+    };
+  }, [openTaskId]);
+
   // Hidrata modal a partir de ?task=<uuid> na URL. Lê direto de
   // window.location pra não acionar CSR bailout do Next (useSearchParams
   // força prerender dinâmico em todas as páginas (app)/*). Roda quando
@@ -680,6 +707,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   });
   const newCommentRef = useRef<HTMLTextAreaElement | null>(null);
   const [newCommentPublico, setNewCommentPublico] = useState(false);
+  // Telemetria · valores dos campos de carga tardia, como carregados no modal
+  const baseTardiaRef = useRef<Partial<Record<keyof Task, unknown>>>({});
   const [imagensMsg, setImagensMsg] = useState<File[]>([]);
   // Detecta viewport mobile pra ajustar placeholder do composer
   const [isMobileVp, setIsMobileVp] = useState(false);
@@ -857,9 +886,23 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           }));
           setDescricaoLoading(false);
           skipNextDirty.current = true;
+          baseTardiaRef.current = {
+            descricao: data?.descricao ?? '',
+            solucaoImplementada: data?.solucao_implementada ?? '',
+            valorEsperado: data?.valor_esperado ?? '',
+            criterioAceite: data?.criterio_aceite ?? '',
+            valorEntregue: data?.valor_entregue ?? '',
+            motivoReabertura: data?.motivo_reabertura ?? '',
+          };
         }
       } else {
         if (!cancelled) setDescricaoLoading(false);
+        const cur = editingRef.current;
+        baseTardiaRef.current = {
+          descricao: cur.descricao, solucaoImplementada: cur.solucaoImplementada,
+          valorEsperado: cur.valorEsperado, criterioAceite: cur.criterioAceite,
+          valorEntregue: cur.valorEntregue, motivoReabertura: cur.motivoReabertura,
+        };
       }
       // Comments
       const { data: cdata } = await sb
@@ -1045,12 +1088,16 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
 
         // Log de mudanças no histórico (status + field changes)
         if (prev) {
-          // Telemetria · quais campos o usuário alterou neste salvamento
-          const IGNORAR = new Set(['statusEm', 'subetapaEm', 'andamentoEm', 'criadoEm', 'webhookSyncStatus', 'webhookSyncError', 'homologacaoEm', 'aprovadoEm']);
-          const norm = (v: unknown) => JSON.stringify(v ?? '');
-          const campos = (Object.keys(e) as (keyof Task)[]).filter(
-            (k) => !IGNORAR.has(k) && norm(prev[k]) !== norm(e[k]),
-          );
+          // Telemetria · só campos que a pessoa edita no modal. Campos de
+          // carga tardia (descrição etc.) não vêm no store: comparam com o
+          // valor carregado no modal, senão todo salvamento contava como edição.
+          const norm = (v: unknown) =>
+            v == null || v === '' || (Array.isArray(v) && v.length === 0) ? '' : JSON.stringify(v);
+          const campos = CAMPOS_EDITAVEIS.filter((k) => {
+            const antes = prev[k] !== undefined ? prev[k] : baseTardiaRef.current[k];
+            return norm(antes) !== norm(e[k]);
+          });
+          for (const k of CAMPOS_TARDIOS) baseTardiaRef.current[k] = e[k];
           if (campos.length) track('task_update', { task_id: e.id, props: { campos, origem: 'modal' } });
           const TRACKED: { jsKey: keyof Task; field: string; fmt: (v: unknown) => string | null }[] = [
             { jsKey: 'prazo', field: 'prazo', fmt: (v) => (v as string) || null },

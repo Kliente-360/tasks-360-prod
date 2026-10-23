@@ -415,6 +415,16 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
     const el = scrollRef.current;
     if (el) el.scrollTop = 0;
   }, [taskId]);
+
+  // Telemetria · quanto tempo a tarefa ficou aberta no portal
+  useEffect(() => {
+    if (!taskId) return;
+    const inicio = Date.now();
+    return () => {
+      const segundos = Math.round((Date.now() - inicio) / 1000);
+      if (segundos >= 1) track('task_close', { task_id: taskId, props: { segundos, portal: true } });
+    };
+  }, [taskId]);
   useEffect(() => {
     if (abaMobile !== 'conversa' || !ehCelular()) return;
     const el = scrollRef.current;

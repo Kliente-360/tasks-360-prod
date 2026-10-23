@@ -19,7 +19,7 @@ begin
 
   with ev as (
     select e.*, coalesce(p.nome, '—') as pessoa_nome, c.nome as cliente_nome
-    from usage_events e
+    from usage_events_reais e
     left join pessoas p on p.id = e.pessoa_id
     left join clientes c on c.id = e.cliente_id
     where e.criado_em >= v_desde

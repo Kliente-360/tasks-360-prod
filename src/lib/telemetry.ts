@@ -29,17 +29,32 @@ let ativo = false;
 let fila: Evento[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 
+const INATIVIDADE_MS = 30 * 60 * 1000;
+
+/** Sessão = atividade contínua na aba; 30 min parada abre uma nova. */
 function sessaoId(): string {
   try {
+    const agora = Date.now();
     let id = sessionStorage.getItem('k360-sessao');
-    if (!id) {
+    const ultimo = Number(sessionStorage.getItem('k360-sessao-ultimo') || 0);
+    if (!id || agora - ultimo > INATIVIDADE_MS) {
       id = crypto.randomUUID();
       sessionStorage.setItem('k360-sessao', id);
+      novaSessao = true;
     }
+    sessionStorage.setItem('k360-sessao-ultimo', String(agora));
     return id;
   } catch {
     return 'sem-sessao';
   }
+}
+
+let novaSessao = false;
+/** True uma vez quando a última chamada abriu sessão nova. */
+export function consumirNovaSessao(): boolean {
+  const v = novaSessao;
+  novaSessao = false;
+  return v;
 }
 
 export function dispositivoAtual(): 'desktop' | 'mobile' {
@@ -57,13 +72,26 @@ export function track(
 ) {
   if (typeof window === 'undefined' || !ativo) return;
   const taskId = extra.task_id && UUID_RE.test(extra.task_id) ? extra.task_id : null;
+  const sessao = sessaoId();
+  // Voltou depois de 30 min parado: registra o início da nova sessão
+  if (consumirNovaSessao() && evento !== 'session_start') {
+    fila.push({
+      evento: 'session_start',
+      rota: window.location.pathname.slice(0, 120),
+      alvo: null,
+      task_id: null,
+      dispositivo: dispositivoAtual(),
+      session_id: sessao,
+      props: { retomada: true, largura: window.innerWidth },
+    });
+  }
   fila.push({
     evento: evento.slice(0, 60),
     rota: window.location.pathname.slice(0, 120),
     alvo: extra.alvo ? String(extra.alvo).replace(/\s+/g, ' ').trim().slice(0, 120) : null,
     task_id: taskId,
     dispositivo: dispositivoAtual(),
-    session_id: sessaoId(),
+    session_id: sessao,
     props: extra.props ?? {},
   });
   if (fila.length >= LOTE) void flushTelemetria();

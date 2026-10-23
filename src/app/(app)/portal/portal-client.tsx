@@ -211,7 +211,18 @@ export function PortalClient() {
     (kbProjeto ? 1 : 0) +
     (kbPrazo ? 1 : 0) +
     (kbPrio.size > 0 ? 1 : 0);
+  // Telemetria · filtros do portal (campo e ação, sem o valor)
+  useEffect(() => {
+    if (kbProjeto) track('filtro', { alvo: 'projeto', props: { campos: ['projeto'], acao: 'aplicou', tela: 'portal' } });
+  }, [kbProjeto]);
+  useEffect(() => {
+    if (kbPrazo) track('filtro', { alvo: 'prazo', props: { campos: ['prazo'], acao: 'aplicou', tela: 'portal', prazo: kbPrazo } });
+  }, [kbPrazo]);
+  useEffect(() => {
+    if (kbPrio.size) track('filtro', { alvo: 'prioridade', props: { campos: ['prioridade'], acao: 'aplicou', tela: 'portal' } });
+  }, [kbPrio]);
   const clearFilters = () => {
+    track('filtro', { alvo: 'limpar', props: { acao: 'limpou_tudo', tela: 'portal' } });
     setQDraft('');
     setKbProjeto('');
     setKbPrazo('');
