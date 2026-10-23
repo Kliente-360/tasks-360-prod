@@ -1092,7 +1092,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
           // carga tardia (descrição etc.) não vêm no store: comparam com o
           // valor carregado no modal, senão todo salvamento contava como edição.
           const norm = (v: unknown) =>
-            v == null || v === '' || (Array.isArray(v) && v.length === 0) ? '' : JSON.stringify(v);
+            v == null || v === '' || v === false || (Array.isArray(v) && v.length === 0) ? '' : JSON.stringify(v);
           const campos = CAMPOS_EDITAVEIS.filter((k) => {
             const antes = prev[k] !== undefined ? prev[k] : baseTardiaRef.current[k];
             return norm(antes) !== norm(e[k]);
