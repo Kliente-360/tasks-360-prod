@@ -113,6 +113,8 @@ export function BacklogClient() {
     removeTasks,
     viewerRole,
     currentPessoa,
+    todasConcluidas,
+    setTodasConcluidas,
   } = useData();
   const isAdmin = viewerRole === 'admin';
   const clientesById = useClientesById();
@@ -396,7 +398,8 @@ export function BacklogClient() {
     setCollapsedGroups([]);
     setSortKeys([]);
     clearSharedFilters();
-  }, []);
+    if (todasConcluidas) void setTodasConcluidas(false);
+  }, [todasConcluidas, setTodasConcluidas]);
 
   // g+l global → limpa filtros desta tela.
   useEffect(() => {
@@ -652,6 +655,19 @@ export function BacklogClient() {
                   kind: 'toggle',
                   active: f.origem === 'humano',
                   onClick: () => setF({ ...f, origem: f.origem === 'humano' ? '' : 'humano' }),
+                },
+                {
+                  // Histórico: carrega concluídas sem o limite de 60 dias e
+                  // já mostra o status Concluído; desligar volta para Abertas
+                  key: 'todas-concluidas',
+                  label: 'Todas as concluídas',
+                  kind: 'toggle',
+                  active: todasConcluidas,
+                  onClick: () => {
+                    const liga = !todasConcluidas;
+                    void setTodasConcluidas(liga);
+                    setF({ ...f, status: liga ? 'concluido' : f.status === 'concluido' ? 'abertas' : f.status });
+                  },
                 },
               ] satisfies MoreMenuItem[]}
             />

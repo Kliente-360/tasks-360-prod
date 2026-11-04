@@ -104,11 +104,16 @@ interface DataState {
   viewerRole: 'admin' | 'interno' | 'cliente' | null;
   /** Atalho pra currentPessoa.is_ceo. */
   isCEO: boolean;
+  /** Concluídas de qualquer data carregadas (filtro "Todas as concluídas").
+   *  Padrão: só as concluídas da janela de dias recente. */
+  todasConcluidas: boolean;
 }
 
 interface DataActions {
   /** Refetch completo (botão "recarregar" / fallback). */
   refreshAll: () => Promise<void>;
+  /** Liga/desliga o carregamento das concluídas sem limite de data. */
+  setTodasConcluidas: (v: boolean) => Promise<void>;
   /** Mutações locais — escritas no banco continuam via supabase client direto. */
   patchTask: (id: string, changes: Partial<Task>) => Task | null;
   patchTasks: (ids: string[], changes: Partial<Task>) => void;
@@ -238,16 +243,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   }, [tasks, toast]);
 
+  // Concluídas antigas só entram quando alguém liga "Todas as concluídas"
+  // (busca de histórico). Ref para o refetch respeitar a escolha.
+  const [todasConcluidas, setTodasConcluidasState] = useState(false);
+  const todasConcluidasRef = useRef(false);
+
   const refreshTasks = useCallback(async () => {
-    const cutoff = cutoffIso();
-    const { data, error } = await sb
-      .from('tasks')
-      .select(TASK_LIGHT_COLS)
-      .or(`status.neq.concluido,status_em.gte.${cutoff}`)
-      .order('criado_em', { ascending: false });
+    let q = sb.from('tasks').select(TASK_LIGHT_COLS);
+    if (!todasConcluidasRef.current) q = q.or(`status.neq.concluido,status_em.gte.${cutoffIso()}`);
+    const { data, error } = await q.order('criado_em', { ascending: false });
     if (error) return;
     setTasks((data ?? []).map(taskFromDb));
   }, [sb]);
+
+  const setTodasConcluidas = useCallback(
+    async (v: boolean) => {
+      todasConcluidasRef.current = v;
+      setTodasConcluidasState(v);
+      await refreshTasks();
+    },
+    [refreshTasks],
+  );
 
   const refreshClientes = useCallback(async () => {
     const { data, error } = await sb
@@ -612,7 +628,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       currentPessoa,
       viewerRole,
       isCEO,
+      todasConcluidas,
       refreshAll,
+      setTodasConcluidas,
       patchTask,
       patchTasks,
       replaceTask,
@@ -632,8 +650,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [
       visibleTasks, visibleClientes, visibleProjetos, pessoas, timeEntries,
       loading, refreshing, error, realtimeStatus,
-      currentPessoa, viewerRole, isCEO,
-      refreshAll,
+      currentPessoa, viewerRole, isCEO, todasConcluidas,
+      refreshAll, setTodasConcluidas,
       patchTask, patchTasks, replaceTask, upsertTask, removeTask, removeTasks,
       upsertCliente, removeCliente, upsertProjeto, removeProjeto, upsertPessoa, removePessoa,
       upsertTimeEntry, removeTimeEntry,

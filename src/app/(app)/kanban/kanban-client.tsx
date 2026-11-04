@@ -45,7 +45,7 @@ const EMPTY = '__empty__';
 const MACROS = ['backlog', 'andamento', 'bloqueado', 'concluido'] as const;
 
 export function KanbanClient() {
-  const { tasks, patchTask, replaceTask, loading, error, timeEntries } = useData();
+  const { tasks, patchTask, replaceTask, loading, error, timeEntries, todasConcluidas, setTodasConcluidas } = useData();
   const { openEdit } = useTaskModal();
   const toast = useToast();
   const clientesById = useClientesById();
@@ -400,6 +400,7 @@ export function KanbanClient() {
                 setOnlyHumano(false);
                 setOnlyRadar(false);
                 clearSharedFilters();
+                if (todasConcluidas) void setTodasConcluidas(false);
               }}
               clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
               projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
@@ -413,6 +414,8 @@ export function KanbanClient() {
                 { key: 'radar', label: 'Somente no Radar do CEO', kind: 'toggle', active: onlyRadar, onClick: () => setOnlyRadar((v) => !v) },
                 { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
                 { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
+                // Histórico: sem o limite de 60 dias das concluídas
+                { key: 'todas-concluidas', label: 'Todas as concluídas', kind: 'toggle', active: todasConcluidas, onClick: () => void setTodasConcluidas(!todasConcluidas) },
               ] satisfies MoreMenuItem[]}
             />
           }
