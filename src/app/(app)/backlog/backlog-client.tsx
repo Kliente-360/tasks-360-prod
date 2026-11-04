@@ -389,6 +389,12 @@ export function BacklogClient() {
   }, [filtered]);
 
 
+  // "Todas as concluídas" ligado em outra tela (Kanban, Calendário): o
+  // Backlog acompanha e passa a mostrar as concluídas
+  useEffect(() => {
+    if (todasConcluidas) setF((cur) => (cur.status === 'abertas' ? { ...cur, status: 'concluido' } : cur));
+  }, [todasConcluidas]);
+
   const clearFilters = useCallback(() => {
     setF(DEFAULT_FILTERS);
     setQDraft('');

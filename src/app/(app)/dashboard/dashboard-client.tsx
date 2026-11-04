@@ -119,7 +119,22 @@ export function DashboardClient() {
   const kpiAtrasadas = useMemo(() => filteredTasks.filter((t) => atrasada(t) && t.status !== 'concluido'), [filteredTasks]);
 
   // ── Velocidade da operação (movida pro Dashboard em jun/2026)
-  const vel = useMemo(() => computeVelocidade(baseTasks), [baseTasks]);
+  // Segue os filtros de cliente, projeto, responsável e origem. O de prazo
+  // fica de fora: throughput e ciclo "só das atrasadas" perdem o sentido.
+  const velTasks = useMemo(
+    () =>
+      baseTasks.filter(
+        (t) =>
+          (!filterCliente || t.clienteId === filterCliente) &&
+          (!filterPessoa || t.pessoaId === filterPessoa) &&
+          (!filterProjeto || t.projetoId === filterProjeto) &&
+          (!onlyIA || t.criadoPorIa) &&
+          (!onlyHumano || !t.criadoPorIa),
+      ),
+    [baseTasks, filterCliente, filterPessoa, filterProjeto, onlyIA, onlyHumano],
+  );
+  const vel = useMemo(() => computeVelocidade(velTasks), [velTasks]);
+  const velFiltrada = !!(filterCliente || filterPessoa || filterProjeto || onlyIA || onlyHumano);
 
   // ── Entregas + calendário
   const entregasSemanas = useMemo(() => computeEntregasSemanas(filteredTasks), [filteredTasks]);
@@ -322,7 +337,7 @@ export function DashboardClient() {
            Substituiu o grid de 4 KPIs (Em andamento/Backlog/Bloqueadas/Atrasadas)
            + a chart Throughput 12 semanas — densidade equivalente, mais
            acionável (foca em ritmo + previsibilidade vs estado bruto). */}
-      <VelocidadeOperacao vel={vel} />
+      <VelocidadeOperacao vel={vel} filtrada={velFiltrada} />
 
       {/* ── 2. Entregas + Calendário ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">

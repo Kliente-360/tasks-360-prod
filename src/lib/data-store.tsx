@@ -107,6 +107,8 @@ interface DataState {
   /** Concluídas de qualquer data carregadas (filtro "Todas as concluídas").
    *  Padrão: só as concluídas da janela de dias recente. */
   todasConcluidas: boolean;
+  /** Buscando as concluídas antigas no banco. */
+  carregandoConcluidas: boolean;
 }
 
 interface DataActions {
@@ -247,6 +249,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   // (busca de histórico). Ref para o refetch respeitar a escolha.
   const [todasConcluidas, setTodasConcluidasState] = useState(false);
   const todasConcluidasRef = useRef(false);
+  const [carregandoConcluidas, setCarregandoConcluidas] = useState(false);
 
   const refreshTasks = useCallback(async () => {
     let q = sb.from('tasks').select(TASK_LIGHT_COLS);
@@ -256,13 +259,40 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setTasks((data ?? []).map(taskFromDb));
   }, [sb]);
 
+  // Liga: busca só as concluídas antigas (fora da janela) e junta às que já
+  // estão na memória · antes recarregava as ~1.600 tasks do zero.
+  // Desliga: tira as antigas da memória, sem ir ao banco.
   const setTodasConcluidas = useCallback(
     async (v: boolean) => {
+      if (todasConcluidasRef.current === v) return;
       todasConcluidasRef.current = v;
       setTodasConcluidasState(v);
-      await refreshTasks();
+      const cutoffMs = new Date(cutoffIso()).getTime();
+      if (!v) {
+        setTasks((cur) => cur.filter((t) => t.status !== 'concluido' || (t.statusEm ?? 0) >= cutoffMs));
+        return;
+      }
+      setCarregandoConcluidas(true);
+      const { data, error } = await sb
+        .from('tasks')
+        .select(TASK_LIGHT_COLS)
+        .eq('status', 'concluido')
+        .lt('status_em', cutoffIso())
+        .order('status_em', { ascending: false });
+      setCarregandoConcluidas(false);
+      if (error) {
+        toast.error('Não foi possível carregar as concluídas antigas.');
+        todasConcluidasRef.current = false;
+        setTodasConcluidasState(false);
+        return;
+      }
+      const antigas = (data ?? []).map(taskFromDb);
+      setTasks((cur) => {
+        const ids = new Set(cur.map((t) => t.id));
+        return [...cur, ...antigas.filter((t) => !ids.has(t.id))];
+      });
     },
-    [refreshTasks],
+    [sb, toast],
   );
 
   const refreshClientes = useCallback(async () => {
@@ -629,6 +659,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       viewerRole,
       isCEO,
       todasConcluidas,
+      carregandoConcluidas,
       refreshAll,
       setTodasConcluidas,
       patchTask,
@@ -650,7 +681,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [
       visibleTasks, visibleClientes, visibleProjetos, pessoas, timeEntries,
       loading, refreshing, error, realtimeStatus,
-      currentPessoa, viewerRole, isCEO, todasConcluidas,
+      currentPessoa, viewerRole, isCEO, todasConcluidas, carregandoConcluidas,
       refreshAll, setTodasConcluidas,
       patchTask, patchTasks, replaceTask, upsertTask, removeTask, removeTasks,
       upsertCliente, removeCliente, upsertProjeto, removeProjeto, upsertPessoa, removePessoa,

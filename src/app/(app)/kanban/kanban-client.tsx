@@ -43,6 +43,9 @@ import { emSegundoPlano } from '@/lib/em-segundo-plano';
 
 const EMPTY = '__empty__';
 const MACROS = ['backlog', 'andamento', 'bloqueado', 'concluido'] as const;
+/** Cards desenhados por coluna antes do "Mostrar mais" · com o histórico
+ *  de concluídas ligado a coluna passava de 400 cards e travava a tela. */
+const CARDS_POR_COLUNA = 40;
 
 export function KanbanClient() {
   const { tasks, patchTask, replaceTask, loading, error, timeEntries, todasConcluidas, setTodasConcluidas } = useData();
@@ -98,6 +101,17 @@ export function KanbanClient() {
   }, [filters.cliente, filters.projeto, filters.pessoa, filters.prazo]);
   const [qDraft, setQDraft] = useState('');
   const [showArchived, setShowArchived] = useState(false);
+  const [limitesColuna, setLimitesColuna] = useState<Record<string, number>>({});
+  const limiteDe = (col: string) => limitesColuna[col] ?? CARDS_POR_COLUNA;
+  const mostrarMais = (col: string, total: number) => (
+    <button
+      type="button"
+      className="kcol-mais"
+      onClick={() => setLimitesColuna((cur) => ({ ...cur, [col]: limiteDe(col) + CARDS_POR_COLUNA }))}
+    >
+      Mostrar mais ({total - limiteDe(col)})
+    </button>
+  );
   const [onlyIA, setOnlyIA] = useState(false);
   const [onlyHumano, setOnlyHumano] = useState(false);
   const [onlyRadar, setOnlyRadar] = useState(false);
@@ -449,7 +463,7 @@ export function KanbanClient() {
                     </div>
                   )}
                 </div>
-                {colTasks.map((t) => (
+                {colTasks.slice(0, limiteDe(sub)).map((t) => (
                   <KCard
                     key={t.id}
                     t={t}
@@ -471,6 +485,7 @@ export function KanbanClient() {
                     draggable
                   />
                 ))}
+                {colTasks.length > limiteDe(sub) && mostrarMais(sub, colTasks.length)}
                 {colTasks.length === 0 && (
                   <div className="text-center text-muted text-xs py-8">—</div>
                 )}
@@ -497,7 +512,7 @@ export function KanbanClient() {
                     </div>
                   </div>
                 </div>
-                {colTasks.map((t) => (
+                {colTasks.slice(0, limiteDe(col)).map((t) => (
                   <KCard
                     key={t.id}
                     t={t}
@@ -513,6 +528,7 @@ export function KanbanClient() {
                     }
                   />
                 ))}
+                {colTasks.length > limiteDe(col) && mostrarMais(col, colTasks.length)}
                 {colTasks.length === 0 && (
                   <div className="text-center text-muted text-xs py-8">—</div>
                 )}

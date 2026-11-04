@@ -3586,3 +3586,19 @@ body {
    por dentro */
 .tmodal-pedido-prio { max-height: 42vh; display: flex; flex-direction: column; }
 .tmodal-pedido-prio-body { overflow-y: auto; min-height: 0; }
+
+/* Aviso de carregamento do histórico de concluídas */
+.carregando-concluidas {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: 6px;
+  background: var(--ink); color: var(--bg-elev);
+  font-size: 13px; font-weight: 500; box-shadow: var(--sh-lg);
+}
+.carregando-concluidas-ponto {
+  width: 8px; height: 8px; border-radius: 999px; background: var(--green);
+  animation: carregando-pulso 1s ease-in-out infinite;
+}
+@keyframes carregando-pulso { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+.kcol-mais { display: block; width: 100%; margin-top: 4px; padding: 8px; border: 1px dashed var(--line-strong); border-radius: 6px; background: transparent; color: var(--ink-soft); font-size: 12px; cursor: pointer; }
+.kcol-mais:hover { border-color: var(--green); color: var(--green); }

@@ -13,6 +13,7 @@ import { ServiceWorkerRegister } from '@/components/sw-register';
 import { AppSplash } from '@/components/app-splash';
 import { ClienteDesktopFab, MobileFab } from '@/components/mobile-fab';
 import { ClienteGuard } from '@/components/cliente-guard';
+import { CarregandoConcluidas } from '@/components/carregando-concluidas';
 import { TelemetryTracker } from '@/components/telemetry-tracker';
 import { BadgeSync } from '@/components/badge-sync';
 import { MobileTabShell } from '@/components/mobile-tab-shell';
@@ -44,6 +45,7 @@ export default function AppLayout({
                     <MobileFab />
                     <ClienteDesktopFab />
                     <ClienteGuard />
+                    <CarregandoConcluidas />
                     <TelemetryTracker />
                     <BadgeSync />
                     </MobileHelpProvider>

@@ -22,14 +22,17 @@ import type { VelocidadeMetrics } from '@/lib/analytics';
 
 interface VelocidadeOperacaoProps {
   vel: VelocidadeMetrics;
+  /** Filtros do Dashboard aplicados (cliente, projeto, responsável, origem). */
+  filtrada?: boolean;
 }
 
-export function VelocidadeOperacao({ vel }: VelocidadeOperacaoProps) {
+export function VelocidadeOperacao({ vel, filtrada = false }: VelocidadeOperacaoProps) {
   return (
     <div className="bg-elev border border-line rounded-xl overflow-hidden">
       <div className="px-3 md:px-4 py-3 border-b border-line flex items-center justify-between">
         <h2 className="text-sm font-semibold text-ink">Velocidade da operação</h2>
         <span className="text-[10px] text-muted">
+          {filtrada && <span className="text-[color:var(--green)] font-semibold">com filtros · </span>}
           throughput · ciclo · previsibilidade · 30d
         </span>
       </div>
