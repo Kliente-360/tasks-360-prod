@@ -62,7 +62,7 @@ function isoLocal(d: Date): string {
 }
 
 export function CalendarioClient() {
-  const { tasks, clientes, projetos, pessoas, patchTask, replaceTask, loading, error } = useData();
+  const { tasks, clientes, projetos, pessoas, patchTask, replaceTask, loading, error, todasConcluidas, setTodasConcluidas } = useData();
   const { openEdit } = useTaskModal();
   const toast = useToast();
   const clientesById = useClientesById();
@@ -399,6 +399,7 @@ export function CalendarioClient() {
                 setOnlyHumano(false);
                 setOnlyRadar(false);
                 clearSharedFilters();
+                if (todasConcluidas) void setTodasConcluidas(false);
               }}
               clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
               projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
@@ -412,6 +413,8 @@ export function CalendarioClient() {
                 { key: 'radar', label: 'Somente no Radar do CEO', kind: 'toggle', active: onlyRadar, onClick: () => setOnlyRadar((v) => !v) },
                 { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
                 { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
+                // Meses passados: concluídas sem o limite de 60 dias
+                { key: 'todas-concluidas', label: 'Todas as concluídas', kind: 'toggle', active: todasConcluidas, onClick: () => void setTodasConcluidas(!todasConcluidas) },
               ] satisfies MoreMenuItem[]}
             />
           }
