@@ -10,19 +10,32 @@
  *   - post_standup      : publica/atualiza standup diário (upsert por data)
  *   - get_standups      : lê standups publicados (mais recente primeiro)
  *
- * Auth: o cliente MCP (Cowork) precisa enviar `Authorization: Bearer <MCP_AUTH_TOKEN>`.
- * Esse token é diferente da TASKS360_API_KEY (essa fica só no Worker).
+ * Auth (dois caminhos aceitos em /mcp):
+ *   1. OAuth 2.1 com login Google restrito a ALLOWED_DOMAIN. É o que o connector do
+ *      claude.ai (e, por tabela, Claude Code e Cowork) usa. Ver src/google-handler.ts.
+ *   2. Legado: `Authorization: Bearer <MCP_AUTH_TOKEN>`, mantido durante a migração
+ *      (mcp-remote no Claude Desktop). Para desligar, apague o secret MCP_AUTH_TOKEN.
+ * A TASKS360_API_KEY continua só no Worker; o cliente MCP nunca a vê.
  */
 
 import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import OAuthProvider from "@cloudflare/workers-oauth-provider";
+import { googleHandler, GRANTED_SCOPES, type AuthEnv, type UserProps } from "./google-handler";
 
-interface Env {
+// URL pública do endpoint MCP. Precisa bater com a URL do Worker em produção.
+const MCP_RESOURCE = "https://tasks360-mcp.felipe-kliente360.workers.dev/mcp";
+
+interface Env extends AuthEnv {
   TASKS360_BASE_URL: string;     // var pública (wrangler.toml)
+  ALLOWED_DOMAIN: string;        // var pública (wrangler.toml): domínio Google aceito no login
   TASKS360_API_KEY: string;      // secret (wrangler secret put)
-  MCP_AUTH_TOKEN: string;        // secret (wrangler secret put)
+  MCP_AUTH_TOKEN?: string;       // secret legado; apagar quando todo mundo migrar pro OAuth
+  GOOGLE_CLIENT_ID: string;      // secret (wrangler secret put)
+  GOOGLE_CLIENT_SECRET: string;  // secret (wrangler secret put)
   MCP_OBJECT: DurableObjectNamespace;
+  OAUTH_KV: KVNamespace;         // grants e tokens do OAuth (wrangler.toml)
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -31,6 +44,7 @@ interface Env {
 
 async function callTasks360(
   env: Env,
+  user: Partial<UserProps> | undefined,
   method: "GET" | "POST",
   path: string,
   query?: Record<string, string | undefined>,
@@ -44,6 +58,8 @@ async function callTasks360(
   }
 
   const headers: Record<string, string> = { "x-api-key": env.TASKS360_API_KEY };
+  // Quem está chamando (informativo; as Edge Functions podem usar pra auditoria)
+  if (user?.email) headers["x-tasks360-user"] = user.email;
   if (body !== undefined) headers["content-type"] = "application/json";
 
   const res = await fetch(url.toString(), {
@@ -238,7 +254,7 @@ const getStandupsSchema = {
 // MCP Agent
 // ──────────────────────────────────────────────────────────────────────────
 
-export class MyMCP extends McpAgent<Env> {
+export class MyMCP extends McpAgent<Env, unknown, UserProps> {
   server = new McpServer({
     name: "tasks360",
     version: "0.1.0",
@@ -251,7 +267,7 @@ export class MyMCP extends McpAgent<Env> {
       "Lista os clientes do Tasks 360. Use ANTES de criar uma task para descobrir o nome canônico do cliente e seus projetos ativos. Inclui flag eh_interno (descartar reuniões 100% internas).",
       getClientesSchema,
       async ({ with_projetos }) => {
-        const result = await callTasks360(this.env, "GET", "get-clientes", {
+        const result = await callTasks360(this.env, this.props, "GET", "get-clientes", {
           with_projetos: String(with_projetos ?? true),
         });
         if (!result.ok) return toolError(`get-clientes falhou (HTTP ${result.status})`, result.error);
@@ -265,7 +281,7 @@ export class MyMCP extends McpAgent<Env> {
       "Lista pessoas (responsáveis em potencial). Quando souber o cliente, passe cliente_id pra reduzir a lista. Use o campo 'nome' (primeiro token = first name) para casar com nomes mencionados nas notas. Se uma pessoa cujo first-name foi mencionada não estiver na lista, NÃO atribua a task.",
       getPessoasSchema,
       async ({ cliente_id, with_load }) => {
-        const result = await callTasks360(this.env, "GET", "get-pessoas", {
+        const result = await callTasks360(this.env, this.props, "GET", "get-pessoas", {
           cliente_id,
           with_load: String(with_load ?? true),
         });
@@ -280,7 +296,7 @@ export class MyMCP extends McpAgent<Env> {
       "Lista tasks do Tasks 360 com filtros (responsável, cliente, status, prazo). Por padrão retorna só tasks ATIVAS (exclui status 'concluido'). Use pra responder perguntas tipo 'quais tasks P0 abertas do cliente X', 'o que a Jéssica tem pra essa semana', 'quantas tasks vencendo até sexta'. Retorna `{ tasks: [...], total }`; cada task traz cliente/projeto/responsavel já resolvidos por nome, flag `atrasada`, e os campos de conteúdo `escopo` (skills), `valor_esperado`, `solucao_implementada`, `valor_entregue`, `tempo_real_horas` — úteis pra análises de qualidade/entrega. Para resumos agregue no lado do consumidor (a API não agrupa).",
       getTasksSchema,
       async ({ pessoa, status, include_concluido, prazo_de, prazo_ate, cliente_id, cliente, projeto_id, limit }) => {
-        const result = await callTasks360(this.env, "GET", "get-tasks", {
+        const result = await callTasks360(this.env, this.props, "GET", "get-tasks", {
           pessoa,
           status: status && status.length > 0 ? status.join(",") : undefined,
           include_concluido: include_concluido !== undefined ? String(include_concluido) : undefined,
@@ -302,7 +318,7 @@ export class MyMCP extends McpAgent<Env> {
       "Lê o histórico de comentários de uma task específica, ordenado do mais recente pro mais antigo. Use pra resumir o status de uma task em standups, dar contexto de discussões anteriores, ou entender por que algo foi decidido. Pegue o task_id no campo 'id' retornado por get_tasks. Retorna `{ comentarios: [{id, autor, data, texto}], total }` — `autor` vem como nome resolvido via get_pessoas (com fallback no texto livre quando o comentário é de cliente externo).",
       getTaskCommentsSchema,
       async ({ task_id, limit }) => {
-        const result = await callTasks360(this.env, "GET", "get-task-comments", {
+        const result = await callTasks360(this.env, this.props, "GET", "get-task-comments", {
           task_id,
           limit: limit !== undefined ? String(limit) : undefined,
         });
@@ -317,12 +333,9 @@ export class MyMCP extends McpAgent<Env> {
       "Cria (ou atualiza, se external_id já existe) uma task no Tasks 360. SEMPRE use external_id deterministico para evitar duplicatas em re-execuções. Cliente, projeto e responsável são casados por nome (case-insensitive) — use os valores exatos retornados por get_clientes/get_pessoas.",
       ingestTaskSchema,
       async (args) => {
-        // Defaults sensatos
-        const body = {
-          criado_por_ia: true,
-          ...args,
-        };
-        const result = await callTasks360(this.env, "POST", "ingest-task", undefined, body);
+        // Task criada pelo MCP conta como criada por IA, salvo se vier explícito
+        const body = { ...args, criado_por_ia: args.criado_por_ia ?? true };
+        const result = await callTasks360(this.env, this.props, "POST", "ingest-task", undefined, body);
         if (!result.ok) return toolError(`ingest-task falhou (HTTP ${result.status})`, result.error);
         return toolResult(result.data);
       },
@@ -337,7 +350,7 @@ export class MyMCP extends McpAgent<Env> {
         const body: Record<string, unknown> = { data, conteudo_md };
         if (texto_whatsapp !== undefined) body.texto_whatsapp = texto_whatsapp;
         if (resumo !== undefined) body.resumo = resumo;
-        const result = await callTasks360(this.env, "POST", "post-standup", undefined, body);
+        const result = await callTasks360(this.env, this.props, "POST", "post-standup", undefined, body);
         if (!result.ok) return toolError(`post-standup falhou (HTTP ${result.status})`, result.error);
         return toolResult(result.data);
       },
@@ -349,7 +362,7 @@ export class MyMCP extends McpAgent<Env> {
       "Lê os standups diários publicados, ordenados do mais recente pro mais antigo. Use pra revisar o que foi dito nos últimos dias, ou (passando `data=YYYY-MM-DD`) puxar o standup de um dia específico. Retorna `{ standups: [...], total }` direto do endpoint.",
       getStandupsSchema,
       async ({ limit, data }) => {
-        const result = await callTasks360(this.env, "GET", "get-standups", {
+        const result = await callTasks360(this.env, this.props, "GET", "get-standups", {
           limit: limit !== undefined ? String(limit) : undefined,
           data,
         });
@@ -361,37 +374,41 @@ export class MyMCP extends McpAgent<Env> {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Worker fetch handler — autenticação por bearer token + roteamento MCP
+// Worker: OAuth provider na frente das rotas MCP
 // ──────────────────────────────────────────────────────────────────────────
 
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
+/** Comparação em tempo constante pro token legado. */
+function safeEqual(a: string, b: string): boolean {
+  const ea = new TextEncoder().encode(a);
+  const eb = new TextEncoder().encode(b);
+  if (ea.length !== eb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ea.length; i++) diff |= ea[i] ^ eb[i];
+  return diff === 0;
+}
 
-    // Healthcheck
-    if (url.pathname === "/" || url.pathname === "/health") {
-      return new Response("tasks360-mcp ok", { status: 200 });
-    }
-
-    // Autenticação (qualquer rota /sse ou /mcp)
-    if (url.pathname.startsWith("/sse") || url.pathname.startsWith("/mcp")) {
-      const auth = request.headers.get("authorization") ?? "";
-      const expected = `Bearer ${env.MCP_AUTH_TOKEN}`;
-      if (!env.MCP_AUTH_TOKEN || auth !== expected) {
-        return new Response("unauthorized", { status: 401 });
-      }
-    }
-
-    // SSE transport (compatibilidade com clientes legacy)
-    if (url.pathname.startsWith("/sse")) {
-      return MyMCP.serveSSE("/sse").fetch(request, env, ctx);
-    }
-
-    // Streamable HTTP transport (recomendado, mais novo)
-    if (url.pathname.startsWith("/mcp")) {
-      return MyMCP.serve("/mcp").fetch(request, env, ctx);
-    }
-
-    return new Response("not found", { status: 404 });
+export default new OAuthProvider<Env>({
+  // Só Streamable HTTP. O transporte SSE (/sse) saiu: nenhum cliente nosso usa e o
+  // OAuth exige que toda rota protegida fique sob o resource /mcp.
+  apiRoute: "/mcp",
+  apiHandler: MyMCP.serve("/mcp"),
+  defaultHandler: googleHandler, // /authorize, /callback, /health
+  authorizeEndpoint: "/authorize",
+  tokenEndpoint: "/token",
+  clientRegistrationEndpoint: "/register",
+  clientIdMetadataDocumentEnabled: true,
+  scopesSupported: GRANTED_SCOPES,
+  resourceMetadata: {
+    resource: MCP_RESOURCE,
+    resource_name: "Tasks 360",
   },
-};
+  accessTokenTTL: 60 * 60,               // 1h; o cliente renova sozinho com o refresh token
+  refreshTokenTTL: 60 * 60 * 24 * 90,    // 90 dias sem uso → precisa logar de novo
+
+  // Token legado (mcp-remote com --header). Some quando o secret MCP_AUTH_TOKEN for apagado.
+  resolveExternalToken: async ({ token, env }) => {
+    if (!env.MCP_AUTH_TOKEN || !safeEqual(token, env.MCP_AUTH_TOKEN)) return null;
+    const props: UserProps = { email: "", name: "token legado", sub: "legacy", via: "legacy-token" };
+    return { props, audience: MCP_RESOURCE };
+  },
+});

@@ -77,7 +77,35 @@ https://tasks360-mcp.<seu-subdominio>.workers.dev
 
 Guarde essa URL — você vai usar logo abaixo.
 
-## Conectar no Cowork
+## Autenticação (OAuth com Google)
+
+O Worker é um authorization server OAuth 2.1 (lib `@cloudflare/workers-oauth-provider`). Quem conecta o MCP faz login com a conta Google; só entram contas verificadas do domínio `ALLOWED_DOMAIN` (`kliente360.com`). Os grants e tokens ficam no KV `OAUTH_KV`, com hash e criptografia.
+
+Rotas: `/authorize` (tela de consentimento), `/callback` (volta do Google), `/token`, `/register` (registro dinâmico de clientes) e os `/.well-known/*` de descoberta. O código do login está em `src/google-handler.ts`.
+
+### Setup do OAuth (uma vez)
+
+```bash
+# KV dos tokens: copie o id impresso para o wrangler.toml ([[kv_namespaces]] OAUTH_KV)
+npx wrangler kv namespace create OAUTH_KV
+
+# Credenciais do OAuth Client do Google (tipo "Aplicativo da Web",
+# redirect URI: https://tasks360-mcp.felipe-kliente360.workers.dev/callback)
+jq -r .web.client_id     client_secret_XXXX.json | npx wrangler secret put GOOGLE_CLIENT_ID
+jq -r .web.client_secret client_secret_XXXX.json | npx wrangler secret put GOOGLE_CLIENT_SECRET
+
+npx wrangler deploy
+```
+
+### Conectar (jeito novo, vale pro time todo)
+
+Um owner/admin do Team adiciona em **claude.ai → Customize → Connectors → Add custom connector** a URL `https://tasks360-mcp.felipe-kliente360.workers.dev/mcp`, sem preencher client ID/secret. Cada pessoa clica em conectar e loga com a conta @kliente360.com. Vale no claude.ai, no app, no Cowork e no Claude Code logado com a conta claude.ai.
+
+### Token legado
+
+O `Authorization: Bearer <MCP_AUTH_TOKEN>` continua aceito só durante a migração. Quando ninguém mais usar o `mcp-remote` com `--header`, desligue com `npx wrangler secret delete MCP_AUTH_TOKEN`.
+
+## Conectar no Cowork (legado, via token)
 
 No Cowork desktop, vá em **Settings → Connectors → Add custom MCP** (ou edite manualmente o arquivo de config) e adicione:
 

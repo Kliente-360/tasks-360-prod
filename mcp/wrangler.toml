@@ -3,17 +3,24 @@
 #   npx wrangler login
 #   npx wrangler deploy
 #
-# Os "secrets" (TASKS360_API_KEY e MCP_AUTH_TOKEN) NÃO ficam aqui.
-# Você define depois com `npx wrangler secret put TASKS360_API_KEY`.
+# Os "secrets" NÃO ficam aqui. Defina com `npx wrangler secret put <NOME>`:
+#   TASKS360_API_KEY      chave da API do Tasks 360 (Supabase)
+#   GOOGLE_CLIENT_ID      OAuth client (Google Cloud Console, tipo "Aplicativo da Web")
+#   GOOGLE_CLIENT_SECRET  idem
+#   MCP_AUTH_TOKEN        LEGADO, só enquanto alguém usa mcp-remote com --header.
+#                         Para desligar: npx wrangler secret delete MCP_AUTH_TOKEN
 
 name = "tasks360-mcp"
 main = "src/index.ts"
 compatibility_date = "2025-01-09"
-compatibility_flags = ["nodejs_compat"]
+# global_fetch_strictly_public: exigido pelo OAuth provider para buscar Client ID Metadata Documents
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
 [vars]
 # Variáveis públicas (não-secretas). Pode editar à vontade.
 TASKS360_BASE_URL = "https://nxtlipldmsopscpshrfd.supabase.co"
+# Só contas Google verificadas deste domínio conseguem conectar o MCP via OAuth.
+ALLOWED_DOMAIN = "kliente360.com"
 
 # Durable Object usado pelo `agents` para manter estado da sessão MCP por cliente.
 [durable_objects]
@@ -24,3 +31,9 @@ bindings = [
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["MyMCP"]
+
+# Armazena clientes, grants e tokens do OAuth (tudo com hash/criptografia).
+# Crie com: npx wrangler kv namespace create OAUTH_KV  → cole o id abaixo.
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+id = "acc66bd27a164dfdacaaa1692f077055"
