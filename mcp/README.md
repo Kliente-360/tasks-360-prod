@@ -13,6 +13,8 @@ Por que existe: o sandbox do Cowork bloqueia chamadas HTTP arbitrárias para `*.
 | `get_tasks`   | Lista tasks ativas (filtra por responsável, cliente, status, prazo). Use pra resumos/relatórios |
 | `get_task_comments` | Lê histórico de comentários de uma task. Use pra resumir discussões em standups            |
 | `ingest_task` | Cria/atualiza task (idempotente por `external_id`)                                          |
+| `update_task` | Atualiza qualquer task pelo `task_id`: subetapa/status, valor entregue, solução, horas realizadas |
+| `add_task_comment` | Posta comentário interno numa task pelo `task_id` (não vai pro cliente nem pro Salesforce) |
 | `post_standup` | Publica/atualiza o standup diário (upsert por `data`)                                       |
 | `get_standups` | Lê standups publicados (mais recente primeiro; filtra por `data` pra puxar um dia específico) |
 
@@ -33,6 +35,29 @@ Todos opcionais. Sem nenhum filtro, retorna as 100 primeiras tasks ativas (statu
 | `limit`            | int 1–200                                         | Default 100                                                      |
 
 Retorna `{ tasks: [...], total }`. Cada task traz `cliente`, `projeto` e `responsavel` já resolvidos por nome, mais a flag `atrasada` (prazo < hoje e não concluída).
+
+### `update_task` — parâmetros
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `task_id` | uuid | Obrigatório. Campo `id` de `get_tasks` |
+| `subetapa` | enum | Uma das 11 subetapas; o status (macro) é derivado dela |
+| `status` | enum | `backlog`, `andamento`, `bloqueado`, `concluido`. Prefira `subetapa`; só o status leva à subetapa padrão do macro (ou mantém a atual se já estiver nele) |
+| `bloqueado_por` | enum | `nos` (padrão), `cliente`, `terceiro` — quando a subetapa for `bloqueado` |
+| `valor_entregue` | string | Substitui o valor atual |
+| `solucao_implementada` | string | Substitui o valor atual |
+| `tempo_real_horas` | number | Total de horas realizadas (substitui, não soma) |
+
+Edge Function: `update-task`. Cada mudança entra em `task_field_history` com `actor_source = 'mcp'` e o autor vem do e-mail do login OAuth. Task do Salesforce com webhook ligado (VB, CTF, Bodytech) envia `task.updated` para a org do cliente, igual a uma edição no app.
+
+### `add_task_comment` — parâmetros
+
+| Parâmetro | Tipo | Descrição |
+|---|---|---|
+| `task_id` | uuid | Obrigatório. Campo `id` de `get_tasks` |
+| `texto` | string | Obrigatório, até 10.000 caracteres |
+
+Edge Function: `add-task-comment`. Sempre interno (`visivel_cliente = false`). Autor = pessoa do e-mail do login OAuth (ou "Claude (MCP)"). O responsável da task recebe aviso no sino.
 
 ### `get_task_comments` — parâmetros
 

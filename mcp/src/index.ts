@@ -217,6 +217,61 @@ const ingestTaskSchema = {
     .describe("Marque true quando a task vier de uma extração automática (Cowork). Default: true."),
 };
 
+const SUBETAPAS = [
+  "backlog", "priorizado", "em_definicao", "escopo_definido",
+  "em_desenvolvimento", "em_homologacao", "em_revisao", "pronto_producao",
+  "em_implantacao", "bloqueado", "concluido",
+] as const;
+
+const updateTaskSchema = {
+  task_id: z
+    .string()
+    .uuid()
+    .describe("UUID da task (campo 'id' retornado por get_tasks). Funciona para qualquer task, com ou sem external_id."),
+  subetapa: z
+    .enum(SUBETAPAS)
+    .optional()
+    .describe(
+      "Nova subetapa. O status (macro) é derivado dela: backlog/priorizado/em_definicao/escopo_definido → backlog; em_desenvolvimento/em_homologacao/em_revisao/pronto_producao/em_implantacao → andamento; bloqueado; concluido.",
+    ),
+  status: z
+    .enum(["backlog", "andamento", "bloqueado", "concluido"])
+    .optional()
+    .describe(
+      "Status macro. Prefira `subetapa`. Se vier só o status, a task vai para a subetapa padrão do macro (andamento → em_desenvolvimento), ou mantém a atual se já estiver nesse macro.",
+    ),
+  bloqueado_por: z
+    .enum(["nos", "cliente", "terceiro"])
+    .optional()
+    .describe("Quem bloqueia, quando a subetapa for 'bloqueado'. Padrão: 'nos'."),
+  valor_entregue: z
+    .string()
+    .optional()
+    .describe("Valor entregue ao negócio, em texto. Substitui o valor atual."),
+  solucao_implementada: z
+    .string()
+    .optional()
+    .describe("O que foi feito / solução implementada, em texto. Substitui o valor atual."),
+  tempo_real_horas: z
+    .number()
+    .min(0)
+    .max(1000)
+    .optional()
+    .describe("Total de horas realizadas na task (substitui o valor atual, não soma)."),
+};
+
+const addTaskCommentSchema = {
+  task_id: z
+    .string()
+    .uuid()
+    .describe("UUID da task (campo 'id' retornado por get_tasks)."),
+  texto: z
+    .string()
+    .min(1)
+    .max(10000)
+    .describe("Texto do comentário. Fica interno: não aparece para o cliente nem vai para o Salesforce."),
+};
+
 const postStandupSchema = {
   data: z
     .string()
@@ -323,6 +378,30 @@ export class MyMCP extends McpAgent<Env, unknown, UserProps> {
           limit: limit !== undefined ? String(limit) : undefined,
         });
         if (!result.ok) return toolError(`get-task-comments falhou (HTTP ${result.status})`, result.error);
+        return toolResult(result.data);
+      },
+    );
+
+    // ───── update_task ─────────────────────────────────────────────────
+    this.server.tool(
+      "update_task",
+      "Atualiza uma task existente pelo id (qualquer task, não só as com external_id): subetapa/status, valor entregue, solução implementada e horas realizadas. Envie só os campos que mudam. Fica registrado no histórico da task com origem 'mcp'. Em task vinda do Salesforce (VB, CTF, Bodytech) a mudança é enviada para a org do cliente, igual a uma edição feita no app. Retorna a task atualizada e `campos` alterados (`action: 'unchanged'` se nada mudou).",
+      updateTaskSchema,
+      async (args) => {
+        const result = await callTasks360(this.env, this.props, "POST", "update-task", undefined, args);
+        if (!result.ok) return toolError(`update-task falhou (HTTP ${result.status})`, result.error);
+        return toolResult(result.data);
+      },
+    );
+
+    // ───── add_task_comment ────────────────────────────────────────────
+    this.server.tool(
+      "add_task_comment",
+      "Posta um comentário interno numa task pelo id. O autor é a pessoa logada no MCP (ou 'Claude (MCP)'). O comentário não aparece no portal do cliente nem vai para o Salesforce; o responsável da task é avisado no sino. Retorna `{ id, task_id, author, body, posted_em }`.",
+      addTaskCommentSchema,
+      async ({ task_id, texto }) => {
+        const result = await callTasks360(this.env, this.props, "POST", "add-task-comment", undefined, { task_id, texto });
+        if (!result.ok) return toolError(`add-task-comment falhou (HTTP ${result.status})`, result.error);
         return toolResult(result.data);
       },
     );
