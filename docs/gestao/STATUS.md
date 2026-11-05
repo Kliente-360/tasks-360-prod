@@ -3,7 +3,7 @@
 > Fonte única de verdade do estado atual. Ler/atualizar todo começo de sessão relevante.
 > `ROADMAP.md` = arquivo histórico imutável — não editar para refletir estado corrente.
 >
-> **Versão**: v1.03.278 · **Atualizado**: 23/10/2026 · branch `main`
+> **Versão**: v1.03.281 · **Atualizado**: 05/11/2026 · branch `main`
 
 ---
 
@@ -197,6 +197,9 @@ Sprint do Bucket V com o Pão e Talho/Bodytech como referência. O portal deixou
   - Modal da tarefa rola por inteiro em telas baixas (corpo com 440px mínimos, colunas com rolagem própria, barra discreta) e abre sempre no topo; banner de prioridade do modal interno limitado a ~40% da tela
   - **Primeiro acesso do cliente** caía em `/foco` vazio até o F5 (pessoa ainda não vinculada ao login): o middleware vincula pelo RPC `app_link_current_user_to_pessoa` e o `ClienteGuard` no app leva ao portal
   - Manual do cliente revisado: prints no celular, Evidências, novas linhas das seções, atrasadas
+- ✅ **Histórico de concluídas (v1.03.279-281)** · "Todas as concluídas" no menu "…" de Kanban, Backlog e Calendário: busca só as concluídas fora da janela de 60 dias (~384) e junta às carregadas; desligar tira da memória sem ir ao banco; Backlog acompanha (status Concluído); aviso "Carregando concluídas antigas…". Kanban passa a desenhar 40 cards por coluna + "Mostrar mais". Fora do Dashboard e do Timesheet de propósito
+- ✅ **Dashboard · Velocidade da operação com filtros (v1.03.281)** · os 4 cards seguem cliente, projeto, responsável e origem (IA/humano); prazo fica de fora; marca "com filtros" no título. Metas continuam as do time todo
+- ✅ **MCP · OAuth Google + escrita (nov/2026)** · login OAuth via Google Workspace, só contas kliente360.com (`@cloudflare/workers-oauth-provider`, KV `OAUTH_KV`; `MCP_AUTH_TOKEN` fica como legado). Tools novas: `update_task` (qualquer task pelo id: subetapa/status, bloqueado_por, valor entregue, solução, horas; histórico com `actor_source='mcp'` e autor do OAuth) e `add_task_comment` (interno por padrão, `visivel_cliente=true` mostra ao cliente e avisa). Edges `update-task` e `add-task-comment` (x-api-key). Teste de ponta a ponta pendente após reconectar o MCP
 - ⚠️ **Incidente 21/10** · o backfill de `prioridade_inicial` alterou 206 tasks do Salesforce (VB, CTF, Bodytech) e o trigger `webhook_task_update` disparou 206 `task.updated` redundantes (dados iguais aos do Salesforce). Regra: update em massa em `tasks` exclui tasks Salesforce com webhook ligado, ou desliga o trigger com aprovação
 - ✅ **Telemetria própria** · `usage_events` (autoria carimbada no banco, insert por qualquer logado, leitura só admin), rollup `usage_daily` + retenção de 90 dias (cron 03:30). Captura automática de sessão, troca de tela e cliques; eventos de negócio para abrir/criar/atualizar task (com campos e origem), comentários (externo, interno, resposta, do cliente), cronômetro do modal vs do topo, lançamento de horas, bulk do Backlog, busca, export, manual, notificações, triagem e ações do portal
 - ✅ **Tela Adoção** (`/adocao`, admin, menu do perfil) · RPCs `app_adocao` e `app_adocao_detalhes`: funcionalidades usadas e nunca usadas no período, telas, pessoas (inclusive convidadas sem uso), origem das ações, comentários, campos editados, abas do modal e cliques mais frequentes
@@ -344,11 +347,15 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 **C.10 · analytics na UI · polir o que foi publicado**
 → Parcial já publicado no Briefing (~38 cards). Pendente: versão Dashboard com widgets visuais refinados + integração nos KPIs · ~1 semana
 
+**MCP · validar as tools novas**
+→ reconectar o MCP e testar `update_task` e `add_task_comment` numa task de teste (ex.: "Teste 2 abrindo como cliente", Pão e Talho, sem webhook): histórico com origem mcp, autor certo, aviso no sino. Depois, decidir quando desligar o `MCP_AUTH_TOKEN` legado
+
 **Adoção · primeira leitura feita (23/10, 8 dias de dados)** · revisão de qualidade aplicada em v1.03.277-278 (sessão com 30 min de inatividade, rótulo de campo nos cliques, área do clique, campos atualizados sem ruído, eventos `task_close` e `filtro`, contas de teste fora via `pessoas.conta_teste`)
-→ achados: timesheet praticamente sem uso (2 cronômetros, 0,9 h em 8 dias; horas digitadas no campo do modal); celular quase só no portal; Calendário e Timesheet sem nenhuma visita; 3 usuários do Pão e Talho com acesso e sem uso. **Segunda leitura** em ~2 semanas, com os dados limpos
+→ achados: timesheet praticamente sem uso (2 cronômetros, 0,9 h em 8 dias; horas digitadas no campo do modal); celular quase só no portal; Calendário e Timesheet sem nenhuma visita; 3 usuários do Pão e Talho com acesso e sem uso. **Segunda leitura** prevista para ~06/11 (2 semanas de dados limpos desde v1.03.277)
 
 **Pendências operacionais**
 → confirmar com quem cuida das orgs Salesforce do VB, da CTF e da Bodytech se alguma automação rodou com os 206 `task.updated` redundantes de 21/10 (~10:56)
+→ apagar os branches antigos `claude/project-setup-roadmap-UVT4T` e `claude/project-status-review-hHoby` (jun/2026, sessão anterior; o segundo tem 1 commit obsoleto do portal)
 
 **Decidir · rotina de limpeza de anexos** (pendente de decisão do Felipe)
 → cron `cleanup-task-attachments-daily` (03:17) chama a edge `cleanup-attachments`, que apaga anexos de tasks concluídas há mais de 30 dias. Hoje não roda de fato: a URL no cron está com o placeholder `<project-ref>`. Com as evidências do cliente, corrigir a URL faria os prints sumirem 30 dias após a entrega. Opções: desligar o cron de vez, ou corrigir a URL com prazo maior (ex.: 365 dias)
@@ -361,7 +368,7 @@ Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA
 
 ## Próximo passo imediato
 
-1. **Decidir com a leitura da Adoção**: o que fazer com Timesheet/cronômetro (adotar de verdade via Bucket T ou simplificar), Calendário e o celular do time.
-2. **T.6** (trava no concluir sem horas), se a decisão for adotar o timesheet.
-3. **Segunda leitura da Adoção** em ~2 semanas, já com os dados limpos.
+1. **Validar as tools novas do MCP** (`update_task`, `add_task_comment`) depois de reconectar.
+2. **Segunda leitura da Adoção** (~06/11, 2 semanas de dados limpos) e, com ela, **decidir o timesheet**: adotar de verdade (T.6 trava no concluir + Bucket T) ou assumir as horas digitadas no campo e simplificar o cronômetro. Decidir também Calendário e celular do time.
+3. **T.6** (trava no concluir sem horas), se a decisão for adotar.
 4. **C.10** (analytics no Dashboard).
