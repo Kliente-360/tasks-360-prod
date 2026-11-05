@@ -1,15 +1,18 @@
 // Edge Function: add-task-comment
-// Posta um comentário interno numa task pelo id interno (uuid) · usada pela
+// Posta um comentário numa task pelo id interno (uuid) · usada pela
 // tool MCP `add_task_comment`.
 //
 // Auth: header x-api-key (INGEST_API_KEYS). Header opcional
 // x-tasks360-user (e-mail de quem chamou pelo MCP) vira o autor.
 //
 // Body JSON:
-//   { "task_id": "uuid", "texto": "comentário" }
+//   { "task_id": "uuid", "texto": "comentário", "visivel_cliente": false }
 //
-// Sempre interno (visivel_cliente = false): não aparece no portal do cliente
-// e não vai para o Salesforce (o webhook de comentário só envia os visíveis).
+// visivel_cliente (padrão false):
+//   false · interno: não aparece no portal e não vai para o Salesforce
+//   true  · aparece no portal, os usuários do cliente recebem aviso no sino
+//           (trigger trg_notif_cliente_comentario) e, em task do Salesforce
+//           com webhook ligado, vira comment.created na org do cliente
 // O responsável da task recebe aviso no sino (comment_on_my_task), salvo se
 // for o próprio autor.
 
@@ -44,6 +47,10 @@ Deno.serve(async (req) => {
   const texto = String(body.texto ?? '').trim();
   if (!texto) return err(422, 'missing_texto', 'texto é obrigatório');
   if (texto.length > MAX_CHARS) return err(422, 'texto_longo', `texto com mais de ${MAX_CHARS} caracteres`);
+  if (body.visivel_cliente !== undefined && typeof body.visivel_cliente !== 'boolean') {
+    return err(422, 'invalid_visivel_cliente', 'visivel_cliente deve ser true ou false');
+  }
+  const visivelCliente = body.visivel_cliente === true;
 
   const { data: task, error: tErr } = await sb
     .from('tasks')
@@ -69,7 +76,7 @@ Deno.serve(async (req) => {
       body: texto,
       author: autor?.nome ?? 'Claude (MCP)',
       author_pessoa_id: autor?.id ?? null,
-      visivel_cliente: false,
+      visivel_cliente: visivelCliente,
       from_cliente: false,
       posted_em: agora,
     })
@@ -91,5 +98,5 @@ Deno.serve(async (req) => {
     if (nErr) console.warn('[add-task-comment] aviso', nErr.message);
   }
 
-  return json(201, { ...comentario, titulo: task.titulo, visivel_cliente: false });
+  return json(201, { ...comentario, titulo: task.titulo, visivel_cliente: visivelCliente });
 });

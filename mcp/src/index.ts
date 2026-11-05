@@ -269,7 +269,13 @@ const addTaskCommentSchema = {
     .string()
     .min(1)
     .max(10000)
-    .describe("Texto do comentário. Fica interno: não aparece para o cliente nem vai para o Salesforce."),
+    .describe("Texto do comentário."),
+  visivel_cliente: z
+    .boolean()
+    .optional()
+    .describe(
+      "Padrão false (interno). true: aparece no portal do cliente, os usuários do cliente recebem aviso e, em task do Salesforce (VB, CTF, Bodytech), o comentário vai para a org do cliente. Só use true quando a mensagem for para o cliente ler.",
+    ),
 };
 
 const postStandupSchema = {
@@ -397,10 +403,14 @@ export class MyMCP extends McpAgent<Env, unknown, UserProps> {
     // ───── add_task_comment ────────────────────────────────────────────
     this.server.tool(
       "add_task_comment",
-      "Posta um comentário interno numa task pelo id. O autor é a pessoa logada no MCP (ou 'Claude (MCP)'). O comentário não aparece no portal do cliente nem vai para o Salesforce; o responsável da task é avisado no sino. Retorna `{ id, task_id, author, body, posted_em }`.",
+      "Posta um comentário numa task pelo id. Padrão interno (visivel_cliente=false): não aparece no portal nem vai para o Salesforce. Com visivel_cliente=true, o cliente vê no portal e é avisado. O autor é a pessoa logada no MCP (ou 'Claude (MCP)'); o responsável da task é avisado no sino. Retorna `{ id, task_id, author, body, posted_em, visivel_cliente }`.",
       addTaskCommentSchema,
-      async ({ task_id, texto }) => {
-        const result = await callTasks360(this.env, this.props, "POST", "add-task-comment", undefined, { task_id, texto });
+      async ({ task_id, texto, visivel_cliente }) => {
+        const result = await callTasks360(this.env, this.props, "POST", "add-task-comment", undefined, {
+          task_id,
+          texto,
+          visivel_cliente: visivel_cliente ?? false,
+        });
         if (!result.ok) return toolError(`add-task-comment falhou (HTTP ${result.status})`, result.error);
         return toolResult(result.data);
       },

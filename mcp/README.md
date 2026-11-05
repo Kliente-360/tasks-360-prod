@@ -14,7 +14,7 @@ Por que existe: o sandbox do Cowork bloqueia chamadas HTTP arbitrárias para `*.
 | `get_task_comments` | Lê histórico de comentários de uma task. Use pra resumir discussões em standups            |
 | `ingest_task` | Cria/atualiza task (idempotente por `external_id`)                                          |
 | `update_task` | Atualiza qualquer task pelo `task_id`: subetapa/status, valor entregue, solução, horas realizadas |
-| `add_task_comment` | Posta comentário interno numa task pelo `task_id` (não vai pro cliente nem pro Salesforce) |
+| `add_task_comment` | Posta comentário numa task pelo `task_id`; interno por padrão, `visivel_cliente: true` mostra ao cliente |
 | `post_standup` | Publica/atualiza o standup diário (upsert por `data`)                                       |
 | `get_standups` | Lê standups publicados (mais recente primeiro; filtra por `data` pra puxar um dia específico) |
 
@@ -56,8 +56,9 @@ Edge Function: `update-task`. Cada mudança entra em `task_field_history` com `a
 |---|---|---|
 | `task_id` | uuid | Obrigatório. Campo `id` de `get_tasks` |
 | `texto` | string | Obrigatório, até 10.000 caracteres |
+| `visivel_cliente` | boolean | Padrão `false` (interno). `true`: aparece no portal, os usuários do cliente recebem aviso e, em task do Salesforce com webhook, vira `comment.created` na org do cliente |
 
-Edge Function: `add-task-comment`. Sempre interno (`visivel_cliente = false`). Autor = pessoa do e-mail do login OAuth (ou "Claude (MCP)"). O responsável da task recebe aviso no sino.
+Edge Function: `add-task-comment`. Interno por padrão. Autor = pessoa do e-mail do login OAuth (ou "Claude (MCP)"). O responsável da task recebe aviso no sino.
 
 ### `get_task_comments` — parâmetros
 
