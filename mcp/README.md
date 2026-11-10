@@ -58,7 +58,7 @@ Edge Function: `update-task`. Cada mudança entra em `task_field_history` com `a
 | `texto` | string | Obrigatório, até 10.000 caracteres |
 | `visivel_cliente` | boolean | Padrão `false` (interno). `true`: aparece no portal, os usuários do cliente recebem aviso e, em task do Salesforce com webhook, vira `comment.created` na org do cliente |
 
-Edge Function: `add-task-comment`. Interno por padrão. Autor = pessoa do e-mail do login OAuth (ou "Claude (MCP)"). O responsável da task recebe aviso no sino.
+Edge Function: `add-task-comment`. Interno por padrão. Autor = pessoa do e-mail do login OAuth; sem pessoa identificada, `MCP_COMMENT_AUTHOR_DEFAULT` (secret da Edge Function) ou "Time de desenvolvimento". O responsável da task recebe aviso no sino.
 
 ### `get_task_comments` — parâmetros
 

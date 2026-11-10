@@ -403,7 +403,7 @@ export class MyMCP extends McpAgent<Env, unknown, UserProps> {
     // ───── add_task_comment ────────────────────────────────────────────
     this.server.tool(
       "add_task_comment",
-      "Posta um comentário numa task pelo id. Padrão interno (visivel_cliente=false): não aparece no portal nem vai para o Salesforce. Com visivel_cliente=true, o cliente vê no portal e é avisado. O autor é a pessoa logada no MCP (ou 'Claude (MCP)'); o responsável da task é avisado no sino. Retorna `{ id, task_id, author, body, posted_em, visivel_cliente }`.",
+      "Posta um comentário numa task pelo id. Padrão interno (visivel_cliente=false): não aparece no portal nem vai para o Salesforce. Com visivel_cliente=true, o cliente vê no portal e é avisado. O autor é a pessoa logada no MCP (ou 'Time de desenvolvimento'); o responsável da task é avisado no sino. Retorna `{ id, task_id, author, body, posted_em, visivel_cliente }`.",
       addTaskCommentSchema,
       async ({ task_id, texto, visivel_cliente }) => {
         const result = await callTasks360(this.env, this.props, "POST", "add-task-comment", undefined, {

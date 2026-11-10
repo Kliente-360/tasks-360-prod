@@ -13,10 +13,13 @@
 //   true  · aparece no portal, os usuários do cliente recebem aviso no sino
 //           (trigger trg_notif_cliente_comentario) e, em task do Salesforce
 //           com webhook ligado, vira comment.created na org do cliente
+// Autor: pessoa logada no MCP; sem ela, MCP_COMMENT_AUTHOR_DEFAULT ou
+// "Time de desenvolvimento" (_shared/autor.ts).
 // O responsável da task recebe aviso no sino (comment_on_my_task), salvo se
 // for o próprio autor.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { autorDoComentario } from '../_shared/autor.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -60,13 +63,14 @@ Deno.serve(async (req) => {
   if (tErr) return err(500, 'db_error', tErr.message);
   if (!task) return err(404, 'task_not_found', `task ${taskId} não existe`);
 
-  // Autor: pessoa do e-mail que chamou o MCP; sem e-mail, "Claude (MCP)"
+  // Autor: pessoa do e-mail que chamou o MCP; sem ela, o rótulo padrão
   const email = (req.headers.get('x-tasks360-user') || '').trim().toLowerCase();
   let autor: { id: string; nome: string } | null = null;
   if (email) {
     const { data: p } = await sb.from('pessoas').select('id, nome').ilike('email', email).maybeSingle();
     autor = p ?? null;
   }
+  const assinatura = autorDoComentario(autor, Deno.env.get('MCP_COMMENT_AUTHOR_DEFAULT'));
   const agora = new Date().toISOString();
 
   const { data: comentario, error: cErr } = await sb
@@ -74,8 +78,8 @@ Deno.serve(async (req) => {
     .insert({
       task_id: taskId,
       body: texto,
-      author: autor?.nome ?? 'Claude (MCP)',
-      author_pessoa_id: autor?.id ?? null,
+      author: assinatura.nome,
+      author_pessoa_id: assinatura.pessoaId,
       visivel_cliente: visivelCliente,
       from_cliente: false,
       posted_em: agora,
@@ -84,7 +88,7 @@ Deno.serve(async (req) => {
     .single();
   if (cErr) return err(500, 'db_error', cErr.message);
 
-  if (task.pessoa_id && task.pessoa_id !== autor?.id) {
+  if (task.pessoa_id && task.pessoa_id !== assinatura.pessoaId) {
     const { error: nErr } = await sb.from('notifications').insert({
       recipient_pessoa_id: task.pessoa_id,
       kind: 'comment_on_my_task',

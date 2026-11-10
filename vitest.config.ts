@@ -15,7 +15,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts'],
+    // supabase/functions/_shared: regras puras das Edge Functions (sem Deno)
+    include: ['src/**/*.test.ts', 'supabase/functions/_shared/**/*.test.ts'],
     globals: false,
   },
 });
