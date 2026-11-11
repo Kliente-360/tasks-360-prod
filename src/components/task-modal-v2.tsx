@@ -901,6 +901,23 @@ export function TaskModalV2(props: TaskModalV2Props) {
         {editing.visivelCliente !== false ? 'Visível ao cliente' : 'Oculta do cliente'}
       </button>
       {isCEO ? (
+        <button
+          type="button"
+          className="m2-chip m2-priv"
+          aria-pressed={editing.privada}
+          onClick={() => set('privada', !editing.privada)}
+          title={editing.privada ? 'Só você vê esta tarefa' : 'O time vê esta tarefa'}
+        >
+          <Icon name="lock" size={12} /> {editing.privada ? 'Privada' : 'Pública'}
+        </button>
+      ) : (
+        editing.privada && (
+          <span className="m2-chip m2-priv" aria-pressed="true">
+            <Icon name="lock" size={12} /> Privada
+          </span>
+        )
+      )}
+      {isCEO ? (
         <button type="button" className="m2-chip m2-radar" aria-pressed={editing.radar} onClick={onToggleRadar}>
           <Icon name="target" size={12} /> Radar
         </button>

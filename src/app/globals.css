@@ -3705,6 +3705,8 @@ select.m-select { padding-right: 18px; background-position: right 0 center; back
 .m2-vis[aria-pressed="true"] { background: var(--green-tint); color: var(--green); }
 .m2-vis[aria-pressed="false"], .m2-radar[aria-pressed="false"] { background: transparent; border: 1px dashed var(--line-strong); color: var(--muted); }
 .m2-radar[aria-pressed="true"] { background: var(--warn-soft); color: var(--warn); }
+.m2-priv[aria-pressed="false"] { background: transparent; border: 1px dashed var(--line-strong); color: var(--muted); }
+.m2-priv[aria-pressed="true"] { background: var(--danger-soft); color: var(--danger); }
 .m2-dep-x { border: 0; background: none; color: inherit; opacity: .6; cursor: pointer; font-size: 14px; line-height: 1; padding: 0 0 0 2px; }
 .m2-dep-x:hover { opacity: 1; color: var(--danger); }
 .m2-date-oculto { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
