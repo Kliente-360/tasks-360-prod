@@ -2272,6 +2272,47 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     ajuste_solicitado: 'Pedido de ajuste',
   };
 
+  // Campo da conversa redimensionável: arrastar a borda de cima aumenta
+  const [alturaComposer, setAlturaComposer] = useState<number | null>(() => {
+    try {
+      const v = Number(localStorage.getItem('k360-composer-altura'));
+      return v > 40 ? v : null;
+    } catch {
+      return null;
+    }
+  });
+  const arrastarComposer = (ev: React.PointerEvent<HTMLDivElement>) => {
+    const pill = (ev.currentTarget.parentElement?.querySelector('.tmodal-composer-pill') as HTMLElement | null);
+    if (!pill) return;
+    ev.preventDefault();
+    const alca = ev.currentTarget;
+    alca.setPointerCapture(ev.pointerId);
+    const y0 = ev.clientY;
+    const h0 = pill.getBoundingClientRect().height;
+    const maxH = Math.max(120, Math.round(window.innerHeight * 0.5));
+    let h = h0;
+    const mover = (e: PointerEvent) => {
+      h = Math.min(maxH, Math.max(40, Math.round(h0 + (y0 - e.clientY))));
+      setAlturaComposer(h > 44 ? h : null);
+    };
+    const soltar = () => {
+      alca.removeEventListener('pointermove', mover);
+      alca.removeEventListener('pointerup', soltar);
+      alca.removeEventListener('pointercancel', soltar);
+      try {
+        if (h > 44) localStorage.setItem('k360-composer-altura', String(h));
+        else localStorage.removeItem('k360-composer-altura');
+      } catch { /* sem storage */ }
+    };
+    alca.addEventListener('pointermove', mover);
+    alca.addEventListener('pointerup', soltar);
+    alca.addEventListener('pointercancel', soltar);
+  };
+  const resetarComposer = () => {
+    setAlturaComposer(null);
+    try { localStorage.removeItem('k360-composer-altura'); } catch { /* sem storage */ }
+  };
+
   const jsxConversaV2 = (
     <>
       <AnexosMsgContext.Provider value={anexosMsgCtx}>
@@ -2402,6 +2443,15 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       </AnexosMsgContext.Provider>
       {editing.id && (
         <div className="tmodal-composer m2-composer relative">
+          <div
+            className="m2-composer-alca"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Arraste para aumentar o campo"
+            title="Arraste para aumentar · duplo clique volta ao normal"
+            onPointerDown={arrastarComposer}
+            onDoubleClick={resetarComposer}
+          />
           {respondendo && (
             <div className="m2-respondendo">
               <span>
@@ -2414,7 +2464,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             arquivos={imagensMsg}
             onRemover={(i) => setImagensMsg((cur) => cur.filter((_, j) => j !== i))}
           />
-          <div className="tmodal-composer-pill">
+          <div
+            className={cn('tmodal-composer-pill', alturaComposer && 'm2-pill-alta')}
+            style={alturaComposer ? { height: alturaComposer } : undefined}
+          >
             <BotaoAnexarImagem
               quantidadeAtual={imagensMsg.length}
               onEscolher={(novas) => setImagensMsg((cur) => juntarPendentes(cur, novas))}
