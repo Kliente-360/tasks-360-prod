@@ -135,6 +135,7 @@ export function pessoaFromDb(r: Row): Pessoa {
     is_ceo: r.is_ceo === true,
     is_pm: r.is_pm === true,
     acesso_portal: r.acesso_portal === 'leitura' ? 'leitura' : 'completo',
+    arquivado_em: (r.arquivado_em as string) ?? null,
   };
 }
 

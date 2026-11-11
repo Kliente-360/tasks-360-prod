@@ -173,6 +173,8 @@ export interface Pessoa {
   is_pm?: boolean;
   /** Cliente externo · 'leitura' não abre solicitações no portal. */
   acesso_portal?: 'completo' | 'leitura';
+  /** Saiu da empresa · some de listas e análises, mantém o histórico. */
+  arquivado_em?: string | null;
 }
 
 export interface TimeEntry {

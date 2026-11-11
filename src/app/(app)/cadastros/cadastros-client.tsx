@@ -33,7 +33,7 @@ export function CadastrosClient() {
   const {
     clientes,
     projetos,
-    pessoas,
+    todasPessoas: pessoas,
     tasks,
     loading,
     error,
@@ -257,6 +257,26 @@ export function CadastrosClient() {
     [pessoas, sb, toast, upsertPessoa],
   );
 
+  // Arquivar pessoa (saiu da empresa): some de listas e análises, mantém o
+  // histórico e revoga o acesso no mesmo update.
+  const runArquivarPessoa = useCallback(
+    async (id: string, nome: string, arquivar: boolean) => {
+      if (arquivar && !confirm(`Arquivar ${nome}? Some das listas e análises, mantém o histórico e revoga o acesso.`)) return;
+      const prev = pessoas.find((p) => p.id === id);
+      const nowIso = new Date().toISOString();
+      const patch = arquivar ? { arquivado_em: nowIso, invited_at: null } : { arquivado_em: null };
+      if (prev) upsertPessoa({ ...prev, ...patch });
+      const { error } = await sb.from('pessoas').update(patch).eq('id', id);
+      if (error) {
+        if (prev) upsertPessoa(prev);
+        toast.error('Erro ao arquivar: ' + error.message);
+        return;
+      }
+      toast.success(arquivar ? `${nome} arquivado.` : `${nome} desarquivado. Ative o acesso se for voltar a usar o app.`);
+    },
+    [pessoas, sb, toast, upsertPessoa],
+  );
+
   const runDeletePessoa = (id: string, nome: string) => {
     const tcount = tasksByPessoa.get(id) ?? 0;
     if (tcount) {
@@ -279,6 +299,8 @@ export function CadastrosClient() {
 
   const clientesVisiveis = showArquivados ? clientes : clientesAtivos;
   const projetosVisiveis = showArquivados ? projetos : projetosAtivos;
+  const pessoasVisiveis = showArquivados ? pessoas : pessoas.filter((p) => !p.arquivado_em);
+  const pessoasAtivasN = pessoas.filter((p) => !p.arquivado_em).length;
   const clientesById = new Map(clientes.map((c) => [c.id, c] as const));
 
   return (
@@ -290,7 +312,7 @@ export function CadastrosClient() {
           <div className="text-xs text-muted mt-0.5">
             <b className="text-ink">{clientesAtivos.length}</b> clientes ·{' '}
             <b className="text-ink">{projetosAtivos.length}</b> projetos ·{' '}
-            <b className="text-ink">{pessoas.length}</b> pessoas
+            <b className="text-ink">{pessoasAtivasN}</b> pessoas
           </div>
         </div>
         <div>
@@ -311,7 +333,7 @@ export function CadastrosClient() {
             <span className="mx-1.5">·</span>
             <b>{projetosAtivos.length}</b> projetos
             <span className="mx-1.5">·</span>
-            <b>{pessoas.length}</b> pessoas
+            <b>{pessoasAtivasN}</b> pessoas
           </>
         }
         right={
@@ -319,12 +341,10 @@ export function CadastrosClient() {
             <button
               type="button"
               onClick={() => setShowArquivados((v) => !v)}
-              disabled={tab === 'pessoas'}
-              title={tab === 'pessoas' ? 'Pessoas não têm flag de arquivado.' : 'Mostrar arquivados'}
+              title="Mostrar arquivados"
               className={cn(
                 'iconbtn bordered text-xs',
-                tab === 'pessoas' && 'opacity-40 cursor-not-allowed',
-                showArquivados && tab !== 'pessoas' && 'bg-[color:var(--green-tint)] border-[color:var(--green)] text-[color:var(--green)]',
+                showArquivados && 'bg-[color:var(--green-tint)] border-[color:var(--green)] text-[color:var(--green)]',
               )}
               style={{ width: 'auto', padding: '0 12px', gap: 6 }}
               aria-label="Mostrar arquivados"
@@ -344,7 +364,7 @@ export function CadastrosClient() {
       <div className="md:hidden flex border-b border-line mb-0">
         {(['clientes', 'projetos', 'pessoas'] as const).map((t) => {
           const label = t === 'clientes' ? 'Clientes' : t === 'projetos' ? 'Projetos' : 'Pessoas';
-          const count = t === 'clientes' ? clientesAtivos.length : t === 'projetos' ? projetosAtivos.length : pessoas.length;
+          const count = t === 'clientes' ? clientesAtivos.length : t === 'projetos' ? projetosAtivos.length : pessoasAtivasN;
           return (
             <button
               key={t}
@@ -402,7 +422,7 @@ export function CadastrosClient() {
         >
           <Icon name="users" size={14} />
           Pessoas
-          <span className="badge">{pessoas.length}</span>
+          <span className="badge">{pessoasAtivasN}</span>
         </button>
       </div>
 
@@ -650,7 +670,7 @@ export function CadastrosClient() {
               </tr>
             </thead>
             <tbody>
-              {pessoas.map((p) => {
+              {pessoasVisiveis.map((p) => {
                 const papelLabel =
                   p.role === 'cliente' ? 'Cliente externo' :
                   p.role === 'admin' ? 'Admin' :
@@ -664,12 +684,13 @@ export function CadastrosClient() {
                   ? (clientes.find((c) => c.id === p.cliente_secundario_id)?.nome ?? '—')
                   : null;
                 return (
-                  <tr key={p.id}>
+                  <tr key={p.id} className={p.arquivado_em ? 'opacity-50' : undefined}>
                     <td>
                       <div className="flex items-center gap-3 min-w-0">
                         <Avatar label={p.nome} shape="circle" />
                         <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
                           <span className="font-medium text-[color:var(--ink)] truncate">{p.nome}</span>
+                          <Chip show={!!p.arquivado_em} label="Arquivado" variant="muted" />
                           <Chip show={p.is_ceo === true} label="CEO" variant="muted" />
                           <Chip show={p.is_pm === true} label="PM" variant="muted" />
                         </div>
@@ -748,6 +769,17 @@ export function CadastrosClient() {
                           aria-label="Inativar pessoa"
                         >
                           <Icon name="lock" size={14} />
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="iconbtn"
+                          onClick={() => runArquivarPessoa(p.id, p.nome, !p.arquivado_em)}
+                          title={p.arquivado_em ? 'Desarquivar pessoa' : 'Arquivar pessoa (saiu da empresa)'}
+                          aria-label={p.arquivado_em ? 'Desarquivar pessoa' : 'Arquivar pessoa'}
+                        >
+                          <Icon name={p.arquivado_em ? 'refresh' : 'archive'} size={14} />
                         </button>
                       )}
                       <EditPessoaButton
@@ -899,7 +931,7 @@ export function CadastrosClient() {
         {/* Pessoas */}
         {tab === 'pessoas' && (
           <div className="rounded-xl border border-line overflow-hidden bg-[color:var(--bg-elev)]">
-            {pessoas.map((p) => {
+            {pessoasVisiveis.map((p) => {
               const clienteNome = p.role === 'cliente' ? clientes.find((c) => c.id === p.cliente_id)?.nome : undefined;
               const papelLabel =
                 p.role === 'cliente'

@@ -90,7 +90,10 @@ interface DataState {
   tasks: Task[];
   clientes: Cliente[];
   projetos: Projeto[];
+  /** Pessoas ativas (sem as arquivadas) · usar em listas, seletores e análises. */
   pessoas: Pessoa[];
+  /** Todas as pessoas, inclusive arquivadas · nomes em histórico/Cadastros. */
+  todasPessoas: Pessoa[];
   /** Time entries dos últimos N dias. Cronômetro start/stop e Timesheet
    *  consomem daqui (sem fetch local). RLS filtra por pessoa pra não-admin. */
   timeEntries: TimeEntry[];
@@ -168,7 +171,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [projetos, setProjetos] = useState<Projeto[]>([]);
-  const [pessoas, setPessoas] = useState<Pessoa[]>([]);
+  // Todas as pessoas (inclui arquivadas, para nomes no histórico); `pessoas`
+  // exposto no contexto é só quem não está arquivado (listas e análises).
+  const [todasPessoas, setPessoas] = useState<Pessoa[]>([]);
+  const pessoas = useMemo(() => todasPessoas.filter((p) => !p.arquivado_em), [todasPessoas]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -318,7 +324,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const refreshPessoas = useCallback(async () => {
     const { data, error } = await sb
       .from('pessoas')
-      .select('id,nome,email,user_id,invited_at,role,cliente_id,cliente_principal_id,cliente_secundario_id,capacidade_horas_semana,skills,senioridade,is_ceo,is_pm,acesso_portal')
+      .select('id,nome,email,user_id,invited_at,role,cliente_id,cliente_principal_id,cliente_secundario_id,capacidade_horas_semana,skills,senioridade,is_ceo,is_pm,acesso_portal,arquivado_em')
       .order('nome');
     if (error) return;
     setPessoas((data ?? []).map(pessoaFromDb));
@@ -389,7 +395,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const userId = session.user.id;
       const email = (session.user.email ?? '').trim().toLowerCase();
       const COLS =
-        'id,nome,email,user_id,invited_at,role,cliente_id,cliente_principal_id,cliente_secundario_id,capacidade_horas_semana,skills,senioridade,is_ceo,is_pm,acesso_portal';
+        'id,nome,email,user_id,invited_at,role,cliente_id,cliente_principal_id,cliente_secundario_id,capacidade_horas_semana,skills,senioridade,is_ceo,is_pm,acesso_portal,arquivado_em';
       // 1) por user_id já vinculado
       const r1 = await sb.from('pessoas').select(COLS).eq('user_id', userId).maybeSingle();
       if (cancelled) return;
@@ -652,6 +658,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       clientes: visibleClientes,
       projetos: visibleProjetos,
       pessoas,
+      todasPessoas,
       timeEntries,
       loading,
       refreshing,
@@ -681,7 +688,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       markUserEditedTask,
     }),
     [
-      visibleTasks, visibleClientes, visibleProjetos, pessoas, timeEntries,
+      visibleTasks, visibleClientes, visibleProjetos, pessoas, todasPessoas, timeEntries,
       loading, refreshing, error, realtimeStatus,
       currentPessoa, viewerRole, isCEO, todasConcluidas, carregandoConcluidas,
       refreshAll, setTodasConcluidas,
@@ -717,8 +724,9 @@ export function useProjetosById(): Map<string, Projeto> {
 }
 
 export function usePessoasById(): Map<string, Pessoa> {
-  const { pessoas } = useData();
-  return useMemo(() => new Map(pessoas.map((p) => [p.id, p])), [pessoas]);
+  // Inclui arquivadas: o nome de quem saiu continua no histórico e nas tarefas
+  const { todasPessoas } = useData();
+  return useMemo(() => new Map(todasPessoas.map((p) => [p.id, p])), [todasPessoas]);
 }
 
 export function useTasksById(): Map<string, Task> {

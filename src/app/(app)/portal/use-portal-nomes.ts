@@ -13,7 +13,7 @@ import { useData } from '@/lib/data-store';
  * Admin/interno já têm todas as pessoas no store.
  */
 export function usePortalNomes(clienteId: string): Map<string, string> {
-  const { pessoas, viewerRole } = useData();
+  const { todasPessoas, viewerRole } = useData();
   const [extras, setExtras] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
@@ -32,8 +32,8 @@ export function usePortalNomes(clienteId: string): Map<string, string> {
   }, [viewerRole, clienteId]);
 
   return useMemo(() => {
-    const m = new Map(pessoas.map((p) => [p.id, p.nome]));
+    const m = new Map(todasPessoas.map((p) => [p.id, p.nome]));
     extras.forEach((nome, id) => m.set(id, nome));
     return m;
-  }, [pessoas, extras]);
+  }, [todasPessoas, extras]);
 }
