@@ -1,17 +1,11 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 
 const fontSans = Inter({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-sans',
-  display: 'swap',
-});
-const fontMono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-mono',
   display: 'swap',
 });
 
@@ -81,7 +75,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="pt-BR" className={`${fontSans.variable} ${fontMono.variable}`}>
+    <html lang="pt-BR" className={fontSans.variable}>
       <head>
         {/* color-scheme reage ao toggle manual (.dark no <html>). Sem
             `only` agora — Auto Dark do Chrome só age quando o usuário

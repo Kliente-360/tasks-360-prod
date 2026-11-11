@@ -365,7 +365,7 @@ export function NotifBell() {
       </button>
 
       {open && (
-        <div className="fixed md:absolute top-14 md:top-full right-3 md:right-0 md:mt-2 bg-elev border border-line rounded-lg shadow-xl z-40 w-[340px] max-w-[calc(100vw-24px)] max-h-[70vh] overflow-hidden flex flex-col">
+        <div className="notif-painel fixed md:absolute top-14 md:top-full right-3 md:right-0 md:mt-2 bg-elev border border-line rounded-lg shadow-xl z-40 w-[340px] max-w-[calc(100vw-24px)] max-h-[70dvh] overflow-hidden flex flex-col">
             <div className="px-3 py-2 border-b border-line flex items-center justify-between">
               <div className="font-brand font-semibold text-sm">Notificações</div>
               {unreadCount > 0 && (

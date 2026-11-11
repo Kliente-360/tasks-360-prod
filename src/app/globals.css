@@ -55,7 +55,9 @@
 
   /* === TIPOGRAFIA === */
   --sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* Produto só em Inter (nov/2026): o que era mono usa Inter com algarismos
+     de largura fixa (tabular-nums). O site da marca mantém o JetBrains do DS. */
+  --mono: var(--sans);
 
   --fs-xs:   12px;
   --fs-sm:   14px;
@@ -1002,7 +1004,7 @@ input[type="checkbox"] { accent-color: var(--brand); }
   .btn.btn-fixed-w { min-height: 0; height: 32px; padding-top: 0; padding-bottom: 0; font-size: 12px; line-height: 1; }
   .view-toggle button { padding-top: 8px; padding-bottom: 8px; }
   .inp { padding: 10px 12px; font-size: 16px; }
-  .modal-card { max-height: calc(100vh - 24px); display: flex; flex-direction: column; }
+  .modal-card { max-height: calc(100dvh - 24px); display: flex; flex-direction: column; }
   .kanban-scroll, .kanban-scroll-op {
     display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px;
     grid-template-columns: none;
@@ -1125,11 +1127,11 @@ select.triage-inline-select { appearance: auto; padding-right: 2px; }
   /* Altura fixa em desktop · evita o modal "respirar" ao trocar de aba
      com menos campos. Conteúdo curto fica com espaço vazio embaixo;
      conteúdo longo scrolla no .tmodal-left. */
-  height: 90vh; max-height: 90vh;
+  height: 90dvh; max-height: 90dvh;
 }
 @media (max-width: 767px) {
   /* Mobile mantém o comportamento original (full-screen com max-height) */
-  .tmodal { height: auto; max-height: 100vh; }
+  .tmodal { height: auto; max-height: 100dvh; }
 }
 .tmodal-head {
   background: var(--header-task); color: #fff;
@@ -2772,7 +2774,7 @@ body {
   width: 100%; background: var(--bg-app);
   border-radius: 24px 24px 0 0;
   padding: 10px 16px calc(24px + env(safe-area-inset-bottom, 0px));
-  max-height: 80vh; overflow-y: auto;
+  max-height: 80dvh; overflow-y: auto;
   animation: sheet-up 0.26s var(--ease);
 }
 @keyframes sheet-up { from { transform: translateY(100%); } to { transform: none; } }
@@ -3019,7 +3021,7 @@ body {
 @media (min-width: 768px) { .pmodal-backdrop { align-items: center; padding: 24px; } }
 .pmodal {
   position: relative;
-  width: 100%; max-width: 1040px; max-height: 92vh;
+  width: 100%; max-width: 1040px; max-height: 92dvh;
   display: flex; flex-direction: column;
   background: var(--bg-elev);
   border: 1px solid var(--line);
@@ -3316,7 +3318,7 @@ body {
    rolagem independente; conversa ancorada embaixo (mais recente no fim) e
    campo de mensagem fixo. No mobile segue uma coluna só, rolando inteira. */
 @media (min-width: 900px) {
-  .pmodal:not(.pmodal-narrow) { height: min(880px, 92vh); }
+  .pmodal:not(.pmodal-narrow) { height: min(880px, 92dvh); }
   /* O modal inteiro rola quando falta altura (tela baixa, faixa de pendência
      ou de homologação aberta). O corpo ocupa o espaço que sobra, mas nunca
      menos que 440px: ao rolar, etapas e faixa sobem e a conversa, com o
@@ -3602,3 +3604,16 @@ body {
 @keyframes carregando-pulso { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
 .kcol-mais { display: block; width: 100%; margin-top: 4px; padding: 8px; border: 1px dashed var(--line-strong); border-radius: 6px; background: transparent; color: var(--ink-soft); font-size: 12px; cursor: pointer; }
 .kcol-mais:hover { border-color: var(--green); color: var(--green); }
+
+
+/* ── Celular: modais não deixam a tela de trás rolar (nov/2026) ─────────
+   Qualquer camada sobreposta (modais fixed inset-0, modal do portal,
+   painéis de baixo, lightbox) trava a rolagem da página; dentro deles a
+   rolagem não "vaza" para trás ao chegar no fim. */
+html:has(.fixed.inset-0, .pmodal-backdrop, .sheet-bg, .anexo-lightbox),
+html:has(.fixed.inset-0, .pmodal-backdrop, .sheet-bg, .anexo-lightbox) body { overflow: hidden; }
+.fixed.inset-0, .fixed.inset-0 *, .pmodal-backdrop, .pmodal-backdrop *, .sheet-bg, .sheet-bg *, .notif-painel, .notif-painel * {
+  overscroll-behavior: contain;
+}
+/* Números alinhados em todo o produto (substitui o JetBrains Mono) */
+html { font-variant-numeric: tabular-nums; }
