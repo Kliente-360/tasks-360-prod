@@ -3752,9 +3752,10 @@ select.m-select { padding-right: 18px; background-position: right 0 center; back
 .m2-campo { display: grid; gap: 5px; min-width: 0; }
 .m2-campo .m2-lbl { font-size: 10px; }
 .m2-area { min-height: 90px; resize: vertical; }
-.m2-valor { margin-top: 4px; padding: 10px 12px; border-radius: 6px; background: var(--green-tint); display: grid; gap: 4px; }
-.m2-valor .m2-lbl { color: var(--green); }
-.m2-valor textarea { border: 0; background: transparent; resize: vertical; color: var(--ink); font: inherit; font-size: 14px; outline: none; padding: 0; }
+.m2-valor { margin-top: 8px; }
+.m2-valor .m2-lbl { color: var(--green); font-size: 11px; }
+.m2-valor .m2-area { min-height: 64px; border-color: color-mix(in srgb, var(--green) 55%, var(--line-strong)); color: var(--green); }
+.m2-valor .m2-area:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-tint); outline: none; }
 .m2-inp { width: 100%; height: 34px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); padding: 0 10px; font-size: 14px; color: var(--ink); background: var(--bg); }
 .m2-inp:focus { outline: 2px solid var(--green); outline-offset: 0; border-color: transparent; }
 

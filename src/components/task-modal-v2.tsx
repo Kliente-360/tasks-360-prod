@@ -14,7 +14,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { Icon } from '@/components/icons';
-import { NotePopover } from '@/components/timer-button';
+import { MIN_NOTE, NotePopover } from '@/components/timer-button';
 import {
   AREAS_TECNICAS, AREA_LABEL, GRUPO_BACKLOG, SUB_LABELS, SUB_TO_MACRO, TIPOS_TRABALHO,
 } from '@/lib/task-constants';
@@ -390,7 +390,7 @@ function LancarHoras({ onLancar }: { onLancar: TaskModalV2Props['onLancar'] }) {
   const [nota, setNota] = useState('');
   const [enviando, setEnviando] = useState(false);
   const h = Number(horas.replace(',', '.'));
-  const valido = Number.isFinite(h) && h > 0 && h <= 24 && !!dia;
+  const valido = Number.isFinite(h) && h > 0 && h <= 24 && !!dia && nota.trim().length >= MIN_NOTE;
 
   const enviar = async () => {
     if (!valido || enviando) return;
@@ -439,7 +439,7 @@ function LancarHoras({ onLancar }: { onLancar: TaskModalV2Props['onLancar'] }) {
             ))}
           </div>
           <label className="m2-campo">
-            <span className="m2-lbl">O que foi feito</span>
+            <span className="m2-lbl">O que foi feito <span className="m2-req">*</span></span>
             <input
               type="text"
               className="m2-inp"
@@ -1186,16 +1186,17 @@ export function TaskModalV2(props: TaskModalV2Props) {
           placeholder={descricaoLoading ? 'Carregando…' : 'Contexto, links, o que o cliente pediu'}
           disabled={descricaoLoading}
         />
-        <div className="m2-valor">
+        <label className="m2-campo m2-valor">
           <span className="m2-lbl">Valor esperado</span>
           <textarea
+            className="inp m2-area"
             rows={2}
             value={descricaoLoading ? '' : (editing.valorEsperado ?? '')}
             onChange={(e) => set('valorEsperado', e.target.value)}
             placeholder={descricaoLoading ? 'Carregando…' : 'O que muda para o cliente quando isso estiver pronto'}
             disabled={descricaoLoading}
           />
-        </div>
+        </label>
       </section>
 
       {nova && (

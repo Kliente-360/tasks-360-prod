@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { STAGE_RANK } from '@/lib/task-constants';
 
 const MAX_NOTE = 120;
+/** Nota obrigatória ao parar o cronômetro ou lançar horas (nov/2026). */
+export const MIN_NOTE = 5;
 
 /** Popover de nota ao parar o cronômetro (comportamento existente).
  *  Exportado pra reuso no botão de cronômetro do modal de task (T.1). */
@@ -43,9 +45,6 @@ export function NotePopover({
         <span className="text-sm font-medium">Parar cronômetro</span>
       </div>
       <div className="p-3">
-        <p className="text-xs text-muted mb-2">
-          Adicione uma nota — opcional, máx. {MAX_NOTE} caracteres.
-        </p>
         <textarea
           ref={areaRef}
           className="inp w-full resize-none text-sm"
@@ -59,11 +58,16 @@ export function NotePopover({
           {note.length}/{MAX_NOTE}
         </div>
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn text-xs" onClick={() => onConfirm('')}>
-            sem nota
+          <button type="button" className="btn text-xs" onClick={onCancel}>
+            Cancelar
           </button>
-          <button type="button" className="btn btn-primary text-xs" onClick={() => onConfirm(note)}>
-            salvar
+          <button
+            type="button"
+            className="btn btn-primary text-xs"
+            disabled={note.trim().length < MIN_NOTE}
+            onClick={() => onConfirm(note.trim())}
+          >
+            Salvar
           </button>
         </div>
       </div>
@@ -269,7 +273,8 @@ export function ManualEntryPopover({
     } as const;
   }, [startTime, durH, durM]);
 
-  const canSubmit = !!date && !!startTime && preview !== null && preview.error === null;
+  const canSubmit =
+    !!date && !!startTime && preview !== null && preview.error === null && note.trim().length >= MIN_NOTE;
 
   function handleSubmit() {
     if (!canSubmit || !preview || preview.error) return;
@@ -350,7 +355,7 @@ export function ManualEntryPopover({
           <textarea
             className="inp w-full resize-none text-sm"
             style={{ height: '72px' }}
-            placeholder="Nota — opcional"
+            placeholder="O que foi feito?"
             maxLength={MAX_NOTE}
             value={note}
             onChange={(e) => setNote(e.target.value)}
