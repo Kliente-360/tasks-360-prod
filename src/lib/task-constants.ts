@@ -102,11 +102,11 @@ export const ALL_SKILLS = SKILL_GROUPS.flatMap((g) => g.values) as string[];
  *  escopo com 13 opções. Sales e Service ficam implícitos (o core). */
 export const AREAS_TECNICAS = [
   { v: 'configuracao', label: 'Configuração', exemplos: 'Admin' },
-  { v: 'automacao', label: 'Automação', exemplos: 'Flow, Apex' },
+  { v: 'automacao', label: 'Automação / Dev', exemplos: 'Flow, Apex' },
   { v: 'canais_ia', label: 'Canais e IA', exemplos: 'WhatsApp, Bot, Agentforce' },
-  { v: 'marketing', label: 'Marketing', exemplos: 'Marketing Cloud' },
   { v: 'integracao', label: 'Integração', exemplos: 'APIs, conectores' },
   { v: 'frontend', label: 'Front-end', exemplos: 'LWC' },
+  { v: 'marketing', label: 'Marketing', exemplos: 'Marketing Cloud' },
   { v: 'consultoria', label: 'Consultoria', exemplos: 'Consultoria, Arquitetura' },
 ] as const;
 export type AreaTecnica = (typeof AREAS_TECNICAS)[number]['v'];
