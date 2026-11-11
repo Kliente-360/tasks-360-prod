@@ -208,7 +208,6 @@ const ingestTaskSchema = {
     .optional()
     .describe("Data limite no formato YYYY-MM-DD (timezone do app)."),
   subetapa: z.string().optional().describe("Ex: backlog, em_andamento, etc. Default: backlog."),
-  complexidade: z.enum(["baixa", "media", "alta"]).optional(),
   tipo_trabalho: z.string().optional().describe("Ex: feature, bug, chore, suporte..."),
   tags: z.array(z.string()).optional(),
   criado_por_ia: z
@@ -216,6 +215,10 @@ const ingestTaskSchema = {
     .optional()
     .describe("Marque true quando a task vier de uma extração automática (Cowork). Default: true."),
 };
+
+const AREAS_TECNICAS = [
+  "configuracao", "automacao", "canais_ia", "marketing", "integracao", "frontend", "consultoria",
+] as const;
 
 const SUBETAPAS = [
   "backlog", "priorizado", "em_definicao", "escopo_definido",
@@ -258,6 +261,11 @@ const updateTaskSchema = {
     .max(1000)
     .optional()
     .describe("Total de horas realizadas na task (substitui o valor atual, não soma)."),
+  area_tecnica: z
+    .enum(AREAS_TECNICAS)
+    .nullable()
+    .optional()
+    .describe("Área técnica da task (escolha única). null limpa."),
 };
 
 const addTaskCommentSchema = {
@@ -354,7 +362,7 @@ export class MyMCP extends McpAgent<Env, unknown, UserProps> {
     // ───── get_tasks ───────────────────────────────────────────────────
     this.server.tool(
       "get_tasks",
-      "Lista tasks do Tasks 360 com filtros (responsável, cliente, status, prazo). Por padrão retorna só tasks ATIVAS (exclui status 'concluido'). Use pra responder perguntas tipo 'quais tasks P0 abertas do cliente X', 'o que a Jéssica tem pra essa semana', 'quantas tasks vencendo até sexta'. Retorna `{ tasks: [...], total }`; cada task traz cliente/projeto/responsavel já resolvidos por nome, flag `atrasada`, e os campos de conteúdo `escopo` (skills), `valor_esperado`, `solucao_implementada`, `valor_entregue`, `tempo_real_horas` — úteis pra análises de qualidade/entrega. Para resumos agregue no lado do consumidor (a API não agrupa).",
+      "Lista tasks do Tasks 360 com filtros (responsável, cliente, status, prazo). Por padrão retorna só tasks ATIVAS (exclui status 'concluido'). Use pra responder perguntas tipo 'quais tasks P0 abertas do cliente X', 'o que a Jéssica tem pra essa semana', 'quantas tasks vencendo até sexta'. Retorna `{ tasks: [...], total }`; cada task traz cliente/projeto/responsavel já resolvidos por nome, flag `atrasada`, e os campos de conteúdo `area_tecnica`, `valor_esperado`, `solucao_implementada`, `tempo_real_horas` (`escopo` e `valor_entregue` são legado, anteriores a nov/2026) — úteis pra análises de qualidade/entrega. Para resumos agregue no lado do consumidor (a API não agrupa).",
       getTasksSchema,
       async ({ pessoa, status, include_concluido, prazo_de, prazo_ate, cliente_id, cliente, projeto_id, limit }) => {
         const result = await callTasks360(this.env, this.props, "GET", "get-tasks", {

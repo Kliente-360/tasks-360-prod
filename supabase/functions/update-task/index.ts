@@ -13,7 +13,8 @@
 //     "bloqueado_por": "cliente",          // nos | cliente | terceiro (só com bloqueado)
 //     "valor_entregue": "texto",
 //     "solucao_implementada": "texto",
-//     "tempo_real_horas": 3.5
+//     "tempo_real_horas": 3.5,
+//     "area_tecnica": "automacao"            // ou null para limpar
 //   }
 //
 // Status vem da subetapa (trigger sync_task_status_from_subetapa). Se só o
@@ -49,6 +50,7 @@ const MACRO_PADRAO: Record<string, string> = {
   backlog: 'backlog', andamento: 'em_desenvolvimento', bloqueado: 'bloqueado', concluido: 'concluido',
 };
 const BLOQUEIOS = ['nos', 'cliente', 'terceiro'];
+const AREAS = ['configuracao', 'automacao', 'canais_ia', 'marketing', 'integracao', 'frontend', 'consultoria'];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const json = (status: number, body: unknown) =>
@@ -68,7 +70,7 @@ Deno.serve(async (req) => {
 
   const { data: task, error: tErr } = await sb
     .from('tasks')
-    .select('id, titulo, status, subetapa, bloqueado_por, valor_entregue, solucao_implementada, tempo_real_horas, arquivado_em')
+    .select('id, titulo, status, subetapa, bloqueado_por, valor_entregue, solucao_implementada, tempo_real_horas, area_tecnica, arquivado_em')
     .eq('id', taskId)
     .maybeSingle();
   if (tErr) return err(500, 'db_error', tErr.message);
@@ -116,6 +118,12 @@ Deno.serve(async (req) => {
     if (arred !== Number(task.tempo_real_horas ?? NaN)) upd.tempo_real_horas = arred;
   }
 
+  if (body.area_tecnica !== undefined) {
+    const area = body.area_tecnica === null || body.area_tecnica === '' ? null : String(body.area_tecnica).toLowerCase();
+    if (area !== null && !AREAS.includes(area)) return err(422, 'invalid_area_tecnica', `area_tecnica deve ser uma de: ${AREAS.join(', ')}`);
+    if (area !== (task.area_tecnica ?? null)) upd.area_tecnica = area;
+  }
+
   if (Object.keys(upd).length === 0) {
     return json(200, { id: task.id, titulo: task.titulo, action: 'unchanged', campos: [] });
   }
@@ -124,7 +132,7 @@ Deno.serve(async (req) => {
     .from('tasks')
     .update(upd)
     .eq('id', taskId)
-    .select('id, titulo, status, subetapa, bloqueado_por, valor_entregue, solucao_implementada, tempo_real_horas')
+    .select('id, titulo, status, subetapa, bloqueado_por, valor_entregue, solucao_implementada, tempo_real_horas, area_tecnica')
     .single();
   if (uErr) return err(500, 'db_error', uErr.message);
 
@@ -139,6 +147,7 @@ Deno.serve(async (req) => {
   const mapa: Record<string, string> = {
     subetapa: 'subetapa', valor_entregue: 'valor_entregue',
     solucao_implementada: 'solucao_implementada', tempo_real_horas: 'tempo_real_horas',
+    area_tecnica: 'area_tecnica',
   };
   const linhas = Object.keys(mapa)
     .filter((k) => k in upd)

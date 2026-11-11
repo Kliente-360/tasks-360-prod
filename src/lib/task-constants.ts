@@ -98,6 +98,32 @@ export const SKILL_GROUPS = [
 
 export const ALL_SKILLS = SKILL_GROUPS.flatMap((g) => g.values) as string[];
 
+/** Área técnica da task (nov/2026) · escolha única e opcional, no lugar do
+ *  escopo com 13 opções. Sales e Service ficam implícitos (o core). */
+export const AREAS_TECNICAS = [
+  { v: 'configuracao', label: 'Configuração', exemplos: 'Admin' },
+  { v: 'automacao', label: 'Automação', exemplos: 'Flow, Apex' },
+  { v: 'canais_ia', label: 'Canais e IA', exemplos: 'WhatsApp, Bot, Agentforce' },
+  { v: 'marketing', label: 'Marketing', exemplos: 'Marketing Cloud' },
+  { v: 'integracao', label: 'Integração', exemplos: 'APIs, conectores' },
+  { v: 'frontend', label: 'Front-end', exemplos: 'LWC' },
+  { v: 'consultoria', label: 'Consultoria', exemplos: 'Consultoria, Arquitetura' },
+] as const;
+export type AreaTecnica = (typeof AREAS_TECNICAS)[number]['v'];
+export const AREA_LABEL: Record<string, string> = Object.fromEntries(AREAS_TECNICAS.map((a) => [a.v, a.label]));
+
+/** Skill (cadastro da pessoa) → área técnica. Mesmo de-para da migração
+ *  2026-11-10 (area_do_escopo). Sales/Service Cloud não viram área. */
+export const SKILL_PARA_AREA: Record<string, AreaTecnica> = {
+  Admin: 'configuracao', Flow: 'automacao', Apex: 'automacao',
+  WhatsApp: 'canais_ia', Bot: 'canais_ia', Agentforce: 'canais_ia',
+  'Marketing Cloud': 'marketing', 'Integração': 'integracao', LWC: 'frontend',
+  Consultoria: 'consultoria', Arquitetura: 'consultoria',
+};
+
+/** Subetapas do grupo Backlog · esforço só pode mudar enquanto a task está nele. */
+export const GRUPO_BACKLOG = new Set(['backlog', 'priorizado', 'em_definicao', 'escopo_definido']);
+
 /** Tipos de trabalho · lista única usada no modal interno e no portal do
  *  cliente. `hint` explica o tipo pra quem abre a solicitação. */
 export const TIPOS_TRABALHO = [

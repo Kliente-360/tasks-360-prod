@@ -25,8 +25,8 @@ import { useToast } from '@/components/toast';
 import { BulkBar, BulkBarClearButton, BulkBarSep, BulkSelect } from '@/components/bulk-bar';
 import { PageHeader } from '@/components/page-header';
 import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
-import { atrasada, fmtDate, fmtDateShort, fmtTempoEtapa, isPreTriagem, lblComplex, lblStatus } from '@/lib/task-utils';
-import { STATUS, SUB_LABELS, SUBS_FLAT, SUBS_FLAT_ORDER } from '@/lib/task-constants';
+import { atrasada, fmtDate, fmtDateShort, fmtTempoEtapa, isPreTriagem, lblStatus } from '@/lib/task-utils';
+import { STATUS, SUB_LABELS, SUBS_FLAT, SUBS_FLAT_ORDER, AREA_LABEL } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import type { Filters as StdFilters } from '@/lib/filters';
@@ -95,7 +95,7 @@ const SORT_OPTIONS: { key: string; label: string }[] = [
   { key: 'pessoaId', label: 'Responsável' },
   { key: 'prioridade', label: 'Prioridade' },
   { key: 'esforco', label: 'Esforço' },
-  { key: 'complexidade', label: 'Complexidade' },
+  { key: 'areaTecnica', label: 'Área técnica' },
   { key: 'prazo', label: 'Prazo' },
   { key: 'subetapa', label: 'Status' },
 ];
@@ -231,9 +231,10 @@ export function BacklogClient() {
       if (f.pri === EMPTY) {
         if (t.prioridade) return false;
       } else if (f.pri && t.prioridade !== f.pri) return false;
+      // Filtro antigo de complexidade passa a filtrar pela área técnica (nov/2026)
       if (f.complexidade === EMPTY) {
-        if (t.complexidade) return false;
-      } else if (f.complexidade && (t.complexidade || 'media') !== f.complexidade) return false;
+        if (t.areaTecnica) return false;
+      } else if (f.complexidade && t.areaTecnica !== f.complexidade) return false;
       if (f.origem === 'ia' && !t.criadoPorIa) return false;
       if (f.origem === 'humano' && t.criadoPorIa) return false;
       if (onlyRadar && !t.radar) return false;
@@ -270,9 +271,7 @@ export function BacklogClient() {
         v = SUBS_FLAT_ORDER[String(v)] ?? 99;
       }
       if (k === 'prioridade') v = v ? +String(v).slice(1) : 99;
-      if (k === 'complexidade') {
-        v = ({ alta: 0, media: 1, baixa: 2 } as Record<string, number>)[String(v)] ?? 1;
-      }
+      if (k === 'areaTecnica') v = AREA_LABEL[String(v)] ?? '~';
       return v == null ? '' : (v as number | string);
     };
     arr.sort((a, b) => {
@@ -337,8 +336,9 @@ export function BacklogClient() {
           label = t.prioridade;
           break;
         case 'complexidade':
-          key = t.complexidade || 'media';
-          label = lblComplex(t.complexidade);
+        case 'areaTecnica':
+          key = t.areaTecnica || NONE;
+          label = t.areaTecnica ? AREA_LABEL[t.areaTecnica] ?? t.areaTecnica : 'Sem área';
           break;
         default:
           key = '__all__';
@@ -360,9 +360,6 @@ export function BacklogClient() {
       groups.sort((a, b) => (order[a.key] ?? 9) - (order[b.key] ?? 9));
     } else if (groupBy === 'subetapa') {
       groups.sort((a, b) => (SUBS_FLAT_ORDER[a.key] ?? 99) - (SUBS_FLAT_ORDER[b.key] ?? 99));
-    } else if (groupBy === 'complexidade') {
-      const order: Record<string, number> = { alta: 0, media: 1, baixa: 2 };
-      groups.sort((a, b) => (order[a.key] ?? 9) - (order[b.key] ?? 9));
     } else {
       groups.sort((a, b) => {
         if (a.key === NONE) return 1;
@@ -755,7 +752,7 @@ export function BacklogClient() {
               <SortableTh label="Responsável" sortKey="pessoaId" sortBy={sortBy} sortIcon={sortIcon} />
               <SortableTh label="Pri" sortKey="prioridade" sortBy={sortBy} sortIcon={sortIcon} title="Prioridade" />
               <SortableTh label="h" sortKey="esforco" sortBy={sortBy} sortIcon={sortIcon} title="Horas previstas" align="right" />
-              <SortableTh label="Cmplx" sortKey="complexidade" sortBy={sortBy} sortIcon={sortIcon} title="Complexidade" />
+              <SortableTh label="Área" sortKey="areaTecnica" sortBy={sortBy} sortIcon={sortIcon} title="Área técnica" />
               <SortableTh label="Prazo" sortKey="prazo" sortBy={sortBy} sortIcon={sortIcon} />
               <SortableTh label="Status" sortKey="subetapa" sortBy={sortBy} sortIcon={sortIcon} />
               <th className="w-8"></th>
@@ -824,14 +821,7 @@ export function BacklogClient() {
                     </td>
                     <td className="font-mono text-ink-soft text-right">{t.esforco}h</td>
                     <td>
-                      <span className={`cx cx-${t.complexidade || 'media'}`}>
-                        <span className="cx-bar">
-                          <i className={t.complexidade === 'baixa' || t.complexidade === 'media' || t.complexidade === 'alta' ? 'on' : ''} style={{ height: 6 }} />
-                          <i className={t.complexidade === 'media' || t.complexidade === 'alta' ? 'on' : ''} style={{ height: 9 }} />
-                          <i className={t.complexidade === 'alta' ? 'on' : ''} style={{ height: 12 }} />
-                        </span>
-                        {lblComplex(t.complexidade)}
-                      </span>
+                      <span className="text-ink-soft text-xs truncate">{t.areaTecnica ? AREA_LABEL[t.areaTecnica] ?? t.areaTecnica : '—'}</span>
                     </td>
                     <td>
                       <span className={atrasada(t) ? 'late' : ''}>{t.prazo ? fmtDate(t.prazo) : '—'}</span>

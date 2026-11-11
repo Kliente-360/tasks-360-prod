@@ -14,7 +14,7 @@
  */
 
 import type { Cliente, Pessoa, Projeto, Task } from './types';
-import { STATUS } from './task-constants';
+import { STATUS, SKILL_PARA_AREA, AREA_LABEL, type AreaTecnica } from './task-constants';
 import {
   agingDays,
   cargaNivelFromPctCap,
@@ -1061,14 +1061,16 @@ export type SkillMismatch = {
   clienteId: string;
   projetoId: string;
   pessoaId: string;
+  /** Área técnica da task (nov/2026 · substitui o escopo). */
+  taskArea: string;
+  /** Mantido para as telas antigas: a área como lista de um item. */
   taskEscopo: string[];
-  /** Skills do escopo da task que a pessoa NÃO tem. */
   missingSkills: string[];
 };
 
 /**
- * Retorna tasks abertas onde a pessoa atribuída não tem nenhuma das
- * skills do escopo da task (interseção vazia).
+ * Tasks abertas cuja área técnica não aparece em nenhuma skill da pessoa
+ * atribuída (skills do cadastro convertidas em área por SKILL_PARA_AREA).
  */
 export function computeSkillMismatches(
   tasks: Task[],
@@ -1078,24 +1080,23 @@ export function computeSkillMismatches(
   for (const t of tasks) {
     if (t.arquivadoEm) continue;
     if (t.status === STATUS.CONCLUIDO) continue;
-    if (!t.pessoaId) continue;
-    const escopo = t.escopo ?? [];
-    if (escopo.length === 0) continue;
+    if (!t.pessoaId || !t.areaTecnica) continue;
 
     const pessoa = pessoasById.get(t.pessoaId);
     if (!pessoa) continue;
-    const skills = pessoa.skills ?? [];
-    const missing = escopo.filter((s) => !skills.includes(s));
-    if (missing.length === 0) continue;
+    const areasDaPessoa = new Set((pessoa.skills ?? []).map((sk) => SKILL_PARA_AREA[sk]).filter(Boolean));
+    if (areasDaPessoa.has(t.areaTecnica as AreaTecnica)) continue;
 
+    const label = AREA_LABEL[t.areaTecnica] ?? t.areaTecnica;
     result.push({
       taskId: t.id,
       taskTitulo: t.titulo,
       clienteId: t.clienteId,
       projetoId: t.projetoId,
       pessoaId: t.pessoaId,
-      taskEscopo: escopo,
-      missingSkills: missing,
+      taskArea: t.areaTecnica,
+      taskEscopo: [label],
+      missingSkills: [label],
     });
   }
   return result;
@@ -1110,16 +1111,18 @@ export type SenioridadeAlert = {
   taskTitulo: string;
   clienteId: string;
   pessoaId: string;
-  /** risco_qualidade: complexidade alta + júnior. desperdicio: baixa + sênior. */
+  /** risco_qualidade: task grande + júnior. desperdicio: task pequena + sênior. */
   type: SenioridadeAlertType;
+  /** Tamanho tirado do esforço (nov/2026 · o campo complexidade saiu):
+   *  'alta' = 24 h ou mais, 'baixa' = menos de 2 h. */
   complexidade: string;
   senioridade: string;
 };
 
 /**
  * Detecta tasks abertas com mismatch de senioridade:
- * - risco_qualidade: complexidade='alta' atribuída a 'junior'
- * - desperdicio:     complexidade='baixa' atribuída a 'senior'
+ * - risco_qualidade: task de 24 h ou mais atribuída a 'junior'
+ * - desperdicio:     task de menos de 2 h atribuída a 'senior'
  */
 export function computeSenioridadeAlerts(
   tasks: Task[],
@@ -1129,12 +1132,14 @@ export function computeSenioridadeAlerts(
   for (const t of tasks) {
     if (t.arquivadoEm) continue;
     if (t.status === STATUS.CONCLUIDO) continue;
-    if (!t.pessoaId || !t.complexidade) continue;
+    if (!t.pessoaId) continue;
+    const horas = Number(t.esforco) || 0;
+    if (horas <= 0) continue;
 
     const pessoa = pessoasById.get(t.pessoaId);
     if (!pessoa?.senioridade) continue;
 
-    const c = t.complexidade;
+    const c = horas >= 24 ? 'alta' : horas < 2 ? 'baixa' : 'media';
     const s = pessoa.senioridade.toLowerCase();
     let type: SenioridadeAlertType | null = null;
     if (c === 'alta' && s === 'junior') type = 'risco_qualidade';
@@ -1504,38 +1509,7 @@ export function computeN9Privadas(tasks: Task[]): N9Row[] {
   return Array.from(map.entries()).map(([pessoaId, count]) => ({ pessoaId, count })).sort((a, b) => b.count - a.count);
 }
 
-// ─── N.10 · Cobertura de critério de aceite ──────────────────────
-const STAGES_AFTER_ESCOPO_DEFINIDO = new Set(['escopo_definido','em_desenvolvimento','em_homologacao','em_revisao','pronto_producao','em_implantacao','concluido']);
-export interface N10Result { elegiveis: number; preenchidas: number; pct: number; faltando: Array<{ taskId: string; titulo: string; clienteId: string }>; }
-export function computeN10CriterioCob(tasks: Task[]): N10Result {
-  let elegiveis = 0, preenchidas = 0;
-  const faltando: N10Result['faltando'] = [];
-  for (const t of tasks) {
-    if (t.arquivadoEm) continue;
-    if (!STAGES_AFTER_ESCOPO_DEFINIDO.has(t.subetapa)) continue;
-    elegiveis++;
-    if (t.criterioAceite && t.criterioAceite.trim()) preenchidas++;
-    else faltando.push({ taskId: t.id, titulo: t.titulo, clienteId: t.clienteId });
-  }
-  const pct = elegiveis === 0 ? 100 : Math.round((preenchidas / elegiveis) * 100);
-  return { elegiveis, preenchidas, pct, faltando: faltando.slice(0, 30) };
-}
-
-// ─── N.11 · Cobertura de valor entregue ──────────────────────────
-export interface N11Result { concluidas: number; preenchidas: number; pct: number; faltando: Array<{ taskId: string; titulo: string; clienteId: string }>; }
-export function computeN11ValorEntregueCob(tasks: Task[]): N11Result {
-  let conc = 0, ok = 0;
-  const faltando: N11Result['faltando'] = [];
-  for (const t of tasks) {
-    if (t.arquivadoEm) continue;
-    if (t.status !== STATUS.CONCLUIDO) continue;
-    conc++;
-    if (t.valorEntregue && t.valorEntregue.trim()) ok++;
-    else faltando.push({ taskId: t.id, titulo: t.titulo, clienteId: t.clienteId });
-  }
-  const pct = conc === 0 ? 100 : Math.round((ok / conc) * 100);
-  return { concluidas: conc, preenchidas: ok, pct, faltando: faltando.slice(0, 30) };
-}
+// N.10 (critério de aceite) e N.11 (valor entregue) saíram com os campos (nov/2026)
 
 // ─── N.12 · WIP por pessoa ───────────────────────────────────────
 export interface N12Row { pessoaId: string; emDesenvolvimento: number; emHomologacao: number; total: number; }

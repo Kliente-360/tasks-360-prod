@@ -68,7 +68,7 @@ No campo de comentário (modal de edição da tarefa), botão **"@ mencionar"** 
 
 ### Card de tarefa (componente único)
 
-O mesmo card visual aparece no **Backlog mobile**, **Meu foco**, **Calendário (dia selecionado)** e **Kanban operacional**. Mudanças nele afetam todos os 4 lugares — comentários cruzados nos templates marcam isso. Estrutura: título + prioridade (topo), cliente · projeto, responsável + complexidade + prazo, status + aging badge.
+O mesmo card visual aparece no **Backlog mobile**, **Meu foco**, **Calendário (dia selecionado)** e **Kanban operacional**. Mudanças nele afetam todos os 4 lugares — comentários cruzados nos templates marcam isso. Estrutura: título + prioridade (topo), cliente · projeto, responsável + prazo, status + aging badge.
 
 ### Meu foco
 
@@ -140,10 +140,10 @@ Tabela mestre. Cabeçalho ordenável por qualquer coluna (clique). Colunas: Tare
 - Atrasadas em vermelho
 - Aging badge em laranja/vermelho quando uma tarefa está parada além do limite saudável
 - Chip `🤖 IA` antes do título marca tasks criadas por automação de IA (ver [Tasks criadas por IA](#tasks-criadas-por-ia))
-- **Agrupar por** (menu ⋯ no topo da tabela): default sem agrupamento (lista plana). Opções: Responsável · Cliente · Projeto · Status · Etapa · Prioridade · Complexidade. Cada grupo vira um header colapsável (clique pra expandir/recolher) com contagem e total de horas.
+- **Agrupar por** (menu ⋯ no topo da tabela): default sem agrupamento (lista plana). Opções: Responsável · Cliente · Projeto · Status · Etapa · Prioridade · Área técnica. Cada grupo vira um header colapsável (clique pra expandir/recolher) com contagem e total de horas.
 - **Ordenar**: no desktop, click no cabeçalho da coluna alterna asc/desc/none. No mobile, botão "Ordenar: [chave] ↑↓" abre painel com 10 opções; click na mesma chave alterna direção, click em outra ativa em ascendente. Etapa segue ordem natural do fluxo, não alfabética.
 - **Ordem manual**: botão "≡ ordem manual" → arraste linhas pra reordenar (desabilitado quando há agrupamento; só desktop)
-- **Filtros**: cliente, projeto, pessoa, status, prioridade, complexidade (ver [Filtros](#filtros-e-busca)). No menu ⋯ também há "mostrar arquivadas" e os toggles "somente criadas por 🤖 IA" / "somente criadas por humanos".
+- **Filtros**: cliente, projeto, pessoa, status, prioridade, área técnica (ver [Filtros](#filtros-e-busca)). No menu ⋯ também há "mostrar arquivadas" e os toggles "somente criadas por 🤖 IA" / "somente criadas por humanos".
 - **Bulk actions**: checkbox por linha (ver [Bulk actions](#bulk-actions-na-tabela))
 - **Pagination**: cada grupo mostra até 100 rows por padrão; botão **"mostrando X de Y · carregar mais"** no fim da lista pra revelar o restante. Mantém o render leve mesmo com centenas de tasks.
 
@@ -191,12 +191,12 @@ Em **Clientes**, o botão "editar" abre modal com:
 
 Em **Projetos**, o botão "editar" abre modal com nome, cliente, **tipo** (`sustentação` / `projeto` / `discovery`) e atributos de **SLA + orçamento** (resposta em horas, entrega em dias, orçamento total em horas). SLA de entrega aciona a heurística "SLA iminente" entre 80% e 120% do prazo. Os atributos aparecem como badges discretas na listagem. **Arquivar** funciona igual ao de cliente — esconde do radar, sem deletar.
 
-Em **Pessoas**, o botão "editar" abre modal com nome, email, perfil (Admin / Time Kliente 360 / Cliente externo) e — quando perfil for "Cliente externo" — o cliente vinculado. Pra time interno: capacidade semanal, skills e **senioridade** (júnior/pleno/sênior/lead). Júnior + complexidade alta vira alerta na heurística.
+Em **Pessoas**, o botão "editar" abre modal com nome, email, perfil (Admin / Time Kliente 360 / Cliente externo) e — quando perfil for "Cliente externo" — o cliente vinculado. Pra time interno: capacidade semanal, skills e **senioridade** (júnior/pleno/sênior/lead). Júnior com task grande (24 h ou mais) vira alerta na heurística.
 
 Tasks têm contador `reopenCount` automático (incrementado por trigger SQL quando voltam de "concluído" pra qualquer outro status). Aparece como badge "reaberta Nx" no header do modal. Tarefas reabertas 2+ vezes viram alerta na heurística.
 
 Tasks também ganham 3 atributos extras (Onda C):
-- **Escopo** (`escopo`, multi-valor) — classificação técnica da task: `SF Admin`, `SF Clouds`, `IA/Conversacional`, etc. Usado pra match com `skills` da pessoa no dropdown de responsável.
+- **Área técnica** (`area_tecnica`, escolha única e opcional) — Configuração, Automação, Canais e IA, Marketing, Integração, Front-end ou Consultoria. Substituiu o escopo de várias opções em nov/2026. As skills da pessoa são convertidas em área para os alertas de compatibilidade.
 - **Tempo real (horas)** — opcional, manual ou via cronômetro (ver [Cronômetro e Timesheet](#cronômetro-e-timesheet)). Se >1.5x do esforço estimado, vira alerta.
 
 Botões de acesso variam por perfil:
@@ -253,7 +253,7 @@ Banner no topo do **Dashboard** mostra alertas determinísticos (sem IA) baseado
 4. **SLA contratado quase vencido** (projetos com `sla_entrega_dias`)
 
 **Onda B — qualidade** (2):
-5. **Júnior + complexidade alta** — task de alta complexidade atribuída a pessoa júnior
+5. **Júnior com task grande** — task de 24 h ou mais atribuída a pessoa júnior
 6. **Reaberturas crônicas** — task com `reopen_count ≥ 2`
 
 **Onda C — execução** (1):
@@ -288,14 +288,14 @@ Campos:
 | **Responsável** | Pessoa única. Pode ficar vazio (mas aparece como sinal de risco). |
 | **Prioridade** | P0 (urgente) · P1 (alta) · P2 (normal) · P3 (baixa). |
 | **Esforço** | Horas estimadas. Decimal aceito. |
-| **Complexidade** | Alta · Média · Baixa. Aparece como chip com mini-barras na tabela do Backlog. |
+| **Área técnica** | Configuração · Automação · Canais e IA · Marketing · Integração · Front-end · Consultoria. Opcional; coluna "Área" no Backlog. (Complexidade, critério de aceite e valor entregue saíram em nov/2026.) |
 | **Prazo** | Data. Se passou e o status não é `concluido` → vira atrasada. |
 | **Etapa** | Sub-etapa (nível 2). Macro é derivada automaticamente: |
 |   | • Backlog → backlog · priorizado · em definição · escopo definido |
 |   | • Em andamento → em desenvolvimento · em homologação · em revisão · pronto p/ produção · em implantação |
 |   | • Bloqueado → bloqueado |
 |   | • Concluído → concluído |
-| **Escopo** | Array de skills técnicas da task (`SF Admin`, `SF Clouds`, `IA/Conversacional`, etc). Combina com `skills` da pessoa pra destaque no dropdown de responsável. |
+| **Esforço** | Estimado em horas. Pode mudar enquanto a task está no grupo Backlog; ao entrar em desenvolvimento, trava e fica guardado como estimativa inicial. |
 | **Checklist** | Lista de mini-tasks (`{ id, body, done }[]`). Colapsável no modal, contador done/total no header. Detalhes em [Checklist](#checklist-da-tarefa). |
 | **Visível ao cliente** | Boolean. Se `true`, task aparece no Portal cliente. Default `true` — exclua selecionando "—" não. |
 | **Anexos** | Imagens coladas via ⌘V/Ctrl+V (PNG/JPG/WebP até 2MB). Persistidas em Storage. Detalhes em [Anexos](#anexos-imagens-via-paste). |
@@ -316,7 +316,7 @@ Ordem das seções, top→down:
 1. **Atribuição** — cliente · projeto · responsável · prioridade (grid 2×2)
 2. **Descrição** — textarea (suporta markdown render leve)
 3. **Checklist** — colapsável; default fechado. Abre auto se a task já tem itens. Detalhes em [Checklist](#checklist-da-tarefa).
-4. **Esforço** — complexidade · prazo · estimado (h) · realizado (h)
+4. **Esforço** — área técnica · prazo · estimado (h, trava ao sair do Backlog) · realizado (h)
 5. **Metadata (sem título)** — Etapa (sub) · Visível ao cliente. Campo "Bloqueado por" aparece quando etapa = `bloqueado`.
 
 > Macro é derivada da sub automaticamente. Subetapa "concluído" leva pra macro `concluido`, etc.
@@ -357,7 +357,7 @@ ESC vai fechando do mais interno pro mais externo:
 ### Quick add (kanban operacional)
 
 - Botão **+ adicionar** no topo de cada coluna sub-etapa.
-- Digita só o título → Enter cria com defaults (P2, 4h, complexidade média, sem cliente/projeto/responsável). Editável depois.
+- Digita só o título → Enter cria com defaults (P2, 4h, sem cliente/projeto/responsável). Editável depois.
 - Após criar, o input continua aberto pra captura contínua. Esc fecha.
 
 ### Editar

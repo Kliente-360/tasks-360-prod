@@ -30,7 +30,7 @@ Base URL: `https://nxtlipldmsopscpshrfd.supabase.co/functions/v1` · header obri
 
 **Sempre** use `portal=true` em `get-tasks` e `get-task-comments`. Sem ele vêm tasks privadas e anotações internas, que nunca podem aparecer no texto.
 
-Campos úteis de `get-tasks`: `id`, `titulo`, `status`, `subetapa`, `prazo`, `prioridade`, `tipo_trabalho`, `descricao`, `valor_esperado`, `solucao_implementada`, `valor_entregue`, `status_em` (pra concluídas, a data de conclusão), `subetapa_em` (desde quando está na etapa atual), `aprovado_em`, `bloqueado_por` (`cliente` · `nos` · `terceiro`), `bloqueada_por_tasks` (ids das tasks que precisam terminar antes), `atrasada`, `projeto`, `responsavel`.
+Campos úteis de `get-tasks`: `id`, `titulo`, `status`, `subetapa`, `prazo`, `prioridade`, `tipo_trabalho`, `descricao`, `valor_esperado`, `solucao_implementada`, `valor_entregue` (legado, só em tasks anteriores a nov/2026), `status_em` (pra concluídas, a data de conclusão), `subetapa_em` (desde quando está na etapa atual), `aprovado_em`, `bloqueado_por` (`cliente` · `nos` · `terceiro`), `bloqueada_por_tasks` (ids das tasks que precisam terminar antes), `atrasada`, `projeto`, `responsavel`.
 
 ---
 
@@ -58,7 +58,7 @@ Para cada entrega, os três campos centrais são:
 
 - `valor_esperado`: o que o cliente queria ganhar quando pediu;
 - `solucao_implementada`: o que o time de fato construiu;
-- `valor_entregue`: o resultado que a entrega gerou.
+- `valor_entregue`: legado. Só aparece em tasks concluídas antes de nov/2026; nas novas, o resultado se lê pela `solucao_implementada` comparada ao `valor_esperado`.
 
 Use `titulo`, `projeto`, `tipo_trabalho` e `descricao` como contexto quando esses campos estiverem vazios. Busque até 5 comentários (`portal=true`) das entregas mais relevantes se ajudarem a entender o resultado.
 
@@ -99,9 +99,9 @@ Escreva em português, falando com o cliente ("vocês", "sua equipe"), como o ti
 
 **MODO=entregas · um compilado do mês para o negócio do cliente, não uma lista de tarefas.**
 
-- Agrupe as entregas pelo efeito no negócio (por exemplo: atendimento, vendas, operação, dados), inferido de `valor_esperado`, `solucao_implementada` e `valor_entregue`. Duas a quatro frentes, cada uma num item.
+- Agrupe as entregas pelo efeito no negócio (por exemplo: atendimento, vendas, operação, dados), inferido de `valor_esperado` e `solucao_implementada` (e de `valor_entregue`, quando existir em tasks antigas). Duas a quatro frentes, cada uma num item.
 - Abertura (1 parágrafo): o que ficou melhor para o negócio no mês, com o número exato de entregas e onde se concentraram ("Em setembro concluímos 7 entregas, a maioria no atendimento: o SAC passou a…").
-- Cada item: o que mudou na operação do cliente, ligando o que era esperado ao que foi entregue, e citando as entregas em **negrito**. Quando `valor_entregue` existir, ele é a frase principal; quando não existir, descreva o que passou a funcionar, sem inventar impacto ou número.
+- Cada item: o que mudou na operação do cliente, ligando o que era esperado ao que foi entregue, e citando as entregas em **negrito**. Ligue o que a `solucao_implementada` entregou ao que o `valor_esperado` pedia; quando o `valor_entregue` antigo existir, ele pode ser a frase principal. Sem inventar impacto ou número.
 - Se houver correções de erro, junte-as numa frase ("também corrigimos 3 falhas no fluxo de e-mail") em vez de um item por correção.
 - Fecho (1 frase, opcional): o que está para chegar, se houver task em homologação.
 - Tamanho: 120 a 220 palavras.

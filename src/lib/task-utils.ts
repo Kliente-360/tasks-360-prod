@@ -379,13 +379,8 @@ export function missingFieldsForCurrentSubetapa(
   if (rank >= TRIAGE_RANK_GATE) {
     if (!t.prazo) missing.add('prazo');
     if (!Number(t.esforco)) missing.add('esforco');
-    if (!(t.criterioAceite && t.criterioAceite.trim().length > 0)) missing.add('criterioAceite');
   }
-
-  // A partir de em_definicao (rank >= 1)
-  if (rank >= 1) {
-    if (!t.escopo || t.escopo.length === 0) missing.add('escopo');
-  }
+  // Critério de aceite e escopo deixaram de ser exigidos (nov/2026)
 
   // tempo_real em em_homologacao→concluido (exceto bloqueado)
   if (REQUIRES_TEMPO_REAL.has(sub)) {
@@ -394,10 +389,9 @@ export function missingFieldsForCurrentSubetapa(
     if (manual <= 0 && fromSheet <= 0) missing.add('tempoRealHoras');
   }
 
-  // solucao_implementada + valor_entregue no concluido
+  // solucao_implementada no concluido (valor entregue saiu em nov/2026)
   if (sub === 'concluido') {
     if (!(t.solucaoImplementada && t.solucaoImplementada.trim().length > 0)) missing.add('solucaoImplementada');
-    if (!(t.valorEntregue && t.valorEntregue.trim().length > 0)) missing.add('valorEntregue');
   }
 
   // motivo_reabertura quando reabrindo
@@ -412,15 +406,15 @@ export function missingFieldsForCurrentSubetapa(
  * Bucket D · Ondas 2.A + 2.B + 3.A · gate de avanço de subetapa.
  *
  * Regras (alinhadas com docs/gestao/DISCIPLINA_DADOS.md):
- *   • em_definicao+        →  escopo[] não vazio                (2.6)
  *   • escopo_definido+     →  esforco > 0                       (2.4)
- *   • escopo_definido+     →  criterio_aceite não vazio         (3.1)
+ *   (escopo e critério de aceite deixaram de ser exigidos · nov/2026)
  *   • em_homologacao→concluido (exceto bloqueado)
  *                          →  tempoRealHoras > 0                (2.5)
  *                             fallback: opts.timeEntriesHours > 0
  *                             → retorna autoFillTempo (modo d:
  *                                só preenche se manual vazio).
- *   • concluido            →  valor_entregue não vazio          (3.5)
+ *   • concluido            →  solucao_implementada não vazia
+ *   (valor entregue saiu em nov/2026)
  *
  * Bloqueado tem rank -1 → não bloqueia.
  */
@@ -432,14 +426,8 @@ export function validateSubetapaAdvance(
   if (novaSubetapa === 'bloqueado') return { ok: true };
 
   const rank = STAGE_RANK[novaSubetapa] ?? 0;
-  if (rank >= 1 && (!task.escopo || task.escopo.length === 0)) {
-    return { ok: false, error: 'Preencha o escopo técnico antes de avançar.' };
-  }
   if (rank >= 3 && !(Number(task.esforco) > 0)) {
     return { ok: false, error: 'Preencha o esforço estimado (h) antes de avançar.' };
-  }
-  if (rank >= 3 && !(task.criterioAceite && task.criterioAceite.trim().length > 0)) {
-    return { ok: false, error: 'Preencha o critério de aceite antes de avançar.' };
   }
 
   if (REQUIRES_TEMPO_REAL.has(novaSubetapa)) {
@@ -453,9 +441,6 @@ export function validateSubetapaAdvance(
         if (novaSubetapa === 'concluido' && !(task.solucaoImplementada && task.solucaoImplementada.trim().length > 0)) {
           return { ok: false, error: 'Preencha a solução implementada (o que foi feito) antes de concluir.' };
         }
-        if (novaSubetapa === 'concluido' && !(task.valorEntregue && task.valorEntregue.trim().length > 0)) {
-          return { ok: false, error: 'Preencha o valor entregue (impacto realizado) antes de concluir.' };
-        }
         return { ok: true, autoFillTempo: Math.round(sumHours * 100) / 100 };
       }
       return { ok: false, error: 'Registre o tempo real (h) ou lance no timesheet antes de avançar.' };
@@ -465,10 +450,6 @@ export function validateSubetapaAdvance(
   if (novaSubetapa === 'concluido' && !(task.solucaoImplementada && task.solucaoImplementada.trim().length > 0)) {
     return { ok: false, error: 'Preencha a solução implementada (o que foi feito) antes de concluir.' };
   }
-  if (novaSubetapa === 'concluido' && !(task.valorEntregue && task.valorEntregue.trim().length > 0)) {
-    return { ok: false, error: 'Preencha o valor entregue (impacto realizado) antes de concluir.' };
-  }
-
   // 3.B · gate de conclusão por dependências
   if (novaSubetapa === 'concluido' && opts?.hasOpenPreReqs) {
     return { ok: false, error: 'Há tasks pré-requisito ainda abertas — conclua-as primeiro.' };

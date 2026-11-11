@@ -45,7 +45,7 @@ import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
 import { fmtDate, fmtDateShort, lblStatus, missingFieldsForCurrentSubetapa, sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
-import { SUB_TO_MACRO, SUB_LABELS, SUBS_FLAT, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK, TIPOS_TRABALHO } from '@/lib/task-constants';
+import { SUB_TO_MACRO, SUB_LABELS, SUBS_FLAT, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK, TIPOS_TRABALHO, AREAS_TECNICAS, GRUPO_BACKLOG } from '@/lib/task-constants';
 import { taskFromDb, timeEntryFromDb } from '@/lib/adapters';
 import { track } from '@/lib/telemetry';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
@@ -60,7 +60,7 @@ import { emSegundoPlano } from '@/lib/em-segundo-plano';
 const CAMPOS_EDITAVEIS: (keyof Task)[] = [
   'titulo', 'descricao', 'clienteId', 'projetoId', 'pessoaId', 'prioridade', 'tipoTrabalho',
   'esforco', 'complexidade', 'prazo', 'subetapa', 'bloqueadoPor', 'bloqueadaPorTasks',
-  'visivelCliente', 'checklist', 'escopo', 'tempoRealHoras', 'privada', 'radar',
+  'visivelCliente', 'checklist', 'escopo', 'areaTecnica', 'tempoRealHoras', 'privada', 'radar',
   'solucaoImplementada', 'valorEsperado', 'criterioAceite', 'valorEntregue', 'motivoReabertura',
 ];
 const CAMPOS_TARDIOS: (keyof Task)[] = [
@@ -2483,6 +2483,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     className={cn('inp', isMissing('esforco'))}
                     value={editing.esforco}
                     onChange={(e) => set('esforco', Number(e.target.value) || 0)}
+                    disabled={!!editing.id && !GRUPO_BACKLOG.has(editing.subetapa)}
+                    title={!!editing.id && !GRUPO_BACKLOG.has(editing.subetapa) ? 'Esforço travado: a task já saiu do Backlog' : undefined}
                   />
                 </div>
                 <div>
@@ -2544,58 +2546,20 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               {/* DINÂMICOS por subetapa · só campos efetivamente obrigatórios
                   pra avançar a etapa atual. */}
 
-              {/* em_definicao+ (rank >= 1): escopo */}
-              {(STAGE_RANK[editing.subetapa] ?? 0) >= 1 && (
-                <div className={cn(isMissing('escopo') && 'section-missing rounded-md p-3 -m-3')}>
-                  <label className="lbl">Escopo {isMissing('escopo') && <span className="text-danger">*</span>}</label>
-                  <div className="flex flex-col gap-2 mt-1">
-                    {SKILL_GROUPS.map((g) => (
-                      <div key={g.group}>
-                        <div className="text-[10px] uppercase tracking-wide text-muted mb-1">{g.group}</div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {g.values.map((skill) => {
-                            const active = (editing.escopo ?? []).includes(skill);
-                            return (
-                              <button
-                                key={skill}
-                                type="button"
-                                onClick={() => {
-                                  const cur = editing.escopo ?? [];
-                                  set('escopo', active ? cur.filter((s) => s !== skill) : [...cur, skill]);
-                                }}
-                                className={cn(
-                                  'text-xs px-2 py-1 rounded border',
-                                  active
-                                    ? 'bg-[var(--brand)] border-[var(--brand)] text-white font-medium'
-                                    : 'bg-[var(--surface-3)] border-[var(--line)] text-muted',
-                                )}
-                              >
-                                {skill}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+              {/* Área técnica (nov/2026 · substitui escopo; critério de aceite saiu) */}
+              <div>
+                <label className="lbl">Área técnica</label>
+                <select
+                    className="inp"
+                    value={editing.areaTecnica ?? ''}
+                    onChange={(e) => set('areaTecnica', e.target.value || null)}
+                  >
+                    <option value="">Sem área</option>
+                    {AREAS_TECNICAS.map((a) => (
+                      <option key={a.v} value={a.v}>{a.label} · {a.exemplos}</option>
                     ))}
-                  </div>
-                </div>
-              )}
-
-              {/* escopo_definido+ (rank >= 3): critério de aceite */}
-              {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && (
-                <div>
-                  <label className="lbl">Critério de aceite <span className="text-danger">*</span></label>
-                  <textarea
-                    className={cn('inp', isMissing('criterioAceite'))}
-                    rows={3}
-                    value={descricaoLoading ? '' : (editing.criterioAceite ?? '')}
-                    onChange={(e) => set('criterioAceite', e.target.value)}
-                    placeholder={descricaoLoading ? 'Carregando…' : 'Como saberemos que está pronto…'}
-                    disabled={descricaoLoading}
-                    style={descricaoLoading ? { opacity: 0.6 } : undefined}
-                  />
-                </div>
-              )}
+                  </select>
+              </div>
 
               {/* em_homologacao+ (rank >= 5): solução implementada */}
               {SHOWS_SOLUCAO.has(editing.subetapa) && (
@@ -2607,22 +2571,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     value={descricaoLoading ? '' : (editing.solucaoImplementada ?? '')}
                     onChange={(e) => set('solucaoImplementada', e.target.value)}
                     placeholder={descricaoLoading ? 'Carregando…' : 'O que foi feito de fato…'}
-                    disabled={descricaoLoading}
-                    style={descricaoLoading ? { opacity: 0.6 } : undefined}
-                  />
-                </div>
-              )}
-
-              {/* concluido: valor entregue */}
-              {editing.subetapa === 'concluido' && (
-                <div>
-                  <label className="lbl">Valor entregue <span className="text-danger">*</span></label>
-                  <textarea
-                    className={cn('inp', isMissing('valorEntregue'))}
-                    rows={2}
-                    value={descricaoLoading ? '' : (editing.valorEntregue ?? '')}
-                    onChange={(e) => set('valorEntregue', e.target.value)}
-                    placeholder={descricaoLoading ? 'Carregando…' : 'Impacto realizado…'}
                     disabled={descricaoLoading}
                     style={descricaoLoading ? { opacity: 0.6 } : undefined}
                   />
@@ -2917,15 +2865,16 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             <div className="tmodal-section hidden md:block">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="lbl">Complexidade</label>
+                  <label className="lbl">Área técnica</label>
                   <select
                     className="inp"
-                    value={editing.complexidade}
-                    onChange={(e) => set('complexidade', e.target.value as Task['complexidade'])}
+                    value={editing.areaTecnica ?? ''}
+                    onChange={(e) => set('areaTecnica', e.target.value || null)}
                   >
-                    <option value="baixa">Baixa</option>
-                    <option value="media">Média</option>
-                    <option value="alta">Alta</option>
+                    <option value="">Sem área</option>
+                    {AREAS_TECNICAS.map((a) => (
+                      <option key={a.v} value={a.v}>{a.label} · {a.exemplos}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -2937,64 +2886,13 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     className={cn('inp', isMissing('esforco'))}
                     value={editing.esforco}
                     onChange={(e) => set('esforco', Number(e.target.value) || 0)}
+                    disabled={!!editing.id && !GRUPO_BACKLOG.has(editing.subetapa)}
+                    title={!!editing.id && !GRUPO_BACKLOG.has(editing.subetapa) ? 'Esforço travado: a task já saiu do Backlog' : undefined}
                   />
                 </div>
               </div>
             </div>
             )}
-            {/* Escopo · aba Definição · antes do Critério de aceite */}
-            {activeFormTab === 'definicao' && (
-            <div
-              className={cn('tmodal-section hidden md:block', isMissing('escopo') && 'section-missing')}
-            >
-              <div className="tmodal-section-title">Escopo {isMissing('escopo') && <span className="text-danger">*</span>}</div>
-              <div className="flex flex-col gap-2">
-                {SKILL_GROUPS.map((g) => (
-                  <div key={g.group}>
-                    <div className="text-[10px] uppercase tracking-wide text-muted mb-1">{g.group}</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {g.values.map((skill) => {
-                        const active = (editing.escopo ?? []).includes(skill);
-                        return (
-                          <button
-                            key={skill}
-                            type="button"
-                            onClick={() => {
-                              const cur = editing.escopo ?? [];
-                              set('escopo', active ? cur.filter((s) => s !== skill) : [...cur, skill]);
-                            }}
-                            className={`text-xs px-2 py-1 rounded border transition-colors ${
-                              active
-                                ? 'bg-[var(--brand)] border-[var(--brand)] text-white font-medium'
-                                : 'bg-[var(--surface-3)] border-[var(--line)] text-muted hover:border-[var(--brand)] hover:text-[var(--brand)]'
-                            }`}
-                          >
-                            {skill}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            )}
-
-            {activeFormTab === 'definicao' && (
-            <div className="tmodal-section hidden md:block">
-              <label className="lbl">Critério de aceite {(STAGE_RANK[editing.subetapa] ?? 0) >= 3 && <span className="text-danger">*</span>}</label>
-              <textarea
-                className={cn('inp', isMissing('criterioAceite'))}
-                rows={3}
-                value={descricaoLoading ? '' : (editing.criterioAceite ?? '')}
-                onChange={(e) => set('criterioAceite', e.target.value)}
-                placeholder={descricaoLoading ? 'Carregando…' : 'Como saberemos que está pronto · obrigatório de escopo definido em diante'}
-                disabled={descricaoLoading}
-                style={descricaoLoading ? { opacity: 0.6 } : undefined}
-              />
-            </div>
-            )}
-
             {/* Aba Execução · Tempo realizado + Solução + Valor entregue
                 (a partir de em_homologacao) */}
             {activeFormTab === 'execucao' && (
@@ -3037,16 +2935,6 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                   value={descricaoLoading ? '' : (editing.solucaoImplementada ?? '')}
                   onChange={(e) => set('solucaoImplementada', e.target.value)}
                   placeholder={descricaoLoading ? 'Carregando…' : 'O que foi feito de fato (vai pro histórico e pra resumos automáticos)…'}
-                  disabled={descricaoLoading}
-                  style={descricaoLoading ? { opacity: 0.6 } : undefined}
-                />
-                <label className="lbl mt-3">Valor entregue {editing.subetapa === 'concluido' && <span className="text-danger">*</span>}</label>
-                <textarea
-                  className={cn('inp', isMissing('valorEntregue'))}
-                  rows={2}
-                  value={descricaoLoading ? '' : (editing.valorEntregue ?? '')}
-                  onChange={(e) => set('valorEntregue', e.target.value)}
-                  placeholder={descricaoLoading ? 'Carregando…' : 'Impacto realizado (versão honesta · obrigatório ao concluir)…'}
                   disabled={descricaoLoading}
                   style={descricaoLoading ? { opacity: 0.6 } : undefined}
                 />

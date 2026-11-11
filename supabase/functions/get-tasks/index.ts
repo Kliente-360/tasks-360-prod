@@ -36,7 +36,8 @@
 //         "esforco": 4,                  // null se não definido
 //         "prioridade": "P1",            // null se não definida
 //         "tipo_trabalho": "feature",    // null se não classificada (bug/feature/discovery/manutencao/admin)
-//         "escopo": ["frontend","react"],// array de skills · [] se vazio
+//         "area_tecnica": "automacao",  // configuracao|automacao|canais_ia|marketing|integracao|frontend|consultoria · null
+//         "escopo": ["frontend","react"],// legado (antes de nov/2026) · [] se vazio
 //         "valor_esperado": "...",       // impacto esperado da entrega · null se vazio
 //         "solucao_implementada": "...", // narrativa do que foi entregue · null se vazio
 //         "valor_entregue": "...",       // impacto realizado · null se vazio
@@ -168,7 +169,7 @@ Deno.serve(async (req) => {
   let q = sb.from('tasks').select(
     `id, titulo, status, subetapa, prazo, esforco, prioridade, tipo_trabalho, criado_por_ia, criado_em, privada, radar,
      descricao, status_em, subetapa_em, aprovado_em, bloqueado_por, bloqueada_por_tasks,
-     escopo, valor_esperado, solucao_implementada, valor_entregue, tempo_real_horas,
+     escopo, area_tecnica, valor_esperado, solucao_implementada, valor_entregue, tempo_real_horas,
      pessoa_id, cliente_id, projeto_id,
      clientes ( nome, eh_interno ),
      projetos ( nome ),
@@ -224,6 +225,7 @@ Deno.serve(async (req) => {
     bloqueado_por: string | null;
     bloqueada_por_tasks: string[] | null;
     escopo: string[] | null;
+    area_tecnica: string | null;
     valor_esperado: string | null;
     solucao_implementada: string | null;
     valor_entregue: string | null;
@@ -258,6 +260,7 @@ Deno.serve(async (req) => {
     aprovado_em:  t.aprovado_em,
     bloqueado_por: t.bloqueado_por,
     bloqueada_por_tasks: t.bloqueada_por_tasks ?? [],
+    area_tecnica: t.area_tecnica,
     escopo:       t.escopo ?? [],
     valor_esperado:       t.valor_esperado,
     solucao_implementada: t.solucao_implementada,

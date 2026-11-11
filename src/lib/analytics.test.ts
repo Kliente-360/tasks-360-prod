@@ -143,30 +143,31 @@ describe('computeSLABreach', () => {
 // ─── C.3 · Skill mismatch ───────────────────────────────────────────────────
 
 describe('computeSkillMismatches', () => {
-  it('returns empty when task has no escopo', () => {
-    const tasks = [makeTask({ escopo: [] })];
+  it('returns empty when task has no área técnica', () => {
+    const tasks = [makeTask({ areaTecnica: null })];
     const pessoas = new Map([['u1', makePessoa()]]);
     expect(computeSkillMismatches(tasks, pessoas)).toHaveLength(0);
   });
 
-  it('returns empty when pessoa has all required skills', () => {
-    const tasks = [makeTask({ escopo: ['frontend'] })];
-    const pessoas = new Map([['u1', makePessoa({ skills: ['frontend', 'backend'] })]]);
+  it('returns empty when pessoa has a skill da área', () => {
+    const tasks = [makeTask({ areaTecnica: 'automacao' })];
+    const pessoas = new Map([['u1', makePessoa({ skills: ['Flow', 'Admin'] })]]);
     expect(computeSkillMismatches(tasks, pessoas)).toHaveLength(0);
   });
 
-  it('detects missing skills', () => {
-    const tasks = [makeTask({ escopo: ['frontend', 'backend'] })];
-    const pessoas = new Map([['u1', makePessoa({ skills: ['frontend'] })]]);
+  it('detects área sem skill correspondente', () => {
+    const tasks = [makeTask({ areaTecnica: 'frontend' })];
+    const pessoas = new Map([['u1', makePessoa({ skills: ['Admin', 'Flow'] })]]);
     const result = computeSkillMismatches(tasks, pessoas);
     expect(result).toHaveLength(1);
-    expect(result[0].missingSkills).toEqual(['backend']);
+    expect(result[0].taskArea).toBe('frontend');
+    expect(result[0].missingSkills).toEqual(['Front-end']);
   });
 
   it('ignores concluded and archived tasks', () => {
     const tasks = [
-      makeTask({ id: 't1', escopo: ['backend'], status: 'concluido' }),
-      makeTask({ id: 't2', escopo: ['backend'], arquivadoEm: '2026-01-01' }),
+      makeTask({ id: 't1', areaTecnica: 'frontend', status: 'concluido' }),
+      makeTask({ id: 't2', areaTecnica: 'frontend', arquivadoEm: '2026-01-01' }),
     ];
     const pessoas = new Map([['u1', makePessoa({ skills: [] })]]);
     expect(computeSkillMismatches(tasks, pessoas)).toHaveLength(0);
@@ -177,7 +178,7 @@ describe('computeSkillMismatches', () => {
 
 describe('computeSenioridadeAlerts', () => {
   it('flags risco_qualidade: alta + junior', () => {
-    const tasks = [makeTask({ complexidade: 'alta' })];
+    const tasks = [makeTask({ esforco: 40 })];
     const pessoas = new Map([['u1', makePessoa({ senioridade: 'junior' })]]);
     const result = computeSenioridadeAlerts(tasks, pessoas);
     expect(result).toHaveLength(1);
@@ -185,7 +186,7 @@ describe('computeSenioridadeAlerts', () => {
   });
 
   it('flags desperdicio: baixa + senior', () => {
-    const tasks = [makeTask({ complexidade: 'baixa' })];
+    const tasks = [makeTask({ esforco: 1 })];
     const pessoas = new Map([['u1', makePessoa({ senioridade: 'senior' })]]);
     const result = computeSenioridadeAlerts(tasks, pessoas);
     expect(result).toHaveLength(1);
@@ -193,19 +194,19 @@ describe('computeSenioridadeAlerts', () => {
   });
 
   it('returns nothing for pleno (neutral)', () => {
-    const tasks = [makeTask({ complexidade: 'alta' })];
+    const tasks = [makeTask({ esforco: 40 })];
     const pessoas = new Map([['u1', makePessoa({ senioridade: 'pleno' })]]);
     expect(computeSenioridadeAlerts(tasks, pessoas)).toHaveLength(0);
   });
 
-  it('returns nothing for media complexity', () => {
-    const tasks = [makeTask({ complexidade: 'media' })];
+  it('returns nothing for medium-sized tasks', () => {
+    const tasks = [makeTask({ esforco: 8 })];
     const pessoas = new Map([['u1', makePessoa({ senioridade: 'junior' })]]);
     expect(computeSenioridadeAlerts(tasks, pessoas)).toHaveLength(0);
   });
 
   it('ignores concluded tasks', () => {
-    const tasks = [makeTask({ complexidade: 'alta', status: 'concluido' })];
+    const tasks = [makeTask({ esforco: 40, status: 'concluido' })];
     const pessoas = new Map([['u1', makePessoa({ senioridade: 'junior' })]]);
     expect(computeSenioridadeAlerts(tasks, pessoas)).toHaveLength(0);
   });

@@ -49,6 +49,10 @@ export interface Task {
   prioridadePedidoAte: string | null;
   /** Resultado do último pedido de prioridade (o banco define ao fechar). */
   prioridadePedidoResultado?: 'aceito' | 'mantido' | null;
+  /** Área técnica (nov/2026) · substitui o escopo com várias opções. */
+  areaTecnica?: string | null;
+  /** Esforço no momento em que a task saiu do Backlog (o banco grava). */
+  esforcoInicial?: number | null;
   /** Primeira prioridade interna da task (P0–P3) · o banco grava e não muda. */
   prioridadeInicial?: string | null;
   prioridadePedidoRespondidoEm?: number | null;

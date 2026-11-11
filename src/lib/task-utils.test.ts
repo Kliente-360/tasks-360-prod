@@ -23,6 +23,8 @@ import {
   normalizeTag,
   matchesPrazoFilter,
   todayIso,
+  validateSubetapaAdvance,
+  missingFieldsForCurrentSubetapa,
 } from './task-utils';
 
 // ─── effEsforco / effTamanho ──────────────────────────────
@@ -236,5 +238,37 @@ describe('matchesPrazoFilter', () => {
   it('task sem prazo nunca passa em modo ativo', () => {
     expect(matchesPrazoFilter(t(''), 'semana')).toBe(false);
     expect(matchesPrazoFilter(t(''), 'd7')).toBe(false);
+  });
+});
+
+
+// ─── Regras de etapa · revisão de campos (nov/2026) ─────────
+
+describe('validateSubetapaAdvance (nov/2026)', () => {
+  const base = { esforco: 8, escopo: [], tempoRealHoras: 3, criterioAceite: '', valorEntregue: '', solucaoImplementada: 'feito' };
+
+  it('não exige escopo nem critério de aceite para avançar', () => {
+    expect(validateSubetapaAdvance(base, 'em_definicao').ok).toBe(true);
+    expect(validateSubetapaAdvance(base, 'em_desenvolvimento').ok).toBe(true);
+  });
+
+  it('continua exigindo esforço a partir de escopo definido', () => {
+    expect(validateSubetapaAdvance({ ...base, esforco: 0 }, 'escopo_definido').ok).toBe(false);
+  });
+
+  it('conclui sem valor entregue, mas exige a solução implementada', () => {
+    expect(validateSubetapaAdvance(base, 'concluido').ok).toBe(true);
+    expect(validateSubetapaAdvance({ ...base, solucaoImplementada: '' }, 'concluido').ok).toBe(false);
+  });
+});
+
+describe('missingFieldsForCurrentSubetapa (nov/2026)', () => {
+  it('não marca escopo, critério nem valor entregue como faltando', () => {
+    const faltando = missingFieldsForCurrentSubetapa({
+      subetapa: 'concluido', status: 'concluido', prioridade: 'P2', pessoaId: 'p', clienteId: 'c', projetoId: 'pr',
+      prazo: '2026-11-10', esforco: 4, escopo: [], tempoRealHoras: 2, criterioAceite: '', valorEntregue: '',
+      solucaoImplementada: 'feito', motivoReabertura: '',
+    });
+    expect([...faltando]).toEqual([]);
   });
 });

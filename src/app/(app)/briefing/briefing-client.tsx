@@ -27,8 +27,6 @@ import {
   computeN7Bloqueios,
   computeN8TempoAprovacao,
   computeN9Privadas,
-  computeN10CriterioCob,
-  computeN11ValorEntregueCob,
   computeN12WIP,
   computeN13PrazoDesalinhado,
   computeN14SemResponsavel,
@@ -165,8 +163,6 @@ export function BriefingClient() {
   const n7 = useMemo(() => computeN7Bloqueios(baseTasks), [baseTasks]);
   const n8 = useMemo(() => computeN8TempoAprovacao(baseTasks), [baseTasks]);
   const n9 = useMemo(() => computeN9Privadas(baseTasks), [baseTasks]);
-  const n10 = useMemo(() => computeN10CriterioCob(baseTasks), [baseTasks]);
-  const n11 = useMemo(() => computeN11ValorEntregueCob(baseTasks), [baseTasks]);
   const n12 = useMemo(() => computeN12WIP(baseTasks), [baseTasks]);
   const n13 = useMemo(() => computeN13PrazoDesalinhado(baseTasks), [baseTasks]);
   const n14 = useMemo(() => computeN14SemResponsavel(baseTasks), [baseTasks]);
@@ -623,7 +619,7 @@ export function BriefingClient() {
         />
         {!collapsed.has('skill') && (
           skillMismatches.length === 0 ? (
-            <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Todas as tasks com escopo têm responsáveis compatíveis.</div>
+            <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Todas as tasks com área técnica têm responsáveis compatíveis.</div>
           ) : (
             <div className="divide-y divide-line">
               {skillMismatches.map((m) => {
@@ -670,7 +666,7 @@ export function BriefingClient() {
         />
         {!collapsed.has('senior') && (
           senioridadeAlerts.length === 0 ? (
-            <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Senioridade vs complexidade balanceada.</div>
+            <div className="px-4 py-5 text-sm text-[var(--brand)]">✓ Senioridade vs tamanho das tasks balanceada.</div>
           ) : (
             <div className="divide-y divide-line">
               {senioridadeAlerts.map((a) => {
@@ -688,7 +684,7 @@ export function BriefingClient() {
                       <div className="min-w-0 flex-1">
                         <div className="text-sm text-ink truncate">{a.taskTitulo}</div>
                         <div className="text-[11px] text-muted mt-0.5">
-                          {cli} · {pessoa} ({a.senioridade}) · complexidade {a.complexidade}
+                          {cli} · {pessoa} ({a.senioridade}) · {a.complexidade === 'alta' ? 'task grande (24h+)' : 'task pequena (<2h)'}
                         </div>
                       </div>
                     </div>
@@ -978,36 +974,6 @@ export function BriefingClient() {
           ))}
         </HCard>
       )}
-
-      {/* N.10 · Cobertura critério de aceite */}
-      <HCard id="n10" title={`N.10 · Cobertura critério de aceite (${n10.pct}%)`}
-        count={n10.faltando.length}
-        emptyMsg={n10.elegiveis === 0 ? 'Nenhuma task em escopo definido ou além' : '✓ Todas elegíveis têm critério preenchido'}
-        collapsed={collapsed.has('n10')} onToggle={() => toggle('n10')}>
-        <div className="px-3 md:px-4 py-2 text-xs text-muted">{n10.preenchidas}/{n10.elegiveis} elegíveis com critério preenchido</div>
-        {n10.faltando.map((x) => (
-          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
-            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
-            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
-            <span className="text-[11px] text-muted shrink-0">{clientesById.get(x.clienteId)?.nome ?? '—'}</span>
-          </button>
-        ))}
-      </HCard>
-
-      {/* N.11 · Cobertura valor entregue */}
-      <HCard id="n11" title={`N.11 · Cobertura valor entregue (${n11.pct}%)`}
-        count={n11.faltando.length}
-        emptyMsg={n11.concluidas === 0 ? 'Nenhuma task concluída' : '✓ Todas concluídas têm valor entregue preenchido'}
-        collapsed={collapsed.has('n11')} onToggle={() => toggle('n11')}>
-        <div className="px-3 md:px-4 py-2 text-xs text-muted">{n11.preenchidas}/{n11.concluidas} concluídas com valor entregue</div>
-        {n11.faltando.map((x) => (
-          <button key={x.taskId} type="button" onClick={() => openEdit(x.taskId)}
-            className="w-full text-left px-3 md:px-4 py-2 flex items-center gap-3 hover:bg-[var(--surface-3)]">
-            <span className="text-sm text-ink truncate flex-1">{x.titulo}</span>
-            <span className="text-[11px] text-muted shrink-0">{clientesById.get(x.clienteId)?.nome ?? '—'}</span>
-          </button>
-        ))}
-      </HCard>
 
       {/* N.12 · WIP excessivo por pessoa */}
       <HCard id="n12" title="N.12 · WIP excessivo por pessoa (≥5 ativas)" count={n12.length}
