@@ -203,6 +203,13 @@ Sprint do Bucket V com o Pão e Talho/Bodytech como referência. O portal deixou
 - ⚠️ **Incidente 21/10** · o backfill de `prioridade_inicial` alterou 206 tasks do Salesforce (VB, CTF, Bodytech) e o trigger `webhook_task_update` disparou 206 `task.updated` redundantes (dados iguais aos do Salesforce). Regra: update em massa em `tasks` exclui tasks Salesforce com webhook ligado, ou desliga o trigger com aprovação
 - ✅ **Telemetria própria** · `usage_events` (autoria carimbada no banco, insert por qualquer logado, leitura só admin), rollup `usage_daily` + retenção de 90 dias (cron 03:30). Captura automática de sessão, troca de tela e cliques; eventos de negócio para abrir/criar/atualizar task (com campos e origem), comentários (externo, interno, resposta, do cliente), cronômetro do modal vs do topo, lançamento de horas, bulk do Backlog, busca, export, manual, notificações, triagem e ações do portal
 - ✅ **Tela Adoção** (`/adocao`, admin, menu do perfil) · RPCs `app_adocao` e `app_adocao_detalhes`: funcionalidades usadas e nunca usadas no período, telas, pessoas (inclusive convidadas sem uso), origem das ações, comentários, campos editados, abas do modal e cliques mais frequentes
+- ✅ **Revisão de campos da tarefa (v1.03.283-284)** · Área técnica (7 opções, escolha única) no lugar do escopo e da complexidade; sem critério de aceite e valor entregue; Inter servida pelo próprio app (build não depende do Google Fonts)
+- ✅ **Modal novo da tarefa · beta (v1.03.285-296)** · chave "Modal novo (beta)" no menu do perfil, qualquer pessoa do time liga por navegador. Etiquetas editáveis no topo, linha do tempo de 5 etapas, faixas de ação, passos de avançar e voltar (Iniciar desenvolvimento · homologação ou bloqueio com mensagem obrigatória · Pronto para produção ou Pedir ajustes · Concluir · Reabrir com motivo; volta ao Backlog na última subetapa e desbloqueio volta para onde estava), conversa estilo portal (mais recente embaixo, citação ao responder), "Lembrar o cliente" na homologação (só sino do portal, 1 por dia, sem webhook · RPC `app_lembrar_homologacao`). Celular fechado: Detalhes como aba padrão, linha do tempo compacta, sem cronômetro, área segura do iPhone
+- ✅ **Horas (v1.03.287-292)** · campo "tempo realizado" manual removido: homologar e concluir exigem horas lançadas (cronômetro ou lançamento). Nota obrigatória (mín. 5 caracteres) ao parar o cronômetro e ao lançar. Lançamento unificado no topo, Timesheet e modal: data + duração em h e min, atalhos que somam (+15m…+4h), Zerar, sem hora de início. Estimado trava na primeira entrada em desenvolvimento, mesmo se voltar ao Backlog (`trg_esforco_travado`)
+- ✅ **Nova tarefa pelo FAB "+"** no desktop, igual ao portal; "+ Tarefa" do topo saiu (v1.03.286)
+- ✅ **Modo escuro revisado (v1.03.290)** · verde de destaque calmo (#4CC27F) separado do verde de ação (#1F7F48, branco 5:1); campos sem fundo branco fixo
+- ✅ **Arquivar pessoa (v1.03.297)** · `pessoas.arquivado_em`: some de listas, seletores e análises, mantém o nome no histórico, revoga o acesso; notificações ignoram arquivados. Elder arquivado
+- ✅ **Segunda leitura da Adoção (11/11, 26 dias)** · Kanban concentra 52% dos eventos e 73% das aberturas de tarefa; mudança de etapa é feita no modal (852 alterações vs 29 por arrastar); cronômetro quase sem uso (39 inícios, 1 pessoa); IA criou 973 tarefas desde maio e só 37 foram aceitas (2 de 726 desde julho); Briefing só usado para "Copiar standup"; Foco é porta de entrada e o clique seguinte é Kanban/Backlog; Calendário sem uso (só 45% das tarefas abertas têm prazo). Celular declarado fechado: melhorias seguem só no desktop
 
 ---
 
@@ -336,39 +343,42 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 
 ---
 
-## 🎯 NEXT · ordem definida (out/2026)
+## 🎯 NEXT · ordem definida (nov/2026 · foco só no desktop)
 
-**Bucket V · Visão cliente** — fechar o lançamento
-→ ✅ V.1 · V.2 · V.3 · V.4 · V.5 · V.8. ❌ V.6 e V.7 encerrados como estão (logo e tour descartados). ✅ **V.9 fechado (23/10)** · cliente testou e aprovou. **Bucket V encerrado.**
+**1 · Horas não lançadas** (urgente: homologar e concluir agora exigem horas lançadas e o cronômetro quase não é usado)
+→ aviso para quem tem tarefa em andamento sem horas no dia; no modal, "Falta: horas lançadas" abre o Lançar direto. Substitui T.2, T.3 e T.6 (a trava já existe)
 
-**Bucket T · Adoção timesheet (paralelo baixo custo)**
-→ T.1 ✅. Próximos: T.6 (trava no concluir · 0.5d · quick win) → T.4 (bulk retroativo) → T.2 (card "horas hoje")
+**2 · Entrada no lugar da Triagem + IA sem criar tarefas**
+→ a IA para de criar tarefas a partir de e-mails (3,8% de aceite) e passa a gerar um resumo diário por cliente; a Triagem vira "Entrada" com as solicitações do portal e os pedidos de prioridade. Mexe no Apps Script. Torna B.4 (auto-triage) desnecessário
 
-**C.10 · analytics na UI · polir o que foi publicado**
-→ Parcial já publicado no Briefing (~38 cards). Pendente: versão Dashboard com widgets visuais refinados + integração nos KPIs · ~1 semana
+**3 · "Minha semana" no lugar do Foco** (precisa de mockup)
+→ tela pessoal de leitura: horas lançadas na semana, tarefas paradas, o que está com o cliente, prazos dos próximos 7 dias, entregas recentes. O app passa a abrir no Kanban
+
+**4 · Cortar Briefing e Calendário · "Visão geral" para admin**
+→ Dashboard atual + Radar do CEO + clientes em atenção + tempo por etapa + "Copiar standup". Substitui C.10 e A.7
+
+**5 · Modal novo para todo o time**
+→ hoje em beta por chave; liberar quando o feedback fechar e remover o modal antigo
+
+**6 · Ajustes pequenos**
+→ "Salvar" só para clientes com webhook (autosave cobre os demais); telemetria de filtro grava todos os campos a cada mudança, corrigir para gravar o que mudou
 
 **MCP · validar as tools novas**
-→ reconectar o MCP e testar `update_task` e `add_task_comment` numa task de teste (ex.: "Teste 2 abrindo como cliente", Pão e Talho, sem webhook): histórico com origem mcp, autor certo, aviso no sino. Depois, decidir quando desligar o `MCP_AUTH_TOKEN` legado
-
-**Adoção · primeira leitura feita (23/10, 8 dias de dados)** · revisão de qualidade aplicada em v1.03.277-278 (sessão com 30 min de inatividade, rótulo de campo nos cliques, área do clique, campos atualizados sem ruído, eventos `task_close` e `filtro`, contas de teste fora via `pessoas.conta_teste`)
-→ achados: timesheet praticamente sem uso (2 cronômetros, 0,9 h em 8 dias; horas digitadas no campo do modal); celular quase só no portal; Calendário e Timesheet sem nenhuma visita; 3 usuários do Pão e Talho com acesso e sem uso. **Segunda leitura** prevista para ~06/11 (2 semanas de dados limpos desde v1.03.277)
+→ testar `update_task` e `add_task_comment` numa task de teste sem webhook; depois desligar o `MCP_AUTH_TOKEN` legado
 
 **Pendências operacionais**
-→ confirmar com quem cuida das orgs Salesforce do VB, da CTF e da Bodytech se alguma automação rodou com os 206 `task.updated` redundantes de 21/10 (~10:56)
-→ apagar os branches antigos `claude/project-setup-roadmap-UVT4T` e `claude/project-status-review-hHoby` (jun/2026, sessão anterior; o segundo tem 1 commit obsoleto do portal)
+→ confirmar com quem cuida das orgs Salesforce do VB, da CTF e da Bodytech se alguma automação rodou com os 206 `task.updated` de 21/10
+→ apagar os branches antigos `claude/project-setup-roadmap-UVT4T` e `claude/project-status-review-hHoby`
+→ decidir a rotina de limpeza de anexos (cron com URL placeholder; corrigir apagaria evidências do cliente 30 dias após a entrega): desligar de vez ou corrigir com prazo maior
 
-**Decidir · rotina de limpeza de anexos** (pendente de decisão do Felipe)
-→ cron `cleanup-task-attachments-daily` (03:17) chama a edge `cleanup-attachments`, que apaga anexos de tasks concluídas há mais de 30 dias. Hoje não roda de fato: a URL no cron está com o placeholder `<project-ref>`. Com as evidências do cliente, corrigir a URL faria os prints sumirem 30 dias após a entrega. Opções: desligar o cron de vez, ou corrigir a URL com prazo maior (ex.: 365 dias)
+**Ideia registrada** (não iniciada): página `/perfil` + calendário de férias + aprovação via task. Escopo em `~/.claude/plans/nested-churning-octopus.md`
 
-**Ideia registrada** (não iniciada): página `/perfil` (nome + avatar) + calendário de férias do time + fluxo de aprovação via task pro CEO. Escopo detalhado em `~/.claude/plans/nested-churning-octopus.md`. ~4-5 dias.
-
-Items NÃO no NEXT (revisitar depois): A.7 PDF · A.8 Workspaces · Bucket B (IA) · C.11 (gated em adoção timesheet ≥60%).
+Fora do NEXT: A.8 Workspaces · Bucket B (IA; B.4 sai com o item 2) · C.11 (depende de adoção de horas ≥60%) · celular (fechado)
 
 ---
 
 ## Próximo passo imediato
 
-1. **Validar as tools novas do MCP** (`update_task`, `add_task_comment`) depois de reconectar.
-2. **Segunda leitura da Adoção** (~06/11, 2 semanas de dados limpos) e, com ela, **decidir o timesheet**: adotar de verdade (T.6 trava no concluir + Bucket T) ou assumir as horas digitadas no campo e simplificar o cronômetro. Decidir também Calendário e celular do time.
-3. **T.6** (trava no concluir sem horas), se a decisão for adotar.
-4. **C.10** (analytics no Dashboard).
+1. **Aviso de horas não lançadas** (item 1 do NEXT).
+2. **Decidir com o Felipe** a mudança da IA e da Triagem (item 2) e o mockup da Minha semana (item 3).
+3. **Validar as tools do MCP**.
