@@ -819,7 +819,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
           {editing.arquivadoEm && <span> · arquivada</span>}
         </div>
         {nova ? (
-          <h2 className="m2-title m2-title-nova">Nova tarefa</h2>
+          <h2 className="m2-title m2-title-nova">{editing.titulo.trim() || 'Nova tarefa'}</h2>
         ) : (
         <input
           className="m2-title"
@@ -1189,7 +1189,6 @@ export function TaskModalV2(props: TaskModalV2Props) {
   );
 
   // ---------- Criação (no estilo do formulário do portal) ----------
-  const req = (f: string) => missingFields.has(f) && <span className="m2-req">*</span>;
   const addImagens = (files: File[]) => setImagensNova((cur) => juntarPendentes(cur, files));
   const formNova = (
     <div className="m2-main m2-nova-form">
@@ -1206,28 +1205,28 @@ export function TaskModalV2(props: TaskModalV2Props) {
       <div className="m2-grid2 m2-grid3">
         {selCliente}
         <label className="m2-campo">
-          <span className="m2-lbl">Projeto {req('projetoId')}</span>
+          <span className="m2-lbl">Projeto</span>
           <select className="inp" value={editing.projetoId} disabled={!editing.clienteId} onChange={(e) => set('projetoId', e.target.value)}>
             <option value="">Escolher</option>
             {projetosDoCliente.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
           </select>
         </label>
         <label className="m2-campo">
-          <span className="m2-lbl">Responsável {req('pessoaId')}</span>
+          <span className="m2-lbl">Responsável</span>
           <select className="inp" value={editing.pessoaId} onChange={(e) => set('pessoaId', e.target.value)}>
             <option value="">Escolher</option>
             {pessoasNaoCliente.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
           </select>
         </label>
         <label className="m2-campo">
-          <span className="m2-lbl">Prioridade {req('prioridade')}</span>
+          <span className="m2-lbl">Prioridade</span>
           <select className="inp" value={editing.prioridade} onChange={(e) => set('prioridade', e.target.value as Task['prioridade'])}>
             <option value="">Escolher</option>
             {PRIORIDADES.map((p) => <option key={p.v} value={p.v}>{p.v} · {p.label}</option>)}
           </select>
         </label>
         <label className="m2-campo">
-          <span className="m2-lbl">Prazo {req('prazo')}</span>
+          <span className="m2-lbl">Prazo</span>
           <input type="date" className="inp" value={editing.prazo} onChange={(e) => set('prazo', e.target.value)} />
         </label>
         <label className="m2-campo">
@@ -1245,12 +1244,12 @@ export function TaskModalV2(props: TaskModalV2Props) {
           </select>
         </label>
         <label className="m2-campo">
-          <span className="m2-lbl">Esforço estimado (h) {req('esforco')}</span>
+          <span className="m2-lbl">Esforço estimado (h)</span>
           <input
             type="number"
             min={0}
             step={0.5}
-            className={cn('inp', missingFields.has('esforco') && 'is-missing')}
+            className="inp"
             value={editing.esforco || ''}
             onChange={(e) => set('esforco', Number(e.target.value) || 0)}
           />

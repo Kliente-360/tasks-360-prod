@@ -988,6 +988,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       if (!e.titulo.trim()) {
         return { ok: false, error: 'Dê um título à tarefa.' };
       }
+      if (!e.id && !e.clienteId) {
+        return { ok: false, error: 'Escolha o cliente.' };
+      }
       if (e.subetapa === 'bloqueado' && !e.bloqueadoPor) {
         return { ok: false, error: 'Informe quem está bloqueando (Nós / Cliente / Terceiro).' };
       }

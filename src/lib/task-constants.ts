@@ -101,13 +101,14 @@ export const ALL_SKILLS = SKILL_GROUPS.flatMap((g) => g.values) as string[];
 /** Área técnica da task (nov/2026) · escolha única e opcional, no lugar do
  *  escopo com 13 opções. Sales e Service ficam implícitos (o core). */
 export const AREAS_TECNICAS = [
-  { v: 'configuracao', label: 'Configuração', exemplos: 'Admin' },
-  { v: 'automacao', label: 'Automação / Dev', exemplos: 'Flow, Apex' },
+  { v: 'configuracao', label: 'Configuração', exemplos: 'Admin, Permissão, App Builder' },
+  { v: 'automacao', label: 'Automação', exemplos: 'Flow, Apex' },
   { v: 'canais_ia', label: 'Canais e IA', exemplos: 'WhatsApp, Bot, Agentforce' },
-  { v: 'integracao', label: 'Integração', exemplos: 'APIs, conectores' },
+  { v: 'integracao', label: 'Integração', exemplos: 'APIs, Conectores' },
   { v: 'frontend', label: 'Front-end', exemplos: 'LWC' },
-  { v: 'marketing', label: 'Marketing', exemplos: 'Marketing Cloud' },
-  { v: 'consultoria', label: 'Consultoria', exemplos: 'Consultoria, Arquitetura' },
+  { v: 'marketing', label: 'Marketing Cloud', exemplos: 'Jornadas, Segmentação, Disparos' },
+  { v: 'consultoria', label: 'Consultoria', exemplos: 'Diagnóstico, Arquitetura, Pré-venda' },
+  { v: 'relatorios', label: 'Relatórios', exemplos: 'Análises, Indicadores, Dashboards' },
 ] as const;
 export type AreaTecnica = (typeof AREAS_TECNICAS)[number]['v'];
 export const AREA_LABEL: Record<string, string> = Object.fromEntries(AREAS_TECNICAS.map((a) => [a.v, a.label]));
