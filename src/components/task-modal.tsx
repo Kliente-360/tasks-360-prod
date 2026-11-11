@@ -527,6 +527,18 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const editingRef = useRef(editing);
   editingRef.current = editing;
 
+  // Criação: prints escolhidos/colados antes de a tarefa existir (sobem depois do insert)
+  const [imagensNova, setImagensNova] = useState<File[]>([]);
+  // Criação: responsável nasce como a pessoa logada (editável)
+  const respPadraoFeito = useRef(false);
+  useEffect(() => {
+    if (respPadraoFeito.current || editing.id || editing.pessoaId) return;
+    if (!currentPessoa?.id || viewerRole === 'cliente') return;
+    respPadraoFeito.current = true;
+    const id = currentPessoa.id;
+    setEditing((cur) => (cur.id || cur.pessoaId ? cur : { ...cur, pessoaId: id }));
+  }, [editing.id, editing.pessoaId, currentPessoa?.id, viewerRole]);
+
   // Subetapa original capturada UMA VEZ quando o modal abre.
   // Não pode ser derivada de `source` porque o autosave atualiza source
   // após 800ms, fazendo isTransitionToBloqueado virar false e o textarea sumir.
@@ -1938,13 +1950,20 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       setSaveState('saved');
       // editingRef pode ter ID novo (caso de "criar"); usa o atual.
       const idAfter = editingRef.current.id || idBefore;
+      if (!idBefore && idAfter && imagensNova.length) {
+        for (const file of imagensNova) {
+          const r = await enviarImagem(sb, { taskId: idAfter, file, autorPessoaId: currentPessoa?.id ?? null, visivelCliente: false });
+          if (r.erro) toast.error(r.erro);
+        }
+        track('anexo_imagem', { task_id: idAfter, props: { qtd: imagensNova.length, origem: 'criacao' } });
+      }
       if (idAfter) markUserEditedTask(idAfter);
       onClose();
     } else {
       setSaveState('error');
       toast.error(res.error ?? 'Erro ao salvar.');
     }
-  }, [persist, onClose, toast, markUserEditedTask]);
+  }, [persist, onClose, toast, markUserEditedTask, imagensNova, sb, currentPessoa?.id]);
 
   // ⌘/Ctrl+Enter salva e fecha. Roda no listener window — handlers
   // locais dos textareas de comment/reply/edit-comment chamam
@@ -2608,6 +2627,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         nAnexos={attachments.length}
         jsxConversa={jsxConversaV2}
         jsxAnexos={jsxAnexos}
+        imagensNova={imagensNova}
+        setImagensNova={setImagensNova}
         jsxHistorico={jsxHistorico}
         jsxTimesheet={editing.id ? <TimesheetTab taskId={editing.id} onLoaded={setTempoCount} /> : null}
         jsxChecklist={<ChecklistEditor items={editing.checklist} onChange={(next) => set('checklist', next)} />}

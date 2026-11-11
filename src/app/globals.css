@@ -3707,6 +3707,20 @@ select.m-select { padding-right: 18px; background-position: right 0 center; back
 .m2-radar[aria-pressed="true"] { background: var(--warn-soft); color: var(--warn); }
 .m2-priv[aria-pressed="false"] { background: transparent; border: 1px dashed var(--line-strong); color: var(--muted); }
 .m2-priv[aria-pressed="true"] { background: var(--danger-soft); color: var(--danger); }
+
+/* Criação: formulário de uma coluna, no estilo do portal */
+.m2.m2-nova { width: min(780px, 100%); }
+@media (min-width: 768px) { .m2.m2-nova { height: auto; } }
+.m2-body.m2-body-nova { display: block; overflow-y: auto; overscroll-behavior: contain; }
+.m2-nova-form { border-right: 0; gap: 16px; padding: 20px 24px 24px; }
+.m2-nova-form .m2-campo { gap: 6px; }
+.m2-nova-form .m2-campo .m2-lbl { font-size: 13px; text-transform: none; letter-spacing: 0; color: var(--ink); font-weight: 600; }
+.m2-nova-form .m2-valor .m2-lbl { color: var(--green); }
+.m2-lbl-dica { font-weight: 400; color: var(--muted); }
+.m2-span2 { grid-column: span 2; }
+.m2-title-nova { margin: 0; font-size: 20px; font-weight: 600; }
+.m2-nova .m2-foot .m2-priv { margin-right: auto; }
+@media (max-width: 767px) { .m2-span2 { grid-column: auto; } }
 .m2-dep-x { border: 0; background: none; color: inherit; opacity: .6; cursor: pointer; font-size: 14px; line-height: 1; padding: 0 0 0 2px; }
 .m2-dep-x:hover { opacity: 1; color: var(--danger); }
 .m2-date-oculto { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }

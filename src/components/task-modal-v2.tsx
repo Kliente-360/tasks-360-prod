@@ -15,6 +15,8 @@ import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { Icon } from '@/components/icons';
 import { LancamentoForm, NotePopover } from '@/components/timer-button';
+import { ImagensPendentes, juntarPendentes } from '@/components/anexos-ui';
+import { atalhoColar, imagensDoClipboard, MAX_POR_MENSAGEM, TIPOS_IMAGEM } from '@/lib/anexos';
 import {
   AREAS_TECNICAS, AREA_LABEL, GRUPO_BACKLOG, SUB_LABELS, SUB_TO_MACRO, TIPOS_TRABALHO,
 } from '@/lib/task-constants';
@@ -63,6 +65,9 @@ export type TaskModalV2Props = {
 
   jsxConversa: React.ReactNode;
   jsxAnexos: React.ReactNode;
+  /** Criação: prints pendentes, sobem depois do insert */
+  imagensNova: File[];
+  setImagensNova: React.Dispatch<React.SetStateAction<File[]>>;
   jsxHistorico: React.ReactNode;
   jsxTimesheet: React.ReactNode;
   jsxChecklist: React.ReactNode;
@@ -743,7 +748,9 @@ export function TaskModalV2(props: TaskModalV2Props) {
     isCEO, podeCronometrar, history, nComentarios, nAnexos,
     jsxConversa, jsxAnexos, jsxHistorico, jsxTimesheet, jsxChecklist, pedidoBanner, lightbox,
     horasLancadas, onTransicao, onLembrar, onToggleRadar, onFechar, onFecharForcado, onSalvar, onPaste,
+    imagensNova, setImagensNova,
   } = props;
+  const inputImagensRef = useRef<HTMLInputElement | null>(null);
 
   const nova = !editing.id;
   const [aba, setAba] = useState<AbaV2>('detalhes');
@@ -805,20 +812,23 @@ export function TaskModalV2(props: TaskModalV2Props) {
     <div className="m2-head">
       <div className="m2-head-main">
         <div className="m2-eyebrow">
-          {cliente?.nome ?? 'Sem cliente'}
+          {nova ? (cliente ? `${cliente.nome} · Nova tarefa` : 'Nova tarefa') : (cliente?.nome ?? 'Sem cliente')}
           {editing.criadoPorCliente && <span> · aberta pelo cliente</span>}
           {editing.criadoPorIa && <span> · criada por IA</span>}
           {(editing.reopenCount || 0) > 0 && <span> · reaberta {editing.reopenCount}x</span>}
           {editing.arquivadoEm && <span> · arquivada</span>}
         </div>
+        {nova ? (
+          <h2 className="m2-title m2-title-nova">Nova tarefa</h2>
+        ) : (
         <input
           className="m2-title"
           value={editing.titulo}
           onChange={(e) => set('titulo', e.target.value)}
           placeholder="O que precisa ser feito?"
           aria-label="Título da tarefa"
-          autoFocus={nova}
         />
+        )}
       </div>
       <div className="m2-head-actions">
         {!nova && (
@@ -1120,50 +1130,6 @@ export function TaskModalV2(props: TaskModalV2Props) {
         !nova && <Passos editing={editing} onTransicao={onTransicao} />
       )}
 
-      {nova && (
-        <section className="m2-sec">
-          <div className="m2-lbl">Dados da tarefa</div>
-          <div className="m2-grid2">
-            {selCliente}
-            <label className="m2-campo">
-              <span className="m2-lbl">Projeto</span>
-              <select className="inp" value={editing.projetoId} disabled={!editing.clienteId} onChange={(e) => set('projetoId', e.target.value)}>
-                <option value="">Escolher</option>
-                {projetosDoCliente.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-              </select>
-            </label>
-            <label className="m2-campo">
-              <span className="m2-lbl">Responsável</span>
-              <select className="inp" value={editing.pessoaId} onChange={(e) => set('pessoaId', e.target.value)}>
-                <option value="">Escolher</option>
-                {pessoasNaoCliente.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-              </select>
-            </label>
-            <label className="m2-campo">
-              <span className="m2-lbl">Prioridade</span>
-              <select className="inp" value={editing.prioridade} onChange={(e) => set('prioridade', e.target.value as Task['prioridade'])}>
-                <option value="">Escolher</option>
-                {PRIORIDADES.map((p) => <option key={p.v} value={p.v}>{p.v} · {p.label}</option>)}
-              </select>
-            </label>
-            <label className="m2-campo">
-              <span className="m2-lbl">Prazo</span>
-              <input type="date" className="inp" value={editing.prazo} onChange={(e) => set('prazo', e.target.value)} />
-            </label>
-            <label className="m2-campo">
-              <span className="m2-lbl">Etapa</span>
-              <select className="inp" value={editing.subetapa} onChange={(e) => set('subetapa', e.target.value)}>
-                {GRUPOS_SUB.filter((g) => g.titulo !== 'Parada').map((g) => (
-                  <optgroup key={g.titulo} label={g.titulo}>
-                    {g.subs.map((s) => <option key={s} value={s}>{SUB_LABELS[s]}</option>)}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
-          </div>
-        </section>
-      )}
-
       <section className="m2-sec">
         <div className="m2-lbl">Solicitação</div>
         <textarea
@@ -1186,43 +1152,6 @@ export function TaskModalV2(props: TaskModalV2Props) {
           />
         </label>
       </section>
-
-      {nova && (
-        <section className="m2-sec">
-          <div className="m2-lbl">Planejamento</div>
-          <div className="m2-grid2 m2-grid3">
-            {(
-              <label className="m2-campo">
-                <span className="m2-lbl">Tipo</span>
-                <select className="inp" value={editing.tipoTrabalho ?? ''} onChange={(e) => set('tipoTrabalho', (e.target.value || null) as Task['tipoTrabalho'])}>
-                  <option value="">Escolher</option>
-                  {TIPOS_TRABALHO.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
-                </select>
-              </label>
-            )}
-            <label className="m2-campo">
-              <span className="m2-lbl">Área técnica</span>
-              <select className="inp" value={editing.areaTecnica ?? ''} onChange={(e) => set('areaTecnica', e.target.value || null)}>
-                <option value="">Sem área</option>
-                {AREAS_TECNICAS.map((a) => <option key={a.v} value={a.v}>{a.label} · {a.exemplos}</option>)}
-              </select>
-            </label>
-            <label className="m2-campo">
-              <span className="m2-lbl">
-                Esforço estimado (h) {missingFields.has('esforco') && <span className="m2-req">*</span>}
-              </span>
-              <input
-                type="number"
-                min={0}
-                step={0.5}
-                className={cn('inp', missingFields.has('esforco') && 'is-missing')}
-                value={editing.esforco || ''}
-                onChange={(e) => set('esforco', Number(e.target.value) || 0)}
-              />
-            </label>
-          </div>
-        </section>
-      )}
 
       {!nova && MOSTRA_SOLUCAO.has(editing.subetapa) && (
         <section className="m2-sec">
@@ -1256,6 +1185,123 @@ export function TaskModalV2(props: TaskModalV2Props) {
           </select>
         </section>
       )}
+    </div>
+  );
+
+  // ---------- Criação (no estilo do formulário do portal) ----------
+  const req = (f: string) => missingFields.has(f) && <span className="m2-req">*</span>;
+  const addImagens = (files: File[]) => setImagensNova((cur) => juntarPendentes(cur, files));
+  const formNova = (
+    <div className="m2-main m2-nova-form">
+      <label className="m2-campo">
+        <span className="m2-lbl">Título <span className="m2-req">*</span></span>
+        <input
+          className="inp"
+          value={editing.titulo}
+          onChange={(e) => set('titulo', e.target.value)}
+          placeholder="O que precisa ser feito?"
+          autoFocus
+        />
+      </label>
+      <div className="m2-grid2 m2-grid3">
+        {selCliente}
+        <label className="m2-campo">
+          <span className="m2-lbl">Projeto {req('projetoId')}</span>
+          <select className="inp" value={editing.projetoId} disabled={!editing.clienteId} onChange={(e) => set('projetoId', e.target.value)}>
+            <option value="">Escolher</option>
+            {projetosDoCliente.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+        </label>
+        <label className="m2-campo">
+          <span className="m2-lbl">Responsável {req('pessoaId')}</span>
+          <select className="inp" value={editing.pessoaId} onChange={(e) => set('pessoaId', e.target.value)}>
+            <option value="">Escolher</option>
+            {pessoasNaoCliente.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+          </select>
+        </label>
+        <label className="m2-campo">
+          <span className="m2-lbl">Prioridade {req('prioridade')}</span>
+          <select className="inp" value={editing.prioridade} onChange={(e) => set('prioridade', e.target.value as Task['prioridade'])}>
+            <option value="">Escolher</option>
+            {PRIORIDADES.map((p) => <option key={p.v} value={p.v}>{p.v} · {p.label}</option>)}
+          </select>
+        </label>
+        <label className="m2-campo">
+          <span className="m2-lbl">Prazo {req('prazo')}</span>
+          <input type="date" className="inp" value={editing.prazo} onChange={(e) => set('prazo', e.target.value)} />
+        </label>
+        <label className="m2-campo">
+          <span className="m2-lbl">Tipo</span>
+          <select className="inp" value={editing.tipoTrabalho ?? ''} onChange={(e) => set('tipoTrabalho', (e.target.value || null) as Task['tipoTrabalho'])}>
+            <option value="">Escolher</option>
+            {TIPOS_TRABALHO.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
+          </select>
+        </label>
+        <label className="m2-campo m2-span2">
+          <span className="m2-lbl">Área técnica</span>
+          <select className="inp" value={editing.areaTecnica ?? ''} onChange={(e) => set('areaTecnica', e.target.value || null)}>
+            <option value="">Sem área</option>
+            {AREAS_TECNICAS.map((a) => <option key={a.v} value={a.v}>{a.label} · {a.exemplos}</option>)}
+          </select>
+        </label>
+        <label className="m2-campo">
+          <span className="m2-lbl">Esforço estimado (h) {req('esforco')}</span>
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            className={cn('inp', missingFields.has('esforco') && 'is-missing')}
+            value={editing.esforco || ''}
+            onChange={(e) => set('esforco', Number(e.target.value) || 0)}
+          />
+        </label>
+      </div>
+      <label className="m2-campo">
+        <span className="m2-lbl">Solicitação</span>
+        <textarea
+          className="inp m2-area"
+          rows={4}
+          value={editing.descricao ?? ''}
+          onChange={(e) => set('descricao', e.target.value)}
+          placeholder="Contexto, o que o cliente pediu, exemplos e links."
+        />
+      </label>
+      <div className="m2-campo">
+        <span className="m2-lbl">
+          Prints <span className="m2-lbl-dica">(clique abaixo ou cole o print ({atalhoColar()}) enquanto escreve a solicitação)</span>
+        </span>
+        <div className="pmodal-imagens">
+          <ImagensPendentes arquivos={imagensNova} onRemover={(i) => setImagensNova((cur) => cur.filter((_, j) => j !== i))} />
+          {imagensNova.length < MAX_POR_MENSAGEM && (
+            <button type="button" className="pmodal-imagens-btn" onClick={() => inputImagensRef.current?.click()}>
+              <Icon name="paperclip" size={14} />
+              Adicionar imagem
+            </button>
+          )}
+          <input
+            ref={inputImagensRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            hidden
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? []).filter((f) => TIPOS_IMAGEM.test(f.type));
+              if (files.length) addImagens(files);
+              e.target.value = '';
+            }}
+          />
+        </div>
+      </div>
+      <label className="m2-campo m2-valor">
+        <span className="m2-lbl">Valor esperado</span>
+        <textarea
+          className="inp m2-area"
+          rows={2}
+          value={editing.valorEsperado ?? ''}
+          onChange={(e) => set('valorEsperado', e.target.value)}
+          placeholder="O que muda para o cliente quando isso estiver pronto"
+        />
+      </label>
     </div>
   );
 
@@ -1342,23 +1388,33 @@ export function TaskModalV2(props: TaskModalV2Props) {
         if (saveState === 'error') return;
         onFechar();
       }}
-      onPaste={onPaste}
+      onPaste={(e) => {
+        if (!nova) { onPaste(e); return; }
+        const imgs = imagensDoClipboard(e);
+        if (!imgs.length) return;
+        e.preventDefault();
+        addImagens(imgs);
+      }}
     >
-      <div className="m2" role="dialog" aria-label={nova ? 'Nova tarefa' : 'Editar tarefa'} data-aba={aba}>
+      <div className={cn('m2', nova && 'm2-nova')} role="dialog" aria-label={nova ? 'Nova tarefa' : 'Editar tarefa'} data-aba={aba}>
         {cabecalho}
         {etiquetas}
         {barraMob}
-        <div className="m2-tabs m2-tabs-mob" role="tablist">
+        {!nova && <div className="m2-tabs m2-tabs-mob" role="tablist">
           {abasMobile.map((t) => (
             <button key={t.k} type="button" role="tab" aria-selected={aba === t.k} onClick={() => setAba(t.k)}>
               {t.label}
             </button>
           ))}
-        </div>
-        <div className="m2-body">
-          {principal}
-          {lado}
-        </div>
+        </div>}
+        {nova ? (
+          <div className="m2-body m2-body-nova">{formNova}</div>
+        ) : (
+          <div className="m2-body">
+            {principal}
+            {lado}
+          </div>
+        )}
         {!nova && emDev && aba !== 'detalhes' && (
           <button type="button" className="m2-proximo-mob" onClick={() => setAba('detalhes')}>
             Próximo passo: homologação ou bloqueio
@@ -1366,6 +1422,17 @@ export function TaskModalV2(props: TaskModalV2Props) {
         )}
         <div className="m2-foot">
           {!nova && <MenuMais {...props} />}
+          {nova && isCEO && (
+            <button
+              type="button"
+              className="m2-chip m2-priv"
+              aria-pressed={editing.privada}
+              onClick={() => set('privada', !editing.privada)}
+              title={editing.privada ? 'Só você vê esta tarefa' : 'O time vê esta tarefa'}
+            >
+              <Icon name="lock" size={12} /> {editing.privada ? 'Privada' : 'Pública'}
+            </button>
+          )}
           {!nova && (
             <span className="m2-auto" data-state={saveState}>
               {props.autosaveLabel}
