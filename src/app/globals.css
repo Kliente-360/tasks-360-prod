@@ -3931,7 +3931,44 @@ button.m2-vis-tag { cursor: pointer; }
   60%  { transform: scale(1.06); background: var(--green-tint); border-color: var(--green); color: var(--green); }
   100% { transform: scale(1); }
 }
-.lanc-atalhos button.zerar { background: none; border-color: transparent; color: var(--muted); }
-.lanc-atalhos button.zerar:hover { color: var(--danger); border-color: transparent; }
+.lanc-zerar { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; border: 0; background: none; padding: 2px 4px;
+  font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; border-radius: 4px; }
+.lanc-zerar:hover { color: var(--danger); }
 @media (prefers-reduced-motion: reduce) { .lanc-atalhos button.somou { animation: none; } }
 .lanc-form input.inp[type="number"] { width: 64px; flex: none; }
+
+/* Celular · revisão (nov/2026): área segura do iPhone, linha do tempo
+   compacta do mock acima das abas e passos distribuídos na largura */
+.m2-steps-mob { display: none; }
+@media (max-width: 767px) {
+  .m2 { padding-top: env(safe-area-inset-top, 0px); }
+  .m2-head { padding-top: 10px; }
+  .m2-foot { padding-bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) - 8px)); }
+  .m2-main .m2-steps { display: none; }
+  .m2-steps-mob { display: block; padding: 10px 16px; background: var(--bg-alt); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .m2-cs-linha { display: flex; align-items: center; }
+  .m2-cs { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--line-strong); background: var(--bg); flex: none; }
+  .m2-cs.done { background: var(--green); border-color: var(--green); }
+  .m2-cs.cur { border: 3px solid var(--warn); }
+  .m2-cs.pausa { border-style: dashed; }
+  .m2-cs.parada { background: var(--danger); border-color: var(--danger); }
+  .m2-cl { flex: 1; height: 2px; background: var(--line); }
+  .m2-cl.done { background: var(--green); }
+  .m2-cs-txt { margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--warn); }
+  .m2-cs-txt.parada { color: var(--danger); }
+  .m2-cs-txt.ok { color: var(--green); }
+  .m2-tabs.m2-tabs-mob { margin-top: 0; }
+  /* faixas mais compactas */
+  .m2-band { padding: 8px 10px; gap: 8px; }
+  .m2-band .bt { font-size: 13px; }
+  .m2-band .grow { min-width: 0; }
+  .m2-band .m2-btn { height: 30px; padding: 0 10px; font-size: 12px; }
+  /* passos: principal ocupa a largura, secundário ao lado, voltar embaixo */
+  .m2-passos { flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; }
+  .m2-passos-dir { margin: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .m2-passos-dir .m2-btn { height: 42px; justify-content: center; }
+  .m2-passos .m2-voltar { order: 2; align-self: center; padding: 4px; }
+  .m2-saida-pe { justify-content: center; flex-wrap: wrap; }
+  .m2-saida-pe .m2-btn { flex: 1; height: 42px; justify-content: center; }
+  .m2-saida-pe .m2-voltar { margin: 0; flex-basis: 100%; text-align: center; order: 2; }
+}

@@ -745,7 +745,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
   } = props;
 
   const nova = !editing.id;
-  const [aba, setAba] = useState<AbaV2>(nova ? 'detalhes' : 'conversa');
+  const [aba, setAba] = useState<AbaV2>('detalhes');
   const [saidaPedida, setSaidaPedida] = useState<'homolog' | 'bloq' | null>(null);
   const [lembrando, setLembrando] = useState(false);
   const novoPrazoRef = useRef<HTMLInputElement | null>(null);
@@ -938,6 +938,33 @@ export function TaskModalV2(props: TaskModalV2Props) {
         );
       })}
     </ol>
+  );
+
+  // Celular: linha do tempo compacta (bolinhas) + texto da etapa, acima das abas
+  const barraMob = !nova && (
+    <div className="m2-steps-mob" aria-label={`Etapa: ${SUB_LABELS[editing.subetapa] ?? editing.subetapa}`}>
+      <div className="m2-cs-linha">
+        {ETAPAS.map((nome, i) => {
+          const bloqueada = editing.subetapa === 'bloqueado';
+          let estado = '';
+          if (i === 3) estado = bloqueada ? 'parada' : 'pausa';
+          else if (bloqueada) estado = i < etapaBase ? 'done' : '';
+          else if (concluida || i < etapaAtual) estado = 'done';
+          else if (i === etapaAtual) estado = 'cur';
+          const linhaFeita = !bloqueada && (concluida || i < etapaAtual);
+          return (
+            <span key={nome} className="contents">
+              <span className={cn('m2-cs', estado)} title={nome} />
+              {i < ETAPAS.length - 1 && <span className={cn('m2-cl', linhaFeita && 'done')} />}
+            </span>
+          );
+        })}
+      </div>
+      <div className={cn('m2-cs-txt', editing.subetapa === 'bloqueado' && 'parada', concluida && 'ok')}>
+        {ETAPAS[etapaAtual]}
+        {SUB_LABELS[editing.subetapa] && SUB_LABELS[editing.subetapa] !== ETAPAS[etapaAtual] && ` · ${SUB_LABELS[editing.subetapa]}`}
+      </div>
+    </div>
   );
 
   // ---------- Faixas ----------
@@ -1281,8 +1308,8 @@ export function TaskModalV2(props: TaskModalV2Props) {
   const abasMobile: { k: AbaV2; label: string }[] = nova
     ? [{ k: 'detalhes', label: 'Detalhes' }, { k: 'checklist', label: 'Checklist' }]
     : [
-        { k: 'conversa', label: 'Conversa' },
         { k: 'detalhes', label: 'Detalhes' },
+        { k: 'conversa', label: 'Conversa' },
         { k: 'horas', label: 'Horas' },
         { k: 'anexos', label: 'Anexos' },
         { k: 'checklist', label: 'Checklist' },
@@ -1302,6 +1329,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
       <div className="m2" role="dialog" aria-label={nova ? 'Nova tarefa' : 'Editar tarefa'} data-aba={aba}>
         {cabecalho}
         {etiquetas}
+        {barraMob}
         <div className="m2-tabs m2-tabs-mob" role="tablist">
           {abasMobile.map((t) => (
             <button key={t.k} type="button" role="tab" aria-selected={aba === t.k} onClick={() => setAba(t.k)}>

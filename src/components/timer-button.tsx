@@ -304,6 +304,16 @@ export function LancamentoForm({
                 aria-label="Minutos"
               />
               <span className="text-xs text-muted">min</span>
+              {totalMin > 0 && (
+                <button
+                  type="button"
+                  className="lanc-zerar"
+                  onClick={() => { setDurH(0); setDurM(0); }}
+                  aria-label="Zerar duração"
+                >
+                  <Icon name="x" size={12} /> Zerar
+                </button>
+              )}
             </div>
             <div className="lanc-atalhos">
               {ATALHOS_DURACAO.map(([l, min]) => (
@@ -326,11 +336,6 @@ export function LancamentoForm({
                   +{l}
                 </button>
               ))}
-              {totalMin > 0 && (
-                <button type="button" className="zerar" onClick={() => { setDurH(0); setDurM(0); }}>
-                  Zerar
-                </button>
-              )}
             </div>
           </div>
         </div>
