@@ -3946,8 +3946,9 @@ button.m2-vis-tag { cursor: pointer; }
    compacta do mock acima das abas e passos distribuídos na largura */
 .m2-steps-mob { display: none; }
 @media (max-width: 767px) {
-  .m2 { padding-top: env(safe-area-inset-top, 0px); }
-  .m2-foot { padding-bottom: max(10px, calc(env(safe-area-inset-bottom, 0px) - 8px)); }
+  /* iOS 26 borra uns 24pt abaixo da barra de status: margem extra */
+  .m2 { padding-top: calc(env(safe-area-inset-top, 0px) + 18px); }
+  .m2-foot { padding: 12px 20px calc(env(safe-area-inset-bottom, 0px) + 14px); }
   .m2-main .m2-steps { display: none; }
   .m2-steps-mob { display: block; padding: 10px 16px; background: var(--bg-alt); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .m2-cs-linha { display: flex; align-items: center; }
