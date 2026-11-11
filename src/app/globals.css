@@ -3675,7 +3675,8 @@ select.m-select { padding-right: 18px; background-position: right 0 center; back
 .m2-hbtn:disabled { opacity: .5; cursor: default; }
 .m2-play { width: 16px; height: 16px; border-radius: 50%; background: var(--green); position: relative; flex: none; }
 .m2-play::after { content: ''; position: absolute; left: 6px; top: 4.5px; border-left: 6px solid #fff; border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent; }
-.m2-hbtn.rodando { border-color: var(--green); background: var(--green-tint); color: var(--green); font-weight: 600; }
+.m2-hbtn.rodando { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); font-weight: 600; }
+.m2-hbtn.rodando .m2-play { background: var(--danger); }
 .m2-hbtn.rodando .m2-play, .m2-hbtn.outra .m2-play { width: 11px; height: 11px; border-radius: 2px; }
 .m2-hbtn.rodando .m2-play::after, .m2-hbtn.outra .m2-play::after { display: none; }
 .m2-hbtn.outra .m2-play { background: var(--warn); }

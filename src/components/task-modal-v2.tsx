@@ -415,7 +415,8 @@ function BotaoPlay(props: TaskModalV2Props) {
       ? `Cronômetro rodando em "${outraTask?.titulo ?? 'outra tarefa'}": clique para parar`
       : 'Iniciar o cronômetro nesta tarefa';
   return (
-    <span className="relative inline-flex">
+    // Celular: sem cronômetro no modal (só Lançar); parar pela barra do app
+    <span className="relative hidden md:inline-flex">
       <button
         type="button"
         className={cn('m2-hbtn', aqui && 'rodando', outra && 'outra')}
