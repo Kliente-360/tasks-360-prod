@@ -1362,22 +1362,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, clienteWebhookEnabled]);
 
-  // Motivo de bloqueio · state separado de `editing`, então autosave não
-  // dispara naturalmente quando o usuário digita. Esse effect agenda um
-  // autosave debounceado (1.5s pra dar tempo de terminar) sempre que
-  // bloqueioMotivo vira não-vazio numa task já em bloqueado. O save
-  // pega bloqueioMotivoRef.current na hora, insere o comment, e o
-  // callback chama setBloqueioMotivo('') pra limpar o textarea.
-  useEffect(() => {
-    if (!editing.id) return;
-    if (editing.subetapa !== 'bloqueado') return;
-    if (!bloqueioMotivo.trim()) return;
-    if (clienteWebhookEnabled) return; // webhook-mode: salva no botão
-    const id = setTimeout(() => {
-      autosaveNowRef.current();
-    }, 1500);
-    return () => clearTimeout(id);
-  }, [bloqueioMotivo, editing.id, editing.subetapa, clienteWebhookEnabled]);
+  // Motivo de bloqueio: NÃO salva sozinho enquanto a pessoa digita (antes
+  // havia um autosave de 1,5 s que postava a pergunta pela metade). Ele é
+  // gravado no próximo salvamento explícito: botão Salvar ou ao fechar.
 
   // Quando muda cliente (Sem→Com webhook ou vice-versa) sem que o user
   // tenha tocado em outro campo, o useEffect acima já trata. Mas o

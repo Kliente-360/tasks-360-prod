@@ -54,7 +54,7 @@
   --ok:          #1E8A4C;   --ok-soft:     #E7F1EA;
 
   /* === TIPOGRAFIA === */
-  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --sans: var(--font-inter), 'Inter', system-ui, -apple-system, sans-serif;
   /* Produto só em Inter (nov/2026): o que era mono usa Inter com algarismos
      de largura fixa (tabular-nums). O site da marca mantém o JetBrains do DS. */
   --mono: var(--sans);
@@ -3617,3 +3617,15 @@ html:has(.fixed.inset-0, .pmodal-backdrop, .sheet-bg, .anexo-lightbox) body { ov
 }
 /* Números alinhados em todo o produto (substitui o JetBrains Mono) */
 html { font-variant-numeric: tabular-nums; }
+
+/* Campos de lista: seta própria a 12px da borda em todo o app (a nativa
+   ficava colada na borda direita). Mesma seta do formulário do portal. */
+select.inp:not([multiple]), select.m-select {
+  appearance: none; -webkit-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236E6D68' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px 14px;
+}
+select.m-select { padding-right: 18px; background-position: right 0 center; background-size: 12px 12px; }
