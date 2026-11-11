@@ -15,7 +15,6 @@ import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { Icon } from '@/components/icons';
 import { NotePopover } from '@/components/timer-button';
-import { fmtDuration } from '@/lib/use-timer';
 import {
   AREAS_TECNICAS, AREA_LABEL, GRUPO_BACKLOG, SUB_LABELS, SUB_TO_MACRO, TIPOS_TRABALHO,
 } from '@/lib/task-constants';
@@ -127,7 +126,7 @@ const BLOQUEIO_LABEL: Record<string, string> = { cliente: 'Cliente', nos: 'Inter
 
 const CAMPO_LABEL: Record<string, string> = {
   clienteId: 'cliente', projetoId: 'projeto', pessoaId: 'responsável', prioridade: 'prioridade',
-  prazo: 'prazo', esforco: 'esforço', tempoRealHoras: 'horas', solucaoImplementada: 'solução',
+  prazo: 'prazo', esforco: 'esforço', tempoRealHoras: 'horas lançadas', solucaoImplementada: 'solução',
   motivoReabertura: 'motivo da reabertura',
 };
 
@@ -139,6 +138,14 @@ function hojeIso(): string {
 }
 const ddmm = (iso: string) => iso.slice(0, 10).split('-').reverse().slice(0, 2).join('/');
 const ddmmaa = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
+/** Cronômetro: segundos → 0:42 · 12:05 · 1:02:33 */
+const fmtCrono = (seg: number) => {
+  const s = Math.max(0, Math.floor(seg));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+};
 const fmtH = (h: number) => (Math.round(h * 10) / 10).toLocaleString('pt-BR');
 const iniciais = (nome: string) =>
   nome.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('');
@@ -474,7 +481,7 @@ function BotaoPlay(props: TaskModalV2Props) {
         onClick={() => (activeEntry ? setNota(true) : onPlay())}
       >
         <span className="m2-play" />
-        <span className="hidden sm:inline">{aqui ? fmtDuration(elapsed) : outra ? 'Rodando' : 'Play'}</span>
+        <span className="hidden sm:inline">{aqui ? fmtCrono(elapsed) : outra ? 'Rodando' : 'Play'}</span>
       </button>
       {nota && activeEntry && (
         <NotePopover
@@ -493,13 +500,14 @@ function BotaoPlay(props: TaskModalV2Props) {
 // Saída do desenvolvimento: homologação ou bloqueio, sempre com mensagem
 // ============================================================
 function Saida({
-  editing, modoInicial, onTransicao, onCancelar, podeCancelar,
+  editing, modoInicial, onTransicao, onCancelar, podeCancelar, voltar,
 }: {
   editing: Task;
   modoInicial: 'homolog' | 'bloq' | null;
   onTransicao: TaskModalV2Props['onTransicao'];
   onCancelar: () => void;
   podeCancelar: boolean;
+  voltar?: { label: string; onClick: () => void };
 }) {
   const [modo, setModo] = useState<'homolog' | 'bloq' | null>(modoInicial);
   const [por, setPor] = useState<string>('');
@@ -546,17 +554,11 @@ function Saida({
       <div className="m2-opcoes" role="radiogroup">
         <button type="button" role="radio" aria-checked={modo === 'homolog'} className="m2-opcao" onClick={() => setModo('homolog')}>
           <span className="m2-op-ic"><Icon name="send" size={13} /></span>
-          <span>
-            <b>Enviar para homologação</b>
-            <small>O cliente recebe a entrega no portal</small>
-          </span>
+          <b>Enviar para homologação</b>
         </button>
         <button type="button" role="radio" aria-checked={modo === 'bloq'} data-op="bloq" className="m2-opcao" onClick={() => setModo('bloq')}>
           <span className="m2-op-ic"><Icon name="alert" size={13} /></span>
-          <span>
-            <b>Bloquear</b>
-            <small>Registra quem está segurando a tarefa</small>
-          </span>
+          <b>Bloquear</b>
         </button>
       </div>
       {modo && (
@@ -577,15 +579,14 @@ function Saida({
             <span className="m2-lbl">{rotuloMsg} <span className="m2-req">*</span></span>
             <textarea rows={3} value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={placeholder} />
           </label>
-          {modo === 'homolog' && editing.visivelCliente === false && (
-            <div className="m2-hint">A tarefa está oculta do cliente: a mensagem fica só na conversa interna.</div>
-          )}
-          {modo === 'bloq' && por === 'cliente' && (
-            <div className="m2-hint">O cliente vê a pergunta em destaque no portal e responde por lá.</div>
-          )}
         </div>
       )}
       <div className="m2-saida-pe">
+        {voltar && !modo && (
+          <button type="button" className="m2-link m2-voltar" onClick={voltar.onClick}>
+            ← {voltar.label}
+          </button>
+        )}
         {(modo || podeCancelar) && (
           <button
             type="button"
@@ -606,6 +607,101 @@ function Saida({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Passos fora do desenvolvimento: avançar e voltar de etapa
+// ============================================================
+const MOTIVOS_REABERTURA = [
+  { v: 'mudanca_cliente', label: 'Mudança de escopo pedida pelo cliente' },
+  { v: 'erro_qualidade', label: 'Erro ou problema de qualidade' },
+  { v: 'regressao', label: 'Regressão (algo quebrou)' },
+  { v: 'novo_requisito', label: 'Novo requisito interno' },
+];
+
+function Passos({ editing, onTransicao }: { editing: Task; onTransicao: TaskModalV2Props['onTransicao'] }) {
+  const [ocupado, setOcupado] = useState(false);
+  const [reabrindo, setReabrindo] = useState(false);
+  const [motivo, setMotivo] = useState('');
+  const ir = async (patch: Partial<Task>) => {
+    if (ocupado) return;
+    setOcupado(true);
+    const ok = await onTransicao(patch);
+    setOcupado(false);
+    if (ok) { setReabrindo(false); setMotivo(''); }
+  };
+  const sub = editing.subetapa;
+  type Acao = { label: string; patch: Partial<Task>; primario?: boolean };
+  let avancar: Acao[] = [];
+  let voltar: Acao | null = null;
+  if (GRUPO_BACKLOG.has(sub)) {
+    avancar = [{ label: 'Iniciar desenvolvimento', patch: { subetapa: 'em_desenvolvimento' }, primario: true }];
+  } else if (sub === 'em_homologacao') {
+    avancar = [
+      { label: 'Pronto para produção', patch: { subetapa: 'pronto_producao' }, primario: true },
+      { label: 'Pedir ajustes', patch: { subetapa: 'em_revisao' } },
+    ];
+  } else if (sub === 'pronto_producao') {
+    avancar = [
+      { label: 'Concluir', patch: { subetapa: 'concluido' }, primario: true },
+      { label: 'Em implantação', patch: { subetapa: 'em_implantacao' } },
+    ];
+    voltar = { label: 'Voltar para homologação', patch: { subetapa: 'em_homologacao' } };
+  } else if (sub === 'em_implantacao') {
+    avancar = [{ label: 'Concluir', patch: { subetapa: 'concluido' }, primario: true }];
+    voltar = { label: 'Voltar para pronto para produção', patch: { subetapa: 'pronto_producao' } };
+  }
+
+  if (sub === 'concluido') {
+    return (
+      <div className="m2-passos">
+        {!reabrindo ? (
+          <button type="button" className="m2-link m2-voltar" onClick={() => setReabrindo(true)}>
+            ← Reabrir
+          </button>
+        ) : (
+          <>
+            <select className="inp m2-passos-sel" value={motivo} onChange={(e) => setMotivo(e.target.value)} aria-label="Motivo da reabertura">
+              <option value="">Motivo da reabertura</option>
+              {MOTIVOS_REABERTURA.map((m) => <option key={m.v} value={m.v}>{m.label}</option>)}
+            </select>
+            <button type="button" className="m2-link" onClick={() => { setReabrindo(false); setMotivo(''); }}>Cancelar</button>
+            <button
+              type="button"
+              className="m2-btn primario"
+              disabled={!motivo || ocupado}
+              onClick={() => ir({ subetapa: 'em_revisao', motivoReabertura: motivo })}
+            >
+              Reabrir
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+  if (!avancar.length && !voltar) return null;
+  return (
+    <div className="m2-passos">
+      {voltar && (
+        <button type="button" className="m2-link m2-voltar" disabled={ocupado} onClick={() => ir(voltar!.patch)}>
+          ← {voltar.label}
+        </button>
+      )}
+      <span className="m2-passos-dir">
+        {avancar.map((a) => (
+          <button
+            key={a.label}
+            type="button"
+            className={cn('m2-btn', a.primario && 'primario')}
+            disabled={ocupado}
+            onClick={() => ir(a.patch)}
+          >
+            {a.label}{a.primario && ' →'}
+          </button>
+        ))}
+      </span>
     </div>
   );
 }
@@ -649,14 +745,14 @@ function MenuMais(props: TaskModalV2Props) {
       <Pop anchor={p.ref} open={p.open} onClose={p.close} width={modo === 'dep' ? 320 : 230} up>
         {modo === 'menu' ? (
           <>
-            <Op sub="Esta tarefa espera outra terminar" onClick={() => setModo('dep')}>Marcar dependência</Op>
+            <Op onClick={() => setModo('dep')}>Marcar dependência</Op>
             {editing.arquivadoEm ? (
               <Op onClick={() => { p.close(); onDesarquivar(); }}>Desarquivar</Op>
             ) : (
-              <Op sub="Some das listas, sem apagar" onClick={() => { p.close(); onArquivar(); }}>Arquivar</Op>
+              <Op onClick={() => { p.close(); onArquivar(); }}>Arquivar</Op>
             )}
             {isAdmin && (
-              <Op perigo sub="Apaga para sempre" onClick={() => { p.close(); onExcluir(); }}>Excluir</Op>
+              <Op perigo onClick={() => { p.close(); onExcluir(); }}>Excluir</Op>
             )}
           </>
         ) : (
@@ -726,6 +822,13 @@ export function TaskModalV2(props: TaskModalV2Props) {
     const h = history.find((x) => x.field === 'subetapa' && x.to_value === 'bloqueado' && x.from_value);
     return h?.from_value && h.from_value !== 'bloqueado' ? h.from_value : 'em_desenvolvimento';
   }, [history]);
+  // Memória: última subetapa do Backlog antes de ir para o desenvolvimento
+  const ultimaDoBacklog = useMemo(() => {
+    const h = history.find(
+      (x) => x.field === 'subetapa' && x.from_value && GRUPO_BACKLOG.has(x.from_value) && !GRUPO_BACKLOG.has(x.to_value ?? ''),
+    );
+    return h?.from_value ?? 'escopo_definido';
+  }, [history]);
   const bloqueadaDesde = useMemo(() => {
     const h = history.find((x) => x.field === 'subetapa' && x.to_value === 'bloqueado');
     return h?.occurred_at ?? null;
@@ -750,7 +853,8 @@ export function TaskModalV2(props: TaskModalV2Props) {
   const faltam = [...missingFields].map((f) => CAMPO_LABEL[f] ?? f);
   const esforco = Number(editing.esforco) || 0;
   const estourou = esforco > 0 && horasLancadas > esforco;
-  const esforcoTravado = !nova && !GRUPO_BACKLOG.has(editing.subetapa);
+  // Estimativa trava na primeira saída do Backlog (esforco_inicial preenchido), mesmo se voltar
+  const esforcoTravado = !nova && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null);
 
   // ---------- Cabeçalho ----------
   const cabecalho = (
@@ -901,7 +1005,6 @@ export function TaskModalV2(props: TaskModalV2Props) {
         <div className="m2-band erro">
           <div className="grow">
             <div className="bt">Não foi possível salvar</div>
-            <p>Revise os campos pendentes e salve de novo.</p>
           </div>
         </div>
       )}
@@ -914,8 +1017,6 @@ export function TaskModalV2(props: TaskModalV2Props) {
             </div>
             {editing.bloqueadoPor === 'cliente' && live?.pendenciaRespondidaEm ? (
               <p>O cliente respondeu em {new Date(live.pendenciaRespondidaEm).toLocaleDateString('pt-BR')}. Veja a conversa e desbloqueie quando puder seguir.</p>
-            ) : editing.bloqueadoPor === 'cliente' ? (
-              <p>Aguardando a resposta do cliente no portal.</p>
             ) : null}
             {!editing.bloqueadoPor && (
               <div className="m2-seg mt-2" role="radiogroup">
@@ -942,11 +1043,6 @@ export function TaskModalV2(props: TaskModalV2Props) {
             <div className="bt">
               {homologDias === null ? 'Com o cliente' : homologDias === 0 ? 'Com o cliente desde hoje' : `Com o cliente há ${homologDias} ${homologDias === 1 ? 'dia' : 'dias'}`}
             </div>
-            <p>
-              {editing.visivelCliente === false
-                ? 'A tarefa está oculta do cliente, então ele não vê a homologação no portal.'
-                : 'O cliente homologa a entrega no portal.'}
-            </p>
           </div>
           {editing.visivelCliente !== false && (
             <button
@@ -967,8 +1063,9 @@ export function TaskModalV2(props: TaskModalV2Props) {
       {!nova && !!editing.aprovadoEm && !concluida && (
         <div className="m2-band ok">
           <div className="grow">
-            <div className="bt">Entrega aprovada pelo cliente</div>
-            <p>Em {new Date(editing.aprovadoEm).toLocaleDateString('pt-BR')}.</p>
+            <div className="bt">
+              Aprovada pelo cliente em {new Date(editing.aprovadoEm).toLocaleDateString('pt-BR')}
+            </div>
           </div>
         </div>
       )}
@@ -1020,14 +1117,19 @@ export function TaskModalV2(props: TaskModalV2Props) {
 
   const principal = (
     <div className="m2-main">
-      {mostraSaida && (
+      {barra}
+      <div className="m2-faixas">{faixas}</div>
+      {mostraSaida ? (
         <Saida
           editing={editing}
           modoInicial={saidaPedida}
           onTransicao={onTransicao}
           onCancelar={() => setSaidaPedida(null)}
           podeCancelar={!emDev}
+          voltar={emDev ? { label: 'Voltar para o Backlog', onClick: () => onTransicao({ subetapa: ultimaDoBacklog }) } : undefined}
         />
+      ) : (
+        !nova && <Passos editing={editing} onTransicao={onTransicao} />
       )}
 
       {nova && (
@@ -1096,11 +1198,11 @@ export function TaskModalV2(props: TaskModalV2Props) {
         </div>
       </section>
 
-      {(nova || GRUPO_BACKLOG.has(editing.subetapa)) && (
+      {nova && (
         <section className="m2-sec">
           <div className="m2-lbl">Planejamento</div>
-          <div className={cn('m2-grid2', nova && 'm2-grid3')}>
-            {nova && (
+          <div className="m2-grid2 m2-grid3">
+            {(
               <label className="m2-campo">
                 <span className="m2-lbl">Tipo</span>
                 <select className="inp" value={editing.tipoTrabalho ?? ''} onChange={(e) => set('tipoTrabalho', (e.target.value || null) as Task['tipoTrabalho'])}>
@@ -1130,14 +1232,13 @@ export function TaskModalV2(props: TaskModalV2Props) {
               />
             </label>
           </div>
-          {!nova && <div className="m2-hint">A estimativa trava quando a tarefa sai do Backlog.</div>}
         </section>
       )}
 
       {!nova && MOSTRA_SOLUCAO.has(editing.subetapa) && (
         <section className="m2-sec">
           <div className="m2-lbl">
-            Entrega · solução implementada {concluida && <span className="m2-req">*</span>}
+            Solução implementada {concluida && <span className="m2-req">*</span>}
           </div>
           <textarea
             className={cn('inp m2-area', missingFields.has('solucaoImplementada') && 'is-missing')}
@@ -1187,9 +1288,6 @@ export function TaskModalV2(props: TaskModalV2Props) {
             <span className="m2-num">{fmtH(horasLancadas)} h</span>
             <span className="m2-de"> lançadas{esforco > 0 ? ` de ${fmtH(esforco)} h estimadas` : ''}</span>
           </span>
-          {esforcoTravado && editing.esforcoInicial ? (
-            <span className="m2-de">estimativa travada</span>
-          ) : null}
         </div>
         {esforco > 0 && (
           <div className="m2-barra">
@@ -1197,20 +1295,21 @@ export function TaskModalV2(props: TaskModalV2Props) {
           </div>
         )}
       </div>
-      <label className="m2-campo">
-        <span className="m2-lbl">
-          Tempo realizado informado (h) {missingFields.has('tempoRealHoras') && <span className="m2-req">*</span>}
-        </span>
-        <input
-          type="number"
-          min={0}
-          step={0.5}
-          className={cn('inp', missingFields.has('tempoRealHoras') && 'is-missing')}
-          value={editing.tempoRealHoras ?? ''}
-          onChange={(e) => set('tempoRealHoras', e.target.value === '' ? null : Number(e.target.value))}
-          placeholder={horasLancadas > 0 ? `${fmtH(horasLancadas)} (das horas lançadas)` : '0'}
-        />
-      </label>
+      {!esforcoTravado && (
+        <label className="m2-campo">
+          <span className="m2-lbl">
+            Estimado (h) {missingFields.has('esforco') && <span className="m2-req">*</span>}
+          </span>
+          <input
+            type="number"
+            min={0}
+            step={0.5}
+            className={cn('inp', missingFields.has('esforco') && 'is-missing')}
+            value={editing.esforco || ''}
+            onChange={(e) => set('esforco', Number(e.target.value) || 0)}
+          />
+        </label>
+      )}
       {jsxTimesheet}
     </div>
   );
@@ -1259,8 +1358,6 @@ export function TaskModalV2(props: TaskModalV2Props) {
       <div className="m2" role="dialog" aria-label={nova ? 'Nova tarefa' : 'Editar tarefa'} data-aba={aba}>
         {cabecalho}
         {etiquetas}
-        {barra}
-        <div className="m2-faixas">{faixas}</div>
         <div className="m2-tabs m2-tabs-mob" role="tablist">
           {abasMobile.map((t) => (
             <button key={t.k} type="button" role="tab" aria-selected={aba === t.k} onClick={() => setAba(t.k)}>
@@ -1279,9 +1376,11 @@ export function TaskModalV2(props: TaskModalV2Props) {
         )}
         <div className="m2-foot">
           {!nova && <MenuMais {...props} />}
-          <span className="m2-auto" data-state={saveState}>
-            {nova ? 'Tarefa nova: crie para começar a conversa' : props.autosaveLabel}
-          </span>
+          {!nova && (
+            <span className="m2-auto" data-state={saveState}>
+              {props.autosaveLabel}
+            </span>
+          )}
           <span className="m2-foot-dir">
             <button type="button" className="m2-btn" onClick={onFecharForcado}>Fechar</button>
             <button type="button" className="m2-btn primario" onClick={onSalvar}>

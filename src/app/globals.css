@@ -3719,7 +3719,7 @@ select.m-select { padding-right: 18px; background-position: right 0 center; back
 
 /* Faixas de ação */
 .m2-faixas:empty { display: none; }
-.m2-faixas { display: grid; gap: 8px; padding: 12px 24px 0; }
+.m2-faixas { display: grid; gap: 8px; }
 .m2-faixas > .tmodal-banner, .m2-faixas > div:not(.m2-band) { margin: 0; }
 .m2-band { padding: 10px 14px; border: 1px solid var(--line); border-left: 3px solid var(--warn); border-radius: 6px;
   background: color-mix(in srgb, var(--warn-soft) 55%, var(--bg)); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
@@ -3744,7 +3744,7 @@ select.m-select { padding-right: 18px; background-position: right 0 center; back
 .m2-link:hover { color: var(--ink); }
 
 /* Corpo */
-.m2-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); margin-top: 12px; border-top: 1px solid var(--line); }
+.m2-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); border-top: 1px solid var(--line); }
 .m2-main { padding: 18px 24px 24px; display: grid; gap: 20px; align-content: start; border-right: 1px solid var(--line); overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
 .m2-sec { display: grid; gap: 8px; }
 .m2-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
@@ -3858,4 +3858,48 @@ select.m-select { padding-right: 18px; background-position: right 0 center; back
     font-size: 13px; font-weight: 600; padding: 10px 16px; text-align: left; cursor: pointer; flex: none; }
   .m2-foot { padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
   .m2-auto { display: none; }
+}
+
+/* Modal novo · divisão (nov/2026): etapas, faixas e passos na coluna da
+   esquerda; conversa ocupa a altura toda da direita */
+.m2-main .m2-steps { padding: 2px 0 0; background: none; border: 0; }
+.m2-main .m2-sdot { width: 16px; height: 16px; }
+.m2-main .m2-sdot svg { width: 10px; height: 10px; }
+.m2-main .m2-sname { font-size: 12px; margin-top: 2px; }
+.m2-main .m2-sdate { font-size: 11px; }
+.m2-main { gap: 16px; }
+.m2-passos { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.m2-passos-dir { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.m2-passos-sel { flex: 1; min-width: 200px; height: 34px; }
+.m2-voltar { padding-left: 0; }
+.m2-saida-pe .m2-voltar { margin-right: auto; }
+.m2-opcao b { font-size: 14px; }
+
+/* Conversa estilo portal */
+.m2-painel { overflow: hidden; }
+.m2-painel > .m2-pad, .m2-painel > .tmodal-thread { overflow-y: auto; min-height: 0; flex: 1; }
+.m2-convo { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 14px 18px 12px; }
+.m2-convo > :first-child { margin-top: auto; }
+.m2-convo .pmodal-msg-body { overflow-wrap: anywhere; }
+.m2-convo .pmodal-msg-body a { color: var(--green); text-decoration: underline; }
+.m2-composer { flex: none; padding: 10px 16px 14px; }
+.m2-macoes { display: flex; gap: 10px; opacity: 0; transition: opacity .12s; }
+.pmodal-msg:hover .m2-macoes, .pmodal-msg:focus-within .m2-macoes { opacity: 1; }
+.pmodal-msg.is-cliente .m2-macoes { justify-content: flex-end; }
+.m2-macoes button { border: 0; background: none; padding: 0; font-size: 11.5px; font-weight: 500; color: var(--muted); cursor: pointer; }
+.m2-macoes button:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
+.m2-macoes button.perigo:hover { color: var(--danger); }
+@media (hover: none) { .m2-macoes { opacity: 1; } }
+.m2-vis-tag { border: 0; margin-left: 6px; font-size: 10px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; vertical-align: 1px; }
+button.m2-vis-tag { cursor: pointer; }
+.m2-vis-tag[aria-pressed="false"] { background: var(--surface-3); color: var(--muted); }
+.m2-vis-tag[aria-pressed="true"] { background: var(--green-tint); color: var(--green); }
+.m2-respondendo { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 6px 10px; border-left: 3px solid var(--green);
+  border-radius: 4px; background: var(--bg); font-size: 12.5px; color: var(--ink-soft); }
+.m2-respondendo span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m2-respondendo b { color: var(--green); font-weight: 600; }
+.m2-respondendo button { border: 0; background: none; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; }
+@media (max-width: 767px) {
+  .m2-convo { padding: 12px 16px; }
+  .pmodal-msg { max-width: 92%; }
 }

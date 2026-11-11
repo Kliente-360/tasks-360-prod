@@ -1574,8 +1574,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   }, [newComment, newCommentPublico, imagensMsg, editing.id, sb, currentPessoa, notifyAfterComment, toast]);
 
   const submitReply = useCallback(
-    async (parentId: string) => {
-      const body = newReply.trim();
+    async (parentId: string, corpo?: string) => {
+      const body = (corpo ?? newReply).trim();
       if (!body || !editing.id || !parentId) return;
       const parent = comments.find((c) => c.id === parentId);
       const visivel = !!parent?.visivel_cliente;
@@ -2211,6 +2211,233 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
               </>
   );
 
+  // ============ Modal novo (beta) · conversa estilo portal ============
+  // Mais antiga em cima, mais recente embaixo (rolagem ancorada no fim).
+  // Resposta cita a original, como no WhatsApp; respostas de respostas
+  // apontam para a mensagem raiz (o banco não aceita aninhar).
+  const conversaAsc = useMemo(
+    () =>
+      [...comments].sort(
+        (a, b) =>
+          new Date(a.posted_em || a.criado_em).getTime() - new Date(b.posted_em || b.criado_em).getTime(),
+      ),
+    [comments],
+  );
+  const comentarioPorId = useMemo(() => new Map(comments.map((c) => [c.id, c])), [comments]);
+  const conversaRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = conversaRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [comments.length]);
+  const respondendo = replyingToId ? comentarioPorId.get(replyingToId) ?? null : null;
+  const enviarConversaV2 = useCallback(() => {
+    if (replyingToId && imagensMsg.length === 0) {
+      const corpo = newComment;
+      if (!corpo.trim()) return;
+      setNewComment('');
+      submitReply(replyingToId, corpo);
+      return;
+    }
+    setReplyingToId('');
+    postComment();
+  }, [replyingToId, imagensMsg.length, newComment, submitReply, postComment]);
+
+  const KIND_TAG_INTERNO: Record<string, string> = {
+    pendencia: 'Pergunta ao cliente',
+    resposta_pendencia: 'Resposta à pendência',
+    pedido_prioridade: 'Pedido de prioridade',
+    resposta_prioridade: 'Resposta ao pedido de prioridade',
+    ajuste_solicitado: 'Pedido de ajuste',
+  };
+
+  const jsxConversaV2 = (
+    <>
+      <AnexosMsgContext.Provider value={anexosMsgCtx}>
+        <div
+          className="pmodal-convo m2-convo"
+          ref={(el) => {
+            if (el && conversaRef.current !== el) {
+              conversaRef.current = el;
+              el.scrollTop = el.scrollHeight;
+            }
+          }}
+        >
+          {!editing.id && <div className="pmodal-empty">Comentários aparecem após salvar a tarefa.</div>}
+          {editing.id && conversaAsc.length === 0 && <div className="pmodal-empty">Nenhuma mensagem ainda.</div>}
+          {conversaAsc.map((c) => {
+            if (c.kind === 'aprovacao') {
+              return (
+                <div key={c.id} className="pmodal-sep is-ok">
+                  <span />
+                  <Icon name="check" size={12} /> Entrega aprovada por {c.author ?? 'cliente'} · {fmtPostedEm(c.posted_em || c.criado_em)}
+                  <span />
+                </div>
+              );
+            }
+            const doCliente = !!c.from_cliente;
+            const externo = !!c.external_source;
+            const autor = !!currentPessoa && c.author_pessoa_id === currentPessoa.id;
+            const podeEditar = !externo && !doCliente && autor;
+            const podeExcluir = !externo && (isAdmin || autor);
+            const podeVisibilidade = !externo && !doCliente && (isAdmin || autor);
+            const original = c.parent_id ? comentarioPorId.get(c.parent_id) : undefined;
+            const tag = c.kind ? KIND_TAG_INTERNO[c.kind] : null;
+            const editando = editingCommentId === c.id;
+            return (
+              <div
+                key={c.id}
+                className={`pmodal-msg ${doCliente ? 'is-cliente' : 'is-time'} ${c.kind ? `kind-${c.kind}` : ''}`}
+              >
+                <div className="pmodal-msg-meta">
+                  <b>{c.author || (doCliente ? 'Cliente' : 'Time')}</b> · {fmtPostedEm(c.posted_em || c.criado_em)}
+                  {c.edited_em && ' · editada'}
+                  {c.external_source === 'salesforce' && <span className="m2-vis-tag" aria-pressed="false">SF</span>}
+                  {!doCliente && (
+                    podeVisibilidade ? (
+                      <button
+                        type="button"
+                        className="m2-vis-tag"
+                        aria-pressed={!!c.visivel_cliente}
+                        onClick={() => toggleCommentVisivel(c)}
+                        title={c.visivel_cliente ? 'O cliente vê esta mensagem' : 'Só o time vê esta mensagem'}
+                      >
+                        {c.visivel_cliente ? 'Externo' : 'Interno'}
+                      </button>
+                    ) : (
+                      <span className="m2-vis-tag" aria-pressed={!!c.visivel_cliente}>
+                        {c.visivel_cliente ? 'Externo' : 'Interno'}
+                      </span>
+                    )
+                  )}
+                </div>
+                <div className="pmodal-msg-body">
+                  {original && (
+                    <div className="pmodal-msg-quote">
+                      <b>{original.author || (original.from_cliente ? 'Cliente' : 'Time')}</b>
+                      <span>{original.body}</span>
+                    </div>
+                  )}
+                  {tag && <div className="pmodal-msg-tag">{tag}</div>}
+                  {editando ? (
+                    <div className="flex flex-col gap-1.5">
+                      <textarea
+                        className="inp resize-y min-h-[60px] text-sm"
+                        value={editingCommentDraft}
+                        onChange={(e) => setEditingCommentDraft(e.target.value)}
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                            e.preventDefault();
+                            saveEditComment(c.id);
+                          } else if (e.key === 'Escape') {
+                            e.stopPropagation();
+                            setEditingCommentId('');
+                            setEditingCommentDraft('');
+                          }
+                        }}
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button type="button" className="m2-link" onClick={() => { setEditingCommentId(''); setEditingCommentDraft(''); }}>
+                          Cancelar
+                        </button>
+                        <button type="button" className="m2-btn primario" disabled={!editingCommentDraft.trim()} onClick={() => saveEditComment(c.id)}>
+                          Salvar
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div dangerouslySetInnerHTML={{ __html: renderCommentBody(c.body, internalFirstNames) }} />
+                  )}
+                  <ImagensDaMensagem commentId={c.id} />
+                </div>
+                {!editando && (
+                  <div className="m2-macoes">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyingToId(c.parent_id || c.id);
+                        newCommentRef.current?.focus();
+                      }}
+                    >
+                      Responder
+                    </button>
+                    {podeEditar && (
+                      <button type="button" onClick={() => { setEditingCommentId(c.id); setEditingCommentDraft(c.body); }}>
+                        Editar
+                      </button>
+                    )}
+                    {podeExcluir && (
+                      <button type="button" className="perigo" onClick={() => deleteComment(c)}>
+                        Excluir
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </AnexosMsgContext.Provider>
+      {editing.id && (
+        <div className="tmodal-composer m2-composer relative">
+          {respondendo && (
+            <div className="m2-respondendo">
+              <span>
+                Respondendo a <b>{respondendo.author || 'mensagem'}</b>: {respondendo.body.slice(0, 80)}
+              </span>
+              <button type="button" aria-label="Cancelar resposta" onClick={() => setReplyingToId('')}>×</button>
+            </div>
+          )}
+          <ImagensPendentes
+            arquivos={imagensMsg}
+            onRemover={(i) => setImagensMsg((cur) => cur.filter((_, j) => j !== i))}
+          />
+          <div className="tmodal-composer-pill">
+            <BotaoAnexarImagem
+              quantidadeAtual={imagensMsg.length}
+              onEscolher={(novas) => setImagensMsg((cur) => juntarPendentes(cur, novas))}
+            />
+            <textarea
+              ref={newCommentRef}
+              value={newComment}
+              onChange={mentionPicker.onChange}
+              onPaste={(e) => {
+                const imgs = imagensDoClipboard(e);
+                if (!imgs.length) return;
+                e.preventDefault();
+                e.stopPropagation();
+                setImagensMsg((cur) => juntarPendentes(cur, imgs));
+              }}
+              rows={1}
+              placeholder={isMobileVp ? '@ para mencionar' : `@ para mencionar · cole print (${atalhoColar()}) · ⌘↵ envia`}
+              onKeyDown={(e) => {
+                if (mentionPicker.onKeyDown(e)) return;
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                  e.preventDefault();
+                  enviarConversaV2();
+                } else if (e.key === 'Escape' && replyingToId) {
+                  e.stopPropagation();
+                  setReplyingToId('');
+                }
+              }}
+            />
+            <button
+              type="button"
+              className="tmodal-composer-send"
+              onClick={enviarConversaV2}
+              disabled={!newComment.trim() && imagensMsg.length === 0}
+              title="Enviar (⌘↵)"
+              aria-label="Enviar comentário"
+            >
+              <Icon name="send" size={14} />
+            </button>
+          </div>
+          <MentionDropdown picker={mentionPicker} />
+        </div>
+      )}
+    </>
+  );
+
   // ============ Modal novo (beta) ============
   // Transição explícita (homologação, bloqueio, desbloqueio): aplica o
   // patch, salva na hora e, se vier mensagem, grava na conversa. Se o
@@ -2384,7 +2611,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         history={history}
         nComentarios={comments.length}
         nAnexos={attachments.length}
-        jsxConversa={jsxConversa}
+        jsxConversa={jsxConversaV2}
         jsxAnexos={jsxAnexos}
         jsxHistorico={jsxHistorico}
         jsxTimesheet={editing.id ? <TimesheetTab taskId={editing.id} onLoaded={setTempoCount} /> : null}
@@ -2900,8 +3127,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     className={cn('inp', isMissing('esforco'))}
                     value={editing.esforco}
                     onChange={(e) => set('esforco', Number(e.target.value) || 0)}
-                    disabled={!!editing.id && !GRUPO_BACKLOG.has(editing.subetapa)}
-                    title={!!editing.id && !GRUPO_BACKLOG.has(editing.subetapa) ? 'Esforço travado: a task já saiu do Backlog' : undefined}
+                    disabled={!!editing.id && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null)}
+                    title={!!editing.id && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null) ? 'Esforço travado: a task já saiu do Backlog' : undefined}
                   />
                 </div>
                 <div>
@@ -3303,8 +3530,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     className={cn('inp', isMissing('esforco'))}
                     value={editing.esforco}
                     onChange={(e) => set('esforco', Number(e.target.value) || 0)}
-                    disabled={!!editing.id && !GRUPO_BACKLOG.has(editing.subetapa)}
-                    title={!!editing.id && !GRUPO_BACKLOG.has(editing.subetapa) ? 'Esforço travado: a task já saiu do Backlog' : undefined}
+                    disabled={!!editing.id && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null)}
+                    title={!!editing.id && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null) ? 'Esforço travado: a task já saiu do Backlog' : undefined}
                   />
                 </div>
               </div>
