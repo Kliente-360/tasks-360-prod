@@ -197,159 +197,128 @@ function TaskPickerPopover({
   );
 }
 
+/** Atalhos de duração do lançamento (minutos). */
+const ATALHOS_DURACAO: [string, number][] = [['15m', 15], ['30m', 30], ['1h', 60], ['2h', 120], ['4h', 240]];
+
 /**
- * Modal de lançamento manual de horas. Campos: data, hora início,
- * duração (Xh Ymin), nota. Preview do término em tempo real.
- * Bloqueia entradas que cruzam meia-noite.
- *
- * `initial` opcional → modo edição (reutiliza o mesmo popover).
+ * Formulário único de lançamento de horas (nov/2026) · usado no cronômetro
+ * do topo, no Timesheet (edição) e no modal da tarefa. Sem hora de início:
+ * a duração é o total trabalhado no dia. Hoje → termina agora; outro dia →
+ * termina às 18h. Na edição, mantém o horário de início original.
  */
-export function ManualEntryPopover({
+export function LancamentoForm({
   taskTitulo,
   initial,
   onConfirm,
   onCancel,
 }: {
-  taskTitulo: string;
+  taskTitulo?: string;
   initial?: { startedAt: Date; endedAt: Date; note?: string };
-  onConfirm: (startedAt: Date, endedAt: Date, note?: string) => void;
+  onConfirm: (startedAt: Date, endedAt: Date, note: string) => void | Promise<unknown>;
   onCancel: () => void;
 }) {
-  const today = new Date().toISOString().slice(0, 10);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const isoLocal = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const today = isoLocal(new Date());
   const isEdit = !!initial;
   const initFrom = useMemo(() => {
     if (!initial) return null;
-    const s = initial.startedAt;
-    const e = initial.endedAt;
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const dateIso = `${s.getFullYear()}-${pad(s.getMonth() + 1)}-${pad(s.getDate())}`;
-    const start = `${pad(s.getHours())}:${pad(s.getMinutes())}`;
-    const mins = Math.max(0, Math.round((e.getTime() - s.getTime()) / 60_000));
-    return { dateIso, start, durH: Math.floor(mins / 60), durM: mins % 60, note: initial.note ?? '' };
+    const mins = Math.max(0, Math.round((initial.endedAt.getTime() - initial.startedAt.getTime()) / 60_000));
+    return { dateIso: isoLocal(initial.startedAt), durH: Math.floor(mins / 60), durM: mins % 60, note: initial.note ?? '' };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial]);
   const [date, setDate] = useState(initFrom?.dateIso ?? today);
-  const [startTime, setStartTime] = useState(initFrom?.start ?? '');
   const [durH, setDurH] = useState(initFrom?.durH ?? 0);
   const [durM, setDurM] = useState(initFrom?.durM ?? 0);
   const [note, setNote] = useState(initFrom?.note ?? '');
-  const ref = useClickAway<HTMLDivElement>(onCancel);
-  // Placement dinâmico: por padrão abre pra baixo (top-full); se não couber
-  // no viewport (ex.: registro no fim da lista), flipa pra cima (bottom-full).
-  const [placement, setPlacement] = useState<'bottom' | 'top'>('bottom');
+  const [enviando, setEnviando] = useState(false);
+  const totalMin = durH * 60 + durM;
+  const canSubmit = !!date && totalMin >= 1 && totalMin <= 24 * 60 && note.trim().length >= MIN_NOTE && !enviando;
 
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const overflowsBottom = rect.bottom > window.innerHeight - 8;
-    const parentRect = el.parentElement?.getBoundingClientRect();
-    const spaceAbove = parentRect ? parentRect.top : rect.top;
-    if (overflowsBottom && spaceAbove >= rect.height + 8) setPlacement('top');
-  }, [ref]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onCancel]);
-
-  const preview = useMemo(() => {
-    if (!startTime) return null;
-    const totalMin = durH * 60 + durM;
-    if (totalMin < 1) return null;
-    const [hh, mm] = startTime.split(':').map(Number);
-    if (isNaN(hh) || isNaN(mm)) return null;
-    const endMin = hh * 60 + mm + totalMin;
-    if (endMin > 1439) return { error: 'Cruza meia-noite — reduza a duração.' } as const;
-    const endH = Math.floor(endMin / 60);
-    const endM = endMin % 60;
-    const durLabel = durH > 0 && durM > 0
-      ? `${durH}h ${durM}min`
-      : durH > 0 ? `${durH}h` : `${durM}min`;
-    return {
-      endHHMM: `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`,
-      durLabel,
-      error: null,
-    } as const;
-  }, [startTime, durH, durM]);
-
-  const canSubmit =
-    !!date && !!startTime && preview !== null && preview.error === null && note.trim().length >= MIN_NOTE;
-
-  function handleSubmit() {
-    if (!canSubmit || !preview || preview.error) return;
-    const startedAt = new Date(`${date}T${startTime}:00`);
-    const endedAt = new Date(startedAt.getTime() + (durH * 60 + durM) * 60_000);
-    onConfirm(startedAt, endedAt, note.trim() || undefined);
+  async function handleSubmit() {
+    if (!canSubmit) return;
+    const [y, m, d] = date.split('-').map(Number);
+    const durMs = totalMin * 60_000;
+    let startedAt: Date;
+    let endedAt: Date;
+    if (initial) {
+      startedAt = new Date(y, m - 1, d, initial.startedAt.getHours(), initial.startedAt.getMinutes());
+      endedAt = new Date(startedAt.getTime() + durMs);
+    } else {
+      endedAt = date === today ? new Date() : new Date(y, m - 1, d, 18, 0, 0);
+      startedAt = new Date(endedAt.getTime() - durMs);
+      const inicioDoDia = new Date(y, m - 1, d, 0, 0, 0);
+      if (startedAt < inicioDoDia) {
+        startedAt = inicioDoDia;
+        endedAt = new Date(inicioDoDia.getTime() + durMs);
+      }
+    }
+    setEnviando(true);
+    try {
+      await onConfirm(startedAt, endedAt, note.trim());
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
-    <div
-      ref={ref}
-      className={cn(
-        'absolute right-0 z-50 w-[360px] max-w-[calc(100vw-24px)] bg-bg-elev border border-line rounded-lg shadow-xl overflow-hidden',
-        placement === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2',
-      )}
-      role="dialog"
-      aria-label="Lançar horas"
-    >
+    <div className="lanc-form" role="dialog" aria-label={isEdit ? 'Editar registro' : 'Lançar horas'}>
       <div className="flex items-center gap-2 px-3 py-2 border-b border-line">
         <div className="w-2 h-2 rounded-full bg-[color:var(--green)] shrink-0" />
         <span className="text-sm font-medium">{isEdit ? 'Editar registro' : 'Lançar horas'}</span>
       </div>
       <div className="p-3 flex flex-col gap-3">
-        <p className="text-xs text-muted truncate" title={taskTitulo}>{taskTitulo}</p>
+        {taskTitulo && <p className="text-xs text-muted truncate" title={taskTitulo}>{taskTitulo}</p>}
 
         <div className="flex items-center gap-2">
           <label className="text-xs text-muted w-14 shrink-0">Data</label>
-          <input
-            type="date"
-            className="inp text-sm flex-1"
-            value={date}
-            max={today}
-            onChange={(e) => setDate(e.target.value)}
-          />
+          <input type="date" className="inp text-sm flex-1" value={date} max={today} onChange={(e) => setDate(e.target.value)} />
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-muted w-14 shrink-0">Início</label>
-          <input
-            type="time"
-            className="inp text-sm flex-1"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-muted w-14 shrink-0">Duração</label>
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              className="inp text-sm w-14 text-center"
-              min={0}
-              max={23}
-              value={durH}
-              onChange={(e) => setDurH(Math.min(23, Math.max(0, parseInt(e.target.value, 10) || 0)))}
-            />
-            <span className="text-xs text-muted">h</span>
-            <input
-              type="number"
-              className="inp text-sm w-14 text-center"
-              min={0}
-              max={59}
-              value={durM}
-              onChange={(e) => setDurM(Math.min(59, Math.max(0, parseInt(e.target.value, 10) || 0)))}
-            />
-            <span className="text-xs text-muted">min</span>
+        <div className="flex items-start gap-2">
+          <label className="text-xs text-muted w-14 shrink-0 pt-2">Duração</label>
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                inputMode="numeric"
+                className="inp text-sm w-14 text-center"
+                min={0}
+                max={24}
+                value={durH}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => setDurH(Math.min(24, Math.max(0, parseInt(e.target.value, 10) || 0)))}
+                aria-label="Horas"
+              />
+              <span className="text-xs text-muted">h</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                className="inp text-sm w-14 text-center"
+                min={0}
+                max={59}
+                step={5}
+                value={durM}
+                onFocus={(e) => e.currentTarget.select()}
+                onChange={(e) => setDurM(Math.min(59, Math.max(0, parseInt(e.target.value, 10) || 0)))}
+                aria-label="Minutos"
+              />
+              <span className="text-xs text-muted">min</span>
+            </div>
+            <div className="lanc-atalhos">
+              {ATALHOS_DURACAO.map(([l, min]) => (
+                <button
+                  key={l}
+                  type="button"
+                  aria-pressed={totalMin === min}
+                  onClick={() => { setDurH(Math.floor(min / 60)); setDurM(min % 60); }}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-
-        {preview && (
-          <p className={`text-xs -mt-1 ${preview.error ? 'text-[color:var(--danger)]' : 'text-muted'}`}>
-            {preview.error ?? `Término: ${preview.endHHMM} · ${preview.durLabel}`}
-          </p>
-        )}
 
         <div>
           <textarea
@@ -359,6 +328,9 @@ export function ManualEntryPopover({
             maxLength={MAX_NOTE}
             value={note}
             onChange={(e) => setNote(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); handleSubmit(); }
+            }}
           />
           <div className={`text-right text-xs mt-0.5 tabular-nums ${note.length >= MAX_NOTE ? 'text-[color:var(--danger)]' : 'text-muted'}`}>
             {note.length}/{MAX_NOTE}
@@ -366,17 +338,54 @@ export function ManualEntryPopover({
         </div>
 
         <div className="flex justify-end gap-2">
-          <button type="button" className="btn text-xs" onClick={onCancel}>cancelar</button>
-          <button
-            type="button"
-            className="btn btn-primary text-xs"
-            disabled={!canSubmit}
-            onClick={handleSubmit}
-          >
-            {isEdit ? 'Salvar' : 'Lançar'}
+          <button type="button" className="btn text-xs" onClick={onCancel}>Cancelar</button>
+          <button type="button" className="btn btn-primary text-xs" disabled={!canSubmit} onClick={handleSubmit}>
+            {enviando ? 'Salvando…' : isEdit ? 'Salvar' : 'Lançar'}
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Popover posicionado do formulário (cronômetro do topo e Timesheet). */
+export function ManualEntryPopover({
+  taskTitulo,
+  initial,
+  onConfirm,
+  onCancel,
+}: {
+  taskTitulo: string;
+  initial?: { startedAt: Date; endedAt: Date; note?: string };
+  onConfirm: (startedAt: Date, endedAt: Date, note?: string) => void | Promise<unknown>;
+  onCancel: () => void;
+}) {
+  const ref = useClickAway<HTMLDivElement>(onCancel);
+  // Abre para baixo; se não couber (registro no fim da lista), abre para cima
+  const [placement, setPlacement] = useState<'bottom' | 'top'>('bottom');
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const overflowsBottom = rect.bottom > window.innerHeight - 8;
+    const parentRect = el.parentElement?.getBoundingClientRect();
+    const spaceAbove = parentRect ? parentRect.top : rect.top;
+    if (overflowsBottom && spaceAbove >= rect.height + 8) setPlacement('top');
+  }, [ref]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'absolute right-0 z-50 w-[360px] max-w-[calc(100vw-24px)] bg-bg-elev border border-line rounded-lg shadow-xl overflow-hidden',
+        placement === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2',
+      )}
+    >
+      <LancamentoForm taskTitulo={taskTitulo} initial={initial} onConfirm={onConfirm} onCancel={onCancel} />
     </div>
   );
 }

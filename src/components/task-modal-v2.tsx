@@ -14,7 +14,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { Icon } from '@/components/icons';
-import { MIN_NOTE, NotePopover } from '@/components/timer-button';
+import { LancamentoForm, NotePopover } from '@/components/timer-button';
 import {
   AREAS_TECNICAS, AREA_LABEL, GRUPO_BACKLOG, SUB_LABELS, SUB_TO_MACRO, TIPOS_TRABALHO,
 } from '@/lib/task-constants';
@@ -75,7 +75,7 @@ export type TaskModalV2Props = {
   timerOcupado: boolean;
   onPlay: () => void;
   onStop: (nota?: string) => Promise<void>;
-  onLancar: (dia: string, horas: number, nota: string) => Promise<boolean>;
+  onLancar: (inicio: Date, fim: Date, nota: string) => Promise<boolean>;
 
   onTransicao: (
     patch: Partial<Task>,
@@ -385,76 +385,19 @@ function ChipClassificacao({ editing, set }: { editing: Task; set: TaskModalV2Pr
 // ============================================================
 function LancarHoras({ onLancar }: { onLancar: TaskModalV2Props['onLancar'] }) {
   const p = usePop();
-  const [dia, setDia] = useState(hojeIso());
-  const [horas, setHoras] = useState('');
-  const [nota, setNota] = useState('');
-  const [enviando, setEnviando] = useState(false);
-  const h = Number(horas.replace(',', '.'));
-  const valido = Number.isFinite(h) && h > 0 && h <= 24 && !!dia && nota.trim().length >= MIN_NOTE;
-
-  const enviar = async () => {
-    if (!valido || enviando) return;
-    setEnviando(true);
-    const ok = await onLancar(dia, h, nota.trim());
-    setEnviando(false);
-    if (ok) {
-      p.close();
-      setHoras('');
-      setNota('');
-      setDia(hojeIso());
-    }
-  };
-
   return (
     <>
       <button ref={p.ref} type="button" className="m2-hbtn" onClick={p.toggle} title="Lançar horas já trabalhadas">
         <span className="m2-mais">+</span>
         <span className="hidden sm:inline">Lançar</span>
       </button>
-      <Pop anchor={p.ref} open={p.open} onClose={p.close} width={300} align="right">
-        <div className="m2-hpop">
-          <b>Lançar horas</b>
-          <div className="m2-hgrid">
-            <label className="m2-campo">
-              <span className="m2-lbl">Dia</span>
-              <input type="date" className="m2-inp" value={dia} max={hojeIso()} onChange={(e) => setDia(e.target.value)} />
-            </label>
-            <label className="m2-campo">
-              <span className="m2-lbl">Horas</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                className="m2-inp"
-                placeholder="1,5"
-                value={horas}
-                onChange={(e) => setHoras(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); enviar(); } }}
-                autoFocus
-              />
-            </label>
-          </div>
-          <div className="m2-atalhos">
-            {[['15m', '0,25'], ['30m', '0,5'], ['1h', '1'], ['2h', '2'], ['4h', '4']].map(([l, v]) => (
-              <button key={l} type="button" onClick={() => setHoras(v)}>{l}</button>
-            ))}
-          </div>
-          <label className="m2-campo">
-            <span className="m2-lbl">O que foi feito <span className="m2-req">*</span></span>
-            <input
-              type="text"
-              className="m2-inp"
-              value={nota}
-              onChange={(e) => setNota(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); enviar(); } }}
-            />
-          </label>
-          <div className="m2-hpop-pe">
-            <button type="button" className="m2-btn" onClick={p.close}>Cancelar</button>
-            <button type="button" className="m2-btn primario" disabled={!valido || enviando} onClick={enviar}>
-              {enviando ? 'Lançando…' : 'Lançar'}
-            </button>
-          </div>
-        </div>
+      <Pop anchor={p.ref} open={p.open} onClose={p.close} width={360} align="right">
+        <LancamentoForm
+          onCancel={p.close}
+          onConfirm={async (inicio, fim, nota) => {
+            if (await onLancar(inicio, fim, nota)) p.close();
+          }}
+        />
       </Pop>
     </>
   );

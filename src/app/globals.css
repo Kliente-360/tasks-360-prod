@@ -3916,3 +3916,12 @@ button.m2-vis-tag { cursor: pointer; }
   .m2-convo { padding: 12px 16px; }
   .pmodal-msg { max-width: 92%; }
 }
+
+/* Lançamento de horas (formulário único · topo, Timesheet e modal) */
+.m2-pop .lanc-form { margin: -5px; }
+.lanc-atalhos { display: flex; gap: 4px; flex-wrap: wrap; }
+.lanc-atalhos button { border: 1px solid var(--line); background: var(--bg-alt); border-radius: 6px; padding: 3px 9px;
+  font-size: 12px; font-weight: 500; color: var(--ink-soft); cursor: pointer; }
+.lanc-atalhos button:hover { border-color: var(--line-strong); color: var(--ink); }
+.lanc-atalhos button[aria-pressed="true"] { border-color: var(--green); background: var(--green-tint); color: var(--green); }
+.lanc-form input.inp[type="number"] { width: 64px; flex: none; }

@@ -2533,14 +2533,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   }, [editing.id, sb, toast, currentPessoa?.id]);
 
   const lancarHoras = useCallback(
-    async (dia: string, horas: number, nota: string): Promise<boolean> => {
+    async (inicio: Date, fim: Date, nota: string): Promise<boolean> => {
       if (!editing.id) return false;
-      const [y, m, d] = dia.split('-').map(Number);
-      const hojeLocal = new Date();
-      const ehHoje =
-        hojeLocal.getFullYear() === y && hojeLocal.getMonth() + 1 === m && hojeLocal.getDate() === d;
-      const fim = ehHoje ? hojeLocal : new Date(y, m - 1, d, 18, 0, 0);
-      const inicio = new Date(fim.getTime() - horas * 3_600_000);
+      const horas = Math.round(((fim.getTime() - inicio.getTime()) / 3_600_000) * 100) / 100;
       try {
         await insertManualEntry(editing.id, inicio, fim, nota || undefined);
         track('timer_manual', { task_id: editing.id, props: { origem: 'modal_novo', horas } });
