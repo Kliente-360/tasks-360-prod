@@ -2,8 +2,8 @@
 
 /**
  * Chave do modal novo da tarefa (beta · nov/2026). Por pessoa e por
- * navegador: admin liga no menu do perfil; o resto do time segue no modal
- * atual até a liberação geral.
+ * navegador: qualquer pessoa do time liga no menu do perfil; quem não ligar
+ * segue no modal atual até a liberação geral.
  */
 
 import { useEffect, useState } from 'react';

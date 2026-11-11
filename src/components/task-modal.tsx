@@ -508,7 +508,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   } = useData();
   const isAdmin = viewerRole === 'admin';
   const { activeEntry, elapsed, startTimer, stopTimer, starting, stopping, insertManualEntry } = useTimer();
-  const modalNovo = useModalNovo() && isAdmin;
+  const modalNovo = useModalNovo() && viewerRole !== 'cliente';
   const projetosByCliente = useProjetosByCliente();
   const clientesById = useClientesById();
   const projetosById = useProjetosById();

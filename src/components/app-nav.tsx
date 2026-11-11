@@ -5,7 +5,6 @@ import { usePathname } from 'next/navigation';
 import { NAV } from '@/lib/nav';
 import { cn } from '@/lib/utils';
 import { useData } from '@/lib/data-store';
-import { useTaskModal } from '@/components/task-modal';
 import { ProfileMenu } from '@/components/profile-menu';
 import { HelpIconButton } from '@/components/help-modal';
 import { ThemeIconButton } from '@/components/theme-toggle';
@@ -20,7 +19,7 @@ import { useFocoDone } from '@/lib/use-foco-done';
 import { useMarcaCliente } from '@/lib/use-marca-cliente';
 import { computeFocoCount } from '@/app/(app)/foco/foco-client';
 
-export const APP_VERSION = 'v1.03.285';
+export const APP_VERSION = 'v1.03.286';
 
 /** Mapeamento de aba → ícone Lucide (handoff §4). */
 const TAB_ICON: Record<string, IconName> = {
@@ -41,7 +40,7 @@ const TAB_ICON: Record<string, IconName> = {
  * AppNav · header do app (desktop + mobile).
  *
  * Desktop (≥md):
- *   [ aperture · tasks 360 ] ... [ Cronômetro | Export · Help · Tema | + Tarefa · Sino · Avatar ]
+ *   [ aperture · tasks 360 ] ... [ Cronômetro | Export · Help · Tema | Sino · Avatar ] · nova tarefa no FAB "+"
  *   [ tab tab tab ... ]
  *
  * Mobile (<md):
@@ -54,7 +53,6 @@ const TAB_ICON: Record<string, IconName> = {
 export function AppNav() {
   const pathname = usePathname();
   const { refreshAll, refreshing, viewerRole, tasks, currentPessoa } = useData();
-  const { openNew } = useTaskModal();
   const { isResolved } = useFocoDone();
   // Cliente logado: ícone, + Solicitação e avatar na cor do cliente
   const marca = useMarcaCliente();
@@ -127,20 +125,7 @@ export function AppNav() {
             <span className="hdr-sep hidden md:block" />
 
             {/* Cluster 3: criar + notif + avatar */}
-            {/* + Tarefa só para o time · cliente abre solicitação pelo FAB
-                (definitivo, out/2026) */}
-            {viewerRole !== 'cliente' && (
-              <button
-                type="button"
-                onClick={() => openNew()}
-                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-[filter,background-color] bg-[color:var(--green)] text-white hover:bg-[color:var(--green-hover)]"
-                title="Nova tarefa"
-                aria-label="Nova tarefa"
-              >
-                <Icon name="plus" size={14} />
-                Tarefa
-              </button>
-            )}
+            {/* Nova tarefa: FAB "+" no canto, igual ao portal (nov/2026) */}
             <ThemeIconButton className="md:hidden" />
             <NotifBell />
             <ProfileMenu />

@@ -61,7 +61,6 @@ export function ProfileMenu() {
   }, [open]);
 
   const initial = (currentPessoa?.nome ?? '?').charAt(0).toUpperCase();
-  const isAdmin = viewerRole === 'admin';
   const isCliente = viewerRole === 'cliente';
   const modalNovo = useModalNovo();
 
@@ -153,8 +152,8 @@ export function ProfileMenu() {
               </>
             )}
 
-            {/* Beta do modal novo da tarefa: só admin liga, por navegador */}
-            {isAdmin && (
+            {/* Beta do modal novo da tarefa: qualquer pessoa do time liga, por navegador */}
+            {!isCliente && (
               <>
                 <div className="border-t border-line my-1" />
                 <button

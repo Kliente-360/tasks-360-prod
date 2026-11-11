@@ -32,23 +32,27 @@ export function MobileFab() {
   );
 }
 
-/** FAB desktop do cliente — "+" redondo como o do mobile, alinhado à borda
- *  direita da área de conteúdo (não da janela), na cor do cliente. Em teste lado a lado com o botão do header
- *  (out/2026); depois decidimos qual fica. */
-export function ClienteDesktopFab() {
+/** FAB desktop — "+" redondo como o do mobile, alinhado à borda direita da
+ *  área de conteúdo (não da janela). Cliente: nova solicitação, na cor do
+ *  cliente. Time: nova tarefa, no verde da marca (substituiu o "+ Tarefa"
+ *  do header em nov/2026). */
+export function DesktopFab() {
   const { viewerRole } = useData();
+  const { openNew } = useTaskModal();
   const marca = useMarcaCliente();
   const pode = usePodeAbrirSolicitacao();
-  if (viewerRole !== 'cliente' || !pode) return null;
+  if (!viewerRole || !pode) return null;
+  const cliente = viewerRole === 'cliente';
+  const label = cliente ? 'Nova solicitação' : 'Nova tarefa';
   return (
     <button
       type="button"
-      onClick={() => window.dispatchEvent(new CustomEvent('portal:new-task'))}
+      onClick={() => (cliente ? window.dispatchEvent(new CustomEvent('portal:new-task')) : openNew())}
       className="cliente-fab hidden md:inline-flex"
       style={marca ? { background: marca.cor, color: marca.texto } : undefined}
-      aria-label="Nova solicitação"
-      title="Nova solicitação"
-      data-track="FAB nova solicitação"
+      aria-label={label}
+      title={cliente ? label : `${label} (N)`}
+      data-track={cliente ? 'FAB nova solicitação' : 'FAB nova tarefa'}
     >
       {/* SVG em vez do caractere "+": o glifo da fonte fica fora do centro */}
       <Icon name="plus" size={26} />
