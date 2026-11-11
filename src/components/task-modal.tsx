@@ -55,6 +55,8 @@ import type { ChecklistItem, Task, TimeEntry } from '@/lib/types';
 import { ANEXO_COLS, atalhoColar, enviarImagem, imagensDoClipboard, type Anexo } from '@/lib/anexos';
 import { BotaoAnexarImagem, ImagensPendentes, juntarPendentes, MiniaturasAnexos } from '@/components/anexos-ui';
 import { emSegundoPlano } from '@/lib/em-segundo-plano';
+import { useModalNovo } from '@/lib/modal-novo';
+import { TaskModalV2 } from '@/components/task-modal-v2';
 
 /** Telemetria · campos que a pessoa edita no modal (o resto é derivado). */
 const CAMPOS_EDITAVEIS: (keyof Task)[] = [
@@ -505,7 +507,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     timeEntries,
   } = useData();
   const isAdmin = viewerRole === 'admin';
-  const { activeEntry, startTimer, stopTimer, starting, stopping } = useTimer();
+  const { activeEntry, elapsed, startTimer, stopTimer, starting, stopping, insertManualEntry } = useTimer();
+  const modalNovo = useModalNovo() && isAdmin;
   const projetosByCliente = useProjetosByCliente();
   const clientesById = useClientesById();
   const projetosById = useProjetosById();
@@ -1988,6 +1991,433 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   const set = <K extends keyof Task>(key: K, value: Task[K]) =>
     setEditing((cur) => ({ ...cur, [key]: value }));
 
+  // Painéis compartilhados pelo modal atual e pelo modal novo (beta)
+  const jsxHistorico = (
+              <div className="tmodal-thread">
+                {history.map((h) => (
+                  <div
+                    key={h.id}
+                    className="flex items-start gap-2 text-xs py-1.5 border-b border-line last:border-0"
+                  >
+                    <span className="font-mono text-muted shrink-0">{fmtPostedEm(h.occurred_at)}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-ink">
+                        {h.actor_pessoa_id
+                          ? pessoasById.get(h.actor_pessoa_id)?.nome ?? '—'
+                          : h.actor_source === 'salesforce'
+                            ? 'Salesforce'
+                            : '—'}
+                      </span>
+                      {h.field === 'lembrete_homologacao' ? (
+                        <span className="text-muted"> lembrou o cliente da homologação</span>
+                      ) : h.field === 'status' ? (
+                        <span>
+                          <span className="text-muted"> moveu </span>
+                          <span className="font-medium">{h.from_value ? lblStatus(h.from_value) : '∅'}</span>
+                          <span className="text-muted"> → </span>
+                          <span className="font-medium">{lblStatus(h.to_value)}</span>
+                        </span>
+                      ) : (
+                        <span>
+                          <span className="text-muted"> mudou </span>
+                          <span className="font-medium">{labelField(h.field)}</span>
+                          <span className="text-muted"> de </span>
+                          <span className="font-medium">{formatFieldValue(h.field, h.from_value, pessoasById)}</span>
+                          <span className="text-muted"> → </span>
+                          <span className="font-medium">{formatFieldValue(h.field, h.to_value, pessoasById)}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {!editing.id && (
+                  <div className="text-xs text-muted italic py-3">Histórico aparece após salvar a tarefa.</div>
+                )}
+                {editing.id && history.length === 0 && (
+                  <div className="text-xs text-muted italic py-3">Sem histórico ainda.</div>
+                )}
+              </div>
+  );
+  const jsxAnexos = (
+              <div className="tmodal-thread">
+                {!editing.id ? (
+                  <div className="text-xs text-muted italic py-3">Anexos aparecem após salvar a tarefa.</div>
+                ) : (
+                  <div className="flex flex-col gap-3 py-1">
+                    <div className="text-[11px] text-muted leading-snug">
+                      Cole imagens com <span className="font-mono">⌘V / Ctrl+V</span> em qualquer lugar do modal · PNG / JPG / WebP até 2MB · redimensionadas pra 1600px.
+                    </div>
+                    {attachmentUploading && (
+                      <div className="text-xs text-muted flex items-center gap-2">
+                        <span className="inline-block w-3 h-3 rounded-full bg-brand animate-pulse" />
+                        <span>{attachmentUploadLabel || 'enviando…'}</span>
+                      </div>
+                    )}
+                    {attachments.length === 0 && !attachmentUploading && (
+                      <div className="text-xs text-muted italic">Nenhum anexo ainda. Tire um print e cole aqui.</div>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {attachments.map((a) => (
+                        <div
+                          key={a.id}
+                          className="relative group border border-line rounded-md overflow-hidden bg-surface-2 aspect-square flex items-center justify-center"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={attachmentUrls[a.id]}
+                            alt={a.storage_path}
+                            className="w-full h-full object-cover cursor-zoom-in"
+                            onClick={() => setLightboxAttachment(a)}
+                            loading="lazy"
+                          />
+                          {/* Origem e visibilidade: da conversa ou solta; cliente vê ou não */}
+                          <div className="absolute left-1 top-1 flex gap-1 pointer-events-none">
+                            {a.visivel_cliente && (
+                              <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[color:var(--green)] text-white">externo</span>
+                            )}
+                            {a.comment_id && (
+                              <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/55 text-white">conversa</span>
+                            )}
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 bg-black/55 text-white text-[10px] px-1.5 py-1 flex items-center justify-between opacity-0 group-hover:opacity-100 transition">
+                            <span className="font-mono truncate">
+                              {a.width && a.height ? `${a.width}×${a.height} · ` : ''}
+                              {fmtBytes(a.size_bytes)}
+                            </span>
+                            {(isAdmin || (currentPessoa && a.author_pessoa_id === currentPessoa.id)) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteAttachment(a);
+                                }}
+                                className="hover:text-danger ml-1"
+                                title="Excluir anexo"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+  );
+  const jsxConversa = (
+              <>
+                <AnexosMsgContext.Provider value={anexosMsgCtx}>
+                <div className="tmodal-thread">
+                  {topLevel.map((c) => (
+                    <CommentItem
+                      key={c.id}
+                      c={c}
+                      replies={repliesOf(c.id)}
+                      editingId={editingCommentId}
+                      editingDraft={editingCommentDraft}
+                      setEditingDraft={setEditingCommentDraft}
+                      onStartEdit={(item) => {
+                        setEditingCommentId(item.id);
+                        setEditingCommentDraft(item.body);
+                      }}
+                      onCancelEdit={() => {
+                        setEditingCommentId('');
+                        setEditingCommentDraft('');
+                      }}
+                      onSaveEdit={saveEditComment}
+                      onDelete={deleteComment}
+                      onToggleVisivel={toggleCommentVisivel}
+                      onStartReply={(id) => {
+                        setReplyingToId(id);
+                        setNewReply('');
+                      }}
+                      onCancelReply={() => {
+                        setReplyingToId('');
+                        setNewReply('');
+                      }}
+                      onSubmitReply={(id) => submitReply(id)}
+                      replyingToId={replyingToId}
+                      newReply={newReply}
+                      setNewReply={setNewReply}
+                      pessoasById={pessoasById}
+                      internalFirstNames={internalFirstNames}
+                      viewerPessoaId={currentPessoa?.id ?? null}
+                      viewerIsAdmin={isAdmin}
+                    />
+                  ))}
+                  {!editing.id && (
+                    <div className="text-xs text-muted italic py-3">
+                      Comentários aparecem após salvar a tarefa.
+                    </div>
+                  )}
+                  {editing.id && comments.length === 0 && (
+                    <div className="text-xs text-muted italic py-3">
+                      Sem comentários ainda. Escreva o primeiro abaixo ↓
+                    </div>
+                  )}
+                </div>
+                </AnexosMsgContext.Provider>
+                {editing.id && (
+                  <div className="tmodal-composer relative">
+                    {/* Bucket V · M.5 iter · composer linha única.
+                        Default = não-visível pro cliente. Toggle interno/externo
+                        no chip dentro do comentário publicado (CommentItem). */}
+                    <ImagensPendentes
+                      arquivos={imagensMsg}
+                      onRemover={(i) => setImagensMsg((cur) => cur.filter((_, j) => j !== i))}
+                    />
+                    <div className="tmodal-composer-pill">
+                      <BotaoAnexarImagem
+                        quantidadeAtual={imagensMsg.length}
+                        onEscolher={(novas) => setImagensMsg((cur) => juntarPendentes(cur, novas))}
+                      />
+                      <textarea
+                        ref={newCommentRef}
+                        value={newComment}
+                        onChange={mentionPicker.onChange}
+                        onPaste={(e) => {
+                          // Colado no campo de mensagem: vai junto da mensagem,
+                          // não para a aba Anexos (paste do modal)
+                          const imgs = imagensDoClipboard(e);
+                          if (!imgs.length) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setImagensMsg((cur) => juntarPendentes(cur, imgs));
+                        }}
+                        rows={1}
+                        placeholder={isMobileVp ? '@ pra mencionar' : `@ pra mencionar · cole print (${atalhoColar()}) · ⌘↵ envia`}
+                        onKeyDown={(e) => {
+                          if (mentionPicker.onKeyDown(e)) return;
+                          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                            e.preventDefault();
+                            postComment();
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="tmodal-composer-send"
+                        onClick={postComment}
+                        disabled={!newComment.trim() && imagensMsg.length === 0}
+                        title="Enviar (⌘↵)"
+                        aria-label="Enviar comentário"
+                      >
+                        <Icon name="send" size={14} />
+                      </button>
+                    </div>
+                    <MentionDropdown picker={mentionPicker} />
+                  </div>
+                )}
+              </>
+  );
+
+  // ============ Modal novo (beta) ============
+  // Transição explícita (homologação, bloqueio, desbloqueio): aplica o
+  // patch, salva na hora e, se vier mensagem, grava na conversa. Se o
+  // salvamento falhar (gate da etapa), volta ao estado anterior.
+  const aplicarTransicao = useCallback(
+    async (
+      patch: Partial<Task>,
+      opts?: { mensagem?: { body: string; visivel: boolean }; motivoBloqueio?: string },
+    ): Promise<boolean> => {
+      const antes = editingRef.current;
+      const next = { ...antes, ...patch };
+      editingRef.current = next;
+      skipNextDirty.current = true;
+      setEditing(next);
+      if (opts?.motivoBloqueio !== undefined) {
+        bloqueioMotivoRef.current = opts.motivoBloqueio;
+        setBloqueioMotivo(opts.motivoBloqueio);
+      }
+      if (!next.id) return true;
+      if (autosaveTimer.current) {
+        clearTimeout(autosaveTimer.current);
+        autosaveTimer.current = null;
+      }
+      setSaveState('saving');
+      const res = await persist({ silent: true });
+      if (!res.ok) {
+        editingRef.current = antes;
+        skipNextDirty.current = true;
+        setEditing(antes);
+        if (opts?.motivoBloqueio !== undefined) {
+          bloqueioMotivoRef.current = '';
+          setBloqueioMotivo('');
+        }
+        setSaveState(clienteWebhookEnabled ? 'off' : 'idle');
+        toast.error(res.error ?? 'Erro ao salvar.');
+        return false;
+      }
+      setSaveState(clienteWebhookEnabled ? 'off' : 'saved');
+      markUserEditedTask(next.id);
+      track('modal_transicao', { task_id: next.id, props: { para: next.subetapa, com_mensagem: !!opts?.mensagem } });
+      if (opts?.mensagem) {
+        const nowIso = new Date().toISOString();
+        const { data: c, error } = await sb
+          .from('task_comments')
+          .insert({
+            task_id: next.id,
+            body: opts.mensagem.body,
+            author: currentPessoa?.nome ?? 'app',
+            author_pessoa_id: currentPessoa?.id ?? null,
+            visivel_cliente: opts.mensagem.visivel,
+            from_cliente: false,
+            posted_em: nowIso,
+          })
+          .select('*')
+          .single();
+        if (error) toast.error('A etapa mudou, mas a mensagem não foi gravada: ' + error.message);
+        else if (c) setComments((cur) => [...cur, c as Comment]);
+      }
+      return true;
+    },
+    [persist, sb, toast, markUserEditedTask, currentPessoa?.id, currentPessoa?.nome, clienteWebhookEnabled],
+  );
+
+  const lembrarCliente = useCallback(async () => {
+    if (!editing.id) return;
+    const { data, error } = await sb.rpc('app_lembrar_homologacao', { p_task_id: editing.id });
+    if (error) {
+      toast.error('Não foi possível lembrar o cliente: ' + error.message);
+      return;
+    }
+    const r = (data ?? {}) as { ok?: boolean; motivo?: string };
+    if (r.ok) {
+      toast.success('Lembrete enviado ao cliente pelo portal.');
+      track('lembrar_homologacao', { task_id: editing.id });
+      const agora = new Date().toISOString();
+      setHistory((cur) => [
+        {
+          id: `tmp-lembrete-${agora}`,
+          field: 'lembrete_homologacao',
+          from_value: null,
+          to_value: 'enviado',
+          actor_pessoa_id: currentPessoa?.id ?? null,
+          actor_source: 'app',
+          occurred_at: agora,
+        },
+        ...cur,
+      ]);
+    } else if (r.motivo === 'ja_lembrado_hoje') {
+      toast.info('O cliente já foi avisado nas últimas horas. Dá para lembrar de novo amanhã.');
+    } else {
+      toast.info('Esta tarefa não está aguardando homologação do cliente.');
+    }
+  }, [editing.id, sb, toast, currentPessoa?.id]);
+
+  const lancarHoras = useCallback(
+    async (dia: string, horas: number, nota: string): Promise<boolean> => {
+      if (!editing.id) return false;
+      const [y, m, d] = dia.split('-').map(Number);
+      const hojeLocal = new Date();
+      const ehHoje =
+        hojeLocal.getFullYear() === y && hojeLocal.getMonth() + 1 === m && hojeLocal.getDate() === d;
+      const fim = ehHoje ? hojeLocal : new Date(y, m - 1, d, 18, 0, 0);
+      const inicio = new Date(fim.getTime() - horas * 3_600_000);
+      try {
+        await insertManualEntry(editing.id, inicio, fim, nota || undefined);
+        track('timer_manual', { task_id: editing.id, props: { origem: 'modal_novo', horas } });
+        toast.success(`${String(horas).replace('.', ',')} h lançadas.`);
+        return true;
+      } catch (err) {
+        toast.error('Erro ao lançar horas: ' + (err as Error).message);
+        return false;
+      }
+    },
+    [editing.id, insertManualEntry, toast],
+  );
+
+  const horasLancadas = useMemo(
+    () => (editing.id ? sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === editing.id)) : 0),
+    [editing.id, timeEntries],
+  );
+
+  const jsxPedidoBanner = editing.id && live?.prioridadePedidoEm ? (
+    <PedidoPrioridadeBanner
+      key={live.prioridadePedidoEm}
+      prioridadeAtual={editing.prioridade}
+      solicitada={live.prioridadePedida ?? null}
+      pedidoEm={live.prioridadePedidoEm}
+      ate={live.prioridadePedidoAte}
+      pedido={[...comments].reverse().find((c) => c.kind === 'pedido_prioridade') ?? null}
+      onResponder={responderPedidoPrioridade}
+    />
+  ) : null;
+
+  const jsxLightbox = lightboxAttachment ? (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 anexo-lightbox"
+      onClick={() => setLightboxAttachment(null)}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={attachmentUrls[lightboxAttachment.id]}
+        alt={lightboxAttachment.storage_path}
+        className="max-w-full max-h-full object-contain"
+      />
+    </div>
+  ) : null;
+
+  if (modalNovo) {
+    return (
+      <TaskModalV2
+        editing={editing}
+        set={set}
+        setCliente={(v) => setEditing((cur) => ({ ...cur, clienteId: v, projetoId: v ? cur.projetoId : '' }))}
+        live={live ?? null}
+        descricaoLoading={descricaoLoading}
+        wasConcluido={wasConcluido}
+        missingFields={missingFields}
+        saveState={saveState}
+        autosaveLabel={autosaveLabel()}
+        clientesAtivos={clientesAtivos}
+        projetosDoCliente={projetosDoCliente}
+        pessoasNaoCliente={pessoasNaoCliente}
+        clientesById={clientesById}
+        projetosById={projetosById}
+        pessoasById={pessoasById}
+        tasks={tasks}
+        tasksById={tasksById}
+        isAdmin={isAdmin}
+        isCEO={isCEO}
+        podeCronometrar={!!currentPessoa}
+        history={history}
+        nComentarios={comments.length}
+        nAnexos={attachments.length}
+        jsxConversa={jsxConversa}
+        jsxAnexos={jsxAnexos}
+        jsxHistorico={jsxHistorico}
+        jsxTimesheet={editing.id ? <TimesheetTab taskId={editing.id} onLoaded={setTempoCount} /> : null}
+        jsxChecklist={<ChecklistEditor items={editing.checklist} onChange={(next) => set('checklist', next)} />}
+        pedidoBanner={jsxPedidoBanner}
+        lightbox={jsxLightbox}
+        horasLancadas={horasLancadas}
+        activeEntry={activeEntry}
+        elapsed={elapsed}
+        timerOcupado={starting || stopping}
+        onPlay={() => {
+          track('timer_start', { task_id: editing.id, props: { origem: 'modal_novo' } });
+          startTimer(editing.id);
+        }}
+        onStop={async (nota) => {
+          track('timer_stop', { props: { origem: 'modal_novo', com_nota: !!nota } });
+          await stopTimer(nota);
+        }}
+        onLancar={lancarHoras}
+        onTransicao={aplicarTransicao}
+        onLembrar={lembrarCliente}
+        onToggleRadar={toggleRadar}
+        onArquivar={arquivarTask}
+        onDesarquivar={desarquivarTask}
+        onExcluir={deleteTask}
+        onFechar={() => close()}
+        onFecharForcado={() => close({ force: true })}
+        onSalvar={saveManual}
+        onPaste={onModalPaste}
+      />
+    );
+  }
+
   // ============ Markup ============
   return (
     <div
@@ -3271,226 +3701,13 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
             </div>
 
             {/* HISTÓRICO */}
-            {modalTab === 'historico' && (
-              <div className="tmodal-thread">
-                {history.map((h) => (
-                  <div
-                    key={h.id}
-                    className="flex items-start gap-2 text-xs py-1.5 border-b border-line last:border-0"
-                  >
-                    <span className="font-mono text-muted shrink-0">{fmtPostedEm(h.occurred_at)}</span>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-medium text-ink">
-                        {h.actor_pessoa_id
-                          ? pessoasById.get(h.actor_pessoa_id)?.nome ?? '—'
-                          : h.actor_source === 'salesforce'
-                            ? 'Salesforce'
-                            : '—'}
-                      </span>
-                      {h.field === 'status' ? (
-                        <span>
-                          <span className="text-muted"> moveu </span>
-                          <span className="font-medium">{h.from_value ? lblStatus(h.from_value) : '∅'}</span>
-                          <span className="text-muted"> → </span>
-                          <span className="font-medium">{lblStatus(h.to_value)}</span>
-                        </span>
-                      ) : (
-                        <span>
-                          <span className="text-muted"> mudou </span>
-                          <span className="font-medium">{labelField(h.field)}</span>
-                          <span className="text-muted"> de </span>
-                          <span className="font-medium">{formatFieldValue(h.field, h.from_value, pessoasById)}</span>
-                          <span className="text-muted"> → </span>
-                          <span className="font-medium">{formatFieldValue(h.field, h.to_value, pessoasById)}</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {!editing.id && (
-                  <div className="text-xs text-muted italic py-3">Histórico aparece após salvar a tarefa.</div>
-                )}
-                {editing.id && history.length === 0 && (
-                  <div className="text-xs text-muted italic py-3">Sem histórico ainda.</div>
-                )}
-              </div>
-            )}
+            {modalTab === 'historico' && jsxHistorico}
 
             {/* ANEXOS */}
-            {modalTab === 'anexos' && (
-              <div className="tmodal-thread">
-                {!editing.id ? (
-                  <div className="text-xs text-muted italic py-3">Anexos aparecem após salvar a tarefa.</div>
-                ) : (
-                  <div className="flex flex-col gap-3 py-1">
-                    <div className="text-[11px] text-muted leading-snug">
-                      Cole imagens com <span className="font-mono">⌘V / Ctrl+V</span> em qualquer lugar do modal · PNG / JPG / WebP até 2MB · redimensionadas pra 1600px.
-                    </div>
-                    {attachmentUploading && (
-                      <div className="text-xs text-muted flex items-center gap-2">
-                        <span className="inline-block w-3 h-3 rounded-full bg-brand animate-pulse" />
-                        <span>{attachmentUploadLabel || 'enviando…'}</span>
-                      </div>
-                    )}
-                    {attachments.length === 0 && !attachmentUploading && (
-                      <div className="text-xs text-muted italic">Nenhum anexo ainda. Tire um print e cole aqui.</div>
-                    )}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {attachments.map((a) => (
-                        <div
-                          key={a.id}
-                          className="relative group border border-line rounded-md overflow-hidden bg-surface-2 aspect-square flex items-center justify-center"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={attachmentUrls[a.id]}
-                            alt={a.storage_path}
-                            className="w-full h-full object-cover cursor-zoom-in"
-                            onClick={() => setLightboxAttachment(a)}
-                            loading="lazy"
-                          />
-                          {/* Origem e visibilidade: da conversa ou solta; cliente vê ou não */}
-                          <div className="absolute left-1 top-1 flex gap-1 pointer-events-none">
-                            {a.visivel_cliente && (
-                              <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[color:var(--green)] text-white">externo</span>
-                            )}
-                            {a.comment_id && (
-                              <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/55 text-white">conversa</span>
-                            )}
-                          </div>
-                          <div className="absolute inset-x-0 bottom-0 bg-black/55 text-white text-[10px] px-1.5 py-1 flex items-center justify-between opacity-0 group-hover:opacity-100 transition">
-                            <span className="font-mono truncate">
-                              {a.width && a.height ? `${a.width}×${a.height} · ` : ''}
-                              {fmtBytes(a.size_bytes)}
-                            </span>
-                            {(isAdmin || (currentPessoa && a.author_pessoa_id === currentPessoa.id)) && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteAttachment(a);
-                                }}
-                                className="hover:text-danger ml-1"
-                                title="Excluir anexo"
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {modalTab === 'anexos' && jsxAnexos}
 
             {/* CONVERSA */}
-            {(modalTab === 'conversa' || modalTab === 'detalhes') && (
-              <>
-                <AnexosMsgContext.Provider value={anexosMsgCtx}>
-                <div className="tmodal-thread">
-                  {topLevel.map((c) => (
-                    <CommentItem
-                      key={c.id}
-                      c={c}
-                      replies={repliesOf(c.id)}
-                      editingId={editingCommentId}
-                      editingDraft={editingCommentDraft}
-                      setEditingDraft={setEditingCommentDraft}
-                      onStartEdit={(item) => {
-                        setEditingCommentId(item.id);
-                        setEditingCommentDraft(item.body);
-                      }}
-                      onCancelEdit={() => {
-                        setEditingCommentId('');
-                        setEditingCommentDraft('');
-                      }}
-                      onSaveEdit={saveEditComment}
-                      onDelete={deleteComment}
-                      onToggleVisivel={toggleCommentVisivel}
-                      onStartReply={(id) => {
-                        setReplyingToId(id);
-                        setNewReply('');
-                      }}
-                      onCancelReply={() => {
-                        setReplyingToId('');
-                        setNewReply('');
-                      }}
-                      onSubmitReply={(id) => submitReply(id)}
-                      replyingToId={replyingToId}
-                      newReply={newReply}
-                      setNewReply={setNewReply}
-                      pessoasById={pessoasById}
-                      internalFirstNames={internalFirstNames}
-                      viewerPessoaId={currentPessoa?.id ?? null}
-                      viewerIsAdmin={isAdmin}
-                    />
-                  ))}
-                  {!editing.id && (
-                    <div className="text-xs text-muted italic py-3">
-                      Comentários aparecem após salvar a tarefa.
-                    </div>
-                  )}
-                  {editing.id && comments.length === 0 && (
-                    <div className="text-xs text-muted italic py-3">
-                      Sem comentários ainda. Escreva o primeiro abaixo ↓
-                    </div>
-                  )}
-                </div>
-                </AnexosMsgContext.Provider>
-                {editing.id && (
-                  <div className="tmodal-composer relative">
-                    {/* Bucket V · M.5 iter · composer linha única.
-                        Default = não-visível pro cliente. Toggle interno/externo
-                        no chip dentro do comentário publicado (CommentItem). */}
-                    <ImagensPendentes
-                      arquivos={imagensMsg}
-                      onRemover={(i) => setImagensMsg((cur) => cur.filter((_, j) => j !== i))}
-                    />
-                    <div className="tmodal-composer-pill">
-                      <BotaoAnexarImagem
-                        quantidadeAtual={imagensMsg.length}
-                        onEscolher={(novas) => setImagensMsg((cur) => juntarPendentes(cur, novas))}
-                      />
-                      <textarea
-                        ref={newCommentRef}
-                        value={newComment}
-                        onChange={mentionPicker.onChange}
-                        onPaste={(e) => {
-                          // Colado no campo de mensagem: vai junto da mensagem,
-                          // não para a aba Anexos (paste do modal)
-                          const imgs = imagensDoClipboard(e);
-                          if (!imgs.length) return;
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setImagensMsg((cur) => juntarPendentes(cur, imgs));
-                        }}
-                        rows={1}
-                        placeholder={isMobileVp ? '@ pra mencionar' : `@ pra mencionar · cole print (${atalhoColar()}) · ⌘↵ envia`}
-                        onKeyDown={(e) => {
-                          if (mentionPicker.onKeyDown(e)) return;
-                          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                            e.preventDefault();
-                            postComment();
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className="tmodal-composer-send"
-                        onClick={postComment}
-                        disabled={!newComment.trim() && imagensMsg.length === 0}
-                        title="Enviar (⌘↵)"
-                        aria-label="Enviar comentário"
-                      >
-                        <Icon name="send" size={14} />
-                      </button>
-                    </div>
-                    <MentionDropdown picker={mentionPicker} />
-                  </div>
-                )}
-              </>
-            )}
+            {(modalTab === 'conversa' || modalTab === 'detalhes') && jsxConversa}
             {/* TEMPO */}
             {modalTab === 'tempo' && editing.id && (
               <TimesheetTab taskId={editing.id} onLoaded={setTempoCount} />

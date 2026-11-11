@@ -28,6 +28,7 @@ import { MobileHelpMenuItem } from '@/components/mobile-help-modal';
 import { Icon, type IconName } from '@/components/icons';
 import { APP_VERSION } from '@/components/app-nav';
 import { useMarcaCliente } from '@/lib/use-marca-cliente';
+import { definirModalNovo, useModalNovo } from '@/lib/modal-novo';
 
 const PROFILE_ICON: Record<string, IconName> = {
   '/cadastros': 'sliders',
@@ -62,6 +63,7 @@ export function ProfileMenu() {
   const initial = (currentPessoa?.nome ?? '?').charAt(0).toUpperCase();
   const isAdmin = viewerRole === 'admin';
   const isCliente = viewerRole === 'cliente';
+  const modalNovo = useModalNovo();
 
   const signOut = async () => {
     await sb.auth.signOut();
@@ -148,6 +150,32 @@ export function ProfileMenu() {
                 <div className="hidden md:block">
                   <OnboardingMenuItem onClick={() => setOpen(false)} />
                 </div>
+              </>
+            )}
+
+            {/* Beta do modal novo da tarefa: só admin liga, por navegador */}
+            {isAdmin && (
+              <>
+                <div className="border-t border-line my-1" />
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={modalNovo}
+                  onClick={() => definirModalNovo(!modalNovo)}
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-sm text-ink hover:bg-[color:var(--surface-3)] transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Icon name="sliders" size={14} className="text-muted shrink-0" />
+                    Modal novo (beta)
+                  </span>
+                  <span
+                    className={`relative w-7 h-4 rounded-full transition-colors ${modalNovo ? 'bg-[color:var(--green)]' : 'bg-[color:var(--surface-3)] border border-line'}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-all ${modalNovo ? 'left-3.5' : 'left-0.5'}`}
+                    />
+                  </span>
+                </button>
               </>
             )}
 
