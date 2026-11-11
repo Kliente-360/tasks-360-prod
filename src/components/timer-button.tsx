@@ -310,12 +310,27 @@ export function LancamentoForm({
                 <button
                   key={l}
                   type="button"
-                  aria-pressed={totalMin === min}
-                  onClick={() => { setDurH(Math.floor(min / 60)); setDurM(min % 60); }}
+                  disabled={totalMin + min > 24 * 60}
+                  onClick={(e) => {
+                    const novo = Math.min(24 * 60, totalMin + min);
+                    setDurH(Math.floor(novo / 60));
+                    setDurM(novo % 60);
+                    // "aperta" o botão: animação curta e volta ao normal
+                    const el = e.currentTarget;
+                    el.classList.remove('somou');
+                    void el.offsetWidth;
+                    el.classList.add('somou');
+                  }}
+                  onAnimationEnd={(e) => e.currentTarget.classList.remove('somou')}
                 >
-                  {l}
+                  +{l}
                 </button>
               ))}
+              {totalMin > 0 && (
+                <button type="button" className="zerar" onClick={() => { setDurH(0); setDurM(0); }}>
+                  Zerar
+                </button>
+              )}
             </div>
           </div>
         </div>

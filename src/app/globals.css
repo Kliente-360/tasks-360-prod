@@ -3923,5 +3923,15 @@ button.m2-vis-tag { cursor: pointer; }
 .lanc-atalhos button { border: 1px solid var(--line); background: var(--bg-alt); border-radius: 6px; padding: 3px 9px;
   font-size: 12px; font-weight: 500; color: var(--ink-soft); cursor: pointer; }
 .lanc-atalhos button:hover { border-color: var(--line-strong); color: var(--ink); }
-.lanc-atalhos button[aria-pressed="true"] { border-color: var(--green); background: var(--green-tint); color: var(--green); }
+.lanc-atalhos button:active:not(:disabled) { transform: scale(.92); }
+.lanc-atalhos button:disabled { opacity: .4; cursor: default; }
+.lanc-atalhos button.somou { animation: lanc-somou .32s ease-out; }
+@keyframes lanc-somou {
+  0%   { transform: scale(.9); background: var(--green-tint); border-color: var(--green); color: var(--green); }
+  60%  { transform: scale(1.06); background: var(--green-tint); border-color: var(--green); color: var(--green); }
+  100% { transform: scale(1); }
+}
+.lanc-atalhos button.zerar { background: none; border-color: transparent; color: var(--muted); }
+.lanc-atalhos button.zerar:hover { color: var(--danger); border-color: transparent; }
+@media (prefers-reduced-motion: reduce) { .lanc-atalhos button.somou { animation: none; } }
 .lanc-form input.inp[type="number"] { width: 64px; flex: none; }
