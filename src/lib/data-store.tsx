@@ -114,6 +114,14 @@ interface DataState {
   todasConcluidas: boolean;
   /** Buscando as concluídas antigas no banco. */
   carregandoConcluidas: boolean;
+  /** Tasks + linhas anônimas do privado (CEO) · só para análises de horas e ocupação. */
+  tasksAnalise: Task[];
+  /** Time entries + horas anônimas do privado · só para análises e Timesheet. */
+  timeEntriesAnalise: TimeEntry[];
+  /** Privada efetiva: a task, o projeto ou o cliente é privado. */
+  ePrivada: (t: Task) => boolean;
+  /** Filtro do CEO: só tarefas privadas (Kanban, Backlog, Calendário). */
+  soPrivadas: boolean;
 }
 
 interface DataActions {
@@ -121,6 +129,7 @@ interface DataActions {
   refreshAll: () => Promise<void>;
   /** Liga/desliga o carregamento das concluídas sem limite de data. */
   setTodasConcluidas: (v: boolean) => Promise<void>;
+  setSoPrivadas: (v: boolean) => void;
   /** Mutações locais — escritas no banco continuam via supabase client direto. */
   patchTask: (id: string, changes: Partial<Task>) => Task | null;
   patchTasks: (ids: string[], changes: Partial<Task>) => void;
@@ -176,6 +185,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [todasPessoas, setPessoas] = useState<Pessoa[]>([]);
   const pessoas = useMemo(() => todasPessoas.filter((p) => !p.arquivado_em), [todasPessoas]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  // Privado do CEO, anônimo, para quem não o vê (só entra nas análises)
+  const [anonTasks, setAnonTasks] = useState<Task[]>([]);
+  const [anonHoras, setAnonHoras] = useState<TimeEntry[]>([]);
+  const [soPrivadas, setSoPrivadas] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -306,7 +319,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const refreshClientes = useCallback(async () => {
     const { data, error } = await sb
       .from('clientes')
-      .select('id,nome,tier,eh_interno,arquivado_em,dominios,webhook_enabled,cor_portal,cor_portal_texto')
+      .select('id,nome,tier,eh_interno,arquivado_em,dominios,webhook_enabled,cor_portal,cor_portal_texto,privado')
       .order('nome');
     if (error) return;
     setClientes((data ?? []).map(clienteFromDb));
@@ -315,7 +328,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const refreshProjetos = useCallback(async () => {
     const { data, error } = await sb
       .from('projetos')
-      .select('id,nome,cliente_id,sla_resposta_horas,sla_entrega_dias,orcamento_horas,tipo,arquivado_em')
+      .select('id,nome,cliente_id,sla_resposta_horas,sla_entrega_dias,orcamento_horas,tipo,arquivado_em,privado')
       .order('nome');
     if (error) return;
     setProjetos((data ?? []).map(projetoFromDb));
@@ -345,6 +358,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setTimeEntries((data ?? []).map(timeEntryFromDb));
   }, [sb]);
 
+  const refreshAnonimo = useCallback(async () => {
+    const horasDesde = new Date();
+    horasDesde.setDate(horasDesde.getDate() - TIME_ENTRIES_WINDOW_DAYS);
+    const { data, error } = await sb.rpc('app_privado_anonimo', {
+      p_cutoff: cutoffIso(),
+      p_horas_desde: horasDesde.toISOString(),
+    });
+    if (error || !data) return;
+    const d = data as { tasks?: Record<string, unknown>[]; horas?: Record<string, unknown>[] };
+    setAnonTasks(
+      (d.tasks ?? []).map((r) => ({ ...taskFromDb({ ...r, titulo: 'Privado', privada: true }), mascarada: true })),
+    );
+    setAnonHoras((d.horas ?? []).map((r) => ({ ...timeEntryFromDb({ ...r, note: null }), mascarada: true })));
+  }, [sb]);
+
   const refreshAll = useCallback(async () => {
     // `loading` é só sinal de "primeira carga não terminou". Refetches
     // subsequentes acontecem em background sem trocar o flag — replica
@@ -354,14 +382,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setRefreshing(true);
     try {
-      await Promise.all([refreshClientes(), refreshProjetos(), refreshPessoas(), refreshTasks(), refreshTimeEntries()]);
+      await Promise.all([refreshClientes(), refreshProjetos(), refreshPessoas(), refreshTasks(), refreshTimeEntries(), refreshAnonimo()]);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [refreshClientes, refreshProjetos, refreshPessoas, refreshTasks, refreshTimeEntries]);
+  }, [refreshClientes, refreshProjetos, refreshPessoas, refreshTasks, refreshTimeEntries, refreshAnonimo]);
 
   // Boot inicial.
   useEffect(() => {
@@ -652,6 +680,18 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     [tasks, viewerRole, internalClienteIds, currentPessoa?.id],
   );
 
+  const clientesById = useMemo(() => new Map(clientes.map((c) => [c.id, c])), [clientes]);
+  const projetosById = useMemo(() => new Map(projetos.map((p) => [p.id, p])), [projetos]);
+  const ePrivada = useCallback(
+    (t: Task) =>
+      !!t.privada ||
+      !!(t.clienteId && clientesById.get(t.clienteId)?.privado) ||
+      !!(t.projetoId && projetosById.get(t.projetoId)?.privado),
+    [clientesById, projetosById],
+  );
+  const tasksAnalise = useMemo(() => (anonTasks.length ? [...visibleTasks, ...anonTasks] : visibleTasks), [visibleTasks, anonTasks]);
+  const timeEntriesAnalise = useMemo(() => (anonHoras.length ? [...timeEntries, ...anonHoras] : timeEntries), [timeEntries, anonHoras]);
+
   const value = useMemo<DataContextValue>(
     () => ({
       tasks: visibleTasks,
@@ -669,8 +709,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       isCEO,
       todasConcluidas,
       carregandoConcluidas,
+      tasksAnalise,
+      timeEntriesAnalise,
+      ePrivada,
+      soPrivadas,
       refreshAll,
       setTodasConcluidas,
+      setSoPrivadas,
       patchTask,
       patchTasks,
       replaceTask,
@@ -691,6 +736,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       visibleTasks, visibleClientes, visibleProjetos, pessoas, todasPessoas, timeEntries,
       loading, refreshing, error, realtimeStatus,
       currentPessoa, viewerRole, isCEO, todasConcluidas, carregandoConcluidas,
+      tasksAnalise, timeEntriesAnalise, ePrivada, soPrivadas,
       refreshAll, setTodasConcluidas,
       patchTask, patchTasks, replaceTask, upsertTask, removeTask, removeTasks,
       upsertCliente, removeCliente, upsertProjeto, removeProjeto, upsertPessoa, removePessoa,

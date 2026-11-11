@@ -98,6 +98,7 @@ export function clienteFromDb(r: Row): Cliente {
     tier: str(r.tier),
     ehInterno: r.eh_interno === true,
     arquivadoEm: dateIso(r.arquivado_em),
+    privado: r.privado === true,
     dominios: arr<string>(r.dominios),
     webhookEnabled: r.webhook_enabled === true,
     corPortal: r.cor_portal ? String(r.cor_portal) : null,
@@ -115,6 +116,7 @@ export function projetoFromDb(r: Row): Projeto {
     orcamentoHoras: numNull(r.orcamento_horas),
     tipo: str(r.tipo),
     arquivadoEm: dateIso(r.arquivado_em),
+    privado: r.privado === true,
   };
 }
 

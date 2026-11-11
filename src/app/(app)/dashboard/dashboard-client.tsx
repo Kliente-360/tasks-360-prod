@@ -9,6 +9,7 @@ import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { cn } from '@/lib/utils';
 import { atrasada, agingDays, effEsforco, isPreTriagem } from '@/lib/task-utils';
 import type { Filters as StdFilters } from '@/lib/filters';
+import type { Task } from '@/lib/types';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import {
   computeEntregasSemanas,
@@ -65,7 +66,7 @@ function SectionHeader({ title, sub }: { title: string; sub?: string }) {
 // ─────────────────────────────────────────────────────────
 
 export function DashboardClient() {
-  const { tasks, clientes, projetos, pessoas, loading, refreshing } = useData();
+  const { tasks, tasksAnalise, clientes, projetos, pessoas, loading, refreshing } = useData();
   const clientesById = useClientesById();
   const projetosById = useProjetosById();
   const pessoasById = usePessoasById();
@@ -91,11 +92,11 @@ export function DashboardClient() {
   // — só aparece em /triagem até ser aceita ou rejeitada.
   const baseTasks = useMemo(() => tasks.filter((t) => !t.arquivadoEm && !isPreTriagem(t)), [tasks]);
 
-  const filteredTasks = useMemo(() => {
+  const passaFiltro = useMemo(() => {
     const todayIso = new Date().toISOString().slice(0, 10);
     const in7 = new Date(); in7.setDate(in7.getDate() + 7);
     const in7Iso = in7.toISOString().slice(0, 10);
-    return baseTasks.filter((t) => {
+    return (t: Task) => {
       if (filterCliente && t.clienteId !== filterCliente) return false;
       if (filterPessoa && t.pessoaId !== filterPessoa) return false;
       if (filterProjeto && t.projetoId !== filterProjeto) return false;
@@ -109,8 +110,14 @@ export function DashboardClient() {
         if (t.prazo < todayIso || t.prazo > in7Iso) return false;
       }
       return true;
-    });
-  }, [baseTasks, filterCliente, filterPessoa, filterProjeto, filterPrazo, onlyIA, onlyHumano]);
+    };
+  }, [filterCliente, filterPessoa, filterProjeto, filterPrazo, onlyIA, onlyHumano]);
+  const filteredTasks = useMemo(() => baseTasks.filter(passaFiltro), [baseTasks, passaFiltro]);
+  // Carga e capacidade contam também o privado do CEO (anônimo para quem não o vê)
+  const capTasks = useMemo(() => {
+    const anon = tasksAnalise.filter((t) => t.mascarada && !t.arquivadoEm && passaFiltro(t));
+    return anon.length ? [...filteredTasks, ...anon] : filteredTasks;
+  }, [tasksAnalise, filteredTasks, passaFiltro]);
 
   // ── KPIs
   const kpiAndamento = useMemo(() => filteredTasks.filter((t) => t.status === 'andamento'), [filteredTasks]);
@@ -149,13 +156,13 @@ export function DashboardClient() {
   // ── Volume + Carga
   const volumeCliente = useMemo(() => computeVolumeByCliente(filteredTasks, clientes), [filteredTasks, clientes]);
   const maxVolume = Math.max(...volumeCliente.map((v) => v.count), 1);
-  const cargaPessoa = useMemo(() => computeCargaByPessoa(filteredTasks, pessoas), [filteredTasks, pessoas]);
+  const cargaPessoa = useMemo(() => computeCargaByPessoa(capTasks, pessoas), [capTasks, pessoas]);
   const maxCarga = Math.max(...cargaPessoa.map((p) => p.total), 1);
 
   // ── Capacidade (substituiu Saúde por projeto + por pessoa em jul/2026)
   const wca = useMemo(
-    () => computeWeeklyCapacityAnalysis(filteredTasks, clientes, projetos, pessoas),
-    [filteredTasks, clientes, projetos, pessoas],
+    () => computeWeeklyCapacityAnalysis(capTasks, clientes, projetos, pessoas),
+    [capTasks, clientes, projetos, pessoas],
   );
   const pessoasAtivasIds = useMemo(
     () => new Set(pessoas.filter((p) => p.invited_at !== null).map((p) => p.id)),

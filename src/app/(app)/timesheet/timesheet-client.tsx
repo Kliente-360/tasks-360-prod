@@ -22,7 +22,7 @@ function fmtDateTime(ms: number) {
 }
 
 export function TimesheetClient() {
-  const { currentPessoa, viewerRole, clientes, projetos, loading, timeEntries, removeTimeEntry, upsertTimeEntry } = useData();
+  const { currentPessoa, viewerRole, clientes, projetos, loading, timeEntriesAnalise: timeEntries, removeTimeEntry, upsertTimeEntry } = useData();
   const { activeEntry, startTimer } = useTimer();
   const tasksById = useTasksById();
   const clientesById = useClientesById();
@@ -286,12 +286,14 @@ export function TimesheetClient() {
                     const pessoa = pessoasById.get(e.pessoaId);
                     const durMs = e.endedAt ? e.endedAt - e.startedAt : Date.now() - e.startedAt;
                     const isRunning = !e.endedAt;
-                    const canDel = viewerRole === 'admin' || e.pessoaId === currentPessoa?.id;
+                    const canDel = !e.mascarada && (viewerRole === 'admin' || e.pessoaId === currentPessoa?.id);
                     return (
                       <tr key={e.id} className="border-b border-line last:border-0 hover:bg-[var(--surface-3)] transition-colors">
                         <td className="px-4 py-2.5 text-muted font-mono text-xs">{fmtDateTime(e.startedAt)}</td>
                         <td className="px-4 py-2.5 max-w-[200px]">
-                          {task ? (
+                          {e.mascarada ? (
+                            <span className="text-muted inline-flex items-center gap-1"><Icon name="lock" size={11} /> Privado</span>
+                          ) : task ? (
                             <button
                               type="button"
                               className="text-left hover:text-brand hover:underline truncate max-w-full block"

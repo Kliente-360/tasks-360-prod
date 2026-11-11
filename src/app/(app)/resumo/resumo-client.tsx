@@ -44,7 +44,7 @@ const WEEK_LABELS_SHORT = ['Agora', '+1s', '+2s', '+3s'];
 // ─────────────────────────────────────────────────────────
 
 export function ResumoClient() {
-  const { tasks, clientes, projetos, pessoas, loading } = useData();
+  const { tasks, tasksAnalise, clientes, projetos, pessoas, loading } = useData();
   const pessoasAtivasIds = useMemo(
     () => new Set(pessoas.filter((p) => p.invited_at !== null).map((p) => p.id)),
     [pessoas],
@@ -57,9 +57,14 @@ export function ResumoClient() {
   const vel = useMemo(() => computeVelocidade(baseTasks), [baseTasks]);
 
   // ── 3 · Capacidade do time
+  // Capacidade conta também o privado do CEO (anônimo para quem não o vê)
+  const capTasks = useMemo(
+    () => [...baseTasks, ...tasksAnalise.filter((t) => t.mascarada && !t.arquivadoEm)],
+    [baseTasks, tasksAnalise],
+  );
   const wca = useMemo(
-    () => computeWeeklyCapacityAnalysis(baseTasks, clientes, projetos, pessoas),
-    [baseTasks, clientes, projetos, pessoas],
+    () => computeWeeklyCapacityAnalysis(capTasks, clientes, projetos, pessoas),
+    [capTasks, clientes, projetos, pessoas],
   );
 
   // ── 4 · Calendário

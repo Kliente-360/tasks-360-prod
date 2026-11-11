@@ -48,7 +48,7 @@ const MACROS = ['backlog', 'andamento', 'bloqueado', 'concluido'] as const;
 const CARDS_POR_COLUNA = 40;
 
 export function KanbanClient() {
-  const { tasks, patchTask, replaceTask, loading, error, timeEntries, todasConcluidas, setTodasConcluidas } = useData();
+  const { tasks, patchTask, replaceTask, loading, error, timeEntries, todasConcluidas, setTodasConcluidas, isCEO, ePrivada, soPrivadas, setSoPrivadas } = useData();
   const { openEdit } = useTaskModal();
   const toast = useToast();
   const clientesById = useClientesById();
@@ -177,6 +177,7 @@ export function KanbanClient() {
       if (onlyIA && !t.criadoPorIa) return false;
       if (onlyHumano && t.criadoPorIa) return false;
       if (onlyRadar && !t.radar) return false;
+      if (soPrivadas && !ePrivada(t)) return false;
       if (q) {
         const cli = clientesById.get(t.clienteId)?.nome ?? '';
         const proj = projetosById.get(t.projetoId)?.nome ?? '';
@@ -189,7 +190,7 @@ export function KanbanClient() {
       }
       return true;
     });
-  }, [tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, onlyRadar, clientesById, projetosById, pessoasById]);
+  }, [tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, onlyRadar, soPrivadas, ePrivada, clientesById, projetosById, pessoasById]);
 
   // ===== Buckets por coluna =====
   const tasksBySub = useMemo(() => {
@@ -413,6 +414,7 @@ export function KanbanClient() {
                 setOnlyIA(false);
                 setOnlyHumano(false);
                 setOnlyRadar(false);
+                setSoPrivadas(false);
                 clearSharedFilters();
                 if (todasConcluidas) void setTodasConcluidas(false);
               }}
@@ -426,6 +428,7 @@ export function KanbanClient() {
                 { key: 'div1', label: '---' },
                 { key: 'arquivadas', label: 'Mostrar arquivadas', kind: 'toggle', active: showArchived, onClick: () => setShowArchived((v) => !v) },
                 { key: 'radar', label: 'Somente no Radar do CEO', kind: 'toggle', active: onlyRadar, onClick: () => setOnlyRadar((v) => !v) },
+                ...(isCEO ? [{ key: 'privadas', label: 'Somente tarefas privadas', kind: 'toggle', active: soPrivadas, onClick: () => setSoPrivadas(!soPrivadas) }] as MoreMenuItem[] : []),
                 { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
                 { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
                 // Histórico: sem o limite de 60 dias das concluídas
@@ -570,6 +573,8 @@ function KCard({
   extraFooter?: React.ReactNode;
   draggable?: boolean;
 }) {
+  const { ePrivada } = useData();
+  const privada = ePrivada(t);
   return (
     <div
       className={`kcard ${dragging ? 'dragging' : ''}`}
@@ -584,6 +589,7 @@ function KCard({
       <div className="flex items-center justify-between gap-2 mb-1">
         <div className="text-xs text-muted truncate">{clienteName + ' · ' + projetoName}</div>
         <div className="flex items-center gap-1.5">
+          {privada && <span className="priv-chip" title="Privada"><Icon name="lock" size={9} /></span>}
           {t.radar && <RadarBadge />}
           <PriChip prio={t.prioridade} />
         </div>

@@ -113,6 +113,8 @@ export interface Task {
    *  "fora de escopo" / "spam" / texto livre. */
   motivoArquivamento: string | null;
   privada: boolean;
+  /** Linha anônima de task privada (só para análises de quem não a vê) */
+  mascarada?: boolean;
   /** Radar do CEO · flag pra marcar tasks importantes que o CEO quer
    *  acompanhar. Só CEO pode ligar/desligar (enforçado por trigger DB
    *  `enforce_radar_ceo_only`). Usado pra filtros, chip visual, e
@@ -131,6 +133,8 @@ export interface Cliente {
   tier: string;
   ehInterno: boolean;
   arquivadoEm: string | null;
+  /** Privado (só CEO): herda para projetos/tasks */
+  privado?: boolean;
   dominios: string[];
   /** Quando true, modal de task NÃO autosalva — usuário precisa clicar Salvar
    *  pra disparar o webhook pro Salesforce. */
@@ -152,6 +156,8 @@ export interface Projeto {
   orcamentoHoras: number | null;
   tipo: string;
   arquivadoEm: string | null;
+  /** Privado (só CEO): herda para projetos/tasks */
+  privado?: boolean;
 }
 
 export interface Pessoa {
@@ -185,4 +191,6 @@ export interface TimeEntry {
   endedAt: number | null;
   note: string | null;
   criadoEm: number;
+  /** Hora anônima de task privada (só análises/Timesheet de quem não a vê) */
+  mascarada?: boolean;
 }

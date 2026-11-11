@@ -62,7 +62,7 @@ function isoLocal(d: Date): string {
 }
 
 export function CalendarioClient() {
-  const { tasks, clientes, projetos, pessoas, patchTask, replaceTask, loading, error, todasConcluidas, setTodasConcluidas } = useData();
+  const { tasks, clientes, projetos, pessoas, patchTask, replaceTask, loading, error, todasConcluidas, setTodasConcluidas, isCEO, ePrivada, soPrivadas, setSoPrivadas } = useData();
   const { openEdit } = useTaskModal();
   const toast = useToast();
   const clientesById = useClientesById();
@@ -188,7 +188,7 @@ export function CalendarioClient() {
     const start = new Date(y, m, 1 - offset);
     const today = isoLocal(new Date());
 
-    const hasFilter = !!(filters.cliente || filters.projeto || filters.pessoa || filters.prazo || qDraft || onlyIA || onlyHumano || onlyRadar);
+    const hasFilter = !!(filters.cliente || filters.projeto || filters.pessoa || filters.prazo || qDraft || onlyIA || onlyHumano || onlyRadar || soPrivadas);
     const q = qDraft.trim().toLowerCase();
     const todayIso = today;
     const in7d = new Date(); in7d.setDate(in7d.getDate() + 7);
@@ -206,6 +206,7 @@ export function CalendarioClient() {
       } else if (filters.pessoa && t.pessoaId !== filters.pessoa) return false;
       if (onlyIA && !t.criadoPorIa) return false;
       if (onlyRadar && !t.radar) return false;
+      if (soPrivadas && !ePrivada(t)) return false;
       if (onlyHumano && t.criadoPorIa) return false;
       if (filters.prazo === 'atrasadas' && !atrasada(t)) return false;
       if (filters.prazo === 'hoje' && t.prazo !== todayIso) return false;
@@ -267,7 +268,7 @@ export function CalendarioClient() {
       });
     }
     return out;
-  }, [cursor, tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, onlyRadar, clientesById, projetosById, pessoasById]);
+  }, [cursor, tasks, filters, qDraft, showArchived, onlyIA, onlyHumano, onlyRadar, soPrivadas, ePrivada, clientesById, projetosById, pessoasById]);
 
   // Versão mobile: tira fim de semana pra caber 5 colunas no viewport
   // estreito; matem a ordem segunda → sexta.
@@ -395,6 +396,7 @@ export function CalendarioClient() {
                 setQDraft('');
                 setFilters({ cliente: '', projeto: '', pessoa: '', status: 'todas', prazo: '' });
                 setShowArchived(false);
+                setSoPrivadas(false);
                 setOnlyIA(false);
                 setOnlyHumano(false);
                 setOnlyRadar(false);
@@ -411,6 +413,7 @@ export function CalendarioClient() {
                 { key: 'div1', label: '---' },
                 { key: 'arquivadas', label: 'Mostrar arquivadas', kind: 'toggle', active: showArchived, onClick: () => setShowArchived((v) => !v) },
                 { key: 'radar', label: 'Somente no Radar do CEO', kind: 'toggle', active: onlyRadar, onClick: () => setOnlyRadar((v) => !v) },
+                ...(isCEO ? [{ key: 'privadas', label: 'Somente tarefas privadas', kind: 'toggle', active: soPrivadas, onClick: () => setSoPrivadas(!soPrivadas) }] as MoreMenuItem[] : []),
                 { key: 'ia', label: 'Somente criadas por IA', kind: 'toggle', active: onlyIA, onClick: () => { setOnlyIA((v) => !v); setOnlyHumano(false); } },
                 { key: 'humano', label: 'Somente criadas por humanos', kind: 'toggle', active: onlyHumano, onClick: () => { setOnlyHumano((v) => !v); setOnlyIA(false); } },
                 // Meses passados: concluídas sem o limite de 60 dias

@@ -44,6 +44,7 @@ export function CadastrosClient() {
     removeProjeto,
     removePessoa,
     viewerRole,
+    isCEO,
   } = useData();
   const isAdmin = viewerRole === 'admin';
 
@@ -131,6 +132,32 @@ export function CadastrosClient() {
       }
       upsertCliente(clienteFromDb(data as Record<string, unknown>));
     });
+  // Privado (só CEO): herda para os projetos e tarefas
+  const setPrivado = (tabela: 'clientes' | 'projetos', id: string, privado: boolean) =>
+    startTransition(async () => {
+      const { data, error } = await sb.from(tabela).update({ privado }).eq('id', id).select().single();
+      if (error || !data) {
+        toast.error(error?.message || 'Não foi possível alterar.');
+        return;
+      }
+      if (tabela === 'clientes') upsertCliente(clienteFromDb(data as Record<string, unknown>));
+      else upsertProjeto(projetoFromDb(data as Record<string, unknown>));
+      toast.success(privado ? 'Agora é privado: só você e os responsáveis das tarefas veem.' : 'Visível ao time de novo.');
+    });
+  const botaoPrivado = (tabela: 'clientes' | 'projetos', id: string, privado: boolean) =>
+    isCEO ? (
+      <button
+        type="button"
+        className="iconbtn"
+        style={privado ? { color: 'var(--danger)' } : undefined}
+        onClick={() => setPrivado(tabela, id, !privado)}
+        title={privado ? 'Privado · clique para tornar visível ao time' : 'Tornar privado'}
+        aria-label={privado ? 'Tornar visível ao time' : 'Tornar privado'}
+        aria-pressed={privado}
+      >
+        <Icon name="lock" size={14} />
+      </button>
+    ) : null;
   const runArquivarCliente = (id: string) => setClienteArquivado(id, true);
   const runDesarquivarCliente = (id: string) => setClienteArquivado(id, false);
   const runDeleteCliente = (id: string, nome: string) => {
@@ -468,6 +495,7 @@ export function CadastrosClient() {
                           <Chip show={!!c.arquivadoEm} label="arquivado" variant="muted" />
                           <Chip show={isInterno} label="interno" variant="muted" />
                           <Chip show={c.webhookEnabled} label="webhook" variant="muted" />
+                          <Chip show={!!c.privado} label="privado" variant="muted" />
                         </div>
                       </div>
                     </td>
@@ -482,6 +510,7 @@ export function CadastrosClient() {
                     <td className="num" style={{ textAlign: 'right' }}>{projetosByCliente.get(c.id) ?? 0}</td>
                     <td className="num" style={{ textAlign: 'right' }}>{tasksByCliente.get(c.id) ?? 0}</td>
                     <td className="actions">
+                      {botaoPrivado('clientes', c.id, !!c.privado)}
                       {/* Arquivar/Desarquivar · interno mostra mas desabilita */}
                       {!c.arquivadoEm ? (
                         <button
@@ -576,6 +605,8 @@ export function CadastrosClient() {
                         <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
                           <span className="font-medium text-[color:var(--ink)]">{p.nome}</span>
                           <Chip show={!!p.arquivadoEm} label="arquivado" variant="muted" />
+                          <Chip show={!!p.privado} label="privado" variant="muted" />
+                          <Chip show={!p.privado && !!clientes.find((c) => c.id === p.clienteId)?.privado} label="privado pelo cliente" variant="muted" />
                         </div>
                       </div>
                     </td>
@@ -594,6 +625,7 @@ export function CadastrosClient() {
                     </td>
                     <td className="num" style={{ textAlign: 'right' }}>{tasksByProjeto.get(p.id) ?? 0}</td>
                     <td className="actions">
+                      {botaoPrivado('projetos', p.id, !!p.privado)}
                       {!p.arquivadoEm ? (
                         <button
                           type="button"

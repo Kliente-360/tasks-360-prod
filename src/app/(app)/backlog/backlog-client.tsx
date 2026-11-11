@@ -115,6 +115,10 @@ export function BacklogClient() {
     currentPessoa,
     todasConcluidas,
     setTodasConcluidas,
+    isCEO,
+    ePrivada,
+    soPrivadas,
+    setSoPrivadas,
   } = useData();
   const isAdmin = viewerRole === 'admin';
   const clientesById = useClientesById();
@@ -238,6 +242,7 @@ export function BacklogClient() {
       if (f.origem === 'ia' && !t.criadoPorIa) return false;
       if (f.origem === 'humano' && t.criadoPorIa) return false;
       if (onlyRadar && !t.radar) return false;
+      if (soPrivadas && !ePrivada(t)) return false;
       if (f.prazo) {
         const todayIso = new Date().toISOString().slice(0, 10);
         if (f.prazo === 'atrasadas' && !atrasada(t)) return false;
@@ -285,7 +290,7 @@ export function BacklogClient() {
       return 0;
     });
     return arr;
-  }, [tasks, showArchived, onlyRadar, f, sortKeys, clientesById, projetosById, pessoasById]);
+  }, [tasks, showArchived, onlyRadar, soPrivadas, ePrivada, f, sortKeys, clientesById, projetosById, pessoasById]);
 
   // ============ Agrupamento + paginação ============
   type Group = {
@@ -595,6 +600,7 @@ export function BacklogClient() {
               onClear={() => {
                 setQDraft('');
                 clearFilters();
+                setSoPrivadas(false);
               }}
               clienteOptions={clientesAtivos.map((c) => ({ v: c.id, label: c.nome }))}
               projetoOptions={projetosFiltrados.map((p) => ({ v: p.id, label: p.nome }))}
@@ -645,6 +651,7 @@ export function BacklogClient() {
                   active: onlyRadar,
                   onClick: () => setOnlyRadar((v) => !v),
                 },
+                ...(isCEO ? [{ key: 'privadas', label: 'Somente tarefas privadas', kind: 'toggle', active: soPrivadas, onClick: () => setSoPrivadas(!soPrivadas) }] as MoreMenuItem[] : []),
                 {
                   key: 'ia',
                   label: 'Somente criadas por IA',
@@ -798,7 +805,7 @@ export function BacklogClient() {
                     </td>
                     <td>
                       <div className="tbl-title" title={t.titulo}>
-                        {t.privada && <span className="priv-chip mr-1" title="Task privada"><Icon name="lock" size={9} /></span>}
+                        {ePrivada(t) && <span className="priv-chip mr-1" title="Task privada"><Icon name="lock" size={9} /></span>}
                         {t.criadoPorIa && <TagIA className="mr-1" />}
                         {t.radar && <RadarBadge className="mr-1" />}
                         {t.prioridadePedidoEm && <PedidoPrioridadeChip className="mr-1" />}

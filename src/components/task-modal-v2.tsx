@@ -761,6 +761,9 @@ export function TaskModalV2(props: TaskModalV2Props) {
   const cliente = editing.clienteId ? clientesById.get(editing.clienteId) : undefined;
   const projeto = editing.projetoId ? projetosById.get(editing.projetoId) : undefined;
   const responsavel = editing.pessoaId ? pessoasById.get(editing.pessoaId) : undefined;
+  // Privada herdada do cliente ou do projeto (só o CEO marca no Cadastros)
+  const privadaHerdada = cliente?.privado ? 'do cliente' : projeto?.privado ? 'do projeto' : null;
+  const privadaEfetiva = editing.privada || !!privadaHerdada;
   const hoje = hojeIso();
   const concluida = editing.subetapa === 'concluido';
   const vencido = !!editing.prazo && editing.prazo < hoje && !concluida;
@@ -910,18 +913,22 @@ export function TaskModalV2(props: TaskModalV2Props) {
         <Icon name={editing.visivelCliente !== false ? 'eye' : 'eye-off'} size={12} />
         {editing.visivelCliente !== false ? 'Visível ao cliente' : 'Oculta do cliente'}
       </button>
-      {isCEO ? (
+      {privadaHerdada ? (
+        <span className="m2-chip m2-priv" aria-pressed="true" title={`Privada porque o ${privadaHerdada.slice(3)} é privado`}>
+          <Icon name="lock" size={12} /> Privada {privadaHerdada}
+        </span>
+      ) : isCEO ? (
         <button
           type="button"
           className="m2-chip m2-priv"
           aria-pressed={editing.privada}
           onClick={() => set('privada', !editing.privada)}
-          title={editing.privada ? 'Só você vê esta tarefa' : 'O time vê esta tarefa'}
+          title={editing.privada ? 'Só você e o responsável veem esta tarefa' : 'O time vê esta tarefa'}
         >
           <Icon name="lock" size={12} /> {editing.privada ? 'Privada' : 'Pública'}
         </button>
       ) : (
-        editing.privada && (
+        privadaEfetiva && (
           <span className="m2-chip m2-priv" aria-pressed="true">
             <Icon name="lock" size={12} /> Privada
           </span>
@@ -1421,7 +1428,12 @@ export function TaskModalV2(props: TaskModalV2Props) {
         )}
         <div className="m2-foot">
           {!nova && <MenuMais {...props} />}
-          {nova && isCEO && (
+          {nova && privadaHerdada && (
+            <span className="m2-chip m2-priv" aria-pressed="true">
+              <Icon name="lock" size={12} /> Privada {privadaHerdada}
+            </span>
+          )}
+          {nova && isCEO && !privadaHerdada && (
             <button
               type="button"
               className="m2-chip m2-priv"

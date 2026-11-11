@@ -135,7 +135,7 @@ function SectionHeader({
 // ─────────────────────────────────────────────────────────
 
 export function BriefingClient() {
-  const { tasks, clientes, projetos, pessoas, loading, isCEO } = useData();
+  const { tasks, tasksAnalise, clientes, projetos, pessoas, loading, isCEO } = useData();
   const { openEdit } = useTaskModal();
 
   // Seções colapsáveis — expandidas por padrão
@@ -192,9 +192,14 @@ export function BriefingClient() {
     [baseTasks, projetos, clientes],
   );
 
+  // Capacidade conta também o privado do CEO (anônimo para quem não o vê)
+  const capTasks = useMemo(
+    () => [...baseTasks, ...tasksAnalise.filter((t) => t.mascarada && !t.arquivadoEm)],
+    [baseTasks, tasksAnalise],
+  );
   const wca = useMemo(
-    () => computeWeeklyCapacityAnalysis(baseTasks, clientes, projetos, pessoas),
-    [baseTasks, clientes, projetos, pessoas],
+    () => computeWeeklyCapacityAnalysis(capTasks, clientes, projetos, pessoas),
+    [capTasks, clientes, projetos, pessoas],
   );
 
   const clientesById = useMemo(() => new Map(clientes.map((c) => [c.id, c])), [clientes]);
