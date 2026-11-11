@@ -19,7 +19,7 @@ export function MobileFab() {
     <button
       type="button"
       onClick={() => (cliente ? window.dispatchEvent(new CustomEvent('portal:new-task')) : openNew())}
-      className="md:hidden fixed right-5 z-40 w-14 h-14 rounded-full bg-[var(--brand)] text-white shadow-lg flex items-center justify-center text-3xl font-light leading-none hover:opacity-90 active:scale-95 transition-all select-none"
+      className="md:hidden fixed right-5 z-40 w-14 h-14 rounded-full bg-[var(--green-action)] text-white shadow-lg flex items-center justify-center text-3xl font-light leading-none hover:opacity-90 active:scale-95 transition-all select-none"
       style={{
         bottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
         ...(marca ? { background: marca.cor, color: marca.texto } : {}),

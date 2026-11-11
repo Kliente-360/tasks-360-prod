@@ -1130,7 +1130,7 @@ function BacklogMobilePanel({
               className={cn(
                 'text-xs font-medium px-3 py-1 rounded-full transition-colors border',
                 showMine
-                  ? 'bg-[color:var(--brand)] text-white border-[color:var(--brand)]'
+                  ? 'bg-[color:var(--green-action)] text-white border-[color:var(--green-action)]'
                   : 'border-[color:var(--line)] text-[color:var(--ink-soft)]',
               )}
             >

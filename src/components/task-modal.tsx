@@ -2073,7 +2073,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                           {/* Origem e visibilidade: da conversa ou solta; cliente vê ou não */}
                           <div className="absolute left-1 top-1 flex gap-1 pointer-events-none">
                             {a.visivel_cliente && (
-                              <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[color:var(--green)] text-white">externo</span>
+                              <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-[color:var(--green-action)] text-white">externo</span>
                             )}
                             {a.comment_id && (
                               <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-black/55 text-white">conversa</span>

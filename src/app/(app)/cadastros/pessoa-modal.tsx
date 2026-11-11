@@ -331,7 +331,7 @@ export function PessoaModal({
                               }
                               className={`text-xs px-2 py-1 rounded border transition-colors ${
                                 active
-                                  ? 'bg-[var(--brand)] border-[var(--brand)] text-white font-medium'
+                                  ? 'bg-[var(--green-action)] border-[var(--green-action)] text-white font-medium'
                                   : 'bg-[var(--surface-3)] border-[var(--line)] text-muted hover:border-[var(--brand)] hover:text-[var(--brand)]'
                               }`}
                             >
