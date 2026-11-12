@@ -13,7 +13,7 @@ import { atrasada } from '@/lib/task-utils';
 import type { Filters as StdFilters } from '@/lib/filters';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
 import { timeEntryFromDb } from '@/lib/adapters';
-import { VelCard } from '@/components/velocidade-operacao';
+import { cn } from '@/lib/utils';
 import type { Task, TimeEntry } from '@/lib/types';
 
 type TsKey = 'pessoa' | 'cliente' | 'projeto' | 'tarefa' | 'data' | 'duracao' | 'inicio' | 'fim';
@@ -199,27 +199,35 @@ export function TimesheetClient() {
     const w1 = w0 - 7 * DIA_MS;
     const w2 = w1 - 7 * DIA_MS;
     const d30 = Date.now() - 30 * DIA_MS;
-    let msW0 = 0, msW1 = 0, msW2 = 0, ms30 = 0, msPrio = 0, msEstr = 0;
-    const diasPessoa = new Set<string>();
+    // W-1 até o mesmo ponto da semana (mesmo dia e hora, 7 dias atrás)
+    const w1Corte = Date.now() - 7 * DIA_MS;
+    let msW0 = 0, msW1 = 0, msW1Ate = 0, msW2 = 0, ms30 = 0, msPrio = 0, msEstr = 0;
     for (const e of entries) {
       const ms = duracaoMs(e);
       if (e.startedAt >= w0) msW0 += ms;
-      else if (e.startedAt >= w1) msW1 += ms;
+      else if (e.startedAt >= w1) {
+        msW1 += ms;
+        if (e.startedAt < w1Corte) msW1Ate += Math.min(ms, w1Corte - e.startedAt);
+      }
       else if (e.startedAt >= w2) msW2 += ms;
       if (e.startedAt >= d30) {
         ms30 += ms;
-        const d = new Date(e.startedAt);
-        diasPessoa.add(`${e.pessoaId}|${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`);
         const t = tasksAnaliseById.get(e.taskId);
         if (t?.prioridade === 'P0' || t?.prioridade === 'P1') msPrio += ms;
         if (t && clientesById.get(t.clienteId)?.tier === 'estrategico') msEstr += ms;
       }
     }
+    // Dias úteis (seg a sex) nos últimos 30 dias, contando hoje
+    let diasUteis = 0;
+    for (let i = 0; i < 30; i++) {
+      const dow = new Date(Date.now() - i * DIA_MS).getDay();
+      if (dow !== 0 && dow !== 6) diasUteis++;
+    }
     const pct = (a: number) => (ms30 > 0 ? Math.round((a / ms30) * 100) : null);
     return {
-      msW0, msW1, msW2, ms30, msPrio, msEstr,
-      mediaDiaMs: diasPessoa.size ? ms30 / diasPessoa.size : null,
-      diasPessoa: diasPessoa.size,
+      msW0, msW1, msW1Ate, msW2,
+      // Time todo somado ÷ dias úteis
+      mediaDiaMs: diasUteis ? ms30 / diasUteis : null,
       pctPrio: pct(msPrio),
       pctEstr: pct(msEstr),
     };
@@ -341,43 +349,11 @@ export function TimesheetClient() {
           </span>
         </div>
         <div className="p-3 md:p-4 grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3">
-          <VelCard
-            label="Esta semana"
-            value={fmtHoras(kpis.msW0)}
-            meta="de segunda até agora"
-            sub={`semana passada inteira: ${fmtHoras(kpis.msW1)}`}
-            status="muted"
-          />
-          <VelCard
-            label="Semana passada"
-            value={fmtHoras(kpis.msW1)}
-            meta="segunda a domingo"
-            sub="semana fechada, base de comparação"
-            status="muted"
-            delta={kpis.msW1 === kpis.msW2 ? 'igual à anterior' : `${kpis.msW1 > kpis.msW2 ? '+' : '−'}${fmtHoras(Math.abs(kpis.msW1 - kpis.msW2))} vs a anterior`}
-            deltaSign={kpis.msW1 > kpis.msW2 ? 'up' : kpis.msW1 < kpis.msW2 ? 'down' : 'neutral'}
-          />
-          <VelCard
-            label="Média por dia"
-            value={kpis.mediaDiaMs != null ? fmtHoras(kpis.mediaDiaMs) : '—'}
-            meta="últimos 30 dias"
-            sub={`por pessoa, nos ${kpis.diasPessoa} dia${kpis.diasPessoa !== 1 ? 's' : ''} com lançamento`}
-            status="muted"
-          />
-          <VelCard
-            label="P0 e P1"
-            value={kpis.pctPrio != null ? `${kpis.pctPrio}%` : '—'}
-            meta="últimos 30 dias"
-            sub={`${fmtHoras(kpis.msPrio)} de ${fmtHoras(kpis.ms30)} em tarefas prioritárias`}
-            status="muted"
-          />
-          <VelCard
-            label="Clientes estratégicos"
-            value={kpis.pctEstr != null ? `${kpis.pctEstr}%` : '—'}
-            meta="últimos 30 dias"
-            sub={`${fmtHoras(kpis.msEstr)} de ${fmtHoras(kpis.ms30)} em clientes estratégicos`}
-            status="muted"
-          />
+          <TsKpi label="Esta semana" value={fmtHoras(kpis.msW0)} {...variacao(kpis.msW0, kpis.msW1Ate, 'vs semana passada até agora')} />
+          <TsKpi label="Semana passada" value={fmtHoras(kpis.msW1)} {...variacao(kpis.msW1, kpis.msW2, 'vs a anterior')} />
+          <TsKpi label="Média por dia" value={kpis.mediaDiaMs != null ? fmtHoras(kpis.mediaDiaMs) : '—'} legenda="time · dias úteis · 30 dias" />
+          <TsKpi label="P0 e P1" value={kpis.pctPrio != null ? `${kpis.pctPrio}%` : '—'} legenda="últimos 30 dias" />
+          <TsKpi label="Clientes estratégicos" value={kpis.pctEstr != null ? `${kpis.pctEstr}%` : '—'} legenda="últimos 30 dias" />
         </div>
       </div>
 
@@ -549,5 +525,28 @@ function TsTh({ label, k, sortBy, sortIcon, align, title }: {
     <th className={`sortable ${align === 'right' ? 'text-right' : ''}`} onClick={() => sortBy(k)} title={title}>
       {label} <span className="text-[10px] ml-1 text-ink">{sortIcon(k)}</span>
     </th>
+  );
+}
+
+/** Variação em horas para a linha do card: ▲ +2,1h vs ... */
+function variacao(atual: number, base: number, rotulo: string): { legenda: string; sinal: 'up' | 'down' | 'neutral' } {
+  const diff = atual - base;
+  if (Math.abs(diff) < 60_000) return { legenda: rotulo.replace(/^vs (a )?/, 'igual à '), sinal: 'neutral' };
+  return { legenda: `${diff > 0 ? '+' : '−'}${fmtHoras(Math.abs(diff))} ${rotulo}`, sinal: diff > 0 ? 'up' : 'down' };
+}
+
+/** Card de KPI do Timesheet: rótulo, número e uma linha (variação ou legenda) */
+function TsKpi({ label, value, legenda, sinal }: { label: string; value: string; legenda: string; sinal?: 'up' | 'down' | 'neutral' }) {
+  return (
+    <div className="bg-elev border border-line rounded-xl p-3 md:p-4 flex flex-col gap-1 min-w-0">
+      <div className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted leading-none">{label}</div>
+      <div className="text-2xl md:text-3xl font-semibold tabular-nums leading-none mt-1 text-[var(--ink)]">{value}</div>
+      <div className={cn(
+        'text-[11px] mt-0.5 truncate',
+        sinal === 'up' ? 'text-[var(--brand)]' : sinal === 'down' ? 'text-[var(--danger)]' : 'text-muted',
+      )}>
+        {sinal === 'up' ? '▲ ' : sinal === 'down' ? '▼ ' : ''}{legenda}
+      </div>
+    </div>
   );
 }
