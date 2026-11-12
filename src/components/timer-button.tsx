@@ -2,6 +2,7 @@
 import { track } from '@/lib/telemetry';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTimer, fmtElapsed } from '@/lib/use-timer';
 import { useData, useClientesById } from '@/lib/data-store';
 import { useClickAway } from '@/lib/use-click-away';
@@ -381,32 +382,49 @@ export function ManualEntryPopover({
   onCancel: () => void;
 }) {
   const ref = useClickAway<HTMLDivElement>(onCancel);
-  // Abre para baixo; se não couber (registro no fim da lista), abre para cima
-  const [placement, setPlacement] = useState<'bottom' | 'top'>('bottom');
+  // Renderiza fora da tabela (portal + posição fixa) para não ser cortado
+  // por containers com overflow. Ancora na célula de ações: abre para baixo
+  // e, se não couber, para cima.
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
   useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const rect = el.getBoundingClientRect();
-    const overflowsBottom = rect.bottom > window.innerHeight - 8;
-    const parentRect = el.parentElement?.getBoundingClientRect();
-    const spaceAbove = parentRect ? parentRect.top : rect.top;
-    if (overflowsBottom && spaceAbove >= rect.height + 8) setPlacement('top');
+    const posicionar = () => {
+      const anchor = anchorRef.current?.parentElement;
+      if (!anchor) return;
+      const a = anchor.getBoundingClientRect();
+      const h = ref.current?.offsetHeight ?? 420;
+      const right = Math.max(12, window.innerWidth - a.right);
+      const cabeEmbaixo = a.bottom + 8 + h <= window.innerHeight - 8;
+      if (cabeEmbaixo || a.top < h + 16) setPos({ top: Math.min(a.bottom + 8, Math.max(8, window.innerHeight - h - 8)), right });
+      else setPos({ bottom: window.innerHeight - a.top + 8, right });
+    };
+    posicionar();
+    window.addEventListener('resize', posicionar);
+    window.addEventListener('scroll', posicionar, true);
+    return () => {
+      window.removeEventListener('resize', posicionar);
+      window.removeEventListener('scroll', posicionar, true);
+    };
   }, [ref]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onCancel]);
-  return (
+  const pop = (
     <div
       ref={ref}
-      className={cn(
-        'absolute right-0 z-50 w-[360px] max-w-[calc(100vw-24px)] bg-bg-elev border border-line rounded-lg shadow-xl overflow-hidden',
-        placement === 'bottom' ? 'top-full mt-2' : 'bottom-full mb-2',
-      )}
+      style={{ position: 'fixed', top: pos?.top, bottom: pos?.bottom, right: pos?.right ?? 12, visibility: pos ? 'visible' : 'hidden' }}
+      className="z-50 w-[360px] max-w-[calc(100vw-24px)] bg-bg-elev border border-line rounded-lg shadow-xl overflow-hidden text-left"
     >
       <LancamentoForm taskTitulo={taskTitulo} initial={initial} onConfirm={onConfirm} onCancel={onCancel} />
     </div>
+  );
+  return (
+    <>
+      <span ref={anchorRef} hidden />
+      {typeof document !== 'undefined' ? createPortal(pop, document.body) : null}
+    </>
   );
 }
 
