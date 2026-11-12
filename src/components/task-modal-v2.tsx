@@ -1263,7 +1263,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
         </label>
       </div>
       <label className="m2-campo">
-        <span className="m2-lbl">Solicitação</span>
+        <span className="m2-lbl">Solicitação <span className="m2-req">*</span></span>
         <textarea
           className="inp m2-area"
           rows={4}
@@ -1299,7 +1299,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
         </div>
       </div>
       <label className="m2-campo m2-valor">
-        <span className="m2-lbl">Valor esperado</span>
+        <span className="m2-lbl">Valor esperado <span className="m2-req">*</span></span>
         <textarea
           className="inp m2-area"
           rows={2}

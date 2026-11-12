@@ -3626,6 +3626,9 @@ html:has(.fixed.inset-0, .pmodal-backdrop, .sheet-bg, .anexo-lightbox) body { ov
 .fixed.inset-0, .fixed.inset-0 *, .pmodal-backdrop, .pmodal-backdrop *, .sheet-bg, .sheet-bg *, .notif-painel, .notif-painel * {
   overscroll-behavior: contain;
 }
+/* Campos de texto não seguram a rolagem: ao rolar sobre um textarea que
+   não tem o que rolar, a roda passa para o corpo do modal */
+.fixed.inset-0 textarea, .pmodal-backdrop textarea, .sheet-bg textarea { overscroll-behavior: auto; }
 /* Números alinhados em todo o produto (substitui o JetBrains Mono) */
 html { font-variant-numeric: tabular-nums; }
 
@@ -3712,7 +3715,7 @@ select.m-select { padding-right: 18px; background-position: right 0 center; back
 .m2.m2-nova { width: min(780px, 100%); }
 @media (min-width: 768px) { .m2.m2-nova { height: auto; } }
 .m2-body.m2-body-nova { display: block; overflow-y: auto; overscroll-behavior: contain; }
-.m2-nova-form { border-right: 0; gap: 16px; padding: 20px 24px 24px; }
+.m2-main.m2-nova-form { border-right: 0; gap: 16px; padding: 20px 24px 24px; overflow: visible; overscroll-behavior: auto; }
 .m2-nova-form .m2-campo { gap: 6px; }
 .m2-nova-form .m2-campo .m2-lbl { font-size: 13px; text-transform: none; letter-spacing: 0; color: var(--ink); font-weight: 600; }
 .m2-nova-form .m2-valor .m2-lbl { color: var(--green); }

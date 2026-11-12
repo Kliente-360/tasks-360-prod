@@ -992,6 +992,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       if (!e.id && !e.clienteId) {
         return { ok: false, error: 'Escolha o cliente.' };
       }
+      if (!e.id && !e.descricao?.trim()) {
+        return { ok: false, error: 'Descreva a solicitação.' };
+      }
+      if (!e.id && !e.valorEsperado?.trim()) {
+        return { ok: false, error: 'Informe o valor esperado.' };
+      }
       if (e.subetapa === 'bloqueado' && !e.bloqueadoPor) {
         return { ok: false, error: 'Informe quem está bloqueando (Nós / Cliente / Terceiro).' };
       }
