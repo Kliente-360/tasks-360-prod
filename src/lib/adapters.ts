@@ -138,6 +138,7 @@ export function pessoaFromDb(r: Row): Pessoa {
     is_pm: r.is_pm === true,
     acesso_portal: r.acesso_portal === 'leitura' ? 'leitura' : 'completo',
     arquivado_em: (r.arquivado_em as string) ?? null,
+    fora_media_horas: r.fora_media_horas === true,
   };
 }
 

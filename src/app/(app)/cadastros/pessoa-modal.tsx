@@ -26,6 +26,8 @@ export type PessoaInitial = {
   skills: string[];
   senioridade: string | null;
   acessoPortal?: 'completo' | 'leitura';
+  /** Não lança horas como rotina: fica fora da média por dia do Timesheet */
+  foraMediaHoras?: boolean;
 };
 
 export const BLANK: PessoaInitial = {
@@ -40,6 +42,7 @@ export const BLANK: PessoaInitial = {
   skills: [],
   senioridade: '',
   acessoPortal: 'completo',
+  foraMediaHoras: false,
 };
 
 export function PessoaModal({
@@ -63,6 +66,7 @@ export function PessoaModal({
   const [skills, setSkills] = useState<string[]>(initial.skills);
   const [senioridade, setSenioridade] = useState(initial.senioridade ?? '');
   const [acessoPortal, setAcessoPortal] = useState<'completo' | 'leitura'>(initial.acessoPortal ?? 'completo');
+  const [foraMediaHoras, setForaMediaHoras] = useState(initial.foraMediaHoras ?? false);
   const [err, setErr] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const nomeRef = useRef<HTMLInputElement | null>(null);
@@ -123,6 +127,7 @@ export function PessoaModal({
       skills: role !== 'cliente' ? skills : [],
       senioridade: role !== 'cliente' ? senioridade || null : null,
       acesso_portal: role === 'cliente' ? acessoPortal : 'completo',
+      fora_media_horas: role !== 'cliente' ? foraMediaHoras : false,
     };
     startTransition(async () => {
       const sb = createClient();
@@ -153,6 +158,7 @@ export function PessoaModal({
     skills,
     senioridade,
     acessoPortal,
+    foraMediaHoras,
     onClose,
     upsertPessoa,
   ]);
@@ -312,6 +318,21 @@ export function PessoaModal({
                   />
                 </div>
               </div>
+
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={foraMediaHoras}
+                  onChange={(e) => setForaMediaHoras(e.target.checked)}
+                />
+                <span className="text-sm">
+                  Não somar horas na média
+                  <span className="block text-[11px] text-muted">
+                    Para quem não lança horas como rotina. As horas continuam no Timesheet, só ficam fora da média por dia do time.
+                  </span>
+                </span>
+              </label>
 
               <div>
                 <label className="lbl">Skills <span className="text-danger">*</span> <span className="text-[11px] text-muted font-normal">(mínimo 2)</span></label>

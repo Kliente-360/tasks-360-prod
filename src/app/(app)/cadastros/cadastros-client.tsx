@@ -725,6 +725,7 @@ export function CadastrosClient() {
                           <Chip show={!!p.arquivado_em} label="Arquivado" variant="muted" />
                           <Chip show={p.is_ceo === true} label="CEO" variant="muted" />
                           <Chip show={p.is_pm === true} label="PM" variant="muted" />
+                          <Chip show={p.fora_media_horas === true} label="Fora da média" variant="muted" />
                         </div>
                       </div>
                     </td>
@@ -827,6 +828,7 @@ export function CadastrosClient() {
                           skills: p.skills ?? [],
                           senioridade: p.senioridade,
                           acessoPortal: p.acesso_portal,
+                          foraMediaHoras: p.fora_media_horas,
                         }}
                         clientes={clienteOptions}
                       />
@@ -977,7 +979,7 @@ export function CadastrosClient() {
                     'flex items-center gap-3 px-3 py-3 border-b border-line last:border-b-0 cursor-pointer active:bg-[color:var(--surface-3)] transition-colors',
                     !ativo && 'opacity-50',
                   )}
-                  onClick={() => setMobileEditPessoa({ id: p.id, nome: p.nome, email: p.email, role: p.role, clienteId: p.cliente_id, clientePrincipalId: p.cliente_principal_id, clienteSecundarioId: p.cliente_secundario_id, capacidadeHorasSemana: p.capacidade_horas_semana, skills: p.skills ?? [], senioridade: p.senioridade, acessoPortal: p.acesso_portal })}
+                  onClick={() => setMobileEditPessoa({ id: p.id, nome: p.nome, email: p.email, role: p.role, clienteId: p.cliente_id, clientePrincipalId: p.cliente_principal_id, clienteSecundarioId: p.cliente_secundario_id, capacidadeHorasSemana: p.capacidade_horas_semana, skills: p.skills ?? [], senioridade: p.senioridade, acessoPortal: p.acesso_portal, foraMediaHoras: p.fora_media_horas })}
                 >
                   <Avatar label={p.nome} shape="circle" />
                   <div className="flex-1 min-w-0">
