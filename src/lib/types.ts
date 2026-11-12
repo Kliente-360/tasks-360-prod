@@ -191,6 +191,8 @@ export interface TimeEntry {
   endedAt: number | null;
   note: string | null;
   criadoEm: number;
+  /** Lançamento manual (data + duração): início/fim não são horário real */
+  manual?: boolean;
   /** Hora anônima de task privada (só análises/Timesheet de quem não a vê) */
   mascarada?: boolean;
 }

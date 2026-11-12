@@ -157,7 +157,7 @@ interface VelCardProps {
   deltaSign?: 'up' | 'down' | 'neutral';
 }
 
-function VelCard({ label, value, sub, meta, status, delta, deltaSign }: VelCardProps) {
+export function VelCard({ label, value, sub, meta, status, delta, deltaSign }: VelCardProps) {
   const valueColor =
     status === 'ok' ? 'text-[var(--brand-dark)]'
     : status === 'warn' ? 'text-[var(--warn)]'

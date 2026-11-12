@@ -350,7 +350,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     cutoff.setDate(cutoff.getDate() - TIME_ENTRIES_WINDOW_DAYS);
     const { data, error } = await sb
       .from('time_entries')
-      .select('id,task_id,pessoa_id,started_at,ended_at,note,criado_em')
+      .select('id,task_id,pessoa_id,started_at,ended_at,note,criado_em,manual')
       .gte('started_at', cutoff.toISOString())
       .order('started_at', { ascending: false })
       .limit(500);

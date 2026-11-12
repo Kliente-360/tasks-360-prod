@@ -4001,3 +4001,6 @@ button.m2-vis-tag { cursor: pointer; }
   .m2-saida-pe .m2-btn { flex: 1; height: 42px; justify-content: center; }
   .m2-saida-pe .m2-voltar { margin: 0; flex-basis: 100%; text-align: center; order: 2; }
 }
+
+/* Timesheet · linhas não abrem nada ao clicar (só o título da tarefa) */
+.ts-tbl tbody tr.ts-row { cursor: default; }

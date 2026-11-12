@@ -150,6 +150,7 @@ export function timeEntryFromDb(r: Row): TimeEntry {
     endedAt: r.ended_at ? new Date(r.ended_at as string).getTime() : null,
     note: r.note ? String(r.note) : null,
     criadoEm: dateMs(r.criado_em),
+    manual: r.manual === true,
   };
 }
 

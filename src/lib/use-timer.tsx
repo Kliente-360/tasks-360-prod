@@ -122,6 +122,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         pessoa_id: currentPessoa.id,
         started_at: startedAt.toISOString(),
         ended_at: endedAt.toISOString(),
+        manual: true,
       };
       if (note) row.note = note;
       const { data } = await supabase.from('time_entries').insert(row).select().single();
