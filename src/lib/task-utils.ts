@@ -5,7 +5,7 @@
  */
 
 import type { Task } from './types';
-import { STATUS, STAGE_RANK } from './task-constants';
+import { STATUS, STAGE_RANK, GRUPO_BACKLOG } from './task-constants';
 
 /** Esforço efetivo: usa o declarado, ou 4h como fallback se zero/null. */
 export function effEsforco(t: Pick<Task, 'esforco'>): number {
@@ -458,3 +458,12 @@ export function validateSubetapaAdvance(
   return { ok: true };
 }
 
+
+/** Da homologação em diante, voltar para Backlog ou Desenvolvimento só pelo
+ *  botão "Voltar para ajuste" do modal, com justificativa que o cliente vê.
+ *  Troca manual (seletor de etapa, arrastar no Kanban/Calendário) é barrada. */
+const SUBS_DA_HOMOLOGACAO = new Set(['em_homologacao', 'pronto_producao', 'em_implantacao']);
+export function voltaSemJustificativa(de: string, para: string): boolean {
+  return SUBS_DA_HOMOLOGACAO.has(de) && (GRUPO_BACKLOG.has(para) || para === 'em_desenvolvimento' || para === 'em_revisao');
+}
+export const MSG_VOLTA_SEM_JUSTIFICATIVA = 'Para tirar uma tarefa da homologação, abra a tarefa e use "Voltar para ajuste", com a justificativa para o cliente.';

@@ -21,6 +21,7 @@ import {
   AREAS_TECNICAS, AREA_LABEL, GRUPO_BACKLOG, SUB_LABELS, SUB_TO_MACRO, TIPOS_TRABALHO,
 } from '@/lib/task-constants';
 import type { Cliente, Pessoa, Projeto, Task, TimeEntry } from '@/lib/types';
+import { voltaSemJustificativa } from '@/lib/task-utils';
 
 // ============================================================
 // Tipos
@@ -224,13 +225,15 @@ function usePop() {
 }
 
 function Op({
-  sel, onClick, children, perigo, sub,
+  sel, onClick, children, perigo, sub, disabled, title,
 }: {
   sel?: boolean;
   onClick: () => void;
   children: React.ReactNode;
   perigo?: boolean;
   sub?: string;
+  disabled?: boolean;
+  title?: string;
 }) {
   return (
     <button
@@ -239,6 +242,8 @@ function Op({
       aria-checked={!!sel}
       className={cn('m2-op', sel && 'sel', perigo && 'perigo')}
       onClick={onClick}
+      disabled={disabled}
+      title={title}
     >
       <span>{children}</span>
       {sub && <small>{sub}</small>}
@@ -264,7 +269,13 @@ function ChipEtapa({ editing, onEscolher }: { editing: Task; onEscolher: (s: str
           <div key={g.titulo}>
             <div className="m2-grupo">{g.titulo}</div>
             {g.subs.map((s) => (
-              <Op key={s} sel={editing.subetapa === s} onClick={() => { p.close(); onEscolher(s); }}>
+              <Op
+                key={s}
+                sel={editing.subetapa === s}
+                onClick={() => { p.close(); onEscolher(s); }}
+                disabled={voltaSemJustificativa(editing.subetapa, s)}
+                title={voltaSemJustificativa(editing.subetapa, s) ? 'Use "Voltar para ajuste", com a justificativa para o cliente' : undefined}
+              >
                 {SUB_LABELS[s]}
               </Op>
             ))}
@@ -574,12 +585,16 @@ function Passos({ editing, onTransicao }: { editing: Task; onTransicao: TaskModa
   const [ocupado, setOcupado] = useState(false);
   const [reabrindo, setReabrindo] = useState(false);
   const [motivo, setMotivo] = useState('');
-  const ir = async (patch: Partial<Task>) => {
+  // Voltar da homologação para ajuste: justificativa obrigatória, que vira
+  // mensagem na conversa (o cliente vê, se a tarefa é visível para ele)
+  const [ajustando, setAjustando] = useState(false);
+  const [justificativa, setJustificativa] = useState('');
+  const ir = async (patch: Partial<Task>, opts?: Parameters<TaskModalV2Props['onTransicao']>[1]) => {
     if (ocupado) return;
     setOcupado(true);
-    const ok = await onTransicao(patch);
+    const ok = await onTransicao(patch, opts);
     setOcupado(false);
-    if (ok) { setReabrindo(false); setMotivo(''); }
+    if (ok) { setReabrindo(false); setMotivo(''); setAjustando(false); setJustificativa(''); }
   };
   const sub = editing.subetapa;
   type Acao = { label: string; patch: Partial<Task>; primario?: boolean };
@@ -590,7 +605,6 @@ function Passos({ editing, onTransicao }: { editing: Task; onTransicao: TaskModa
   } else if (sub === 'em_homologacao') {
     avancar = [
       { label: 'Pronto para produção', patch: { subetapa: 'pronto_producao' }, primario: true },
-      { label: 'Pedir ajustes', patch: { subetapa: 'em_revisao' } },
     ];
   } else if (sub === 'pronto_producao') {
     avancar = [
@@ -630,9 +644,46 @@ function Passos({ editing, onTransicao }: { editing: Task; onTransicao: TaskModa
       </div>
     );
   }
-  if (!avancar.length && !voltar) return null;
+  if (sub === 'em_homologacao' && ajustando) {
+    const visivel = editing.visivelCliente !== false;
+    return (
+      <div className="m2-saida">
+        <label className="m2-campo">
+          <span className="m2-lbl">
+            {visivel ? 'Por que voltou para ajuste (o cliente vê)' : 'Por que voltou para ajuste'} <span className="m2-req">*</span>
+          </span>
+          <textarea
+            rows={3}
+            autoFocus
+            value={justificativa}
+            onChange={(e) => setJustificativa(e.target.value)}
+            placeholder="O que precisa ser ajustado antes de voltar para a homologação"
+          />
+        </label>
+        <div className="m2-saida-pe">
+          <button type="button" className="m2-link" onClick={() => { setAjustando(false); setJustificativa(''); }}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="m2-btn primario"
+            disabled={!justificativa.trim() || ocupado}
+            onClick={() => ir({ subetapa: 'em_revisao' }, { mensagem: { body: justificativa.trim(), visivel } })}
+          >
+            {ocupado ? 'Salvando…' : 'Voltar para ajuste'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  if (!avancar.length && !voltar && sub !== 'em_homologacao') return null;
   return (
     <div className="m2-passos">
+      {sub === 'em_homologacao' && (
+        <button type="button" className="m2-link m2-voltar" disabled={ocupado} onClick={() => setAjustando(true)}>
+          ← Voltar para ajuste
+        </button>
+      )}
       {voltar && (
         <button type="button" className="m2-link m2-voltar" disabled={ocupado} onClick={() => ir(voltar!.patch)}>
           ← {voltar.label}

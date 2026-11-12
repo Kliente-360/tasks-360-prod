@@ -33,7 +33,7 @@ import { FilterBar, type MoreMenuItem } from '@/components/filter-bar';
 import { Icon } from '@/components/icons';
 import { PriChip, TaskAvatar, PrazoLabel, RadarBadge, PedidoPrioridadeChip } from '@/components/task-card/primitives';
 import { createClient } from '@/lib/supabase/client';
-import { atrasada, etapaTempoColor, etapaTempoDays, fmtDateShort, isPreTriagem, lblStatus, matchesPrazoFilter, needsTriage, sumTimeEntriesHours, triageFailures, validateSubetapaAdvance, type PrazoFilter } from '@/lib/task-utils';
+import { atrasada, etapaTempoColor, etapaTempoDays, fmtDateShort, isPreTriagem, lblStatus, matchesPrazoFilter, MSG_VOLTA_SEM_JUSTIFICATIVA, needsTriage, sumTimeEntriesHours, triageFailures, validateSubetapaAdvance, voltaSemJustificativa, type PrazoFilter } from '@/lib/task-utils';
 import { SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
 import { getSharedFilters, patchSharedFilters, clearSharedFilters } from '@/lib/shared-filters';
@@ -230,6 +230,7 @@ export function KanbanClient() {
   const setTaskSubetapa = useCallback(
     async (t: Task, newSub: string) => {
       if (!t || t.subetapa === newSub) return;
+      if (voltaSemJustificativa(t.subetapa, newSub)) { toast.error(MSG_VOLTA_SEM_JUSTIFICATIVA); return; }
       track('task_update', { task_id: t.id, props: { campos: ['subetapa'], origem: 'kanban', para: newSub } });
       // Hidrata campos lazy antes de validar. Boot pula descricao/
       // criterio_aceite/solucao_implementada/valor_esperado/valor_entregue

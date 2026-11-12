@@ -33,8 +33,10 @@ import {
   fmtDate,
   fmtDateShort,
   isPreTriagem,
+  MSG_VOLTA_SEM_JUSTIFICATIVA,
   needsTriage,
   triageFailures,
+  voltaSemJustificativa,
 } from '@/lib/task-utils';
 import { SUB_TO_MACRO } from '@/lib/task-constants';
 import { CLEAR_FILTERS_EVENT } from '@/lib/events';
@@ -298,6 +300,7 @@ export function CalendarioClient() {
   const setTaskSubetapa = useCallback(
     async (t: Task, newSub: string) => {
       if (!t || t.subetapa === newSub) return;
+      if (voltaSemJustificativa(t.subetapa, newSub)) { toast.error(MSG_VOLTA_SEM_JUSTIFICATIVA); return; }
       track('task_update', { task_id: t.id, props: { campos: ['subetapa'], origem: 'calendario', para: newSub } });
       const newMacro = SUB_TO_MACRO[newSub] ?? t.status;
       const macroChanged = t.status !== newMacro;
