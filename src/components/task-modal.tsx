@@ -1410,10 +1410,9 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       onClose();
       return;
     }
-    const pending: Promise<unknown>[] = [];
-    if (newComment.trim()) pending.push(postComment());
-    if (replyingToId && newReply.trim()) pending.push(submitReply(replyingToId));
-    if (editingCommentId && editingCommentDraft.trim()) pending.push(saveEditComment(editingCommentId));
+    // Comentário, resposta e edição de comentário só saem com ação explícita
+    // (Enviar / ⌘↵). Fechar não posta nada; o rascunho do comentário novo
+    // fica guardado no navegador e volta quando a tarefa reabrir.
     // Autosave de fechamento: se falha (gate de subetapa por ex.),
     // emite toast E NÃO FECHA o modal — evita o caso do usuário ver
     // o autosave parado em "error" e fechar achando que tá tudo certo.
@@ -1426,17 +1425,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         autosaveFailed = true;
       }
     }
-    if (pending.length) {
-      try {
-        await Promise.all(pending);
-      } catch {
-        /* segue mesmo com erro — onClose fecha */
-      }
-    }
     if (autosaveFailed) return; // mantém aberto pra usuário corrigir
     onClose();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newComment, replyingToId, newReply, editingCommentId, editingCommentDraft, editing.id, autosaveNow, onClose]);
+  }, [editing.id, autosaveNow, onClose]);
 
   // ESC fecha · MAS bloqueado quando autosave falhou (gate de campo
   // obrigatório). Só botão de fechar (×) consegue sair sem persistir
@@ -2273,16 +2265,57 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     ajuste_solicitado: 'Pedido de ajuste',
   };
 
-  // Campo da conversa cresce com o texto até 5 linhas; depois rola por dentro
+  // Campo da conversa: cresce com o texto até 5 linhas e encolhe ao apagar.
+  // A alça na borda de cima fixa uma altura maior (lembrada no navegador);
+  // duplo clique volta ao automático.
+  const [alturaManual, setAlturaManual] = useState<number | null>(() => {
+    try {
+      const v = Number(localStorage.getItem('k360-composer-altura'));
+      return v > 38 ? v : null;
+    } catch {
+      return null;
+    }
+  });
   useLayoutEffect(() => {
     const el = newCommentRef.current;
     if (!el || !el.closest('.m2-composer')) return;
-    const MAX = 118; // 5 linhas de 20px + 18px de respiro
+    const AUTO_MAX = 118; // 5 linhas de 20px + 18px de respiro
     el.style.height = 'auto';
-    const alvo = Math.min(el.scrollHeight, MAX);
-    el.style.height = `${Math.max(38, alvo)}px`;
-    el.style.overflowY = el.scrollHeight > MAX ? 'auto' : 'hidden';
-  }, [newComment, modalNovo]);
+    const h = Math.max(alturaManual ?? 38, Math.min(el.scrollHeight, AUTO_MAX));
+    el.style.height = `${h}px`;
+    el.style.overflowY = el.scrollHeight > h ? 'auto' : 'hidden';
+  }, [newComment, modalNovo, alturaManual]);
+  const arrastarComposer = (ev: React.PointerEvent<HTMLDivElement>) => {
+    const ta = newCommentRef.current;
+    if (!ta) return;
+    ev.preventDefault();
+    const alca = ev.currentTarget;
+    alca.setPointerCapture(ev.pointerId);
+    const y0 = ev.clientY;
+    const h0 = ta.getBoundingClientRect().height;
+    const maxH = Math.max(160, Math.round(window.innerHeight * 0.5));
+    let h = h0;
+    const mover = (e: PointerEvent) => {
+      h = Math.min(maxH, Math.max(38, Math.round(h0 + (y0 - e.clientY))));
+      setAlturaManual(h > 40 ? h : null);
+    };
+    const soltar = () => {
+      alca.removeEventListener('pointermove', mover);
+      alca.removeEventListener('pointerup', soltar);
+      alca.removeEventListener('pointercancel', soltar);
+      try {
+        if (h > 40) localStorage.setItem('k360-composer-altura', String(h));
+        else localStorage.removeItem('k360-composer-altura');
+      } catch { /* sem storage */ }
+    };
+    alca.addEventListener('pointermove', mover);
+    alca.addEventListener('pointerup', soltar);
+    alca.addEventListener('pointercancel', soltar);
+  };
+  const resetarComposer = () => {
+    setAlturaManual(null);
+    try { localStorage.removeItem('k360-composer-altura'); } catch { /* sem storage */ }
+  };
 
   const jsxConversaV2 = (
     <>
@@ -2414,6 +2447,15 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       </AnexosMsgContext.Provider>
       {editing.id && (
         <div className="tmodal-composer m2-composer relative">
+          <div
+            className="m2-composer-alca"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Arraste para aumentar o campo"
+            title="Arraste para aumentar · duplo clique volta ao automático"
+            onPointerDown={arrastarComposer}
+            onDoubleClick={resetarComposer}
+          />
           {respondendo && (
             <div className="m2-respondendo">
               <span>
