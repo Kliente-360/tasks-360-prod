@@ -526,6 +526,14 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   // ===== Editing state =====
   const [editing, setEditing] = useState<Task>(() => (source ? { ...source } : blankEditing()));
   const editingRef = useRef(editing);
+  // Esforço fora do Backlog trava, salvo se a tarefa saiu sem estimativa:
+  // aí pode preencher (o banco aceita uma vez). Lido ao abrir a tarefa, para
+  // o campo não travar no meio da digitação.
+  const [esforcoVazioAoAbrir, setEsforcoVazioAoAbrir] = useState(false);
+  useEffect(() => {
+    setEsforcoVazioAoAbrir(!(Number(editingRef.current.esforco) > 0) && editingRef.current.esforcoInicial == null);
+  }, [editing.id]);
+  const esforcoTravado = !!editing.id && !esforcoVazioAoAbrir && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null);
   editingRef.current = editing;
 
   // Criação: prints escolhidos/colados antes de a tarefa existir (sobem depois do insert)
@@ -3206,8 +3214,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     className={cn('inp', isMissing('esforco'))}
                     value={editing.esforco}
                     onChange={(e) => set('esforco', Number(e.target.value) || 0)}
-                    disabled={!!editing.id && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null)}
-                    title={!!editing.id && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null) ? 'Esforço travado: a task já saiu do Backlog' : undefined}
+                    disabled={esforcoTravado}
+                    title={esforcoTravado ? 'Esforço travado: a task já saiu do Backlog' : undefined}
                   />
                 </div>
                 <div>
@@ -3609,8 +3617,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
                     className={cn('inp', isMissing('esforco'))}
                     value={editing.esforco}
                     onChange={(e) => set('esforco', Number(e.target.value) || 0)}
-                    disabled={!!editing.id && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null)}
-                    title={!!editing.id && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null) ? 'Esforço travado: a task já saiu do Backlog' : undefined}
+                    disabled={esforcoTravado}
+                    title={esforcoTravado ? 'Esforço travado: a task já saiu do Backlog' : undefined}
                   />
                 </div>
               </div>

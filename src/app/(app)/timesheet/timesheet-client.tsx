@@ -201,7 +201,14 @@ export function TimesheetClient() {
     const d30 = Date.now() - 30 * DIA_MS;
     // W-1 até o mesmo ponto da semana (mesmo dia e hora, 7 dias atrás)
     const w1Corte = Date.now() - 7 * DIA_MS;
-    let msW0 = 0, msW1 = 0, msW1Ate = 0, msW2 = 0, ms30 = 0, msPrio = 0, msEstr = 0;
+    let msW0 = 0, msW1 = 0, msW1Ate = 0, msW2 = 0, ms30 = 0, msPrio = 0, msEstr = 0, msMedia = 0;
+    // Média por dia: só quem produz horas como rotina (fora CEO, PM e quem
+    // está marcado fora da média). Pessoas arquivadas contam: as horas delas
+    // no período foram trabalho real, e a divisão é por dia, não por pessoa.
+    const contaNaMedia = (pessoaId: string) => {
+      const p = pessoasById.get(pessoaId);
+      return !p?.is_ceo && !p?.is_pm && !p?.fora_media_horas;
+    };
     for (const e of entries) {
       const ms = duracaoMs(e);
       if (e.startedAt >= w0) msW0 += ms;
@@ -212,6 +219,7 @@ export function TimesheetClient() {
       else if (e.startedAt >= w2) msW2 += ms;
       if (e.startedAt >= d30) {
         ms30 += ms;
+        if (contaNaMedia(e.pessoaId)) msMedia += ms;
         const t = tasksAnaliseById.get(e.taskId);
         if (t?.prioridade === 'P0' || t?.prioridade === 'P1') msPrio += ms;
         if (t && clientesById.get(t.clienteId)?.tier === 'estrategico') msEstr += ms;
@@ -227,11 +235,11 @@ export function TimesheetClient() {
     return {
       msW0, msW1, msW1Ate, msW2,
       // Time todo somado ÷ dias úteis
-      mediaDiaMs: diasUteis ? ms30 / diasUteis : null,
+      mediaDiaMs: diasUteis ? msMedia / diasUteis : null,
       pctPrio: pct(msPrio),
       pctEstr: pct(msEstr),
     };
-  }, [entries, tasksAnaliseById, clientesById]);
+  }, [entries, tasksAnaliseById, clientesById, pessoasById]);
 
   async function deleteEntry(id: string) {
     const supabase = createClient();

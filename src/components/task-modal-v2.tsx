@@ -808,7 +808,15 @@ export function TaskModalV2(props: TaskModalV2Props) {
   const esforco = Number(editing.esforco) || 0;
   const estourou = esforco > 0 && horasLancadas > esforco;
   // Estimativa trava na primeira saída do Backlog (esforco_inicial preenchido), mesmo se voltar
-  const esforcoTravado = !nova && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null);
+  // Saiu do Backlog sem estimativa: o campo continua aberto para preencher
+  // (lido ao abrir a tarefa, para não sumir no meio da digitação)
+  const [esforcoVazioAoAbrir, setEsforcoVazioAoAbrir] = useState(false);
+  const editingAtual = useRef(editing);
+  editingAtual.current = editing;
+  useEffect(() => {
+    setEsforcoVazioAoAbrir(!(Number(editingAtual.current.esforco) > 0) && editingAtual.current.esforcoInicial == null);
+  }, [editing.id]);
+  const esforcoTravado = !nova && !esforcoVazioAoAbrir && (!GRUPO_BACKLOG.has(editing.subetapa) || editing.esforcoInicial != null);
 
   // ---------- Cabeçalho ----------
   const cabecalho = (

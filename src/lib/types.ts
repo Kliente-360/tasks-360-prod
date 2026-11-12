@@ -181,6 +181,8 @@ export interface Pessoa {
   acesso_portal?: 'completo' | 'leitura';
   /** Saiu da empresa · some de listas e análises, mantém o histórico. */
   arquivado_em?: string | null;
+  /** Não lança horas como rotina: fica fora da média por dia do Timesheet */
+  fora_media_horas?: boolean;
 }
 
 export interface TimeEntry {
