@@ -821,17 +821,15 @@ export function TaskModalV2(props: TaskModalV2Props) {
           {(editing.reopenCount || 0) > 0 && <span> · reaberta {editing.reopenCount}x</span>}
           {editing.arquivadoEm && <span> · arquivada</span>}
         </div>
-        {nova ? (
-          <h2 className="m2-title m2-title-nova">{editing.titulo.trim() || 'Nova tarefa'}</h2>
-        ) : (
         <input
           className="m2-title"
           value={editing.titulo}
           onChange={(e) => set('titulo', e.target.value)}
-          placeholder="O que precisa ser feito?"
+          placeholder={nova ? 'Título: o que precisa ser feito?' : 'O que precisa ser feito?'}
           aria-label="Título da tarefa"
+          aria-required={nova || undefined}
+          autoFocus={nova}
         />
-        )}
       </div>
       <div className="m2-head-actions">
         {!nova && (
@@ -1199,16 +1197,6 @@ export function TaskModalV2(props: TaskModalV2Props) {
   const addImagens = (files: File[]) => setImagensNova((cur) => juntarPendentes(cur, files));
   const formNova = (
     <div className="m2-main m2-nova-form">
-      <label className="m2-campo">
-        <span className="m2-lbl">Título <span className="m2-req">*</span></span>
-        <input
-          className="inp"
-          value={editing.titulo}
-          onChange={(e) => set('titulo', e.target.value)}
-          placeholder="O que precisa ser feito?"
-          autoFocus
-        />
-      </label>
       <div className="m2-grid2 m2-grid3">
         {selCliente}
         <label className="m2-campo">
@@ -1266,7 +1254,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
         <span className="m2-lbl">Solicitação <span className="m2-req">*</span></span>
         <textarea
           className="inp m2-area"
-          rows={4}
+          rows={3}
           value={editing.descricao ?? ''}
           onChange={(e) => set('descricao', e.target.value)}
           placeholder="Contexto, o que o cliente pediu, exemplos e links."

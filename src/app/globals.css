@@ -3721,7 +3721,6 @@ select.m-select { padding-right: 18px; background-position: right 0 center; back
 .m2-nova-form .m2-valor .m2-lbl { color: var(--green); }
 .m2-lbl-dica { font-weight: 400; color: var(--muted); }
 .m2-span2 { grid-column: span 2; }
-.m2-title-nova { margin: 0; font-size: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .m2-nova .m2-foot .m2-priv { margin-right: auto; }
 @media (max-width: 767px) { .m2-span2 { grid-column: auto; } }
 .m2-dep-x { border: 0; background: none; color: inherit; opacity: .6; cursor: pointer; font-size: 14px; line-height: 1; padding: 0 0 0 2px; }
