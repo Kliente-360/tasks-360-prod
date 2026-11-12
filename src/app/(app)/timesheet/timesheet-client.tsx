@@ -16,17 +16,13 @@ import { timeEntryFromDb } from '@/lib/adapters';
 import { cn } from '@/lib/utils';
 import type { Task, TimeEntry } from '@/lib/types';
 
-type TsKey = 'pessoa' | 'cliente' | 'projeto' | 'tarefa' | 'data' | 'duracao' | 'inicio' | 'fim';
+type TsKey = 'pessoa' | 'cliente' | 'projeto' | 'tarefa' | 'data' | 'duracao';
 type SortKey = { key: TsKey; dir: 'asc' | 'desc' };
 
 const DIA_MS = 86_400_000;
 const duracaoMs = (e: TimeEntry) => (e.endedAt ?? Date.now()) - e.startedAt;
 /** Horas em decimal pt-BR: 12,5h */
 const fmtHoras = (ms: number) => `${(ms / 3_600_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}h`;
-
-function fmtTime(ms: number) {
-  return new Date(ms).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
 
 function fmtDateTime(ms: number) {
   return new Date(ms).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -124,8 +120,7 @@ export function TimesheetClient() {
   const sorted = useMemo(() => {
     const arr = [...entries];
     if (sortKeys.length === 0) return arr.sort((a, b) => b.startedAt - a.startedAt);
-    const minutosDoDia = (ms: number) => { const d = new Date(ms); return d.getHours() * 60 + d.getMinutes(); };
-    const val = (e: TimeEntry, k: TsKey): string | number | null => {
+    const val = (e: TimeEntry, k: TsKey): string | number => {
       const t = tasksById.get(e.taskId);
       switch (k) {
         case 'pessoa': return pessoasById.get(e.pessoaId)?.nome ?? '';
@@ -134,8 +129,6 @@ export function TimesheetClient() {
         case 'tarefa': return e.mascarada ? '' : (t?.titulo ?? '');
         case 'data': return e.startedAt;
         case 'duracao': return duracaoMs(e);
-        case 'inicio': return e.manual ? null : minutosDoDia(e.startedAt);
-        case 'fim': return e.manual || !e.endedAt ? null : minutosDoDia(e.endedAt);
       }
     };
     return arr.sort((a, b) => {
@@ -143,9 +136,6 @@ export function TimesheetClient() {
         const av = val(a, key);
         const bv = val(b, key);
         if (av === bv) continue;
-        // Sem valor (lançamento manual em Início/Fim) vai sempre para o fim
-        if (av === null) return 1;
-        if (bv === null) return -1;
         const cmp = typeof av === 'string' && typeof bv === 'string' ? av.localeCompare(bv, 'pt-BR') : av < bv ? -1 : 1;
         if (cmp !== 0) return dir === 'asc' ? cmp : -cmp;
       }
@@ -377,9 +367,7 @@ export function TimesheetClient() {
               <col style={{ width: 140 }} />
               <col />
               <col style={{ width: 96 }} />
-              <col style={{ width: 128 }} />
-              <col style={{ width: 84 }} />
-              <col style={{ width: 84 }} />
+              <col style={{ width: 96 }} />
               <col style={{ width: 112 }} />
             </colgroup>
             <thead>
@@ -389,9 +377,7 @@ export function TimesheetClient() {
                 <TsTh label="Projeto" k="projeto" sortBy={sortBy} sortIcon={sortIcon} />
                 <TsTh label="Tarefa" k="tarefa" sortBy={sortBy} sortIcon={sortIcon} />
                 <TsTh label="Data" k="data" sortBy={sortBy} sortIcon={sortIcon} />
-                <TsTh label="Total horas" k="duracao" sortBy={sortBy} sortIcon={sortIcon} align="right" />
-                <TsTh label="Início" k="inicio" className="ts-ini" sortBy={sortBy} sortIcon={sortIcon} title="Só para registros do cronômetro" />
-                <TsTh label="Fim" k="fim" sortBy={sortBy} sortIcon={sortIcon} title="Só para registros do cronômetro" />
+                <TsTh label="Horas" k="duracao" sortBy={sortBy} sortIcon={sortIcon} align="right" />
                 <th />
               </tr>
             </thead>
@@ -401,7 +387,7 @@ export function TimesheetClient() {
                 <tbody key={group.key}>
                   {grouped && (
                     <tr className="group-header cursor-pointer" onClick={() => toggleGroup(group.key)}>
-                      <td colSpan={9} className="bg-bg-elev hover:bg-brand-tint transition-colors py-2 px-3 border-y border-line">
+                      <td colSpan={7} className="bg-bg-elev hover:bg-brand-tint transition-colors py-2 px-3 border-y border-line">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="text-muted font-mono text-xs w-3 inline-block">{fechado ? '▸' : '▾'}</span>
@@ -445,10 +431,6 @@ export function TimesheetClient() {
                         <td className="font-mono text-xs text-muted">{fmtDateTime(e.startedAt)}</td>
                         <td className={`text-right font-mono font-medium ${isRunning ? 'text-[color:var(--brand)]' : ''}`}>
                           {fmtDuration(duracaoMs(e))}
-                        </td>
-                        <td className="font-mono text-xs text-muted ts-ini">{e.manual ? '-' : fmtTime(e.startedAt)}</td>
-                        <td className="font-mono text-xs text-muted">
-                          {e.manual ? '-' : e.endedAt ? fmtTime(e.endedAt) : <span className="text-[color:var(--brand)]">agora</span>}
                         </td>
                         <td className="text-right relative">
                           {canDel && !isRunning && (
