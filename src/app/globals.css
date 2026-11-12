@@ -4004,3 +4004,5 @@ button.m2-vis-tag { cursor: pointer; }
 
 /* Timesheet · linhas não abrem nada ao clicar (só o título da tarefa) */
 .ts-tbl tbody tr.ts-row { cursor: default; }
+/* Respiro entre "Total horas" (alinhado à direita) e "Início" */
+.tbl-wrap .ts-tbl thead th.ts-ini, .ts-tbl tbody td.ts-ini { padding-left: 24px; }

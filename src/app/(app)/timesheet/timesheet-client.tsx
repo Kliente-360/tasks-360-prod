@@ -349,9 +349,9 @@ export function TimesheetClient() {
           </span>
         </div>
         <div className="p-3 md:p-4 grid grid-cols-2 md:grid-cols-5 gap-2 md:gap-3">
-          <TsKpi label="Esta semana" value={fmtHoras(kpis.msW0)} {...variacao(kpis.msW0, kpis.msW1Ate, 'vs semana passada até agora')} />
-          <TsKpi label="Semana passada" value={fmtHoras(kpis.msW1)} {...variacao(kpis.msW1, kpis.msW2, 'vs a anterior')} />
-          <TsKpi label="Média por dia" value={kpis.mediaDiaMs != null ? fmtHoras(kpis.mediaDiaMs) : '—'} legenda="time · dias úteis · 30 dias" />
+          <TsKpi label="Esta semana" value={fmtHoras(kpis.msW0)} {...variacao(kpis.msW0, kpis.msW1Ate, 'vs semana anterior')} />
+          <TsKpi label="Semana passada" value={fmtHoras(kpis.msW1)} {...variacao(kpis.msW1, kpis.msW2, 'vs semana anterior')} />
+          <TsKpi label="Média por dia" value={kpis.mediaDiaMs != null ? fmtHoras(kpis.mediaDiaMs) : '—'} legenda="últimos 30 dias" />
           <TsKpi label="P0 e P1" value={kpis.pctPrio != null ? `${kpis.pctPrio}%` : '—'} legenda="últimos 30 dias" />
           <TsKpi label="Clientes estratégicos" value={kpis.pctEstr != null ? `${kpis.pctEstr}%` : '—'} legenda="últimos 30 dias" />
         </div>
@@ -368,10 +368,10 @@ export function TimesheetClient() {
               <col style={{ width: 140 }} />
               <col style={{ width: 140 }} />
               <col />
-              <col style={{ width: 90 }} />
               <col style={{ width: 96 }} />
-              <col style={{ width: 70 }} />
-              <col style={{ width: 70 }} />
+              <col style={{ width: 128 }} />
+              <col style={{ width: 84 }} />
+              <col style={{ width: 84 }} />
               <col style={{ width: 112 }} />
             </colgroup>
             <thead>
@@ -382,7 +382,7 @@ export function TimesheetClient() {
                 <TsTh label="Tarefa" k="tarefa" sortBy={sortBy} sortIcon={sortIcon} />
                 <TsTh label="Data" k="data" sortBy={sortBy} sortIcon={sortIcon} />
                 <TsTh label="Total horas" k="duracao" sortBy={sortBy} sortIcon={sortIcon} align="right" />
-                <TsTh label="Início" k="inicio" sortBy={sortBy} sortIcon={sortIcon} title="Só para registros do cronômetro" />
+                <TsTh label="Início" k="inicio" className="ts-ini" sortBy={sortBy} sortIcon={sortIcon} title="Só para registros do cronômetro" />
                 <TsTh label="Fim" k="fim" sortBy={sortBy} sortIcon={sortIcon} title="Só para registros do cronômetro" />
                 <th />
               </tr>
@@ -438,7 +438,7 @@ export function TimesheetClient() {
                         <td className={`text-right font-mono font-medium ${isRunning ? 'text-[color:var(--brand)]' : ''}`}>
                           {fmtDuration(duracaoMs(e))}
                         </td>
-                        <td className="font-mono text-xs text-muted">{e.manual ? '-' : fmtTime(e.startedAt)}</td>
+                        <td className="font-mono text-xs text-muted ts-ini">{e.manual ? '-' : fmtTime(e.startedAt)}</td>
                         <td className="font-mono text-xs text-muted">
                           {e.manual ? '-' : e.endedAt ? fmtTime(e.endedAt) : <span className="text-[color:var(--brand)]">agora</span>}
                         </td>
@@ -513,16 +513,17 @@ export function TimesheetClient() {
   );
 }
 
-function TsTh({ label, k, sortBy, sortIcon, align, title }: {
+function TsTh({ label, k, sortBy, sortIcon, align, title, className }: {
   label: string;
   k: TsKey;
   sortBy: (k: TsKey) => void;
   sortIcon: (k: TsKey) => string;
   align?: 'right';
   title?: string;
+  className?: string;
 }) {
   return (
-    <th className={`sortable ${align === 'right' ? 'text-right' : ''}`} onClick={() => sortBy(k)} title={title}>
+    <th className={cn('sortable', align === 'right' && 'text-right', className)} onClick={() => sortBy(k)} title={title}>
       {label} <span className="text-[10px] ml-1 text-ink">{sortIcon(k)}</span>
     </th>
   );
@@ -531,7 +532,7 @@ function TsTh({ label, k, sortBy, sortIcon, align, title }: {
 /** Variação em horas para a linha do card: ▲ +2,1h vs ... */
 function variacao(atual: number, base: number, rotulo: string): { legenda: string; sinal: 'up' | 'down' | 'neutral' } {
   const diff = atual - base;
-  if (Math.abs(diff) < 60_000) return { legenda: rotulo.replace(/^vs (a )?/, 'igual à '), sinal: 'neutral' };
+  if (Math.abs(diff) < 60_000) return { legenda: rotulo.replace(/^vs /, 'igual à '), sinal: 'neutral' };
   return { legenda: `${diff > 0 ? '+' : '−'}${fmtHoras(Math.abs(diff))} ${rotulo}`, sinal: diff > 0 ? 'up' : 'down' };
 }
 
