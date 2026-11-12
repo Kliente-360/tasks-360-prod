@@ -3917,12 +3917,9 @@ select.m-select { padding-right: 18px; background-position: right 0 center; back
 .m2-convo .pmodal-msg-body { overflow-wrap: anywhere; }
 .m2-convo .pmodal-msg-body a { color: var(--green); text-decoration: underline; }
 .m2-composer { flex: none; padding: 10px 16px 14px; }
-.m2-composer-alca { position: absolute; left: 0; right: 0; top: -5px; height: 10px; cursor: ns-resize; z-index: 2; touch-action: none; }
-.m2-composer-alca::after { content: ''; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: transparent; transition: background 120ms; }
-.m2-composer-alca:hover::after, .m2-composer-alca:active::after { background: var(--green); }
-.tmodal-composer-pill.m2-pill-alta { padding-top: 0; padding-bottom: 0; }
-.tmodal-composer-pill.m2-pill-alta textarea { height: auto; min-height: 0; max-height: none; overflow-y: auto; white-space: pre-wrap; padding: 10px 0; }
-.tmodal-composer-pill.m2-pill-alta .anexo-clipe, .tmodal-composer-pill.m2-pill-alta .tmodal-composer-send { align-self: flex-end; margin-bottom: 4px; }
+.m2-composer .tmodal-composer-pill { height: auto; min-height: 40px; align-items: flex-end; }
+.m2-composer .tmodal-composer-pill textarea { height: 38px; min-height: 38px; max-height: 118px; white-space: pre-wrap; overflow-wrap: anywhere; overflow-y: hidden; }
+.m2-composer .tmodal-composer-pill .anexo-clipe, .m2-composer .tmodal-composer-send { align-self: flex-end; margin-bottom: 4px; }
 .m2-macoes { display: flex; gap: 10px; opacity: 0; transition: opacity .12s; }
 .pmodal-msg:hover .m2-macoes, .pmodal-msg:focus-within .m2-macoes { opacity: 1; }
 .pmodal-msg.is-cliente .m2-macoes { justify-content: flex-end; }
