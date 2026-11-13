@@ -20,6 +20,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { janelaDoLancamento, dataSaoPaulo } from '../_shared/lancamento.ts';
+import { tarefaPrivada } from '../_shared/acesso.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -37,8 +38,8 @@ const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const err = (status: number, code: string, message: string) => json(status, { error: { code, message } });
 
-type Pessoa = { id: string; nome: string; role: string; arquivado_em: string | null };
-const COLS_PESSOA = 'id, nome, role, arquivado_em';
+type Pessoa = { id: string; nome: string; role: string; arquivado_em: string | null; is_ceo?: boolean | null };
+const COLS_PESSOA = 'id, nome, role, arquivado_em, is_ceo';
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return err(405, 'method_not_allowed', 'POST only');
@@ -74,6 +75,8 @@ Deno.serve(async (req) => {
     const { data: p } = await sb.from('pessoas').select(COLS_PESSOA).ilike('email', email).maybeSingle();
     chamador = (p as Pessoa | null) ?? null;
   }
+  // E-mail sem cadastro não lança (nem para si, nem para outros)
+  if (email && !chamador) return err(403, 'forbidden', 'e-mail sem cadastro no Tasks 360');
 
   // Para quem são as horas
   let alvo: Pessoa | null = chamador;
@@ -95,11 +98,16 @@ Deno.serve(async (req) => {
 
   const { data: task, error: tErr } = await sb
     .from('tasks')
-    .select('id, titulo, arquivado_em')
+    .select('id, titulo, arquivado_em, privada, pessoa_id, clientes ( privado ), projetos ( privado )')
     .eq('id', taskId)
     .maybeSingle();
   if (tErr) return err(500, 'db_error', tErr.message);
-  if (!task) return err(404, 'task_not_found', `task ${taskId} não existe`);
+  // Tarefa privada: só o CEO, o responsável ou quem lança as próprias horas nela
+  const tf = task as { privada: boolean; pessoa_id: string | null; clientes: { privado: boolean } | null; projetos: { privado: boolean } | null } | null;
+  const privada = !!tf && tarefaPrivada({ privada: tf.privada, cliente_privado: tf.clientes?.privado, projeto_privado: tf.projetos?.privado });
+  if (!task || (privada && chamador && !chamador.is_ceo && tf!.pessoa_id !== chamador.id && tf!.pessoa_id !== alvo.id)) {
+    return err(404, 'task_not_found', `task ${taskId} não existe`);
+  }
   if (task.arquivado_em) return err(422, 'task_arquivada', 'a tarefa está arquivada');
 
   const startedIso = janela.startedAt.toISOString();

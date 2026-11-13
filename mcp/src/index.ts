@@ -9,6 +9,8 @@
  *   - ingest_task       : cria/atualiza task (idempotente por external_id)
  *   - post_standup      : publica/atualiza standup diário (upsert por data)
  *   - get_standups      : lê standups publicados (mais recente primeiro)
+ *   - get_task          : uma tarefa completa (solicitação, checklist, horas, etapas, comentários)
+ *   - get_atividade     : o que mudou desde uma data (etapas, criadas, comentários, horas)
  *   - log_horas         : lança horas no Timesheet (data + duração + nota)
  *   - get_horas         : lê lançamentos do Timesheet com totais por pessoa e cliente
  *
@@ -18,6 +20,9 @@
  *   2. Legado: `Authorization: Bearer <MCP_AUTH_TOKEN>`, mantido durante a migração
  *      (mcp-remote no Claude Desktop). Para desligar, apague o secret MCP_AUTH_TOKEN.
  * A TASKS360_API_KEY continua só no Worker; o cliente MCP nunca a vê.
+ * O e-mail do login vai no header x-tasks360-user, e as Edge Functions aplicam
+ * o acesso do app (supabase/functions/_shared/acesso.ts): tarefa privada só
+ * para o CEO e o responsável, horas de outros só para admin.
  */
 
 import { McpAgent } from "agents/mcp";
@@ -158,6 +163,10 @@ const getTasksSchema = {
     .string()
     .optional()
     .describe("Filtra por projeto (UUID)."),
+  q: z
+    .string()
+    .optional()
+    .describe("Busca por texto no título e na solicitação (sem diferenciar maiúsculas). Ex: 'Rodocred', 'termo de aceite'."),
   limit: z
     .number()
     .int()
@@ -209,7 +218,7 @@ const ingestTaskSchema = {
     .string()
     .optional()
     .describe("Data limite no formato YYYY-MM-DD (timezone do app)."),
-  subetapa: z.string().optional().describe("Ex: backlog, em_andamento, etc. Default: backlog."),
+  subetapa: z.string().optional().describe("Etapa inicial: backlog (padrão), priorizado, em_definicao ou escopo_definido. Para mover depois, use update_task."),
   tipo_trabalho: z.string().optional().describe("Ex: feature, bug, chore, suporte..."),
   tags: z.array(z.string()).optional(),
   criado_por_ia: z
@@ -237,7 +246,7 @@ const updateTaskSchema = {
     .enum(SUBETAPAS)
     .optional()
     .describe(
-      "Nova subetapa. O status (macro) é derivado dela: backlog/priorizado/em_definicao/escopo_definido → backlog; em_desenvolvimento/em_homologacao/em_revisao/pronto_producao/em_implantacao → andamento; bloqueado; concluido.",
+      "Nova subetapa. O status (macro) é derivado dela: backlog/priorizado/em_definicao/escopo_definido → backlog; em_desenvolvimento/em_homologacao/em_revisao/pronto_producao/em_implantacao → andamento; bloqueado; concluido. Algumas mudanças pedem texto, como no app: ir para em_homologacao pede `mensagem`; voltar de em_homologacao/pronto_producao/em_implantacao para Backlog ou Desenvolvimento pede `justificativa`; bloqueado pede `motivo`; sair de concluido pede `motivo_reabertura`.",
     ),
   status: z
     .enum(["backlog", "andamento", "bloqueado", "concluido"])
@@ -245,10 +254,45 @@ const updateTaskSchema = {
     .describe(
       "Status macro. Prefira `subetapa`. Se vier só o status, a task vai para a subetapa padrão do macro (andamento → em_desenvolvimento), ou mantém a atual se já estiver nesse macro.",
     ),
+  mensagem: z
+    .string()
+    .optional()
+    .describe("Obrigatória ao enviar para em_homologacao: o que foi entregue e como testar. Vira comentário que o cliente vê (se a task é visível para ele)."),
+  justificativa: z
+    .string()
+    .optional()
+    .describe("Obrigatória ao voltar da homologação (ou depois) para ajuste: por que voltou. Vira comentário que o cliente vê (se a task é visível para ele)."),
+  motivo: z
+    .string()
+    .optional()
+    .describe("Obrigatório ao bloquear. Com bloqueado_por='cliente' vira a pergunta para o cliente no portal; nos outros casos fica interno."),
   bloqueado_por: z
     .enum(["nos", "cliente", "terceiro"])
     .optional()
     .describe("Quem bloqueia, quando a subetapa for 'bloqueado'. Padrão: 'nos'."),
+  motivo_reabertura: z
+    .enum(["mudanca_cliente", "erro_qualidade", "regressao", "novo_requisito"])
+    .optional()
+    .describe("Obrigatório ao reabrir uma task concluída."),
+  titulo: z.string().min(1).max(300).optional().describe("Novo título."),
+  prioridade: z.enum(["P0", "P1", "P2", "P3"]).nullable().optional().describe("Nova prioridade. null limpa."),
+  prazo: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional()
+    .describe("Novo prazo (YYYY-MM-DD). null limpa."),
+  responsavel: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Novo responsável (nome ou UUID de get_pessoas). null deixa sem responsável."),
+  esforco: z
+    .number()
+    .min(0)
+    .max(1000)
+    .optional()
+    .describe("Estimativa em horas. Fora do Backlog só preenche se estava vazia (a estimativa trava ao sair do Backlog); o retorno avisa quando não mudou."),
   valor_entregue: z
     .string()
     .optional()
@@ -257,12 +301,6 @@ const updateTaskSchema = {
     .string()
     .optional()
     .describe("O que foi feito / solução implementada, em texto. Substitui o valor atual."),
-  tempo_real_horas: z
-    .number()
-    .min(0)
-    .max(1000)
-    .optional()
-    .describe("Total de horas realizadas na task (substitui o valor atual, não soma)."),
   area_tecnica: z
     .enum(AREAS_TECNICAS)
     .nullable()
@@ -319,6 +357,31 @@ const getStandupsSchema = {
     .regex(/^\d{4}-\d{2}-\d{2}$/, "data deve estar no formato YYYY-MM-DD.")
     .optional()
     .describe("Se passada, retorna apenas o standup daquele dia exato (YYYY-MM-DD)."),
+};
+
+const getTaskSchema = {
+  task_id: z.string().uuid().describe("UUID da task (campo 'id' de get_tasks)."),
+  comentarios: z
+    .number()
+    .int()
+    .min(0)
+    .max(100)
+    .optional()
+    .describe("Quantos comentários mais recentes trazer. Padrão 20."),
+};
+
+const getAtividadeSchema = {
+  desde: z
+    .string()
+    .optional()
+    .describe("Início (YYYY-MM-DD = meia-noite de São Paulo, ou data-hora ISO). Padrão: 24h atrás."),
+  ate: z
+    .string()
+    .optional()
+    .describe("Fim (YYYY-MM-DD inclui o dia inteiro, ou ISO). Padrão: agora."),
+  cliente: z.string().optional().describe("Só tarefas deste cliente (nome de get_clientes)."),
+  pessoa: z.string().optional().describe("Só tarefas deste responsável (nome ou UUID)."),
+  limit: z.number().int().min(1).max(500).optional().describe("Máximo por lista. Padrão 100."),
 };
 
 const logHorasSchema = {
@@ -415,9 +478,9 @@ export class MyMCP extends McpAgent<Env, unknown, UserProps> {
     // ───── get_tasks ───────────────────────────────────────────────────
     this.server.tool(
       "get_tasks",
-      "Lista tasks do Tasks 360 com filtros (responsável, cliente, status, prazo). Por padrão retorna só tasks ATIVAS (exclui status 'concluido'). Use pra responder perguntas tipo 'quais tasks P0 abertas do cliente X', 'o que a Jéssica tem pra essa semana', 'quantas tasks vencendo até sexta'. Retorna `{ tasks: [...], total }`; cada task traz cliente/projeto/responsavel já resolvidos por nome, flag `atrasada`, e os campos de conteúdo `area_tecnica`, `valor_esperado`, `solucao_implementada`, `tempo_real_horas` (`escopo` e `valor_entregue` são legado, anteriores a nov/2026) — úteis pra análises de qualidade/entrega. Para resumos agregue no lado do consumidor (a API não agrupa).",
+      "Lista tasks do Tasks 360 com filtros (responsável, cliente, status, prazo) e busca por texto (`q`). Tarefas privadas só aparecem para o CEO e o responsável. Por padrão retorna só tasks ATIVAS (exclui status 'concluido'). Use pra responder perguntas tipo 'quais tasks P0 abertas do cliente X', 'o que a Jéssica tem pra essa semana', 'quantas tasks vencendo até sexta'. Retorna `{ tasks: [...], total }`; cada task traz cliente/projeto/responsavel já resolvidos por nome, flag `atrasada`, e os campos de conteúdo `area_tecnica`, `valor_esperado`, `solucao_implementada` (`escopo`, `valor_entregue` e `tempo_real_horas` são legado; horas reais estão em get_horas) — úteis pra análises de qualidade/entrega. Para resumos agregue no lado do consumidor (a API não agrupa).",
       getTasksSchema,
-      async ({ pessoa, status, include_concluido, prazo_de, prazo_ate, cliente_id, cliente, projeto_id, limit }) => {
+      async ({ pessoa, status, include_concluido, prazo_de, prazo_ate, cliente_id, cliente, projeto_id, q, limit }) => {
         const result = await callTasks360(this.env, this.props, "GET", "get-tasks", {
           pessoa,
           status: status && status.length > 0 ? status.join(",") : undefined,
@@ -427,6 +490,7 @@ export class MyMCP extends McpAgent<Env, unknown, UserProps> {
           cliente_id,
           cliente,
           projeto_id,
+          q,
           limit: limit !== undefined ? String(limit) : undefined,
         });
         if (!result.ok) return toolError(`get-tasks falhou (HTTP ${result.status})`, result.error);
@@ -452,7 +516,7 @@ export class MyMCP extends McpAgent<Env, unknown, UserProps> {
     // ───── update_task ─────────────────────────────────────────────────
     this.server.tool(
       "update_task",
-      "Atualiza uma task existente pelo id (qualquer task, não só as com external_id): subetapa/status, valor entregue, solução implementada e horas realizadas. Envie só os campos que mudam. Fica registrado no histórico da task com origem 'mcp'. Em task vinda do Salesforce (VB, CTF, Bodytech) a mudança é enviada para a org do cliente, igual a uma edição feita no app. Retorna a task atualizada e `campos` alterados (`action: 'unchanged'` se nada mudou).",
+      "Atualiza uma task pelo id: etapa, título, prioridade, prazo, responsável, esforço, área técnica, valor entregue e solução implementada. Envie só os campos que mudam. Segue as regras do app: algumas mudanças de etapa pedem texto (veja `subetapa`), e esse texto vira comentário na conversa. Fica no histórico com origem 'mcp'. Em task do Salesforce (VB, CTF, Bodytech) a mudança vai para a org do cliente, igual a uma edição no app. Horas não se lançam aqui: use log_horas. Retorna a task, `campos` alterados, `comentario` (se houve) e `avisos`.",
       updateTaskSchema,
       async (args) => {
         const result = await callTasks360(this.env, this.props, "POST", "update-task", undefined, args);
@@ -506,10 +570,43 @@ export class MyMCP extends McpAgent<Env, unknown, UserProps> {
       },
     );
 
+    // ───── get_task ────────────────────────────────────────────────────
+    this.server.tool(
+      "get_task",
+      "Traz uma task completa numa chamada: todos os campos (inclui solicitação, critério de aceite, valor esperado, checklist), cliente/projeto/responsável por nome, tarefas de que ela depende, horas lançadas (total, estimado e por pessoa), histórico de etapa/responsável/prazo/prioridade e os comentários mais recentes (com `visivel_cliente` e `do_cliente`). Use antes de comentar, mover ou resumir uma task.",
+      getTaskSchema,
+      async ({ task_id, comentarios }) => {
+        const result = await callTasks360(this.env, this.props, "GET", "get-task", {
+          task_id,
+          comentarios: comentarios !== undefined ? String(comentarios) : undefined,
+        });
+        if (!result.ok) return toolError(`get-task falhou (HTTP ${result.status})`, result.error);
+        return toolResult(result.data);
+      },
+    );
+
+    // ───── get_atividade ───────────────────────────────────────────────
+    this.server.tool(
+      "get_atividade",
+      "O que aconteceu num período (padrão: últimas 24h): mudanças de etapa (quem moveu, de→para), tarefas criadas (pelo time, cliente ou IA), comentários (com os do cliente marcados), mudanças de responsável/prazo/prioridade e horas lançadas por pessoa, mais um `resumo` com as contagens. Filtra por cliente ou responsável. Use para standup, resumo semanal e 'o que mudou desde ontem'.",
+      getAtividadeSchema,
+      async ({ desde, ate, cliente, pessoa, limit }) => {
+        const result = await callTasks360(this.env, this.props, "GET", "get-activity", {
+          desde,
+          ate,
+          cliente,
+          pessoa,
+          limit: limit !== undefined ? String(limit) : undefined,
+        });
+        if (!result.ok) return toolError(`get-activity falhou (HTTP ${result.status})`, result.error);
+        return toolResult(result.data);
+      },
+    );
+
     // ───── log_horas ───────────────────────────────────────────────────
     this.server.tool(
       "log_horas",
-      "Lança horas no Timesheet de uma task, como o lançamento manual do app (data + duração + nota). Por padrão as horas são da pessoa logada no MCP; admin pode lançar para outra pessoa com `pessoa`. Repetir a mesma chamada não duplica (volta `action: 'unchanged'`). Não use para corrigir o total da task: isso é tempo_real_horas em update_task. Retorna `{ id, task_id, titulo, pessoa, data, horas, nota, action }`.",
+      "Lança horas no Timesheet de uma task, como o lançamento manual do app (data + duração + nota). Por padrão as horas são da pessoa logada no MCP; admin pode lançar para outra pessoa com `pessoa`. Repetir a mesma chamada não duplica (volta `action: 'unchanged'`). Retorna `{ id, task_id, titulo, pessoa, data, horas, nota, action }`.",
       logHorasSchema,
       async (args) => {
         if (args.horas === undefined && args.minutos === undefined) return toolError("informe horas ou minutos");

@@ -17,6 +17,8 @@
 //   ?cliente_id=<uuid>          filtra por cliente.
 //   ?projeto_id=<uuid>          filtra por projeto.
 //   ?limit=50                   máx de tasks retornadas (default 100, máx 200).
+//   ?cliente=<nome>             filtra por cliente pelo nome (sem diferenciar maiúsculas).
+//   ?q=<texto>                  busca no título e na solicitação (descricao).
 //   ?portal=true                só o que o cliente vê no portal: visivel_cliente
 //                               = true e não privada (usado pelas caixas de IA).
 //
@@ -62,6 +64,9 @@
 //   GET /get-tasks?include_concluido=true&pessoa=<uuid>  → histórico completo
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { acessoDe, podeVerTarefa } from '../_shared/acesso.ts';
+// Acesso (x-tasks360-user): tarefa privada (dela, do projeto ou do cliente)
+// só sai para o CEO e o responsável; sem o header (automações), vale tudo.
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -101,6 +106,12 @@ Deno.serve(async (req) => {
 
   const url = new URL(req.url);
   const p   = url.searchParams;
+
+  const email = (req.headers.get('x-tasks360-user') || '').trim().toLowerCase();
+  const { data: pessoaChamador } = email
+    ? await sb.from('pessoas').select('id, nome, role, is_ceo').ilike('email', email).maybeSingle()
+    : { data: null };
+  const acesso = acessoDe(email, pessoaChamador);
 
   // --- ?pessoa ---
   const pessoaParam     = p.get('pessoa');
@@ -147,6 +158,17 @@ Deno.serve(async (req) => {
   const clienteIdParam = p.get('cliente_id');
   const projetoIdParam = p.get('projeto_id');
   if (clienteIdParam && !UUID_RE.test(clienteIdParam)) return err(422, 'invalid_cliente_id', 'cliente_id deve ser UUID');
+  // ?cliente=<nome> (cliente_id tem precedência)
+  let clienteNomeId: string | null = null;
+  const clienteNome = (p.get('cliente') || '').trim();
+  if (clienteNome && !clienteIdParam) {
+    const { data: cs, error: cErr } = await sb.from('clientes').select('id').ilike('nome', clienteNome).limit(1);
+    if (cErr) return err(500, 'db_error', cErr.message);
+    if (!cs?.length) return err(422, 'cliente_not_found', `cliente '${clienteNome}' não encontrado; use o nome de get_clientes`);
+    clienteNomeId = cs[0].id;
+  }
+  // ?q=<texto>: título ou solicitação (caracteres de filtro do PostgREST saem)
+  const busca = (p.get('q') || '').replace(/[,()*%\\]/g, ' ').trim();
   if (projetoIdParam && !UUID_RE.test(projetoIdParam)) return err(422, 'invalid_projeto_id', 'projeto_id deve ser UUID');
 
   // --- ?limit ---
@@ -171,8 +193,8 @@ Deno.serve(async (req) => {
      descricao, status_em, subetapa_em, aprovado_em, bloqueado_por, bloqueada_por_tasks,
      escopo, area_tecnica, valor_esperado, solucao_implementada, valor_entregue, tempo_real_horas,
      pessoa_id, cliente_id, projeto_id,
-     clientes ( nome, eh_interno ),
-     projetos ( nome ),
+     clientes ( nome, eh_interno, privado ),
+     projetos ( nome, privado ),
      pessoas:pessoa_id ( nome )`,
   ).is('arquivado_em', null);
 
@@ -196,6 +218,8 @@ Deno.serve(async (req) => {
 
   if (pessoaIdFilter) q = q.eq('pessoa_id', pessoaIdFilter);
   if (clienteIdParam) q = q.eq('cliente_id', clienteIdParam);
+  if (clienteNomeId) q = q.eq('cliente_id', clienteNomeId);
+  if (busca) q = q.or(`titulo.ilike.*${busca}*,descricao.ilike.*${busca}*`);
   if (projetoIdParam) q = q.eq('projeto_id', projetoIdParam);
   if (prazoDeParam)   q = q.gte('prazo', prazoDeParam);
   if (prazoAteParam)  q = q.lte('prazo', prazoAteParam);
@@ -231,15 +255,19 @@ Deno.serve(async (req) => {
     valor_entregue: string | null;
     tempo_real_horas: number | null;
     pessoa_id: string | null; cliente_id: string | null; projeto_id: string | null;
-    clientes: { nome: string; eh_interno: boolean } | null;
-    projetos: { nome: string } | null;
+    clientes: { nome: string; eh_interno: boolean; privado: boolean } | null;
+    projetos: { nome: string; privado: boolean } | null;
     pessoas:  { nome: string } | null;
   };
 
   // Filtro server-side por eh_interno (PostgREST não suporta where em
   // tabela joined de forma trivial · filtramos client-side aqui).
-  const filtered = (tasks as Raw[]).filter(t => {
+  const filtered = (tasks as unknown as Raw[]).filter(t => {
     if (excludeInternos && t.clientes?.eh_interno === true) return false;
+    if (!podeVerTarefa(acesso, {
+      privada: t.privada, pessoa_id: t.pessoa_id,
+      cliente_privado: t.clientes?.privado, projeto_privado: t.projetos?.privado,
+    })) return false;
     return true;
   });
 

@@ -20,6 +20,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { autorDoComentario } from '../_shared/autor.ts';
+import { acessoDe, podeEscrever, podeVerTarefa } from '../_shared/acesso.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -57,19 +58,24 @@ Deno.serve(async (req) => {
 
   const { data: task, error: tErr } = await sb
     .from('tasks')
-    .select('id, titulo, pessoa_id')
+    .select('id, titulo, pessoa_id, privada, clientes ( privado ), projetos ( privado )')
     .eq('id', taskId)
     .maybeSingle();
   if (tErr) return err(500, 'db_error', tErr.message);
-  if (!task) return err(404, 'task_not_found', `task ${taskId} não existe`);
 
-  // Autor: pessoa do e-mail que chamou o MCP; sem ela, o rótulo padrão
+  // Autor e acesso: pessoa do e-mail que chamou o MCP; sem ela, o rótulo padrão
   const email = (req.headers.get('x-tasks360-user') || '').trim().toLowerCase();
-  let autor: { id: string; nome: string } | null = null;
-  if (email) {
-    const { data: p } = await sb.from('pessoas').select('id, nome').ilike('email', email).maybeSingle();
-    autor = p ?? null;
-  }
+  const { data: pessoaChamador } = email
+    ? await sb.from('pessoas').select('id, nome, role, is_ceo').ilike('email', email).maybeSingle()
+    : { data: null };
+  const acesso = acessoDe(email, pessoaChamador);
+  if (!podeEscrever(acesso)) return err(403, 'forbidden', 'só gente do time cadastrada no Tasks 360 comenta');
+  const tf = task as { privada: boolean; pessoa_id: string | null; clientes: { privado: boolean } | null; projetos: { privado: boolean } | null } | null;
+  if (!task || !tf || !podeVerTarefa(acesso, {
+    privada: tf.privada, pessoa_id: tf.pessoa_id,
+    cliente_privado: tf.clientes?.privado, projeto_privado: tf.projetos?.privado,
+  })) return err(404, 'task_not_found', `task ${taskId} não existe`);
+  const autor: { id: string; nome: string } | null = pessoaChamador ? { id: pessoaChamador.id, nome: pessoaChamador.nome } : null;
   const assinatura = autorDoComentario(autor, Deno.env.get('MCP_COMMENT_AUTHOR_DEFAULT'));
   const agora = new Date().toISOString();
 

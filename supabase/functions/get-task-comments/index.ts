@@ -31,6 +31,7 @@
 // Ordem: mais recente primeiro (COALESCE(posted_em, criado_em) DESC).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { acessoDe, podeVerTarefa } from '../_shared/acesso.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -80,6 +81,23 @@ Deno.serve(async (req) => {
 
   const portalOnly = p.get('portal') === 'true';
 
+  // Acesso: tarefa privada só para o CEO e o responsável (sem header = automação)
+  const email = (req.headers.get('x-tasks360-user') || '').trim().toLowerCase();
+  const { data: pessoaChamador } = email
+    ? await sb.from('pessoas').select('id, nome, role, is_ceo').ilike('email', email).maybeSingle()
+    : { data: null };
+  const acesso = acessoDe(email, pessoaChamador);
+  const { data: tarefa } = await sb
+    .from('tasks')
+    .select('privada, pessoa_id, clientes ( privado ), projetos ( privado )')
+    .eq('id', taskId)
+    .maybeSingle();
+  const tf = tarefa as { privada: boolean; pessoa_id: string | null; clientes: { privado: boolean } | null; projetos: { privado: boolean } | null } | null;
+  if (!tf || !podeVerTarefa(acesso, {
+    privada: tf.privada, pessoa_id: tf.pessoa_id,
+    cliente_privado: tf.clientes?.privado, projeto_privado: tf.projetos?.privado,
+  })) return err(404, 'task_not_found', `task ${taskId} não existe`);
+
   // --- Query principal ---
   // Embed da tabela pessoas (autor interno) — não-ambíguo aqui (uma FK só:
   // task_comments_author_pessoa_id_fkey). Mantém `author` (texto livre) como
@@ -87,7 +105,7 @@ Deno.serve(async (req) => {
   let q = sb
     .from('task_comments')
     .select(
-      `id, body, posted_em, criado_em, author, author_pessoa_id,
+      `id, body, posted_em, criado_em, author, author_pessoa_id, visivel_cliente, from_cliente,
        pessoas:author_pessoa_id ( nome )`,
     )
     .eq('task_id', taskId)
@@ -109,14 +127,18 @@ Deno.serve(async (req) => {
     criado_em: string;
     author: string | null;
     author_pessoa_id: string | null;
+    visivel_cliente: boolean | null;
+    from_cliente: boolean | null;
     pessoas: { nome: string } | null;
   };
 
-  const out = (rows as Raw[]).map(c => ({
+  const out = (rows as unknown as Raw[]).map(c => ({
     id:    c.id,
     autor: c.pessoas?.nome ?? c.author ?? null,
     data:  c.posted_em ?? c.criado_em,
     texto: c.body,
+    visivel_cliente: c.visivel_cliente === true,
+    do_cliente: c.from_cliente === true,
   }));
 
   return json(200, { comentarios: out, total: out.length });
