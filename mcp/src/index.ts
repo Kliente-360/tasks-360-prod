@@ -9,6 +9,8 @@
  *   - ingest_task       : cria/atualiza task (idempotente por external_id)
  *   - post_standup      : publica/atualiza standup diário (upsert por data)
  *   - get_standups      : lê standups publicados (mais recente primeiro)
+ *   - log_horas         : lança horas no Timesheet (data + duração + nota)
+ *   - get_horas         : lê lançamentos do Timesheet com totais por pessoa e cliente
  *
  * Auth (dois caminhos aceitos em /mcp):
  *   1. OAuth 2.1 com login Google restrito a ALLOWED_DOMAIN. É o que o connector do
@@ -217,7 +219,7 @@ const ingestTaskSchema = {
 };
 
 const AREAS_TECNICAS = [
-  "configuracao", "automacao", "canais_ia", "marketing", "integracao", "frontend", "consultoria",
+  "configuracao", "automacao", "canais_ia", "marketing", "integracao", "frontend", "consultoria", "relatorios",
 ] as const;
 
 const SUBETAPAS = [
@@ -317,6 +319,57 @@ const getStandupsSchema = {
     .regex(/^\d{4}-\d{2}-\d{2}$/, "data deve estar no formato YYYY-MM-DD.")
     .optional()
     .describe("Se passada, retorna apenas o standup daquele dia exato (YYYY-MM-DD)."),
+};
+
+const logHorasSchema = {
+  task_id: z
+    .string()
+    .uuid()
+    .describe("UUID da task (campo 'id' retornado por get_tasks)."),
+  horas: z
+    .number()
+    .min(0.02)
+    .max(24)
+    .optional()
+    .describe("Duração em horas decimais (1.5 = 1h30). Use horas OU minutos."),
+  minutos: z
+    .number()
+    .int()
+    .min(1)
+    .max(1440)
+    .optional()
+    .describe("Duração em minutos. Tem precedência sobre horas."),
+  data: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "data deve estar no formato YYYY-MM-DD.")
+    .optional()
+    .describe("Dia do trabalho (YYYY-MM-DD, fuso de São Paulo). Padrão: hoje. Não aceita data futura."),
+  nota: z
+    .string()
+    .min(5)
+    .max(2000)
+    .describe("O que foi feito, em uma frase (mínimo 5 caracteres). Aparece no Timesheet."),
+  pessoa: z
+    .string()
+    .optional()
+    .describe("Para quem são as horas (nome ou UUID de get_pessoas). Padrão: a pessoa logada no MCP. Lançar para outra pessoa só funciona para admin."),
+};
+
+const getHorasSchema = {
+  de: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe("Início do período (YYYY-MM-DD). Padrão: 6 dias atrás."),
+  ate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .describe("Fim do período (YYYY-MM-DD). Padrão: hoje."),
+  pessoa: z.string().optional().describe("Filtra por pessoa (nome ou UUID)."),
+  cliente: z.string().optional().describe("Filtra por cliente (nome exato de get_clientes)."),
+  task_id: z.string().uuid().optional().describe("Filtra por uma task."),
+  limit: z.number().int().min(1).max(1000).optional().describe("Máximo de lançamentos. Padrão 200."),
 };
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -449,6 +502,38 @@ export class MyMCP extends McpAgent<Env, unknown, UserProps> {
         if (resumo !== undefined) body.resumo = resumo;
         const result = await callTasks360(this.env, this.props, "POST", "post-standup", undefined, body);
         if (!result.ok) return toolError(`post-standup falhou (HTTP ${result.status})`, result.error);
+        return toolResult(result.data);
+      },
+    );
+
+    // ───── log_horas ───────────────────────────────────────────────────
+    this.server.tool(
+      "log_horas",
+      "Lança horas no Timesheet de uma task, como o lançamento manual do app (data + duração + nota). Por padrão as horas são da pessoa logada no MCP; admin pode lançar para outra pessoa com `pessoa`. Repetir a mesma chamada não duplica (volta `action: 'unchanged'`). Não use para corrigir o total da task: isso é tempo_real_horas em update_task. Retorna `{ id, task_id, titulo, pessoa, data, horas, nota, action }`.",
+      logHorasSchema,
+      async (args) => {
+        if (args.horas === undefined && args.minutos === undefined) return toolError("informe horas ou minutos");
+        const result = await callTasks360(this.env, this.props, "POST", "log-time-entry", undefined, args);
+        if (!result.ok) return toolError(`log-time-entry falhou (HTTP ${result.status})`, result.error);
+        return toolResult(result.data);
+      },
+    );
+
+    // ───── get_horas ───────────────────────────────────────────────────
+    this.server.tool(
+      "get_horas",
+      "Lê os lançamentos do Timesheet num período (padrão: últimos 7 dias), com total, `por_pessoa` e `por_cliente` já somados. Segue o acesso do app: interno vê só as próprias horas, admin vê as de todos, e horas em tarefa privada de outra pessoa saem como 'Privado'. Cada lançamento traz data, pessoa, horas, origem (manual ou cronometro), tarefa, cliente, projeto, prioridade e nota. Use para relatórios de horas, conferir o que foi lançado na semana e cruzar horas com tarefas.",
+      getHorasSchema,
+      async ({ de, ate, pessoa, cliente, task_id, limit }) => {
+        const result = await callTasks360(this.env, this.props, "GET", "get-time-entries", {
+          de,
+          ate,
+          pessoa,
+          cliente,
+          task_id,
+          limit: limit !== undefined ? String(limit) : undefined,
+        });
+        if (!result.ok) return toolError(`get-time-entries falhou (HTTP ${result.status})`, result.error);
         return toolResult(result.data);
       },
     );

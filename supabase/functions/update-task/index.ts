@@ -50,7 +50,7 @@ const MACRO_PADRAO: Record<string, string> = {
   backlog: 'backlog', andamento: 'em_desenvolvimento', bloqueado: 'bloqueado', concluido: 'concluido',
 };
 const BLOQUEIOS = ['nos', 'cliente', 'terceiro'];
-const AREAS = ['configuracao', 'automacao', 'canais_ia', 'marketing', 'integracao', 'frontend', 'consultoria'];
+const AREAS = ['configuracao', 'automacao', 'canais_ia', 'marketing', 'integracao', 'frontend', 'consultoria', 'relatorios'];
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const json = (status: number, body: unknown) =>
