@@ -47,7 +47,7 @@ import { createClient } from '@/lib/supabase/client';
 import { fmtBytes, fmtPostedEm, renderCommentBody } from '@/lib/format';
 import { fmtDate, fmtDateShort, lblStatus, missingFieldsForCurrentSubetapa, sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
 import { SUB_TO_MACRO, SUB_LABELS, SUBS_FLAT, SKILL_GROUPS, ALL_SKILLS, STAGE_RANK, TIPOS_TRABALHO, AREAS_TECNICAS, GRUPO_BACKLOG } from '@/lib/task-constants';
-import { taskFromDb, timeEntryFromDb } from '@/lib/adapters';
+import { TASK_LIGHT_COLS as COLS_TAREFA, taskFromDb, timeEntryFromDb } from '@/lib/adapters';
 import { track } from '@/lib/telemetry';
 import { fmtDuration, useTimer } from '@/lib/use-timer';
 import { NotePopover } from '@/components/timer-button';
@@ -483,9 +483,48 @@ export function TaskModalProvider({ children }: { children: React.ReactNode }) {
     <TaskModalContext.Provider value={value}>
       {children}
       {openTaskId !== null && (
-        <TaskModal taskId={isNew ? null : openTaskId} onClose={close} />
+        isNew || tasksById.has(openTaskId) ? (
+          <TaskModal taskId={isNew ? null : openTaskId} onClose={close} />
+        ) : (
+          <CarregandoTarefa taskId={openTaskId} onFalha={close} />
+        )
       )}
     </TaskModalContext.Provider>
+  );
+}
+
+// ============================================================
+// Tarefa fora do que está carregado (criada por outra pessoa depois que a
+// página abriu, arquivada, concluída antiga): busca no banco antes de abrir.
+// Sem isso o modal não achava a tarefa e caía no formulário de tarefa nova
+// (ex.: clicar no aviso de solicitação nova de cliente).
+// ============================================================
+function CarregandoTarefa({ taskId, onFalha }: { taskId: string; onFalha: () => void }) {
+  const { upsertTask } = useData();
+  const toast = useToastSafe();
+  useEffect(() => {
+    let vivo = true;
+    createClient()
+      .from('tasks')
+      .select(COLS_TAREFA)
+      .eq('id', taskId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!vivo) return;
+        if (error || !data) {
+          toast.error('Não foi possível abrir a tarefa: ela não existe mais ou você não tem acesso.');
+          onFalha();
+          return;
+        }
+        // Entra no estado do app; o provider troca para o modal de verdade
+        upsertTask(taskFromDb(data as Record<string, unknown>));
+      });
+    return () => { vivo = false; };
+  }, [taskId, upsertTask, toast, onFalha]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-bg" role="status" aria-live="polite">
+      <div className="bg-bg-elev border border-line rounded-lg shadow-xl px-4 py-3 text-sm text-muted">Abrindo tarefa…</div>
+    </div>
   );
 }
 
