@@ -479,11 +479,14 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
       .from('task_comments')
       .insert({
         task_id: task.id,
-        author: clienteNome || 'cliente',
+        // Autor é quem está logado (cliente ou time); o nome do cliente só
+        // entra se a pessoa não tiver cadastro. Time comentando pela aba
+        // Portal não conta como comentário do cliente.
+        author: currentPessoa?.nome || clienteNome || 'cliente',
         body,
-        author_pessoa_id: null,
+        author_pessoa_id: currentPessoa?.id ?? null,
         visivel_cliente: true,
-        from_cliente: true,
+        from_cliente: viewerRole === 'cliente',
         parent_id: respondendo ? respondendo.parent_id ?? respondendo.id : null,
       })
       .select('id')
@@ -512,7 +515,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
     setNewComment('');
     setRespondendo(null);
     void carregar(task.id);
-  }, [newComment, pendentes, respondendo, task, busy, sb, clienteNome, toast, carregar, currentPessoa?.id]);
+  }, [newComment, pendentes, respondendo, task, busy, sb, clienteNome, toast, carregar, currentPessoa?.id, currentPessoa?.nome, viewerRole]);
 
   if (!task) return null;
 
