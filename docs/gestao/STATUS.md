@@ -358,8 +358,8 @@ Tags · Tipo de trabalho · Dependências UI · Templates de projeto · WhatsApp
 **4 · Cortar Briefing e Calendário · "Visão geral" para admin**
 → Dashboard atual + Radar do CEO + clientes em atenção + tempo por etapa + "Copiar standup". Substitui C.10 e A.7
 
-**5 · Modal novo para todo o time**
-→ hoje em beta por chave; liberar quando o feedback fechar e remover o modal antigo
+**5 · Modal novo para todo o time** ✅ 19/11/2026 (v1.03.325)
+→ modal novo é o único; modal antigo e a opção "Modal novo (beta)" do menu removidos
 
 **6 · Ajustes pequenos**
 → "Salvar" só para clientes com webhook (autosave cobre os demais); telemetria de filtro grava todos os campos a cada mudança, corrigir para gravar o que mudou
