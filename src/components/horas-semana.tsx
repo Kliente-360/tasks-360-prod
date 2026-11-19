@@ -149,7 +149,7 @@ export function HorasSemanaView({
           <h2 className="text-sm font-semibold text-ink">{titulo}</h2>
           <p className="text-[10px] text-muted mt-0.5">
             {filtrada && <span className="text-[color:var(--green)] font-semibold">com filtros · </span>}
-            timesheet · últimas {SEMANAS} semanas · por cliente
+            timesheet por cliente
           </p>
         </div>
         <div className="text-right shrink-0">
