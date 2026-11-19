@@ -634,6 +634,22 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
   }, [editing, timeEntries, wasConcluido]);
   const isMissing = (f: string) => (missingFields.has(f) ? 'is-missing' : '');
 
+  // Mesma regra do salvar (persist), checada antes de abrir o formulário da
+  // transição: o aviso aparece ao clicar, não depois de escrever a mensagem
+  const preChecarEtapa = useCallback(
+    (sub: string): string | null => {
+      const e = editingRef.current;
+      const horas = e.id ? sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === e.id)) : 0;
+      const hasOpenPreReqs = (e.bloqueadaPorTasks ?? []).some((id) => {
+        const dep = tasksById.get(id);
+        return dep && dep.status !== 'concluido' && !dep.arquivadoEm;
+      });
+      const gate = validateSubetapaAdvance(e, sub, { timeEntriesHours: horas, hasOpenPreReqs });
+      return gate.ok ? null : gate.error;
+    },
+    [timeEntries, tasksById],
+  );
+
   // Bucket V · M.2 · tabs do formulário (desktop)
   type FormTab = 'triagem' | 'definicao' | 'execucao' | 'bloqueio' | 'reabertura' | 'admin';
   const FIELD_TO_TAB: Record<string, FormTab> = useMemo(() => ({
@@ -2759,6 +2775,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         onLancar={lancarHoras}
         onTransicao={aplicarTransicao}
         onLembrar={lembrarCliente}
+        preChecarEtapa={preChecarEtapa}
         onToggleRadar={toggleRadar}
         onArquivar={arquivarTask}
         onDesarquivar={desarquivarTask}

@@ -4019,3 +4019,8 @@ button.m2-vis-tag { cursor: pointer; }
   --hs-outros: #6b6a66;
 }
 .hs-pilha { gap: 2px; transition: opacity .15s; }
+/* Transição barrada antes de escrever (ex.: homologação sem horas lançadas) */
+.m2-saida-erro { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px;
+  background: var(--danger-soft); color: var(--danger); font-size: 13px; font-weight: 500; }
+.m2-saida-erro span { flex: 1; }
+.m2-saida-erro .m2-btn { flex: none; }

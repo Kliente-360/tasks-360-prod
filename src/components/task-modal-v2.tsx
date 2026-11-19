@@ -88,6 +88,9 @@ export type TaskModalV2Props = {
     opts?: { mensagem?: { body: string; visivel: boolean }; motivoBloqueio?: string },
   ) => Promise<boolean>;
   onLembrar: () => Promise<void>;
+  /** Checa antes de abrir o formulário se a tarefa pode ir para a etapa
+   *  (mesmas regras do salvar: esforço, horas lançadas...). null = pode. */
+  preChecarEtapa: (subetapa: string) => string | null;
   onToggleRadar: () => void;
   onArquivar: () => void;
   onDesarquivar: () => void;
@@ -459,8 +462,13 @@ function BotaoPlay(props: TaskModalV2Props) {
 // ============================================================
 // Saída do desenvolvimento: homologação ou bloqueio, sempre com mensagem
 // ============================================================
+// Rascunho da mensagem por tarefa e modo: a transição muda a etapa na tela
+// antes de salvar e o formulário desmonta; se o salvar falha, ele volta com
+// o texto em vez de vazio
+const rascunhosSaida = new Map<string, string>();
+
 function Saida({
-  editing, modoInicial, onTransicao, onCancelar, podeCancelar, voltar,
+  editing, modoInicial, onTransicao, onCancelar, podeCancelar, voltar, preChecarEtapa, onLancarHoras,
 }: {
   editing: Task;
   modoInicial: 'homolog' | 'bloq' | null;
@@ -468,12 +476,24 @@ function Saida({
   onCancelar: () => void;
   podeCancelar: boolean;
   voltar?: { label: string; onClick: () => void };
+  preChecarEtapa: TaskModalV2Props['preChecarEtapa'];
+  onLancarHoras: () => void;
 }) {
   const [modo, setModo] = useState<'homolog' | 'bloq' | null>(modoInicial);
   const [por, setPor] = useState<string>('');
-  const [msg, setMsg] = useState('');
+  const chaveRascunho = `${editing.id}:${modo ?? ''}`;
+  const [msg, setMsgState] = useState(() => rascunhosSaida.get(`${editing.id}:${modoInicial ?? ''}`) ?? '');
+  const setMsg = (v: string) => {
+    setMsgState(v);
+    if (v) rascunhosSaida.set(chaveRascunho, v);
+    else rascunhosSaida.delete(chaveRascunho);
+  };
   const [enviando, setEnviando] = useState(false);
   useEffect(() => setModo(modoInicial), [modoInicial]);
+  // Trocar de modo carrega o rascunho daquele modo
+  useEffect(() => { setMsgState(rascunhosSaida.get(chaveRascunho) ?? ''); }, [chaveRascunho]);
+  // Homologação barrada (falta esforço ou horas): avisa antes de escrever
+  const impedimento = modo === 'homolog' ? preChecarEtapa('em_homologacao') : null;
 
   const valido = msg.trim().length > 0 && (modo === 'homolog' || !!por);
   const confirmar = async () => {
@@ -521,7 +541,16 @@ function Saida({
           <b>Bloquear</b>
         </button>
       </div>
-      {modo && (
+      {impedimento && (
+        <div className="m2-saida-erro" role="alert">
+          <Icon name="alert" size={14} />
+          <span>{impedimento}</span>
+          {/timesheet|tempo real/i.test(impedimento) && (
+            <button type="button" className="m2-btn" onClick={onLancarHoras}>Lançar horas</button>
+          )}
+        </div>
+      )}
+      {modo && !impedimento && (
         <div className="m2-saida-form">
           {modo === 'bloq' && (
             <div className="m2-campo">
@@ -556,7 +585,7 @@ function Saida({
             Cancelar
           </button>
         )}
-        {modo && (
+        {modo && !impedimento && (
           <button
             type="button"
             className={cn('m2-btn', modo === 'homolog' ? 'primario' : 'perigo')}
@@ -1189,6 +1218,8 @@ export function TaskModalV2(props: TaskModalV2Props) {
           onCancelar={() => setSaidaPedida(null)}
           podeCancelar={!emDev}
           voltar={emDev ? { label: 'Voltar para o Backlog', onClick: () => onTransicao({ subetapa: ultimaDoBacklog }) } : undefined}
+          preChecarEtapa={props.preChecarEtapa}
+          onLancarHoras={() => setAba('horas')}
         />
       ) : (
         !nova && <Passos editing={editing} onTransicao={onTransicao} />
