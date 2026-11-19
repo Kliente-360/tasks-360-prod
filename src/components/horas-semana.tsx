@@ -16,9 +16,9 @@
  * do Timesheet: interno só as próprias, admin todas, privado anônimo).
  */
 
-import { useMemo, useState } from 'react';
-import { useData, useTasksById, useClientesById } from '@/lib/data-store';
-import type { Cliente, Task, TimeEntry } from '@/lib/types';
+import { useEffect, useMemo, useState } from 'react';
+import { useData, useTasksById, useClientesById, usePessoasById } from '@/lib/data-store';
+import type { Cliente, Pessoa, Task, TimeEntry } from '@/lib/types';
 
 const SEMANAS = 12;
 const DIA_MS = 86_400_000;
@@ -43,17 +43,22 @@ export interface HorasSemanaFiltros {
 }
 
 type Serie = { key: string; nome: string; cor: string };
+/** Agrupamento das barras: por cliente ou por responsável (quem lançou) */
+export type GrupoHoras = 'cliente' | 'pessoa';
+const ROTULO_GRUPO: Record<GrupoHoras, string> = { cliente: 'por cliente', pessoa: 'por responsável' };
 type Semana = { inicio: number; rotulo: string; atual: boolean; total: number; porSerie: Map<string, number> };
 
 export function HorasSemanaCard({ filtros = {}, filtrada = false }: { filtros?: HorasSemanaFiltros; filtrada?: boolean }) {
   const { timeEntriesAnalise, viewerRole } = useData();
   const tasksById = useTasksById();
   const clientesById = useClientesById();
+  const pessoasById = usePessoasById();
   return (
     <HorasSemanaView
       entries={timeEntriesAnalise}
       tasksById={tasksById}
       clientesById={clientesById}
+      pessoasById={pessoasById}
       titulo={viewerRole === 'admin' ? 'Horas por semana' : 'Suas horas por semana'}
       filtros={filtros}
       filtrada={filtrada}
@@ -63,31 +68,52 @@ export function HorasSemanaCard({ filtros = {}, filtrada = false }: { filtros?: 
 
 /** Parte visual, sem depender do data-store (permite pré-visualizar com dados de teste). */
 export function HorasSemanaView({
-  entries: timeEntriesAnalise, tasksById, clientesById, titulo, filtros = {}, filtrada = false,
+  entries: timeEntriesAnalise, tasksById, clientesById, pessoasById, titulo, filtros = {}, filtrada = false,
 }: {
   entries: TimeEntry[];
   tasksById: Map<string, Pick<Task, 'clienteId' | 'projetoId'>>;
   clientesById: Map<string, Pick<Cliente, 'nome'>>;
+  pessoasById: Map<string, Pick<Pessoa, 'nome'>>;
   titulo: string;
   filtros?: HorasSemanaFiltros;
   filtrada?: boolean;
 }) {
   const [hover, setHover] = useState<number | null>(null);
+  // Desktop escolhe o agrupamento; no celular é sempre por responsável
+  const [grupoEscolhido, setGrupoEscolhido] = useState<GrupoHoras>(() => {
+    try { return localStorage.getItem('k360-horas-grupo') === 'pessoa' ? 'pessoa' : 'cliente'; } catch { return 'cliente'; }
+  });
+  const [celular, setCelular] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const atualizar = () => setCelular(mq.matches);
+    atualizar();
+    mq.addEventListener('change', atualizar);
+    return () => mq.removeEventListener('change', atualizar);
+  }, []);
+  const grupo: GrupoHoras = celular ? 'pessoa' : grupoEscolhido;
+  const escolherGrupo = (g: GrupoHoras) => {
+    setGrupoEscolhido(g);
+    try { localStorage.setItem('k360-horas-grupo', g); } catch { /* sem storage */ }
+  };
 
   const { semanas, series, max, tendencia, mediaRecente } = useMemo(() => {
     const segAtual = segundaDe(Date.now());
     const inicioJanela = segAtual - (SEMANAS - 1) * 7 * DIA_MS;
-    const clienteDe = (e: TimeEntry) => (e.mascarada ? null : tasksById.get(e.taskId)?.clienteId ?? null);
+    // Chave do grupo: cliente da tarefa (privado anônimo fica sem cliente) ou quem lançou
+    const chaveDe = (e: TimeEntry): string | null =>
+      grupo === 'pessoa' ? e.pessoaId : e.mascarada ? null : tasksById.get(e.taskId)?.clienteId ?? null;
+    const nomeDe = (id: string) => (grupo === 'pessoa' ? pessoasById.get(id)?.nome : clientesById.get(id)?.nome) ?? '—';
 
     // Ranking de cores na janela inteira, antes dos filtros
-    const totalPorCliente = new Map<string, number>();
+    const totalPorChave = new Map<string, number>();
     for (const e of timeEntriesAnalise) {
       if (e.startedAt < inicioJanela) continue;
-      const c = clienteDe(e);
-      if (c) totalPorCliente.set(c, (totalPorCliente.get(c) ?? 0) + duracaoH(e));
+      const c = chaveDe(e);
+      if (c) totalPorChave.set(c, (totalPorChave.get(c) ?? 0) + duracaoH(e));
     }
-    const top = [...totalPorCliente.entries()].sort((a, b) => b[1] - a[1]).slice(0, MAX_CLIENTES).map(([id]) => id);
-    const series: Serie[] = top.map((id, i) => ({ key: id, nome: clientesById.get(id)?.nome ?? '—', cor: `var(--hs-${i + 1})` }));
+    const top = [...totalPorChave.entries()].sort((a, b) => b[1] - a[1]).slice(0, MAX_CLIENTES).map(([id]) => id);
+    const series: Serie[] = top.map((id, i) => ({ key: id, nome: nomeDe(id), cor: `var(--hs-${i + 1})` }));
     series.push({ key: '__outros', nome: 'Outros', cor: 'var(--hs-outros)' });
 
     const semanas: Semana[] = Array.from({ length: SEMANAS }, (_, i) => {
@@ -112,7 +138,7 @@ export function HorasSemanaView({
       const s = semanas[idx];
       if (!s) continue;
       const h = duracaoH(e);
-      const c = t?.clienteId ?? null;
+      const c = chaveDe(e);
       const key = c && top.includes(c) ? c : '__outros';
       s.total += h;
       s.porSerie.set(key, (s.porSerie.get(key) ?? 0) + h);
@@ -129,7 +155,7 @@ export function HorasSemanaView({
     const mediaRecente = ultimas.length ? ultimas.reduce((a, s) => a + s.total, 0) / ultimas.length : 0;
     const max = Math.max(1, ...semanas.map((s) => s.total), ...tendencia.map((v) => v ?? 0));
     return { semanas, series, max, tendencia, mediaRecente };
-  }, [timeEntriesAnalise, tasksById, clientesById, filtros.clienteId, filtros.projetoId, filtros.pessoaId]);
+  }, [timeEntriesAnalise, tasksById, clientesById, pessoasById, grupo, filtros.clienteId, filtros.projetoId, filtros.pessoaId]);
 
   // Escala com folga e grade em números redondos (3 a 4 linhas)
   const passo = max <= 8 ? 2 : max <= 16 ? 5 : max <= 36 ? 10 : max <= 90 ? 25 : 50;
@@ -149,8 +175,23 @@ export function HorasSemanaView({
           <h2 className="text-sm font-semibold text-ink">{titulo}</h2>
           <p className="text-[10px] text-muted mt-0.5">
             {filtrada && <span className="text-[color:var(--green)] font-semibold">com filtros · </span>}
-            timesheet por cliente
+            timesheet {ROTULO_GRUPO[grupo]}
           </p>
+        </div>
+        {/* Agrupamento: só no desktop (celular fica por responsável) */}
+        <div className="hidden md:flex ml-auto mr-2 rounded-md border border-line overflow-hidden text-[11px] shrink-0" role="radiogroup" aria-label="Agrupar horas">
+          {(['cliente', 'pessoa'] as const).map((g) => (
+            <button
+              key={g}
+              type="button"
+              role="radio"
+              aria-checked={grupo === g}
+              onClick={() => escolherGrupo(g)}
+              className={grupo === g ? 'px-2.5 py-1 bg-[var(--surface-3)] text-ink font-semibold' : 'px-2.5 py-1 text-muted hover:text-ink'}
+            >
+              {g === 'cliente' ? 'Cliente' : 'Responsável'}
+            </button>
+          ))}
         </div>
         <div className="text-right shrink-0">
           <div className="text-lg font-semibold tabular-nums leading-none text-ink">{fmtH(mediaRecente)}</div>
@@ -176,6 +217,8 @@ export function HorasSemanaView({
                 className="relative flex-1 h-full flex flex-col justify-end cursor-default"
                 onMouseEnter={() => setHover(i)}
                 onMouseLeave={() => setHover(null)}
+                // Toque no celular: abre o detalhe desta semana (fecha ao tocar fora)
+                onClick={() => setHover(i)}
                 aria-label={`Semana de ${s.rotulo}: ${fmtH(s.total)}`}
               >
                 <div
@@ -202,9 +245,11 @@ export function HorasSemanaView({
           {/* Tooltip */}
           {semanaHover && hover != null && (
             <div
-              className="absolute z-10 pointer-events-none bg-bg-elev border border-line rounded-lg shadow-lg px-3 py-2 text-[11px] min-w-[150px]"
+              className="absolute z-10 pointer-events-none bg-bg-elev border border-line rounded-lg shadow-lg px-3 py-2 text-[11px] min-w-[170px] whitespace-nowrap"
               style={{
-                bottom: `${Math.min(92, (semanaHover.total / topo) * 100 + 4)}%`,
+                // Preso ao topo da área do gráfico: acima da barra mais alta ele
+                // passava do card (que corta o que transborda) e saía cortado
+                top: 0,
                 left: `${((hover + 0.5) / SEMANAS) * 100}%`,
                 transform: `translateX(${hover > SEMANAS / 2 ? '-100%' : '0'})`,
               }}
