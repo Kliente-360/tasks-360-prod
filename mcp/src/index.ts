@@ -190,6 +190,10 @@ const getTaskCommentsSchema = {
     .describe("Máximo de comentários retornados. Default 100, máximo 200."),
 };
 
+const AREAS_TECNICAS = [
+  "configuracao", "automacao", "canais_ia", "marketing", "integracao", "frontend", "consultoria", "relatorios",
+] as const;
+
 const ingestTaskSchema = {
   external_id: z
     .string()
@@ -219,7 +223,15 @@ const ingestTaskSchema = {
     .optional()
     .describe("Data limite no formato YYYY-MM-DD (timezone do app)."),
   subetapa: z.string().optional().describe("Etapa inicial: backlog (padrão), priorizado, em_definicao ou escopo_definido. Para mover depois, use update_task."),
-  tipo_trabalho: z.string().optional().describe("Ex: feature, bug, chore, suporte..."),
+  tipo_trabalho: z.string().optional().describe("Tipo: bug, feature, discovery, manutencao ou admin."),
+  area_tecnica: z
+    .enum(AREAS_TECNICAS)
+    .optional()
+    .describe("Área técnica (escolha única): configuracao, automacao, canais_ia, integracao, frontend, marketing, consultoria, relatorios."),
+  visivel_cliente: z
+    .boolean()
+    .optional()
+    .describe("Se a task aparece no portal do cliente. Na criação o padrão é true; mande false para tarefa interna (o cliente não vê nem é avisado). Em update, só muda se enviado."),
   tags: z.array(z.string()).optional(),
   criado_por_ia: z
     .boolean()
@@ -227,9 +239,6 @@ const ingestTaskSchema = {
     .describe("Marque true quando a task vier de uma extração automática (Cowork). Default: true."),
 };
 
-const AREAS_TECNICAS = [
-  "configuracao", "automacao", "canais_ia", "marketing", "integracao", "frontend", "consultoria", "relatorios",
-] as const;
 
 const SUBETAPAS = [
   "backlog", "priorizado", "em_definicao", "escopo_definido",
@@ -306,6 +315,10 @@ const updateTaskSchema = {
     .nullable()
     .optional()
     .describe("Área técnica da task (escolha única). null limpa."),
+  visivel_cliente: z
+    .boolean()
+    .optional()
+    .describe("true: a task aparece no portal do cliente; false: some do portal (vira interna). Em task do Salesforce a mudança vai para a org do cliente."),
 };
 
 const addTaskCommentSchema = {
@@ -516,7 +529,7 @@ export class MyMCP extends McpAgent<Env, unknown, UserProps> {
     // ───── update_task ─────────────────────────────────────────────────
     this.server.tool(
       "update_task",
-      "Atualiza uma task pelo id: etapa, título, prioridade, prazo, responsável, esforço, área técnica, valor entregue e solução implementada. Envie só os campos que mudam. Segue as regras do app: algumas mudanças de etapa pedem texto (veja `subetapa`), e esse texto vira comentário na conversa. Fica no histórico com origem 'mcp'. Em task do Salesforce (VB, CTF, Bodytech) a mudança vai para a org do cliente, igual a uma edição no app. Horas não se lançam aqui: use log_horas. Retorna a task, `campos` alterados, `comentario` (se houve) e `avisos`.",
+      "Atualiza uma task pelo id: etapa, título, prioridade, prazo, responsável, esforço, área técnica, visibilidade no portal do cliente, valor entregue e solução implementada. Envie só os campos que mudam. Segue as regras do app: algumas mudanças de etapa pedem texto (veja `subetapa`), e esse texto vira comentário na conversa. Fica no histórico com origem 'mcp'. Em task do Salesforce (VB, CTF, Bodytech) a mudança vai para a org do cliente, igual a uma edição no app. Horas não se lançam aqui: use log_horas. Retorna a task, `campos` alterados, `comentario` (se houve) e `avisos`.",
       updateTaskSchema,
       async (args) => {
         const result = await callTasks360(this.env, this.props, "POST", "update-task", undefined, args);

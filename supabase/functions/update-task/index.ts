@@ -21,7 +21,8 @@
 //     "responsavel": "nome ou uuid" | null, "esforco": 4,
 //     "valor_entregue": "texto", "solucao_implementada": "texto",
 //     "tempo_real_horas": 3.5,             // legado (o MCP não expõe mais; use log_horas)
-//     "area_tecnica": "automacao"          // ou null para limpar
+//     "area_tecnica": "automacao",         // ou null para limpar
+//     "visivel_cliente": false             // aparece (true) ou não (false) no portal do cliente
 //   }
 //
 // Regras de etapa iguais às do modal (exigenciaDaTransicao): a mensagem,
@@ -67,7 +68,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const COLS = 'id, titulo, status, subetapa, bloqueado_por, valor_entregue, solucao_implementada, tempo_real_horas, area_tecnica, prioridade, prazo, pessoa_id, esforco, motivo_reabertura, visivel_cliente, privada, arquivado_em, clientes ( privado ), projetos ( privado )';
-const COLS_SAIDA = 'id, titulo, status, subetapa, bloqueado_por, prioridade, prazo, pessoa_id, esforco, valor_entregue, solucao_implementada, tempo_real_horas, area_tecnica';
+const COLS_SAIDA = 'id, titulo, status, subetapa, bloqueado_por, prioridade, prazo, pessoa_id, esforco, valor_entregue, solucao_implementada, tempo_real_horas, area_tecnica, visivel_cliente';
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -201,6 +202,11 @@ Deno.serve(async (req) => {
     if (area !== (t.area_tecnica ?? null)) upd.area_tecnica = area;
   }
 
+  if (body.visivel_cliente !== undefined && body.visivel_cliente !== null) {
+    if (typeof body.visivel_cliente !== 'boolean') return err(422, 'invalid_visivel_cliente', 'visivel_cliente deve ser true ou false');
+    if (body.visivel_cliente !== (t.visivel_cliente !== false)) upd.visivel_cliente = body.visivel_cliente;
+  }
+
   if (Object.keys(upd).length === 0) {
     return json(200, { id: t.id, titulo: t.titulo, action: 'unchanged', campos: [] });
   }
@@ -242,6 +248,7 @@ Deno.serve(async (req) => {
     pessoa_id: 'pessoa', esforco: 'esforco', bloqueado_por: 'bloqueado_por',
     valor_entregue: 'valor_entregue', solucao_implementada: 'solucao_implementada',
     tempo_real_horas: 'tempo_real_horas', area_tecnica: 'area_tecnica',
+    visivel_cliente: 'visivel_cliente',
   };
   const linhas = Object.keys(mapa)
     .filter((k) => k in upd)

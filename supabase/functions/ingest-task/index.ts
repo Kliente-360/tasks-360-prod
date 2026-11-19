@@ -27,6 +27,8 @@
 //     "status":       "andamento",                  // opcional (legacy: backlog|andamento|bloqueado|concluido)
 //     "complexidade": "media",                      // opcional: alta|media|baixa
 //     "tipo_trabalho":"feature",                    // opcional: bug|feature|discovery|manutencao|admin
+//     "area_tecnica": "automacao",                  // opcional: configuracao|automacao|canais_ia|integracao|frontend|marketing|consultoria|relatorios · null limpa
+//     "visivel_cliente": false,                     // opcional. Padrão do banco na criação: true (aparece no portal). Só muda se enviado.
 //     // "tags": [...]  — REMOVIDO (coluna dropada v1.03.159 · ingest aceita silenciosamente, sem inserir)
 //     "criado_por_ia":true,                         // opcional, default false. Marca task como originada de automação IA (Cowork etc).
 //     "external_status":"Cancelado"                 // opcional. Quando "Cancelado" (case-insensitive):
@@ -65,6 +67,7 @@ const SERVICE_KEY   = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const API_KEYS      = (Deno.env.get('INGEST_API_KEYS') || '')
   .split(',').map(s => s.trim()).filter(Boolean);
 const SOURCE        = 'salesforce';
+const AREAS_VALID   = ['configuracao', 'automacao', 'canais_ia', 'integracao', 'frontend', 'marketing', 'consultoria', 'relatorios'];
 
 const STATUS_VALID  = ['backlog', 'andamento', 'bloqueado', 'concluido'];
 const PRI_VALID     = ['P0', 'P1', 'P2', 'P3'];
@@ -260,6 +263,20 @@ Deno.serve(async (req) => {
       return err(422, 'invalid_tipo_trabalho', `tipo_trabalho deve ser: ${TIPO_VALID.join('|')}`);
     }
   }
+  // area_tecnica: só mexe se vier no body; null/"" limpa
+  let areaTecnica: string | null | undefined = undefined;
+  if (body.area_tecnica !== undefined) {
+    areaTecnica = body.area_tecnica === null || body.area_tecnica === '' ? null : String(body.area_tecnica).toLowerCase().trim();
+    if (areaTecnica !== null && !AREAS_VALID.includes(areaTecnica)) {
+      return err(422, 'invalid_area_tecnica', `area_tecnica deve ser: ${AREAS_VALID.join('|')}`);
+    }
+  }
+  // visivel_cliente: só mexe se vier no body (na criação o padrão do banco é true)
+  let visivelCliente: boolean | undefined = undefined;
+  if (body.visivel_cliente !== undefined && body.visivel_cliente !== null) {
+    if (typeof body.visivel_cliente !== 'boolean') return err(422, 'invalid_visivel_cliente', 'visivel_cliente deve ser true ou false');
+    visivelCliente = body.visivel_cliente;
+  }
   // tags · coluna foi dropada na v1.03.159 (Onda 2.D). Mantemos compat
   // silenciosa: clientes que ainda mandam o campo recebem 200 sem erro,
   // só descartamos. Sem retornar 422 pra não quebrar Cowork/SF/AppScript.
@@ -317,6 +334,8 @@ Deno.serve(async (req) => {
   if (complexidade)                 payload.complexidade = complexidade;
   if (tipoTrabalho)                 payload.tipo_trabalho = tipoTrabalho;
   if (criadoPorIa != null)          payload.criado_por_ia = criadoPorIa;
+  if (areaTecnica !== undefined)    payload.area_tecnica = areaTecnica;
+  if (visivelCliente !== undefined) payload.visivel_cliente = visivelCliente;
   if (subetapa) {
     payload.subetapa = subetapa;
     if (!existing || existing.subetapa !== subetapa) {
