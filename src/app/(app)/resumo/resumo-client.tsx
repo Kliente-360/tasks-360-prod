@@ -11,6 +11,7 @@ import {
   computeWeeklyCapacityAnalysis,
 } from '@/lib/analytics';
 import { VelocidadeOperacao } from '@/components/velocidade-operacao';
+import { HorasSemanaCard } from '@/components/horas-semana';
 import { StandupCard } from '@/components/standup-card';
 
 // ─────────────────────────────────────────────────────────
@@ -107,6 +108,7 @@ export function ResumoClient() {
 
         {/* ── 1 · Velocidade da operação ── */}
         <VelocidadeOperacao vel={vel} />
+        <HorasSemanaCard />
 
         {/* ── 3 · Capacidade do time ── */}
         <div className="bg-elev border border-line rounded-xl overflow-hidden">

@@ -20,6 +20,7 @@ import {
   computeWeeklyCapacityAnalysis,
 } from '@/lib/analytics';
 import { VelocidadeOperacao } from '@/components/velocidade-operacao';
+import { HorasSemanaCard } from '@/components/horas-semana';
 
 // ─────────────────────────────────────────────────────────
 //  Helpers
@@ -345,6 +346,13 @@ export function DashboardClient() {
            + a chart Throughput 12 semanas — densidade equivalente, mais
            acionável (foca em ritmo + previsibilidade vs estado bruto). */}
       <VelocidadeOperacao vel={vel} filtrada={velFiltrada} />
+
+      {/* ── Horas por semana (timesheet) · segue cliente, projeto e responsável
+           (aqui = quem lançou as horas) */}
+      <HorasSemanaCard
+        filtros={{ clienteId: filterCliente || undefined, projetoId: filterProjeto || undefined, pessoaId: filterPessoa || undefined }}
+        filtrada={!!(filterCliente || filterProjeto || filterPessoa)}
+      />
 
       {/* ── 2. Entregas + Calendário ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">

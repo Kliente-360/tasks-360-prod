@@ -4006,3 +4006,16 @@ button.m2-vis-tag { cursor: pointer; }
 .ts-tbl tbody tr.ts-row { cursor: default; }
 /* Etapa que não pode ser escolhida à mão (ex.: voltar da homologação) */
 .m2-op:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Card "Horas por semana" (Dashboard e Resumo) · paleta categórica validada
+   (dataviz): cor segue o cliente; "Outros" em cinza. Escuro = mesmos tons
+   ajustados para a superfície escura. */
+.hs-card {
+  --hs-1: #2a78d6; --hs-2: #eb6834; --hs-3: #1baf7a; --hs-4: #eda100; --hs-5: #e87ba4;
+  --hs-outros: #a9a8a3;
+}
+.dark .hs-card, [data-theme="dark"] .hs-card {
+  --hs-1: #3987e5; --hs-2: #d95926; --hs-3: #199e70; --hs-4: #c98500; --hs-5: #d55181;
+  --hs-outros: #6b6a66;
+}
+.hs-pilha { gap: 2px; transition: opacity .15s; }
