@@ -679,11 +679,31 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
+// agents 0.0.67 só grava os dados do login (props) na sessão no transporte
+// SSE; no Streamable HTTP (o que o claude.ai usa) this.props ficava vazio, e
+// as Edge Functions recebiam a chamada sem x-tasks360-user: autor "Time de
+// desenvolvimento", histórico sem ator e sem a regra de acesso. Aqui, a cada
+// requisição de uma sessão já aberta, a sessão recebe as props do OAuth
+// antes de executar a tool. Ao atualizar a lib, conferir se ainda precisa.
+const mcpHandler = MyMCP.serve("/mcp");
+const apiHandler = {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext & { props?: UserProps }) {
+    const sessionId = request.headers.get("mcp-session-id");
+    if (sessionId && ctx.props?.email !== undefined) {
+      const stub = env.MCP_OBJECT.get(env.MCP_OBJECT.idFromName(`streamable-http:${sessionId}`)) as unknown as {
+        _init(props: UserProps): Promise<void>;
+      };
+      await stub._init(ctx.props);
+    }
+    return mcpHandler.fetch(request, env, ctx);
+  },
+};
+
 export default new OAuthProvider<Env>({
   // Só Streamable HTTP. O transporte SSE (/sse) saiu: nenhum cliente nosso usa e o
   // OAuth exige que toda rota protegida fique sob o resource /mcp.
   apiRoute: "/mcp",
-  apiHandler: MyMCP.serve("/mcp"),
+  apiHandler: apiHandler as unknown as ReturnType<typeof MyMCP.serve>,
   defaultHandler: googleHandler, // /authorize, /callback, /health
   authorizeEndpoint: "/authorize",
   tokenEndpoint: "/token",
