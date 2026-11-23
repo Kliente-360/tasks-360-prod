@@ -34,6 +34,7 @@ import { Icon } from '@/components/icons';
 import { PriChip, TaskAvatar, PrazoLabel, TagIA, RadarBadge, PedidoPrioridadeChip } from './primitives';
 import { cn } from '@/lib/utils';
 import type { Task } from '@/lib/types';
+import { SUB_LABELS } from '@/lib/task-constants';
 
 interface TaskCardProps {
   task: Task;
@@ -57,6 +58,8 @@ interface TaskCardProps {
   descricaoPreview?: string;
   /** Pra size=lg: mostra chip de status no footer */
   showStatus?: boolean;
+  /** Chip da etapa (subetapa) no footer, com a cor do status (Backlog no celular) */
+  showSubetapa?: boolean;
   onClick?: () => void;
   className?: string;
 }
@@ -83,6 +86,7 @@ export function TaskCard({
   showEsforco = false,
   descricaoPreview,
   showStatus = false,
+  showSubetapa = false,
   onClick,
   className,
 }: TaskCardProps) {
@@ -164,6 +168,12 @@ export function TaskCard({
             {respNome && <span className="text-xs text-muted">{firstName}</span>}
             {task.criadoPorIa && <TagIA />}
             {task.prioridadePedidoEm && <PedidoPrioridadeChip />}
+            {showSubetapa && task.subetapa && (
+              <span className="status" data-s={task.status} style={{ fontSize: 10 }}>
+                <span className="status-dot" />
+                {SUB_LABELS[task.subetapa] ?? task.subetapa}
+              </span>
+            )}
             {size === 'lg' && showStatus && (
               <span className={cn('status', `status-${task.status}`)} style={{ fontSize: 10 }}>
                 <span className="status-dot" />

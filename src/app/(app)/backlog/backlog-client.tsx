@@ -33,13 +33,23 @@ import type { Filters as StdFilters } from '@/lib/filters';
 import type { Cliente, Pessoa, Task } from '@/lib/types';
 
 // Sort manual (DnD) foi removido do Backlog do Alpine — não portamos.
-// Sort fica sempre em chain (asc/desc por coluna) ou vazio (criação desc).
+// Sort fica sempre em chain (asc/desc por coluna) ou, vazio, na ORDEM_PADRAO
+// (status, etapa, prazo, prioridade, responsável).
 
 // ====================== Tipos locais ======================
 type SortKey = {
   key: string;
   dir: 'asc' | 'desc';
 };
+
+/** Ordem padrão da lista (desktop e celular) quando nenhuma coluna foi escolhida */
+const ORDEM_PADRAO: SortKey[] = [
+  { key: 'status', dir: 'asc' },
+  { key: 'subetapa', dir: 'asc' },
+  { key: 'prazo', dir: 'asc' },
+  { key: 'prioridade', dir: 'asc' },
+  { key: 'pessoaId', dir: 'asc' },
+];
 
 type Filters = {
   q: string;
@@ -260,15 +270,16 @@ export function BacklogClient() {
     });
 
     // ===== Sort =====
-    if (sortKeys.length === 0) {
-      arr.sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
-      return arr;
-    }
+    // Sem coluna escolhida vale a ordem padrão: status, etapa, prazo,
+    // prioridade e responsável (a mesma lista alimenta o celular)
+    const chaves = sortKeys.length ? sortKeys : ORDEM_PADRAO;
     const resolveVal = (t: Task, k: string): number | string => {
       let v: unknown = (t as unknown as Record<string, unknown>)[k];
       if (k === 'clienteId') v = clientesById.get(t.clienteId)?.nome ?? '';
       if (k === 'projetoId') v = projetosById.get(t.projetoId)?.nome ?? '';
-      if (k === 'pessoaId') v = pessoasById.get(t.pessoaId)?.nome ?? '';
+      // Sem responsável e sem prazo vão para o fim na ordem crescente
+      if (k === 'pessoaId') v = pessoasById.get(t.pessoaId)?.nome || '~';
+      if (k === 'prazo') v = t.prazo || '9999-12-31';
       if (k === 'status') {
         v = ({ andamento: 0, bloqueado: 1, backlog: 2, concluido: 3 } as Record<string, number>)[String(v)] ?? 99;
       }
@@ -280,14 +291,14 @@ export function BacklogClient() {
       return v == null ? '' : (v as number | string);
     };
     arr.sort((a, b) => {
-      for (const { key, dir } of sortKeys) {
+      for (const { key, dir } of chaves) {
         const mul = dir === 'asc' ? 1 : -1;
         const av = resolveVal(a, key);
         const bv = resolveVal(b, key);
         if (av < bv) return -mul;
         if (av > bv) return mul;
       }
-      return 0;
+      return (b.criadoEm || 0) - (a.criadoEm || 0);
     });
     return arr;
   }, [tasks, showArchived, onlyRadar, soPrivadas, ePrivada, f, sortKeys, clientesById, projetosById, pessoasById]);
@@ -1207,6 +1218,7 @@ function BacklogMobilePanel({
               projeto={projetosById.get(t.projetoId)?.nome}
               respNome={pessoasById.get(t.pessoaId)?.nome ?? '—'}
               size="md"
+              showSubetapa
               onClick={() => onOpen(t)}
             />
           ))
