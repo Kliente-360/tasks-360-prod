@@ -28,7 +28,6 @@ import { usePortalNomes } from './use-portal-nomes';
 import { PortalIaBoxes } from './portal-ia-boxes';
 import { CabecalhoRecolher, useSecaoAberta } from './recolher';
 import { PortalTaskModal } from './portal-task-modal';
-import { useTaskModal } from '@/components/task-modal';
 import { PortalNewTaskForm } from './portal-new-task-form';
 import { Icon } from '@/components/icons';
 import { useClickAway } from '@/lib/use-click-away';
@@ -138,9 +137,6 @@ export function PortalClient() {
 
   // Modal state
   const [openTask, setOpenTask] = useState<Task | null>(null);
-  // Time na aba Portal (ex.: PMO conduzindo reunião com o cliente) abre o
-  // modal interno, que edita em tempo real; cliente segue no modal do portal
-  const { openEdit } = useTaskModal();
   const closeModal = () => setOpenTask(null);
   // 3.D · estado do form "Nova solicitação" · abre via evento
   // `portal:new-task` disparado pelo botão + Solicitação do header.
@@ -238,10 +234,6 @@ export function PortalClient() {
     // e é visível. RLS já bloqueia no banco; este guard evita race conditions
     // (ex: realtime entregando task antes da filtragem).
     if (!t || t.clienteId !== effectiveCid || t.visivelCliente === false || t.arquivadoEm) {
-      return;
-    }
-    if (viewerRole !== ROLE.CLIENTE) {
-      openEdit(t.id);
       return;
     }
     track('task_open', { task_id: t.id, props: { portal: true } });

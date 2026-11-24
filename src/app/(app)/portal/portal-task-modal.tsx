@@ -22,7 +22,9 @@ import { useData } from '@/lib/data-store';
 import { useToastSafe } from '@/components/toast';
 import { Icon } from '@/components/icons';
 import { fmtDataCurta, fmtPostedEm } from '@/lib/format';
-import { STATUS, SUB_LABELS } from '@/lib/task-constants';
+import { STATUS, SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
+import { sumTimeEntriesHours, validateSubetapaAdvance, voltaSemJustificativa } from '@/lib/task-utils';
+import { useTaskModal } from '@/components/task-modal';
 import type { Task } from '@/lib/types';
 import { ANEXO_COLS, atalhoColar, enviarImagem, imagensDoClipboard, urlsDosAnexos, type Anexo } from '@/lib/anexos';
 import {
@@ -331,7 +333,8 @@ function PedirPrioridadeDialog({
 // ── Modal ────────────────────────────────────────────────────────────
 
 export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }: PortalTaskModalProps) {
-  const { projetos, clientes, patchTask, viewerRole, currentPessoa } = useData();
+  const { projetos, clientes, patchTask, viewerRole, currentPessoa, tasks, timeEntries } = useData();
+  const { openEdit } = useTaskModal();
   const toast = useToastSafe();
   const sb = useMemo(() => createClient(), []);
 
@@ -358,6 +361,73 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
 
   const taskId = task?.id ?? '';
   const ehCliente = viewerRole === 'cliente';
+
+  // ── Time na aba Portal (PMO em reunião com o cliente): etapa, prioridade e
+  // prazo editáveis nos chips do topo, salvando na hora como no app
+  const [salvandoCampo, setSalvandoCampo] = useState<string | null>(null);
+  const editarCampo = useCallback(
+    async (campo: 'subetapa' | 'prioridade' | 'prazo', valor: string) => {
+      if (!task || ehCliente) return;
+      const de = (task[campo] as string | null | undefined) || '';
+      if (valor === de) return;
+      const agora = new Date();
+      const iso = agora.toISOString();
+      const patchDb: Record<string, unknown> = {};
+      const patchLocal: Partial<Task> = {};
+      const macroNovo = campo === 'subetapa' ? SUB_TO_MACRO[valor] : undefined;
+      if (campo === 'subetapa') {
+        patchDb.subetapa = valor;
+        patchDb.subetapa_em = iso;
+        patchLocal.subetapa = valor as Task['subetapa'];
+        patchLocal.subetapaEm = agora.getTime();
+        if (macroNovo && macroNovo !== task.status) {
+          patchDb.status_em = iso;
+          patchLocal.status = macroNovo as Task['status'];
+          patchLocal.statusEm = agora.getTime();
+        }
+      } else if (campo === 'prioridade') {
+        patchDb.prioridade = valor || null;
+        patchLocal.prioridade = valor as Task['prioridade'];
+      } else {
+        patchDb.prazo = valor || null;
+        patchLocal.prazo = valor;
+      }
+      const antes = { ...task };
+      setSalvandoCampo(campo);
+      patchTask(task.id, patchLocal);
+      const { error } = await sb.from('tasks').update(patchDb).eq('id', task.id);
+      setSalvandoCampo(null);
+      if (error) {
+        patchTask(task.id, antes);
+        toast.error('Não foi possível salvar: ' + error.message);
+        return;
+      }
+      const autor = currentPessoa?.id ?? null;
+      const linhas: { task_id: string; field: string; from_value: string | null; to_value: string | null; actor_pessoa_id: string | null; actor_source: string; occurred_at: string }[] = [{ task_id: task.id, field: campo, from_value: de || null, to_value: valor || null, actor_pessoa_id: autor, actor_source: 'app', occurred_at: iso }];
+      if (macroNovo && macroNovo !== task.status) {
+        linhas.push({ task_id: task.id, field: 'status', from_value: task.status, to_value: macroNovo, actor_pessoa_id: autor, actor_source: 'app', occurred_at: iso });
+      }
+      void sb.from('task_field_history').insert(linhas);
+      track('task_update', { task_id: task.id, props: { campos: [campo], origem: 'portal' } });
+    },
+    [task, ehCliente, sb, patchTask, toast, currentPessoa?.id],
+  );
+  // Etapas que pedem texto ou não passam nas regras ficam desativadas no menu
+  // (essas mudanças vão pela tarefa completa, que pede a mensagem certa)
+  const motivoEtapaBloqueada = (s: string): string | null => {
+    if (!task || s === task.subetapa) return null;
+    if (s === 'bloqueado') return 'pede o motivo';
+    if (task.subetapa === 'concluido') return 'reabrir pede o motivo';
+    if (voltaSemJustificativa(task.subetapa, s)) return 'pede justificativa';
+    if (s === 'em_homologacao') return 'pede a mensagem ao cliente';
+    const horas = sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === task.id));
+    const hasOpenPreReqs = (task.bloqueadaPorTasks ?? []).some((id) => {
+      const dep = tasks.find((x) => x.id === id);
+      return !!dep && dep.status !== 'concluido' && !dep.arquivadoEm;
+    });
+    const gate = validateSubetapaAdvance(task, s, { timeEntriesHours: horas, hasOpenPreReqs });
+    return gate.ok ? null : gate.error.replace(/\.$/, '').toLowerCase();
+  };
 
   const carregar = useCallback(
     async (id: string) => {
@@ -656,26 +726,83 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                 responsável · prioridade · prazo */}
             <div className="pmodal-chips">
               {projeto && <span className="pmodal-chip">{projeto}</span>}
-              <span className={`pmodal-chip ${statusChip.cls}`}>
-                <span className="pmodal-dot" />
-                {statusChip.txt}
-              </span>
+              {ehCliente ? (
+                <span className={`pmodal-chip ${statusChip.cls}`}>
+                  <span className="pmodal-dot" />
+                  {statusChip.txt}
+                </span>
+              ) : (
+                <select
+                  className={`pmodal-chip pmodal-chip-edit ${statusChip.cls}`}
+                  value={task.subetapa}
+                  disabled={salvandoCampo === 'subetapa'}
+                  onChange={(e) => editarCampo('subetapa', e.target.value)}
+                  aria-label="Etapa"
+                  title="Mudar etapa"
+                >
+                  {SUBS_FLAT.map((s) => {
+                    const motivo = motivoEtapaBloqueada(s);
+                    return (
+                      <option key={s} value={s} disabled={!!motivo}>
+                        {SUB_LABELS[s]}{motivo ? ` (${motivo})` : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              )}
               {responsavel && (
                 <span className="pmodal-chip">
                   <span className="pmodal-avatar">{responsavel.charAt(0)}</span>
                   {responsavel}
                 </span>
               )}
-              {task.prioridade && (
-                <span className={`pri pri-${task.prioridade}`}>
-                  <span className="pri-dot" />
-                  {task.prioridade}
-                </span>
+              {ehCliente ? (
+                task.prioridade && (
+                  <span className={`pri pri-${task.prioridade}`}>
+                    <span className="pri-dot" />
+                    {task.prioridade}
+                  </span>
+                )
+              ) : (
+                <select
+                  className={`pmodal-chip pmodal-chip-edit pri pri-${task.prioridade || 'none'}`}
+                  value={task.prioridade || ''}
+                  disabled={salvandoCampo === 'prioridade'}
+                  onChange={(e) => editarCampo('prioridade', e.target.value)}
+                  aria-label="Prioridade"
+                  title="Mudar prioridade"
+                >
+                  <option value="">Sem prioridade</option>
+                  {['P0', 'P1', 'P2', 'P3'].map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
               )}
-              {task.prazo && (
-                <span className={`pmodal-chip font-mono ${atrasada ? 'is-danger' : ''}`}>
-                  {fmtDataCurta(task.prazo)}
-                </span>
+              {ehCliente ? (
+                task.prazo && (
+                  <span className={`pmodal-chip font-mono ${atrasada ? 'is-danger' : ''}`}>
+                    {fmtDataCurta(task.prazo)}
+                  </span>
+                )
+              ) : (
+                <input
+                  type="date"
+                  className={`pmodal-chip pmodal-chip-edit font-mono ${atrasada ? 'is-danger' : ''}`}
+                  value={task.prazo || ''}
+                  disabled={salvandoCampo === 'prazo'}
+                  onChange={(e) => editarCampo('prazo', e.target.value)}
+                  aria-label="Prazo"
+                  title="Mudar prazo"
+                />
+              )}
+              {!ehCliente && (
+                <button
+                  type="button"
+                  className="pmodal-chip pmodal-chip-acao-time"
+                  onClick={() => { onClose(); openEdit(task.id); }}
+                  title="Abrir a tarefa no modal do time (mensagens, horas, homologação, bloqueio)"
+                >
+                  <Icon name="edit" size={12} />
+                  Abrir tarefa completa
+                </button>
               )}
               {/* Celular: pedir prioridade fica junto das pills, no topo */}
               <button

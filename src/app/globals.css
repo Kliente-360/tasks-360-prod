@@ -4024,3 +4024,10 @@ button.m2-vis-tag { cursor: pointer; }
   background: var(--danger-soft); color: var(--danger); font-size: 13px; font-weight: 500; }
 .m2-saida-erro span { flex: 1; }
 .m2-saida-erro .m2-btn { flex: none; }
+
+/* Portal visto pelo time: etapa, prioridade e prazo editáveis nos chips */
+select.pmodal-chip-edit, input.pmodal-chip-edit { font: inherit; cursor: pointer; appearance: auto; max-width: 220px; }
+select.pmodal-chip-edit.pri { border: 1px solid var(--line); }
+.pmodal-chip-edit:disabled { opacity: .6; cursor: progress; }
+.pmodal-chip-acao-time { background: none; border-style: dashed; color: var(--ink-soft); cursor: pointer; }
+.pmodal-chip-acao-time:hover { color: var(--green); border-color: var(--green); }
