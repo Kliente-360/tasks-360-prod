@@ -4025,16 +4025,5 @@ button.m2-vis-tag { cursor: pointer; }
 .m2-saida-erro span { flex: 1; }
 .m2-saida-erro .m2-btn { flex: none; }
 
-/* Portal visto pelo time: prioridade e prazo editáveis com o mesmo visual dos
-   chips; o seletor/calendário nativo fica invisível por cima do chip */
-.pmodal-chip-edit { position: relative; cursor: pointer; }
-.pmodal-chip-edit:hover { box-shadow: inset 0 0 0 1px var(--line-strong); }
-.pmodal-chip-edit > select, .pmodal-chip-edit > input {
-  position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; font-size: 16px; }
-.pmodal-chip-edit > select:disabled, .pmodal-chip-edit > input:disabled { cursor: progress; }
-.pmodal-chip.is-vazio { background: transparent; border: 1px dashed var(--line-strong); color: var(--muted); }
-.pmodal-caret { font-size: 9px; color: var(--muted); margin-left: 2px; }
 /* Etapa (só o time): no topo da coluna de detalhes, como no modal interno */
 .pmodal-passos-time { margin-bottom: 20px; }
-button.pmodal-chip-edit { font: inherit; cursor: pointer; }
-button.pmodal-chip-edit.pri { border: 0; }

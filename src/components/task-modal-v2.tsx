@@ -289,7 +289,7 @@ function ChipEtapa({ editing, onEscolher }: { editing: Task; onEscolher: (s: str
   );
 }
 
-function ChipLista<T extends string>({
+export function ChipLista<T extends string>({
   rotulo, vazio, valor, opcoes, onEscolher, icone, classe, largura = 220, permiteLimpar,
 }: {
   rotulo: React.ReactNode;
@@ -332,7 +332,7 @@ function ChipLista<T extends string>({
   );
 }
 
-function ChipPrazo({ prazo, vencido, onChange }: { prazo: string; vencido: boolean; onChange: (v: string) => void }) {
+export function ChipPrazo({ prazo, vencido, onChange }: { prazo: string; vencido: boolean; onChange: (v: string) => void }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   return (
     <label className={cn('m2-chip relative', !prazo && 'vazio', vencido && 'danger')}>
