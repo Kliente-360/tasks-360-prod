@@ -4031,3 +4031,7 @@ select.pmodal-chip-edit.pri { border: 1px solid var(--line); }
 .pmodal-chip-edit:disabled { opacity: .6; cursor: progress; }
 .pmodal-chip-acao-time { background: none; border-style: dashed; color: var(--ink-soft); cursor: pointer; }
 .pmodal-chip-acao-time:hover { color: var(--green); border-color: var(--green); }
+/* Portal visto pelo time: faixa Próximo passo (mesmos botões do modal interno) */
+.pmodal-passo-time { margin: 0 20px 12px; padding: 10px 12px; border: 1px dashed var(--line-strong); border-radius: 10px; display: grid; gap: 8px; }
+.pmodal-passo-rot { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.pmodal-passo-time .m2-saida { background: transparent; border: 0; padding: 0; }

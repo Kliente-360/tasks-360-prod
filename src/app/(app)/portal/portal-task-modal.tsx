@@ -22,9 +22,11 @@ import { useData } from '@/lib/data-store';
 import { useToastSafe } from '@/components/toast';
 import { Icon } from '@/components/icons';
 import { fmtDataCurta, fmtPostedEm } from '@/lib/format';
-import { STATUS, SUB_LABELS, SUBS_FLAT, SUB_TO_MACRO } from '@/lib/task-constants';
-import { sumTimeEntriesHours, validateSubetapaAdvance, voltaSemJustificativa } from '@/lib/task-utils';
+import { STATUS, SUB_LABELS } from '@/lib/task-constants';
+import { sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
 import { useTaskModal } from '@/components/task-modal';
+import { Passos, Saida } from '@/components/task-modal-v2';
+import { aplicarTransicaoEtapa, type OpcoesTransicao } from '@/lib/transicao-etapa';
 import type { Task } from '@/lib/types';
 import { ANEXO_COLS, atalhoColar, enviarImagem, imagensDoClipboard, urlsDosAnexos, type Anexo } from '@/lib/anexos';
 import {
@@ -362,11 +364,11 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
   const taskId = task?.id ?? '';
   const ehCliente = viewerRole === 'cliente';
 
-  // ── Time na aba Portal (PMO em reunião com o cliente): etapa, prioridade e
-  // prazo editáveis nos chips do topo, salvando na hora como no app
+  // ── Time na aba Portal (PMO em reunião com o cliente): prioridade e prazo
+  // editáveis nos chips do topo; a etapa anda pela faixa Próximo passo
   const [salvandoCampo, setSalvandoCampo] = useState<string | null>(null);
   const editarCampo = useCallback(
-    async (campo: 'subetapa' | 'prioridade' | 'prazo', valor: string) => {
+    async (campo: 'prioridade' | 'prazo', valor: string) => {
       if (!task || ehCliente) return;
       const de = (task[campo] as string | null | undefined) || '';
       if (valor === de) return;
@@ -374,18 +376,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
       const iso = agora.toISOString();
       const patchDb: Record<string, unknown> = {};
       const patchLocal: Partial<Task> = {};
-      const macroNovo = campo === 'subetapa' ? SUB_TO_MACRO[valor] : undefined;
-      if (campo === 'subetapa') {
-        patchDb.subetapa = valor;
-        patchDb.subetapa_em = iso;
-        patchLocal.subetapa = valor as Task['subetapa'];
-        patchLocal.subetapaEm = agora.getTime();
-        if (macroNovo && macroNovo !== task.status) {
-          patchDb.status_em = iso;
-          patchLocal.status = macroNovo as Task['status'];
-          patchLocal.statusEm = agora.getTime();
-        }
-      } else if (campo === 'prioridade') {
+      if (campo === 'prioridade') {
         patchDb.prioridade = valor || null;
         patchLocal.prioridade = valor as Task['prioridade'];
       } else {
@@ -404,29 +395,49 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
       }
       const autor = currentPessoa?.id ?? null;
       const linhas: { task_id: string; field: string; from_value: string | null; to_value: string | null; actor_pessoa_id: string | null; actor_source: string; occurred_at: string }[] = [{ task_id: task.id, field: campo, from_value: de || null, to_value: valor || null, actor_pessoa_id: autor, actor_source: 'app', occurred_at: iso }];
-      if (macroNovo && macroNovo !== task.status) {
-        linhas.push({ task_id: task.id, field: 'status', from_value: task.status, to_value: macroNovo, actor_pessoa_id: autor, actor_source: 'app', occurred_at: iso });
-      }
       void sb.from('task_field_history').insert(linhas);
       track('task_update', { task_id: task.id, props: { campos: [campo], origem: 'portal' } });
     },
     [task, ehCliente, sb, patchTask, toast, currentPessoa?.id],
   );
-  // Etapas que pedem texto ou não passam nas regras ficam desativadas no menu
-  // (essas mudanças vão pela tarefa completa, que pede a mensagem certa)
-  const motivoEtapaBloqueada = (s: string): string | null => {
-    if (!task || s === task.subetapa) return null;
-    if (s === 'bloqueado') return 'pede o motivo';
-    if (task.subetapa === 'concluido') return 'reabrir pede o motivo';
-    if (voltaSemJustificativa(task.subetapa, s)) return 'pede justificativa';
-    if (s === 'em_homologacao') return 'pede a mensagem ao cliente';
+  // Próximo passo (time): mesmas regras e botões do modal interno
+  // A solução implementada não vem na lista do app (campo carregado à parte):
+  // usa a dos detalhes, senão a regra de Concluir a daria como vazia
+  const tarefaComDetalhes = (): Task | null =>
+    task ? { ...task, solucaoImplementada: task.solucaoImplementada ?? detalhes?.solucao ?? '' } : null;
+  const contextoTransicao = () => {
+    if (!task) return null;
     const horas = sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === task.id));
     const hasOpenPreReqs = (task.bloqueadaPorTasks ?? []).some((id) => {
       const dep = tasks.find((x) => x.id === id);
       return !!dep && dep.status !== 'concluido' && !dep.arquivadoEm;
     });
-    const gate = validateSubetapaAdvance(task, s, { timeEntriesHours: horas, hasOpenPreReqs });
-    return gate.ok ? null : gate.error.replace(/\.$/, '').toLowerCase();
+    return { horas, hasOpenPreReqs };
+  };
+  const transicionar = async (patch: Partial<Task>, opts?: OpcoesTransicao): Promise<boolean> => {
+    const c = contextoTransicao();
+    if (!task || !c) return false;
+    const r = await aplicarTransicaoEtapa(
+      {
+        sb, task: tarefaComDetalhes()!, horasLancadas: c.horas, hasOpenPreReqs: c.hasOpenPreReqs, patchTask,
+        pessoa: currentPessoa ? { id: currentPessoa.id, nome: currentPessoa.nome } : null,
+      },
+      patch,
+      opts,
+    );
+    if (!r.ok) {
+      toast.error(r.error);
+      return false;
+    }
+    track('modal_transicao', { task_id: task.id, props: { para: patch.subetapa, com_mensagem: !!opts?.mensagem, origem: 'portal' } });
+    void carregar(task.id);
+    return true;
+  };
+  const preChecarEtapa = (sub: string): string | null => {
+    const c = contextoTransicao();
+    if (!task || !c) return null;
+    const gate = validateSubetapaAdvance(tarefaComDetalhes()!, sub, { timeEntriesHours: c.horas, hasOpenPreReqs: c.hasOpenPreReqs });
+    return gate.ok ? null : gate.error;
   };
 
   const carregar = useCallback(
@@ -726,30 +737,10 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                 responsável · prioridade · prazo */}
             <div className="pmodal-chips">
               {projeto && <span className="pmodal-chip">{projeto}</span>}
-              {ehCliente ? (
-                <span className={`pmodal-chip ${statusChip.cls}`}>
-                  <span className="pmodal-dot" />
-                  {statusChip.txt}
-                </span>
-              ) : (
-                <select
-                  className={`pmodal-chip pmodal-chip-edit ${statusChip.cls}`}
-                  value={task.subetapa}
-                  disabled={salvandoCampo === 'subetapa'}
-                  onChange={(e) => editarCampo('subetapa', e.target.value)}
-                  aria-label="Etapa"
-                  title="Mudar etapa"
-                >
-                  {SUBS_FLAT.map((s) => {
-                    const motivo = motivoEtapaBloqueada(s);
-                    return (
-                      <option key={s} value={s} disabled={!!motivo}>
-                        {SUB_LABELS[s]}{motivo ? ` (${motivo})` : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-              )}
+              <span className={`pmodal-chip ${statusChip.cls}`}>
+                <span className="pmodal-dot" />
+                {statusChip.txt}
+              </span>
               {responsavel && (
                 <span className="pmodal-chip">
                   <span className="pmodal-avatar">{responsavel.charAt(0)}</span>
@@ -824,6 +815,37 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
             </button>
           </div>
         </header>
+
+        {/* Próximo passo · só o time: os mesmos botões do modal interno
+            (homologação e volta pedem mensagem, bloqueio pede motivo) */}
+        {!ehCliente && (
+          <div className="pmodal-passo-time">
+            <div className="pmodal-passo-rot">Próximo passo · só o time vê</div>
+            {task.subetapa === 'em_desenvolvimento' || task.subetapa === 'em_revisao' ? (
+              <Saida
+                key={task.id}
+                editing={task}
+                modoInicial={null}
+                onTransicao={transicionar}
+                onCancelar={() => {}}
+                podeCancelar={false}
+                voltar={{ label: 'Voltar para o Backlog', onClick: () => void transicionar({ subetapa: 'backlog' }) }}
+                preChecarEtapa={preChecarEtapa}
+                onLancarHoras={() => { onClose(); openEdit(task.id); }}
+              />
+            ) : task.subetapa === 'bloqueado' ? (
+              <div className="m2-passos">
+                <span className="m2-passos-dir">
+                  <button type="button" className="m2-btn primario" onClick={() => void transicionar({ subetapa: 'em_desenvolvimento', bloqueadoPor: '' })}>
+                    Desbloquear →
+                  </button>
+                </span>
+              </div>
+            ) : (
+              <Passos key={task.id} editing={task} onTransicao={transicionar} />
+            )}
+          </div>
+        )}
 
         <div className="pmodal-scroll" ref={scrollRef}>
           <Progresso task={task} />

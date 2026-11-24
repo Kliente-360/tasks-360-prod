@@ -467,7 +467,7 @@ function BotaoPlay(props: TaskModalV2Props) {
 // o texto em vez de vazio
 const rascunhosSaida = new Map<string, string>();
 
-function Saida({
+export function Saida({
   editing, modoInicial, onTransicao, onCancelar, podeCancelar, voltar, preChecarEtapa, onLancarHoras,
 }: {
   editing: Task;
@@ -610,7 +610,7 @@ const MOTIVOS_REABERTURA = [
   { v: 'novo_requisito', label: 'Novo requisito interno' },
 ];
 
-function Passos({ editing, onTransicao }: { editing: Task; onTransicao: TaskModalV2Props['onTransicao'] }) {
+export function Passos({ editing, onTransicao }: { editing: Task; onTransicao: TaskModalV2Props['onTransicao'] }) {
   const [ocupado, setOcupado] = useState(false);
   const [reabrindo, setReabrindo] = useState(false);
   const [motivo, setMotivo] = useState('');
