@@ -124,7 +124,7 @@ const ETAPA_DA_SUB: Record<string, number> = {
 const EM_DESENVOLVIMENTO = new Set(['em_desenvolvimento', 'em_revisao']);
 const MOSTRA_SOLUCAO = new Set(['em_homologacao', 'em_revisao', 'pronto_producao', 'em_implantacao', 'concluido']);
 
-const PRIORIDADES: { v: Task['prioridade']; label: string }[] = [
+export const PRIORIDADES: { v: Task['prioridade']; label: string }[] = [
   { v: 'P0', label: 'Urgente' },
   { v: 'P1', label: 'Alta' },
   { v: 'P2', label: 'Normal' },
@@ -162,7 +162,7 @@ const iniciais = (nome: string) =>
 // ============================================================
 // Popover ancorado (portal no body · não é cortado pelo modal)
 // ============================================================
-function Pop({
+export function Pop({
   anchor, open, onClose, width = 240, align = 'left', up = false, children,
 }: {
   anchor: React.RefObject<HTMLElement | null>;
@@ -221,13 +221,13 @@ function Pop({
   );
 }
 
-function usePop() {
+export function usePop() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLButtonElement | null>(null);
   return { open, setOpen, ref, close: () => setOpen(false), toggle: () => setOpen((v) => !v) };
 }
 
-function Op({
+export function Op({
   sel, onClick, children, perigo, sub, disabled, title,
 }: {
   sel?: boolean;

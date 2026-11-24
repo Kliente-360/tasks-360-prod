@@ -25,7 +25,7 @@ import { fmtDataCurta, fmtPostedEm } from '@/lib/format';
 import { STATUS, SUB_LABELS } from '@/lib/task-constants';
 import { sumTimeEntriesHours, validateSubetapaAdvance } from '@/lib/task-utils';
 import { useTaskModal } from '@/components/task-modal';
-import { Passos, Saida } from '@/components/task-modal-v2';
+import { Op, Passos, Pop, PRIORIDADES, Saida, usePop } from '@/components/task-modal-v2';
 import { aplicarTransicaoEtapa, type OpcoesTransicao } from '@/lib/transicao-etapa';
 import type { Task } from '@/lib/types';
 import { ANEXO_COLS, atalhoColar, enviarImagem, imagensDoClipboard, urlsDosAnexos, type Anexo } from '@/lib/anexos';
@@ -367,6 +367,8 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
   // ── Time na aba Portal (PMO em reunião com o cliente): prioridade e prazo
   // editáveis nos chips do topo; a etapa anda pela faixa Próximo passo
   const [salvandoCampo, setSalvandoCampo] = useState<string | null>(null);
+  // Menu de prioridade: o mesmo do modal interno
+  const popPrio = usePop();
   const editarCampo = useCallback(
     async (campo: 'prioridade' | 'prazo', valor: string) => {
       if (!task || ehCliente) return;
@@ -755,21 +757,33 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                   </span>
                 )
               ) : (
-                // Mesmo visual dos chips; o seletor nativo fica invisível por cima
-                <label className={`pmodal-chip-edit ${task.prioridade ? `pri pri-${task.prioridade}` : 'pmodal-chip is-vazio'}`} title="Mudar prioridade">
-                  {task.prioridade ? <span className="pri-dot" /> : null}
-                  {task.prioridade || 'Prioridade'}
-                  <span className="pmodal-caret">▾</span>
-                  <select
-                    value={task.prioridade || ''}
+                // Mesmo visual dos chips e o mesmo menu do modal interno
+                <>
+                  <button
+                    ref={popPrio.ref}
+                    type="button"
+                    className={`pmodal-chip-edit ${task.prioridade ? `pri pri-${task.prioridade}` : 'pmodal-chip is-vazio'}`}
+                    onClick={popPrio.toggle}
                     disabled={salvandoCampo === 'prioridade'}
-                    onChange={(e) => editarCampo('prioridade', e.target.value)}
-                    aria-label="Prioridade"
+                    aria-haspopup="menu"
+                    title="Mudar prioridade"
                   >
-                    <option value="">Sem prioridade</option>
-                    {['P0', 'P1', 'P2', 'P3'].map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </label>
+                    {task.prioridade ? <span className="pri-dot" /> : null}
+                    {task.prioridade || 'Prioridade'}
+                    <span className="pmodal-caret">▾</span>
+                  </button>
+                  <Pop anchor={popPrio.ref} open={popPrio.open} onClose={popPrio.close} width={170}>
+                    {PRIORIDADES.map((p) => (
+                      <Op
+                        key={p.v}
+                        sel={task.prioridade === p.v}
+                        onClick={() => { popPrio.close(); void editarCampo('prioridade', p.v); }}
+                      >
+                        {p.v} · {p.label}
+                      </Op>
+                    ))}
+                  </Pop>
+                </>
               )}
               {ehCliente ? (
                 task.prazo && (
@@ -875,7 +889,7 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
               <div className="pmodal-band-title">Você respondeu em {diaMes(task.pendenciaRespondidaEm)}</div>
               <div className="pmodal-band-sub">O time vai avaliar sua resposta e retomar a tarefa.</div>
             </section>
-          ) : homologar ? (
+          ) : homologar && ehCliente ? (
             <section className="pmodal-band is-warn">
               <div className="pmodal-band-line">
                 <div className="pmodal-band-text">

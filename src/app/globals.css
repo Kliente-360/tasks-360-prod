@@ -4036,3 +4036,5 @@ button.m2-vis-tag { cursor: pointer; }
 .pmodal-caret { font-size: 9px; color: var(--muted); margin-left: 2px; }
 /* Etapa (só o time): no topo da coluna de detalhes, como no modal interno */
 .pmodal-passos-time { margin-bottom: 20px; }
+button.pmodal-chip-edit { font: inherit; cursor: pointer; }
+button.pmodal-chip-edit.pri { border: 0; }
