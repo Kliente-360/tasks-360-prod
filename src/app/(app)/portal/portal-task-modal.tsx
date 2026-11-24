@@ -755,17 +755,21 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                   </span>
                 )
               ) : (
-                <select
-                  className={`pmodal-chip pmodal-chip-edit pri pri-${task.prioridade || 'none'}`}
-                  value={task.prioridade || ''}
-                  disabled={salvandoCampo === 'prioridade'}
-                  onChange={(e) => editarCampo('prioridade', e.target.value)}
-                  aria-label="Prioridade"
-                  title="Mudar prioridade"
-                >
-                  <option value="">Sem prioridade</option>
-                  {['P0', 'P1', 'P2', 'P3'].map((p) => <option key={p} value={p}>{p}</option>)}
-                </select>
+                // Mesmo visual dos chips; o seletor nativo fica invisível por cima
+                <label className={`pmodal-chip-edit ${task.prioridade ? `pri pri-${task.prioridade}` : 'pmodal-chip is-vazio'}`} title="Mudar prioridade">
+                  {task.prioridade ? <span className="pri-dot" /> : null}
+                  {task.prioridade || 'Prioridade'}
+                  <span className="pmodal-caret">▾</span>
+                  <select
+                    value={task.prioridade || ''}
+                    disabled={salvandoCampo === 'prioridade'}
+                    onChange={(e) => editarCampo('prioridade', e.target.value)}
+                    aria-label="Prioridade"
+                  >
+                    <option value="">Sem prioridade</option>
+                    {['P0', 'P1', 'P2', 'P3'].map((p) => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </label>
               )}
               {ehCliente ? (
                 task.prazo && (
@@ -774,29 +778,24 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
                   </span>
                 )
               ) : (
-                <input
-                  type="date"
-                  className={`pmodal-chip pmodal-chip-edit font-mono ${atrasada ? 'is-danger' : ''}`}
-                  value={task.prazo || ''}
-                  disabled={salvandoCampo === 'prazo'}
-                  onChange={(e) => editarCampo('prazo', e.target.value)}
-                  aria-label="Prazo"
+                <label
+                  className={`pmodal-chip pmodal-chip-edit ${task.prazo ? 'font-mono' : 'is-vazio'} ${atrasada ? 'is-danger' : ''}`}
                   title="Mudar prazo"
-                />
-              )}
-              {!ehCliente && (
-                <button
-                  type="button"
-                  className="pmodal-chip pmodal-chip-acao-time"
-                  onClick={() => { onClose(); openEdit(task.id); }}
-                  title="Abrir a tarefa no modal do time (mensagens, horas, homologação, bloqueio)"
                 >
-                  <Icon name="edit" size={12} />
-                  Abrir tarefa completa
-                </button>
+                  <Icon name="calendar" size={13} />
+                  {task.prazo ? fmtDataCurta(task.prazo) : 'Prazo'}
+                  <input
+                    type="date"
+                    value={task.prazo || ''}
+                    disabled={salvandoCampo === 'prazo'}
+                    onClick={(e) => { try { e.currentTarget.showPicker(); } catch { /* navegador sem showPicker */ } }}
+                    onChange={(e) => editarCampo('prazo', e.target.value)}
+                    aria-label="Prazo"
+                  />
+                </label>
               )}
-              {/* Celular: pedir prioridade fica junto das pills, no topo */}
-              <button
+              {/* Celular: pedir prioridade fica junto das pills, no topo (só cliente) */}
+              {ehCliente && <button
                 type="button"
                 className="pmodal-chip pmodal-chip-acao pmodal-so-mobile"
                 onClick={abrirPrioridade}
@@ -805,47 +804,28 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
               >
                 <Icon name="flag" size={13} />
                 Pedir prioridade
-              </button>
+              </button>}
             </div>
           </div>
           <div className="pmodal-head-actions">
-            <span className="pmodal-so-desktop">{botaoPrioridade}</span>
+            {ehCliente ? (
+              <span className="pmodal-so-desktop">{botaoPrioridade}</span>
+            ) : (
+              <button
+                type="button"
+                className="btn pmodal-btn-quiet"
+                onClick={() => { onClose(); openEdit(task.id); }}
+                title="Abrir no modal do time: mensagens internas, horas e histórico"
+              >
+                <Icon name="edit" size={15} />
+                Abrir tarefa completa
+              </button>
+            )}
             <button type="button" className="pmodal-close" onClick={onClose} aria-label="Fechar">
               <Icon name="x" size={20} />
             </button>
           </div>
         </header>
-
-        {/* Próximo passo · só o time: os mesmos botões do modal interno
-            (homologação e volta pedem mensagem, bloqueio pede motivo) */}
-        {!ehCliente && (
-          <div className="pmodal-passo-time">
-            <div className="pmodal-passo-rot">Próximo passo · só o time vê</div>
-            {task.subetapa === 'em_desenvolvimento' || task.subetapa === 'em_revisao' ? (
-              <Saida
-                key={task.id}
-                editing={task}
-                modoInicial={null}
-                onTransicao={transicionar}
-                onCancelar={() => {}}
-                podeCancelar={false}
-                voltar={{ label: 'Voltar para o Backlog', onClick: () => void transicionar({ subetapa: 'backlog' }) }}
-                preChecarEtapa={preChecarEtapa}
-                onLancarHoras={() => { onClose(); openEdit(task.id); }}
-              />
-            ) : task.subetapa === 'bloqueado' ? (
-              <div className="m2-passos">
-                <span className="m2-passos-dir">
-                  <button type="button" className="m2-btn primario" onClick={() => void transicionar({ subetapa: 'em_desenvolvimento', bloqueadoPor: '' })}>
-                    Desbloquear →
-                  </button>
-                </span>
-              </div>
-            ) : (
-              <Passos key={task.id} editing={task} onTransicao={transicionar} />
-            )}
-          </div>
-        )}
 
         <div className="pmodal-scroll" ref={scrollRef}>
           <Progresso task={task} />
@@ -1015,6 +995,35 @@ export function PortalTaskModal({ task, nomeResponsavel, clienteNome, onClose }:
           {/* Corpo */}
           <div className="pmodal-body">
             <div className="pmodal-col-main">
+              {/* Etapa · só o time, no mesmo lugar e com os mesmos botões do modal
+                  interno (homologação e volta pedem mensagem, bloqueio pede motivo) */}
+              {!ehCliente && (
+                <div className="pmodal-passos-time">
+                  {task.subetapa === 'em_desenvolvimento' || task.subetapa === 'em_revisao' ? (
+                    <Saida
+                      key={task.id}
+                      editing={task}
+                      modoInicial={null}
+                      onTransicao={transicionar}
+                      onCancelar={() => {}}
+                      podeCancelar={false}
+                      voltar={{ label: 'Voltar para o Backlog', onClick: () => void transicionar({ subetapa: 'backlog' }) }}
+                      preChecarEtapa={preChecarEtapa}
+                      onLancarHoras={() => { onClose(); openEdit(task.id); }}
+                    />
+                  ) : task.subetapa === 'bloqueado' ? (
+                    <div className="m2-passos">
+                      <span className="m2-passos-dir">
+                        <button type="button" className="m2-btn primario" onClick={() => void transicionar({ subetapa: 'em_desenvolvimento', bloqueadoPor: '' })}>
+                          Desbloquear →
+                        </button>
+                      </span>
+                    </div>
+                  ) : (
+                    <Passos key={task.id} editing={task} onTransicao={transicionar} />
+                  )}
+                </div>
+              )}
               <section className="pmodal-section">
                 <div className="pmodal-lbl">Sua solicitação</div>
                 {detalhes === null ? (
