@@ -641,7 +641,8 @@ export function Passos({ editing, onTransicao, interna = false }: { editing: Tas
   let avancar: Acao[] = [];
   let voltar: Acao | null = null;
   if (GRUPO_BACKLOG.has(sub)) {
-    avancar = [{ label: 'Iniciar desenvolvimento', patch: { subetapa: 'em_desenvolvimento' }, primario: true }];
+    // Interna costuma ser tarefa de gestão, não desenvolvimento
+    avancar = [{ label: interna ? 'Iniciar tarefa' : 'Iniciar desenvolvimento', patch: { subetapa: 'em_desenvolvimento' }, primario: true }];
   } else if (interna && sub !== 'concluido') {
     // Tarefa interna: do desenvolvimento direto para concluída
     avancar = [{ label: 'Concluir', patch: { subetapa: 'concluido' }, primario: true }];
@@ -1007,7 +1008,8 @@ export function TaskModalV2(props: TaskModalV2Props) {
           </span>
         );
       })}
-      <button
+      {/* Tarefa interna é sempre oculta do cliente: sem o chip */}
+      {!interna && <button
         type="button"
         className="m2-chip m2-vis"
         aria-pressed={editing.visivelCliente !== false}
@@ -1016,7 +1018,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
       >
         <Icon name={editing.visivelCliente !== false ? 'eye' : 'eye-off'} size={12} />
         {editing.visivelCliente !== false ? 'Visível ao cliente' : 'Oculta do cliente'}
-      </button>
+      </button>}
       {privadaHerdada ? (
         <span className="m2-chip m2-priv" aria-pressed="true" title={`Privada porque o ${privadaHerdada.slice(3)} é privado`}>
           <Icon name="lock" size={12} /> Privada {privadaHerdada}
@@ -1054,7 +1056,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
 
   // ---------- Barra de etapas ----------
   const barra = !nova && (
-    <ol className="m2-steps">
+    <ol className={cn('m2-steps', interna && 'm2-steps-curta')}>
       {etapasBarra.map((nome, i) => {
         const bloqueada = !interna && editing.subetapa === 'bloqueado';
         let estado: 'done' | 'cur' | 'parada' | 'pausa' | '' = '';

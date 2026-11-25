@@ -1052,6 +1052,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         e.tempoRealHoras = gate.autoFillTempo;
         setEditing((cur) => ({ ...cur, tempoRealHoras: gate.autoFillTempo as number }));
       }
+      // Tarefa interna (cliente Kliente 360) é sempre oculta do cliente
+      if (clientesById.get(e.clienteId)?.ehInterno) e.visivelCliente = false;
       const payload = editingToDbPayload(e);
       const nowMs = Date.now();
       const nowIso = new Date(nowMs).toISOString();

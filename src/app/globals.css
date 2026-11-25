@@ -4027,3 +4027,5 @@ button.m2-vis-tag { cursor: pointer; }
 
 /* Etapa (só o time): no topo da coluna de detalhes, como no modal interno */
 .pmodal-passos-time { margin-bottom: 20px; }
+/* Tarefa interna: linha do tempo de 3 etapas ocupa toda a largura */
+.m2-steps.m2-steps-curta { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; }
