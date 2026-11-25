@@ -260,6 +260,11 @@ describe('validateSubetapaAdvance (nov/2026)', () => {
     expect(validateSubetapaAdvance(base, 'concluido').ok).toBe(true);
     expect(validateSubetapaAdvance({ ...base, solucaoImplementada: '' }, 'concluido').ok).toBe(false);
   });
+
+  it('tarefa interna conclui sem solução, mas ainda pede horas', () => {
+    expect(validateSubetapaAdvance({ ...base, solucaoImplementada: '' }, 'concluido', { interna: true }).ok).toBe(true);
+    expect(validateSubetapaAdvance({ ...base, solucaoImplementada: '', tempoRealHoras: 0 }, 'concluido', { interna: true }).ok).toBe(false);
+  });
 });
 
 describe('missingFieldsForCurrentSubetapa (nov/2026)', () => {

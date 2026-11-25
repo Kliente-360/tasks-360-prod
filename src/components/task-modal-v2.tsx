@@ -122,6 +122,17 @@ const ETAPA_DA_SUB: Record<string, number> = {
   pronto_producao: 4, em_implantacao: 4, concluido: 4,
 };
 const EM_DESENVOLVIMENTO = new Set(['em_desenvolvimento', 'em_revisao']);
+
+// Tarefa interna (cliente Kliente 360): processo curto, sem homologação nem
+// produção · Backlog → Desenvolvimento → Concluída
+const GRUPOS_SUB_INTERNA: { titulo: string; subs: string[] }[] = [
+  { titulo: 'Backlog', subs: ['backlog'] },
+  { titulo: 'Desenvolvimento', subs: ['em_desenvolvimento'] },
+  { titulo: 'Concluída', subs: ['concluido'] },
+];
+const ETAPAS_INTERNA = ['Backlog', 'Desenvolvimento', 'Concluída'] as const;
+/** Etapa da barra curta: qualquer subetapa fora do Backlog e não concluída conta como Desenvolvimento */
+const etapaInterna = (sub: string): number => (GRUPO_BACKLOG.has(sub) ? 0 : sub === 'concluido' ? 2 : 1);
 const MOSTRA_SOLUCAO = new Set(['em_homologacao', 'em_revisao', 'pronto_producao', 'em_implantacao', 'concluido']);
 
 export const PRIORIDADES: { v: Task['prioridade']; label: string }[] = [
@@ -257,7 +268,7 @@ export function Op({
 // ============================================================
 // Etiquetas do cabeçalho
 // ============================================================
-function ChipEtapa({ editing, onEscolher }: { editing: Task; onEscolher: (s: string) => void }) {
+function ChipEtapa({ editing, onEscolher, interna = false }: { editing: Task; onEscolher: (s: string) => void; interna?: boolean }) {
   const p = usePop();
   const macro = SUB_TO_MACRO[editing.subetapa] ?? 'backlog';
   return (
@@ -268,7 +279,7 @@ function ChipEtapa({ editing, onEscolher }: { editing: Task; onEscolher: (s: str
         <span className="m2-caret">▾</span>
       </button>
       <Pop anchor={p.ref} open={p.open} onClose={p.close} width={230}>
-        {GRUPOS_SUB.map((g) => (
+        {(interna ? GRUPOS_SUB_INTERNA : GRUPOS_SUB).map((g) => (
           <div key={g.titulo}>
             <div className="m2-grupo">{g.titulo}</div>
             {g.subs.map((s) => (
@@ -610,7 +621,7 @@ const MOTIVOS_REABERTURA = [
   { v: 'novo_requisito', label: 'Novo requisito interno' },
 ];
 
-export function Passos({ editing, onTransicao }: { editing: Task; onTransicao: TaskModalV2Props['onTransicao'] }) {
+export function Passos({ editing, onTransicao, interna = false }: { editing: Task; onTransicao: TaskModalV2Props['onTransicao']; interna?: boolean }) {
   const [ocupado, setOcupado] = useState(false);
   const [reabrindo, setReabrindo] = useState(false);
   const [motivo, setMotivo] = useState('');
@@ -631,6 +642,10 @@ export function Passos({ editing, onTransicao }: { editing: Task; onTransicao: T
   let voltar: Acao | null = null;
   if (GRUPO_BACKLOG.has(sub)) {
     avancar = [{ label: 'Iniciar desenvolvimento', patch: { subetapa: 'em_desenvolvimento' }, primario: true }];
+  } else if (interna && sub !== 'concluido') {
+    // Tarefa interna: do desenvolvimento direto para concluída
+    avancar = [{ label: 'Concluir', patch: { subetapa: 'concluido' }, primario: true }];
+    voltar = { label: 'Voltar para o Backlog', patch: { subetapa: 'backlog' } };
   } else if (sub === 'em_homologacao') {
     avancar = [
       { label: 'Pronto para produção', patch: { subetapa: 'pronto_producao' }, primario: true },
@@ -664,7 +679,7 @@ export function Passos({ editing, onTransicao }: { editing: Task; onTransicao: T
               type="button"
               className="m2-btn primario"
               disabled={!motivo || ocupado}
-              onClick={() => ir({ subetapa: 'em_revisao', motivoReabertura: motivo })}
+              onClick={() => ir({ subetapa: interna ? 'em_desenvolvimento' : 'em_revisao', motivoReabertura: motivo })}
             >
               Reabrir
             </button>
@@ -839,6 +854,8 @@ export function TaskModalV2(props: TaskModalV2Props) {
   const novoPrazoRef = useRef<HTMLInputElement | null>(null);
 
   const cliente = editing.clienteId ? clientesById.get(editing.clienteId) : undefined;
+  // Cliente interno (Kliente 360): processo curto e menos campos
+  const interna = !!cliente?.ehInterno;
   const projeto = editing.projetoId ? projetosById.get(editing.projetoId) : undefined;
   const responsavel = editing.pessoaId ? pessoasById.get(editing.pessoaId) : undefined;
   // Privada herdada do cliente ou do projeto (só o CEO marca no Cadastros)
@@ -848,7 +865,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
   const concluida = editing.subetapa === 'concluido';
   const vencido = !!editing.prazo && editing.prazo < hoje && !concluida;
   const emDev = EM_DESENVOLVIMENTO.has(editing.subetapa);
-  const mostraSaida = !nova && (emDev || saidaPedida !== null) && editing.subetapa !== 'bloqueado';
+  const mostraSaida = !nova && !interna && (emDev || saidaPedida !== null) && editing.subetapa !== 'bloqueado';
   const checklistFeitos = editing.checklist.filter((i) => i.done).length;
 
   // Subetapa anterior ao bloqueio (para o Desbloquear)
@@ -869,7 +886,8 @@ export function TaskModalV2(props: TaskModalV2Props) {
   }, [history]);
 
   // Barra de etapas
-  const etapaAtual = ETAPA_DA_SUB[editing.subetapa] ?? 0;
+  const etapasBarra: readonly string[] = interna ? ETAPAS_INTERNA : ETAPAS;
+  const etapaAtual = interna ? etapaInterna(editing.subetapa) : ETAPA_DA_SUB[editing.subetapa] ?? 0;
   const etapaBase = editing.subetapa === 'bloqueado' ? (ETAPA_DA_SUB[antesDoBloqueio] ?? 1) : etapaAtual;
 
   const escolherEtapa = (s: string) => {
@@ -951,7 +969,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
         onEscolher={(v) => set('projetoId', v)}
         icone={<Icon name="folder" size={12} />}
       />
-      <ChipEtapa editing={editing} onEscolher={escolherEtapa} />
+      <ChipEtapa editing={editing} onEscolher={escolherEtapa} interna={interna} />
       <ChipLista
         rotulo={responsavel ? responsavel.nome.split(' ')[0] : 'Responsável'}
         vazio={!responsavel}
@@ -971,7 +989,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
         largura={170}
       />
       <ChipPrazo prazo={editing.prazo} vencido={vencido} onChange={(v) => set('prazo', v)} />
-      <ChipClassificacao editing={editing} set={set} />
+      {!interna && <ChipClassificacao editing={editing} set={set} />}
       {editing.bloqueadaPorTasks.map((id) => {
         const dep = tasksById.get(id);
         const aberta = dep && dep.status !== 'concluido' && !dep.arquivadoEm;
@@ -1037,10 +1055,10 @@ export function TaskModalV2(props: TaskModalV2Props) {
   // ---------- Barra de etapas ----------
   const barra = !nova && (
     <ol className="m2-steps">
-      {ETAPAS.map((nome, i) => {
-        const bloqueada = editing.subetapa === 'bloqueado';
+      {etapasBarra.map((nome, i) => {
+        const bloqueada = !interna && editing.subetapa === 'bloqueado';
         let estado: 'done' | 'cur' | 'parada' | 'pausa' | '' = '';
-        if (i === 3) estado = bloqueada ? 'parada' : 'pausa';
+        if (!interna && i === 3) estado = bloqueada ? 'parada' : 'pausa';
         else if (bloqueada) estado = i < etapaBase ? 'done' : '';
         else if (concluida) estado = 'done';
         else if (i < etapaAtual) estado = 'done';
@@ -1049,7 +1067,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
           <li key={nome} className={cn('m2-step', estado)}>
             <div className="m2-track">
               <span className="m2-sdot">{estado === 'done' && <Icon name="check" size={11} />}</span>
-              {i < ETAPAS.length - 1 && <span className="m2-sline" />}
+              {i < etapasBarra.length - 1 && <span className="m2-sline" />}
             </div>
             <span className="m2-sname">{nome}</span>
             {(estado === 'cur' || estado === 'parada') && (
@@ -1065,10 +1083,10 @@ export function TaskModalV2(props: TaskModalV2Props) {
   const barraMob = !nova && (
     <div className="m2-steps-mob" aria-label={`Etapa: ${SUB_LABELS[editing.subetapa] ?? editing.subetapa}`}>
       <div className="m2-cs-linha">
-        {ETAPAS.map((nome, i) => {
-          const bloqueada = editing.subetapa === 'bloqueado';
+        {etapasBarra.map((nome, i) => {
+          const bloqueada = !interna && editing.subetapa === 'bloqueado';
           let estado = '';
-          if (i === 3) estado = bloqueada ? 'parada' : 'pausa';
+          if (!interna && i === 3) estado = bloqueada ? 'parada' : 'pausa';
           else if (bloqueada) estado = i < etapaBase ? 'done' : '';
           else if (concluida || i < etapaAtual) estado = 'done';
           else if (i === etapaAtual) estado = 'cur';
@@ -1076,14 +1094,14 @@ export function TaskModalV2(props: TaskModalV2Props) {
           return (
             <span key={nome} className="contents">
               <span className={cn('m2-cs', estado)} title={nome} />
-              {i < ETAPAS.length - 1 && <span className={cn('m2-cl', linhaFeita && 'done')} />}
+              {i < etapasBarra.length - 1 && <span className={cn('m2-cl', linhaFeita && 'done')} />}
             </span>
           );
         })}
       </div>
       <div className={cn('m2-cs-txt', editing.subetapa === 'bloqueado' && 'parada', concluida && 'ok')}>
-        {ETAPAS[etapaAtual]}
-        {SUB_LABELS[editing.subetapa] && SUB_LABELS[editing.subetapa] !== ETAPAS[etapaAtual] && ` · ${SUB_LABELS[editing.subetapa]}`}
+        {etapasBarra[etapaAtual]}
+        {SUB_LABELS[editing.subetapa] && SUB_LABELS[editing.subetapa] !== etapasBarra[etapaAtual] && ` · ${SUB_LABELS[editing.subetapa]}`}
       </div>
     </div>
   );
@@ -1222,7 +1240,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
           onLancarHoras={() => setAba('horas')}
         />
       ) : (
-        !nova && <Passos editing={editing} onTransicao={onTransicao} />
+        !nova && <Passos editing={editing} onTransicao={onTransicao} interna={interna} />
       )}
 
       <section className="m2-sec">
@@ -1235,7 +1253,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
           placeholder={descricaoLoading ? 'Carregando…' : 'Contexto, links, o que o cliente pediu'}
           disabled={descricaoLoading}
         />
-        <label className="m2-campo m2-valor">
+        {!interna && <label className="m2-campo m2-valor">
           <span className="m2-lbl">Valor esperado</span>
           <textarea
             className="inp m2-area"
@@ -1245,10 +1263,10 @@ export function TaskModalV2(props: TaskModalV2Props) {
             placeholder={descricaoLoading ? 'Carregando…' : 'O que muda para o cliente quando isso estiver pronto'}
             disabled={descricaoLoading}
           />
-        </label>
+        </label>}
       </section>
 
-      {!nova && MOSTRA_SOLUCAO.has(editing.subetapa) && (
+      {!nova && !interna && MOSTRA_SOLUCAO.has(editing.subetapa) && (
         <section className="m2-sec">
           <div className="m2-lbl">
             Solução implementada {concluida && <span className="m2-req">*</span>}
@@ -1314,20 +1332,20 @@ export function TaskModalV2(props: TaskModalV2Props) {
           <span className="m2-lbl">Prazo</span>
           <input type="date" className="inp" value={editing.prazo} onChange={(e) => set('prazo', e.target.value)} />
         </label>
-        <label className="m2-campo">
+        {!interna && <label className="m2-campo">
           <span className="m2-lbl">Tipo</span>
           <select className="inp" value={editing.tipoTrabalho ?? ''} onChange={(e) => set('tipoTrabalho', (e.target.value || null) as Task['tipoTrabalho'])}>
             <option value="">Escolher</option>
             {TIPOS_TRABALHO.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
           </select>
-        </label>
-        <label className="m2-campo m2-span2">
+        </label>}
+        {!interna && <label className="m2-campo m2-span2">
           <span className="m2-lbl">Área técnica</span>
           <select className="inp" value={editing.areaTecnica ?? ''} onChange={(e) => set('areaTecnica', e.target.value || null)}>
             <option value="">Sem área</option>
             {AREAS_TECNICAS.map((a) => <option key={a.v} value={a.v}>{a.label} · {a.exemplos}</option>)}
           </select>
-        </label>
+        </label>}
         <label className="m2-campo">
           <span className="m2-lbl">Esforço estimado (h)</span>
           <input
@@ -1347,10 +1365,10 @@ export function TaskModalV2(props: TaskModalV2Props) {
           rows={3}
           value={editing.descricao ?? ''}
           onChange={(e) => set('descricao', e.target.value)}
-          placeholder="Contexto, o que o cliente pediu, exemplos e links."
+          placeholder={interna ? 'O que precisa ser feito, contexto e links.' : 'Contexto, o que o cliente pediu, exemplos e links.'}
         />
       </label>
-      <div className="m2-campo">
+      {!interna && <div className="m2-campo">
         <span className="m2-lbl">
           Prints <span className="m2-lbl-dica">(clique abaixo ou cole o print ({atalhoColar()}) enquanto escreve a solicitação)</span>
         </span>
@@ -1375,8 +1393,8 @@ export function TaskModalV2(props: TaskModalV2Props) {
             }}
           />
         </div>
-      </div>
-      <label className="m2-campo m2-valor">
+      </div>}
+      {!interna && <label className="m2-campo m2-valor">
         <span className="m2-lbl">Valor esperado <span className="m2-req">*</span></span>
         <textarea
           className="inp m2-area"
@@ -1385,7 +1403,7 @@ export function TaskModalV2(props: TaskModalV2Props) {
           onChange={(e) => set('valorEsperado', e.target.value)}
           placeholder="O que muda para o cliente quando isso estiver pronto"
         />
-      </label>
+      </label>}
     </div>
   );
 

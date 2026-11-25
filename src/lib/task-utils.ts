@@ -360,7 +360,7 @@ export function missingFieldsForCurrentSubetapa(
     'prazo' | 'esforco' | 'escopo' | 'tempoRealHoras' | 'criterioAceite' | 'valorEntregue' |
     'solucaoImplementada' | 'motivoReabertura'
   >,
-  opts?: { timeEntriesHours?: number; wasConcluido?: boolean },
+  opts?: { timeEntriesHours?: number; wasConcluido?: boolean; interna?: boolean },
 ): Set<string> {
   const missing = new Set<string>();
   if (!t || t.status === STATUS.CONCLUIDO && t.subetapa === 'concluido') {
@@ -389,8 +389,9 @@ export function missingFieldsForCurrentSubetapa(
     if (manual <= 0 && fromSheet <= 0) missing.add('tempoRealHoras');
   }
 
-  // solucao_implementada no concluido (valor entregue saiu em nov/2026)
-  if (sub === 'concluido') {
+  // solucao_implementada no concluido (valor entregue saiu em nov/2026).
+  // Tarefa interna (cliente Kliente 360) não pede solução
+  if (sub === 'concluido' && !opts?.interna) {
     if (!(t.solucaoImplementada && t.solucaoImplementada.trim().length > 0)) missing.add('solucaoImplementada');
   }
 
@@ -421,7 +422,7 @@ export function missingFieldsForCurrentSubetapa(
 export function validateSubetapaAdvance(
   task: Pick<Task, 'esforco' | 'escopo' | 'tempoRealHoras' | 'criterioAceite' | 'valorEntregue' | 'solucaoImplementada'>,
   novaSubetapa: string,
-  opts?: { timeEntriesHours?: number; hasOpenPreReqs?: boolean },
+  opts?: { timeEntriesHours?: number; hasOpenPreReqs?: boolean; interna?: boolean },
 ): { ok: true; autoFillTempo?: number } | { ok: false; error: string } {
   if (novaSubetapa === 'bloqueado') return { ok: true };
 
@@ -438,7 +439,7 @@ export function validateSubetapaAdvance(
       const sumHours = opts?.timeEntriesHours ?? 0;
       if (sumHours > 0) {
         // Modo (d): manual vazio → usa timesheet como fallback.
-        if (novaSubetapa === 'concluido' && !(task.solucaoImplementada && task.solucaoImplementada.trim().length > 0)) {
+        if (novaSubetapa === 'concluido' && !opts?.interna && !(task.solucaoImplementada && task.solucaoImplementada.trim().length > 0)) {
           return { ok: false, error: 'Preencha a solução implementada (o que foi feito) antes de concluir.' };
         }
         return { ok: true, autoFillTempo: Math.round(sumHours * 100) / 100 };
@@ -447,7 +448,7 @@ export function validateSubetapaAdvance(
     }
   }
 
-  if (novaSubetapa === 'concluido' && !(task.solucaoImplementada && task.solucaoImplementada.trim().length > 0)) {
+  if (novaSubetapa === 'concluido' && !opts?.interna && !(task.solucaoImplementada && task.solucaoImplementada.trim().length > 0)) {
     return { ok: false, error: 'Preencha a solução implementada (o que foi feito) antes de concluir.' };
   }
   // 3.B · gate de conclusão por dependências

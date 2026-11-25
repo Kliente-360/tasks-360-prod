@@ -588,8 +588,12 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
     const sumHours = editing.id
       ? sumTimeEntriesHours(timeEntries.filter((te) => te.taskId === editing.id))
       : 0;
-    return missingFieldsForCurrentSubetapa(editing, { timeEntriesHours: sumHours, wasConcluido });
-  }, [editing, timeEntries, wasConcluido]);
+    return missingFieldsForCurrentSubetapa(editing, {
+      timeEntriesHours: sumHours,
+      wasConcluido,
+      interna: !!clientesById.get(editing.clienteId)?.ehInterno,
+    });
+  }, [editing, timeEntries, wasConcluido, clientesById]);
 
   // Mesma regra do salvar (persist), checada antes de abrir o formulário da
   // transição: o aviso aparece ao clicar, não depois de escrever a mensagem
@@ -601,10 +605,10 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         const dep = tasksById.get(id);
         return dep && dep.status !== 'concluido' && !dep.arquivadoEm;
       });
-      const gate = validateSubetapaAdvance(e, sub, { timeEntriesHours: horas, hasOpenPreReqs });
+      const gate = validateSubetapaAdvance(e, sub, { timeEntriesHours: horas, hasOpenPreReqs, interna: !!clientesById.get(e.clienteId)?.ehInterno });
       return gate.ok ? null : gate.error;
     },
-    [timeEntries, tasksById],
+    [timeEntries, tasksById, clientesById],
   );
 
   // Bucket V · M.2 · tabs do formulário (desktop)
@@ -1007,7 +1011,8 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       if (!e.id && !e.descricao?.trim()) {
         return { ok: false, error: 'Descreva a solicitação.' };
       }
-      if (!e.id && !e.valorEsperado?.trim()) {
+      // Tarefa interna (cliente Kliente 360) não tem valor esperado
+      if (!e.id && !e.valorEsperado?.trim() && !clientesById.get(e.clienteId)?.ehInterno) {
         return { ok: false, error: 'Informe o valor esperado.' };
       }
       if (e.subetapa === 'bloqueado' && !e.bloqueadoPor) {
@@ -1027,6 +1032,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
       const gate = validateSubetapaAdvance(e, e.subetapa, {
         timeEntriesHours: sumHoursForTask,
         hasOpenPreReqs,
+        interna: !!clientesById.get(e.clienteId)?.ehInterno,
       });
       if (!gate.ok) return { ok: false, error: gate.error };
       // 3.3 · gate de reabertura: se estava 'concluido' e mudou pra outra,
@@ -1326,7 +1332,7 @@ function TaskModal({ taskId, onClose }: { taskId: string | null; onClose: () => 
         return { ok: true };
       }
     },
-    [sb, tasksById, patchTask, replaceTask, upsertTask, currentPessoa?.id, currentPessoa?.nome, timeEntries],
+    [sb, tasksById, clientesById, patchTask, replaceTask, upsertTask, currentPessoa?.id, currentPessoa?.nome, timeEntries],
   );
 
   const autosaveNow = useCallback(async (opts?: { quiet?: boolean }) => {
